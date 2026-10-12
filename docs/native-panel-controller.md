@@ -51,7 +51,7 @@ https://gtk-rs.org/gtk4-rs/stable/latest/book/main_event_loop.html.
 1. [x] Implement bounded commands/worker/watch/completion and control validation.
 2. [x] Regression checks using actual private broker/coordinator/native client.
 3. [x] Run affected checks once, strict Clippy/format; record actual results, commit.
-4. [ ] Connect GTK Rust shell to controller, prove isolated widget integration.
+4. [x] Connect GTK Rust shell to controller, prove isolated widget integration.
 
 Rollback this client-only module before any consuming shell. No daemon/protocol
 change. Risks: cancellation loses ordered state, unread GUI blocks IO, queue grows,
@@ -95,4 +95,5 @@ following view refresh fails; the coalesced state exposes that refresh error.
 An accepted send recovered during abort returns its original outcome; it is never
 silently cancelled. Same-UID transfer ID matching deliberately ignores client
 provenance, preserving service-owned controls. No timer/polling/per-action task.
-GTK integration continues next.
+GTK adapter and isolated widget/tray checks are implemented in
+[native-gtk-shell.md](native-gtk-shell.md); physical compositor acceptance remains.

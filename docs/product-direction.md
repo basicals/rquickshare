@@ -1,5 +1,22 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-12: native GTK shell implementation checkpoint
+
+[native-gtk-shell.md](native-gtk-shell.md) now records a separate native executable
+with real PanelController binding, local capability acquisition, explicit
+recipient/send/consent controls and KDE tray registration/placement logic. Hide
+keeps the client; Quit joins local tasks and leaves accepted daemon transfers.
+Seven new scoped methods and fourteen affected SDK checks passed, plus strict
+lint; three isolated compiled previews were reviewed. No real KDE placement proof
+or full-product acceptance. No installation or Tauri retirement.
+
+The next public-contract choice is
+[context-menu ingress ownership](native-desktop-ingress-review.md); accepted
+connection-owned selections cannot simply be passed as a token from CLI to GTK.
+Notifications, settings migration/editor, clipboard/reveal/autostart/updates,
+Dolphin/package integration and physical Google parity remain required. Work stays
+in dev. Historical checkpoints below do not supersede this current state.
+
 ## 2026-10-12: complete native Manager2 view implemented
 
 The user selected option 2 and confirmed there are no old native clients. Manager2

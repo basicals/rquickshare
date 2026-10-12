@@ -1,5 +1,28 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: uninstalled native GTK tray shell implemented
+
+[native-gtk-shell.md](native-gtk-shell.md) records the separate pinned GTK4 crate,
+actual complete-view/controller bindings, tracked local chooser acquisition,
+explicit send/consent/cancel/discard/recovery and hide/quit ownership. Tray uses
+shared hardened SDK framing, real broker UID checks, pinned watcher ownership and
+coalesced hints. No automatic ordinary-window fallback. Three compiled previews
+are 420x498; physical KDE placement/scale/focus remains unproven.
+
+Seven new methods passed across scoped initial/corrected/affected runs; fourteen
+existing SDK methods passed after shared framing extraction. Final core and native
+strict Clippy passed. Full core inventory 504 plus native 7 = 511, not a fresh
+whole-511 run. See SSOT for the observed failed link/fixture and corrections.
+No install, live tray/daemon/settings changes, push or Tauri retirement. Work stays
+on dev; upstream tracking refs remain as requested. All owned processes exited.
+Terminal closed.
+
+Next: choose the new context-menu import/selection ownership contract in
+[native-desktop-ingress-review.md](native-desktop-ingress-review.md). Existing
+accepted daemon selection ownership does not authorize a bare CLI token handoff.
+No new GUI ingress or ownership transfer is implemented before selection.
+Notifications, settings/Dolphin/package and actual Google parity also remain.
+
 ## 2026-10-12: bounded native panel controller implemented
 
 [native-panel-controller.md](native-panel-controller.md) records one dedicated SDK

@@ -235,8 +235,7 @@ fn same_uid(actual: u32, expected: u32) -> Result<()> {
 
 impl NativeClient {
     pub async fn connect(stream: UnixStream) -> Result<Self> {
-        let connection = zbus::connection::Builder::socket(bus::transport::BoundedSocket(stream))
-            .max_queued(8)
+        let connection = bus::connection_builder(stream)
             .build()
             .await
             .map_err(|_| ClientError::Transport)?;

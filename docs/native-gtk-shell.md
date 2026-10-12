@@ -15,13 +15,13 @@ core to avoid unrelated core dependency upgrades. New shell depends on the SDK,
 never creates RQS, opens network-peer sockets or owns transfer lifetime.
 
 Milestones:
-1. [ ] Add native Rust crate/lockfile, pure tray-coordinate placement, GtkBuilder
+1. [x] Add native Rust crate/lockfile, pure tray-coordinate placement, GtkBuilder
    production widget source derived from the review and actual state rendering.
-2. [ ] Connect injected controller on owned Tokio runtime, GLib-only widgets,
+2. [x] Connect injected controller on owned Tokio runtime, GLib-only widgets,
    explicit file/folder chooser acquisition and send/consent/cancel/discard.
-3. [ ] StatusNotifierItem activation on KDE session bus; bounded activation hints,
+3. [x] StatusNotifierItem activation on KDE session bus; bounded activation hints,
    owned registration, no implicit installed daemon launch or fallback window.
-4. [ ] Focused pure/native widget/private-broker checks, one affected check run,
+4. [x] Focused pure/native widget/private-broker checks, one affected check run,
    strict lint/format/build, isolated actual rendering; record results and commit.
 
 ## Invariants and boundaries
@@ -108,3 +108,78 @@ contract. Preserve queue eight and existing credential checks. Run affected SDK
 and private tray checks once; do not repeat unchanged widget/business suites.
 GLib subscriptions and the single completion waiter are explicitly aborted on
 exit; tracked filesystem acquisition, controller and tray IO tasks are joined.
+
+### Implemented state and measured verification
+
+native_desktop is an independent pinned GTK4 0.11.3 / Layer Shell 0.8 crate with
+its own committed lockfile. It consumes the real PanelController complete view,
+with explicit chooser/send/respond/cancel/discard/recovery bindings. The chooser
+rejects nonlocal roots and more than 256 selected roots before acquisition; folder
+enumeration uses existing bounded OpenedSelection. No paths cross daemon IPC.
+One tracked blocking ingress worker is joined; a previous finished worker is joined
+before reuse. Preview controls cannot admit operations, even programmatically.
+Preview never creates NativeClient or Tray. Initial state, pending operation,
+unsynchronized/draining/disconnected/busy and local chooser work disable actions.
+
+The tray uses the same predecode 64KiB/16-FD socket and eight-message queue as the
+SDK through service::bus::connection_builder. Actual sender UID is resolved by
+the broker for activation; watcher UID and unique owner are pinned before
+registration. Owner change is sticky and closes the GUI client with an explicit
+restart diagnostic, leaving daemon transfers alone. Normal mode requires Layer
+Shell; an ordinary preview window is never used as a silent fallback. Validated
+logical hints place/clamp against the containing monitor and measured panel height.
+Same UID remains a desktop boundary, not sandbox isolation or proof of user intent.
+
+Observed checks (development, no ten-run/stability claim):
+- Initial native test link failed because privately extracted development symlinks
+  lacked installed runtime targets. Added symlinks only under chat work/; /usr is
+  unchanged. No apt installation.
+- Initial seven-method run: six passed, one literal-label fixture assertion failed.
+  Corrected the expected advertised-device suffix; both affected panel methods
+  passed. After explicit GLib task ownership, the affected widget method passed
+  again (0.17s). No weakening of markup, full 256-file or hide assertions.
+- Both private-tray methods passed again after shared bounded transport (0.06s).
+  Fourteen existing SDK methods passed after the shared builder extraction (5.25s).
+- Native binary build passed. Final core all-feature/all-target and native
+  all-target strict Clippy passed after shared transport extraction. The dependency
+  core build without default features still emits nine existing unused/cfg warnings;
+  these are not native shell lint errors. Core all-feature strict lint is clean.
+  Existing bluer future-incompatibility notice remains. Format/diff checks passed.
+- Compiled binary captured Nearby/Incoming/Transfers previews on a private broker
+  with no activation directories and Xvfb; all three are 420x498, visually reviewed.
+  They contain explicitly marked example data and disabled controls. The later
+  transport-only extraction does not enter preview mode and did not warrant
+  repeating unchanged screenshots.
+
+Final source review also found that preview write failure and a lost tray watcher
+printed an error but returned process success. Corrected by preserving a fixed
+local exit failure through joined cleanup. Final native strict lint/build passed.
+On 2026-10-13, one isolated negative executable check wrote to a directory target:
+exit 1, fixed "Cannot save preview image" diagnostic, no file created; owned display
+and broker exited. This is one observed executable N12 check in addition to seven
+automated methods, not an eighth unit test or a repeated stability run. The lost-
+watcher GUI exit code is source-checked; private tray loss itself is exercised.
+This corrects diagnostic exit status, not product flow/API. Nightly format and
+diff checks passed after the final correction. Terminal closed.
+
+Seven new methods, primary categories: Positive 1, N1 1, N2 1, N5 1, N7 1,
+N9 1, N10 1. Secondary N3 covers missing/lost watcher. N4/N6 existing SDK/controller
+recovery and strict Manager2 checks are reused, no new ledger/schema in GTK.
+N8 no locale/time rules; logical geometry is tested but physical DPI is pending.
+N11 no monetization; N12 uses existing file-source validation/IO coverage rather
+than a new storage backend. This is scoped Mode A verification, not exhaustive
+GUI branch coverage or measured full-product coverage. Core inventory remains
+496 unit/export + 8 integration; native crate adds 7 = 511 across both crates.
+There was no fresh full-511 run. Prior measured suite results remain authoritative.
+
+Remaining: real KDE scale/focus/monitor/clock placement and chooser interaction;
+daemon-owned notifications; settings migration/editor, clipboard/reveal/autostart/
+updates/package equivalence; context-menu ingress ownership; actual Google peers.
+Tauri remains installed/current until those gates pass. No live daemon, real tray,
+user settings, Dolphin entry, installation, push or source deletion by this work.
+Work remains on dev; upstream remote-tracking refs are retained as requested.
+All owned verification processes exited. Terminal closed.
+
+The next context-menu ownership decision is reviewable in
+[native-desktop-ingress-review.md](native-desktop-ingress-review.md). No new ingress
+endpoint or daemon ownership-transfer method is implemented before that choice.

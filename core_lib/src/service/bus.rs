@@ -33,6 +33,13 @@ pub const INTROSPECTION: &str =
     include_str!("../../dbus/io.github.morozhenko_apps.RQuickShare.Manager2.xml");
 const INBOX: usize = 8;
 
+/// Shared local-bus framing for native clients/adapters. Bounds frames and received
+/// descriptors before decoding, sets CLOEXEC atomically and queues eight messages.
+/// Callers still authenticate actual bus senders and own connection shutdown.
+pub fn connection_builder(stream: UnixStream) -> zbus::connection::Builder<'static> {
+    zbus::connection::Builder::socket(transport::BoundedSocket(stream)).max_queued(INBOX)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BusError {
     Transport,
