@@ -1,6 +1,6 @@
 # Native D-Bus selection contract review
 
-2026-10-12. Mode A. Status: option 1 approved by the user on 2026-10-12 (choose the architecturally preferable option). Implementation is tracked in native-selection-transactions.md. No bus adapter, method fixture, activation file or system policy is implemented by this review. The accepted FD boundary, native runtime, Rust/zbus direction and compact tray UX do not need reapproval.
+2026-10-12. Mode A. Status: option 1 approved by the user on 2026-10-12 (choose the architecturally preferable option). Implementation is tracked in native-selection-transactions.md. The selected adapter and frozen fixtures are now implemented and verified in native-selection-transactions.md. No activation file or system policy is installed by this work. The accepted FD boundary, native runtime, Rust/zbus direction and compact tray UX do not need reapproval.
 
 ## Evidence and reason for review
 

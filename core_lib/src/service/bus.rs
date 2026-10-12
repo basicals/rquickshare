@@ -1,0 +1,650 @@
+//! Serial same-UID selection IPC. Names are metadata; only owned descriptors enter the core.
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+use std::fs::File;
+use std::os::fd::{AsFd, AsRawFd};
+
+use futures::StreamExt;
+use serde::de::{self, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer};
+use tokio::net::UnixStream;
+use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
+use zbus::fdo::{ConnectionCredentials, RequestNameFlags, RequestNameReply};
+use zbus::message::Type as MessageType;
+use zbus::zvariant::{Fd, Type};
+use zbus::{Connection, Message, MessageStream};
+
+use super::runtime::{NativeRuntime, RuntimeError};
+use super::uploads::{UploadState, BATCH_FILES};
+use super::{ClientId, Coordinator, Error, UploadId};
+use crate::file_source::OpenedFile;
+
+mod transport;
+
+pub const SERVICE: &str = "io.github.morozhenko_apps.RQuickShare";
+pub const PATH: &str = "/io/github/morozhenko_apps/RQuickShare";
+pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Manager1";
+pub const INTROSPECTION: &str =
+    include_str!("../../dbus/io.github.morozhenko_apps.RQuickShare.Manager1.xml");
+const INBOX: usize = 8;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BusError {
+    Transport,
+    Runtime(RuntimeError),
+    Coordinator(Error),
+}
+impl fmt::Display for BusError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Native bus: {self:?}")
+    }
+}
+impl std::error::Error for BusError {}
+
+/// One pump and one serial owner; no task is spawned for an individual method.
+/// Call `run` or `close` to join cleanup. Drop only requests cancellation.
+pub struct SelectionBus {
+    connection: Option<Connection>,
+    inbox: mpsc::Receiver<Message>,
+    pump: JoinHandle<()>,
+    failed: CancellationToken,
+    closed: CancellationToken,
+    clients: BTreeMap<String, ClientId>,
+    uid: u32,
+}
+
+impl SelectionBus {
+    /// The caller connects a local user-bus socket. This never discovers or mutates
+    /// a system/session address implicitly, which also permits isolated bus fixtures.
+    pub async fn connect(stream: UnixStream) -> Result<Self, BusError> {
+        Self::connect_with_uid(stream, rustix::process::geteuid().as_raw()).await
+    }
+
+    async fn connect_with_uid(stream: UnixStream, uid: u32) -> Result<Self, BusError> {
+        let connection = zbus::connection::Builder::socket(transport::BoundedSocket(stream))
+            .max_queued(INBOX)
+            .build()
+            .await
+            .map_err(|_| BusError::Transport)?;
+        let mut messages = MessageStream::from(&connection);
+        let (sender, inbox) = mpsc::channel(INBOX);
+        let failed = CancellationToken::new();
+        let closed = CancellationToken::new();
+        let fail = failed.clone();
+        let stop = closed.clone();
+        let pump = tokio::spawn(async move {
+            loop {
+                let item = tokio::select! { _ = stop.cancelled() => break, item = messages.next() => item };
+                match item {
+                    Some(Ok(message)) => {
+                        if matches!(
+                            message.message_type(),
+                            MessageType::MethodCall | MessageType::Signal
+                        ) && sender.try_send(message).is_err()
+                        {
+                            fail.cancel();
+                            break;
+                        }
+                    }
+                    _ => {
+                        fail.cancel();
+                        break;
+                    }
+                }
+            }
+        });
+        let mut bus = Self {
+            connection: Some(connection),
+            inbox,
+            pump,
+            failed,
+            closed,
+            clients: BTreeMap::new(),
+            uid,
+        };
+        let initialized = async {
+            let rule = zbus::MatchRule::builder()
+                .msg_type(MessageType::Signal)
+                .sender("org.freedesktop.DBus")?
+                .path("/org/freedesktop/DBus")?
+                .interface("org.freedesktop.DBus")?
+                .member("NameOwnerChanged")?
+                .arg(0, SERVICE)?
+                .arg(2, "")?
+                .build();
+            bus.broker_call("AddMatch", &rule.to_string()).await?;
+            let connection = bus.connection.as_ref().ok_or(zbus::Error::NameTaken)?;
+            let reply = connection
+                .request_name_with_flags(SERVICE, RequestNameFlags::DoNotQueue.into())
+                .await?;
+            if !matches!(
+                reply,
+                RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner
+            ) {
+                return Err(zbus::Error::NameTaken);
+            }
+            let owner = bus.broker_call("GetNameOwner", &SERVICE).await?;
+            let owner: String = owner.body().deserialize()?;
+            if connection
+                .unique_name()
+                .is_none_or(|name| name.as_str() != owner)
+            {
+                return Err(zbus::Error::NameTaken);
+            }
+            Ok::<_, zbus::Error>(())
+        }
+        .await;
+        if initialized.is_err() || bus.failed.is_cancelled() {
+            bus.close_connection().await;
+            return Err(BusError::Transport);
+        }
+        Ok(bus)
+    }
+
+    /// Claims the name in connect() before starting any core transports. The
+    /// runtime remains borrowed/owned across cancellation and is always joined.
+    pub async fn run(
+        &mut self,
+        runtime: &mut NativeRuntime,
+        stop: CancellationToken,
+    ) -> Result<(), BusError> {
+        let outcome = self.run_inner(runtime, stop).await;
+        let shutdown = runtime.shutdown().await.map_err(BusError::Runtime);
+        let disconnected = self.disconnect_clients(runtime.selection_coordinator());
+        self.close_connection().await;
+        outcome.and(shutdown).and(disconnected)
+    }
+
+    async fn run_inner(
+        &mut self,
+        runtime: &mut NativeRuntime,
+        stop: CancellationToken,
+    ) -> Result<(), BusError> {
+        if self.closed.is_cancelled() || self.failed.is_cancelled() {
+            return Err(BusError::Transport);
+        }
+        if stop.is_cancelled() {
+            return Ok(());
+        }
+        let failure = self.failed.clone();
+        tokio::select! {
+            _ = stop.cancelled() => return Ok(()),
+            _ = failure.cancelled() => return Err(BusError::Transport),
+            result = runtime.start() => result.map_err(BusError::Runtime)?,
+        }
+        loop {
+            tokio::select! {
+                _ = stop.cancelled() => return Ok(()),
+                _ = failure.cancelled() => return Err(BusError::Transport),
+                result = runtime.step() => result.map_err(BusError::Runtime)?,
+                message = self.inbox.recv() => {
+                    let message = message.ok_or(BusError::Transport)?;
+                    // Keep broker waits/replies cancellable without dropping the runtime owner.
+                    tokio::select! {
+                        _ = stop.cancelled() => return Ok(()),
+                        _ = failure.cancelled() => return Err(BusError::Transport),
+                        result = self.dispatch(runtime.selection_coordinator(), message) => result?,
+                    }
+                }
+            }
+        }
+    }
+
+    fn disconnect_clients(&mut self, coordinator: &mut Coordinator) -> Result<(), BusError> {
+        let mut result = Ok(());
+        for (_, client) in std::mem::take(&mut self.clients) {
+            if let Err(error) = coordinator.disconnect(client) {
+                result = Err(BusError::Coordinator(error));
+            }
+        }
+        result
+    }
+
+    pub async fn close(&mut self, runtime: &mut NativeRuntime) -> Result<(), BusError> {
+        let shutdown = runtime.shutdown().await.map_err(BusError::Runtime);
+        let result = self.disconnect_clients(runtime.selection_coordinator());
+        self.close_connection().await;
+        shutdown.and(result)
+    }
+
+    async fn close_connection(&mut self) {
+        if self.closed.is_cancelled() {
+            return;
+        }
+        self.closed.cancel();
+        let _ = (&mut self.pump).await;
+        self.inbox.close();
+        while self.inbox.try_recv().is_ok() {}
+        if let Some(connection) = self.connection.take() {
+            let _ = connection.close().await;
+        }
+    }
+
+    async fn authenticated_client(
+        &mut self,
+        coordinator: &mut Coordinator,
+        sender: &str,
+    ) -> Result<ClientId, AuthenticationError> {
+        if !sender.starts_with(':') {
+            return Err(AuthenticationError::Denied);
+        }
+        let _ = zbus::names::BusName::try_from(sender).map_err(|_| AuthenticationError::Denied)?;
+        if let Some(client) = self.clients.get(sender).copied() {
+            let reply = self
+                .broker_call("NameHasOwner", &sender)
+                .await
+                .map_err(|_| AuthenticationError::Denied)?;
+            if reply
+                .body()
+                .deserialize::<bool>()
+                .map_err(|_| AuthenticationError::Denied)?
+            {
+                return Ok(client);
+            }
+            self.forget_client(coordinator, sender)
+                .await
+                .map_err(|_| AuthenticationError::Denied)?;
+            return Err(AuthenticationError::Denied);
+        }
+        let uid = {
+            let reply = self
+                .broker_call("GetConnectionCredentials", &sender)
+                .await
+                .map_err(|_| AuthenticationError::Denied)?;
+            let credentials: ConnectionCredentials = reply
+                .body()
+                .deserialize()
+                .map_err(|_| AuthenticationError::Denied)?;
+            credentials.unix_user_id()
+        };
+        if uid != Some(self.uid) {
+            return Err(AuthenticationError::Denied);
+        }
+        let rule = owner_rule(sender).map_err(|_| AuthenticationError::Denied)?;
+        let client = coordinator
+            .connect()
+            .map_err(AuthenticationError::Coordinator)?;
+        // Track ownership before any cancellable broker wait. Host cleanup can
+        // now release this client even if AddMatch or NameHasOwner is abandoned.
+        self.clients.insert(sender.to_owned(), client);
+        // Exact subscriptions keep unrelated application traffic out of the inbox.
+        let watched = self
+            .broker_call("AddMatch", &rule.to_string())
+            .await
+            .is_ok();
+        let live = if watched {
+            match self.broker_call("NameHasOwner", &sender).await {
+                Ok(reply) => reply.body().deserialize::<bool>().unwrap_or(false),
+                Err(_) => false,
+            }
+        } else {
+            false
+        };
+        if !live {
+            self.forget_client(coordinator, sender)
+                .await
+                .map_err(|_| AuthenticationError::Denied)?;
+            return Err(AuthenticationError::Denied);
+        }
+        Ok(client)
+    }
+
+    async fn forget_client(
+        &mut self,
+        coordinator: &mut Coordinator,
+        sender: &str,
+    ) -> Result<(), BusError> {
+        if let Some(client) = self.clients.remove(sender) {
+            coordinator
+                .disconnect(client)
+                .map_err(BusError::Coordinator)?;
+            let rule = owner_rule(sender).map_err(|_| BusError::Transport)?;
+            self.broker_call("RemoveMatch", &rule.to_string())
+                .await
+                .map_err(|_| BusError::Transport)?;
+        }
+        Ok(())
+    }
+
+    async fn broker_call<B: serde::Serialize + Type>(
+        &self,
+        method: &str,
+        body: &B,
+    ) -> zbus::Result<Message> {
+        let connection = self
+            .connection
+            .as_ref()
+            .ok_or_else(|| zbus::Error::Failure("Native bus closed".into()))?;
+        let reply = connection
+            .call_method(
+                Some("org.freedesktop.DBus"),
+                "/org/freedesktop/DBus",
+                Some("org.freedesktop.DBus"),
+                method,
+                body,
+            )
+            .await?;
+        // A matching reply serial alone is not broker authority.
+        if reply
+            .header()
+            .sender()
+            .is_none_or(|sender| sender.as_str() != "org.freedesktop.DBus")
+        {
+            return Err(zbus::Error::Failure("Untrusted broker reply".into()));
+        }
+        Ok(reply)
+    }
+
+    async fn dispatch(
+        &mut self,
+        coordinator: &mut Coordinator,
+        message: Message,
+    ) -> Result<(), BusError> {
+        let connection = self.connection.as_ref().ok_or(BusError::Transport)?.clone();
+        let header = message.header();
+        if message.message_type() == MessageType::Signal {
+            if header
+                .sender()
+                .is_some_and(|sender| sender.as_str() == "org.freedesktop.DBus")
+                && header
+                    .path()
+                    .is_some_and(|path| path.as_str() == "/org/freedesktop/DBus")
+                && header
+                    .interface()
+                    .is_some_and(|interface| interface.as_str() == "org.freedesktop.DBus")
+            {
+                match header.member().map(|member| member.as_str()) {
+                    Some("NameOwnerChanged") => {
+                        let (name, _, new): (String, String, String) = message
+                            .body()
+                            .deserialize()
+                            .map_err(|_| BusError::Transport)?;
+                        if new.is_empty() {
+                            if name == SERVICE {
+                                return Err(BusError::Transport);
+                            }
+                            self.forget_client(coordinator, &name).await?;
+                        }
+                    }
+                    Some("NameLost") => {
+                        let name: String = message
+                            .body()
+                            .deserialize()
+                            .map_err(|_| BusError::Transport)?;
+                        if name == SERVICE {
+                            return Err(BusError::Transport);
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            return Ok(());
+        }
+        if header.unix_fds().unwrap_or(0) as usize != message.data().fds().len() {
+            return self.domain_error(&header, Error::InvalidInput).await;
+        }
+        let Some(sender) = header.sender() else {
+            return Err(BusError::Transport);
+        };
+        let client = match self
+            .authenticated_client(coordinator, sender.as_str())
+            .await
+        {
+            Ok(client) => client,
+            Err(AuthenticationError::Denied) => {
+                return self
+                    .error(&header, "org.freedesktop.DBus.Error.AccessDenied")
+                    .await
+            }
+            Err(AuthenticationError::Coordinator(error)) => {
+                return self.domain_error(&header, error).await
+            }
+        };
+        if header.path().is_none_or(|path| path.as_str() != PATH) {
+            return self
+                .error(&header, "org.freedesktop.DBus.Error.UnknownObject")
+                .await;
+        }
+        let interface = header.interface().map(|interface| interface.as_str());
+        let member = header.member().map(|member| member.as_str());
+        if interface == Some("org.freedesktop.DBus.Introspectable") && member == Some("Introspect")
+        {
+            if message.body().deserialize::<()>().is_err() || !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            return connection
+                .reply(&header, &INTROSPECTION)
+                .await
+                .map_err(|_| BusError::Transport);
+        }
+        if interface != Some(INTERFACE) {
+            return self
+                .error(&header, "org.freedesktop.DBus.Error.UnknownInterface")
+                .await;
+        }
+        let Some(member) = member else {
+            return self
+                .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                .await;
+        };
+        if ![
+            "BeginSelection",
+            "AppendFiles",
+            "GetUpload",
+            "CommitSelection",
+            "AbortSelection",
+        ]
+        .contains(&member)
+        {
+            return self
+                .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                .await;
+        }
+        match execute(coordinator, client, member, &message) {
+            Ok(Reply::Token(token)) => connection.reply(&header, &token).await,
+            Ok(Reply::Sequence(sequence)) => connection.reply(&header, &sequence).await,
+            Ok(Reply::Upload(sequence, state, selection)) => {
+                connection
+                    .reply(&header, &(sequence, state, selection))
+                    .await
+            }
+            Ok(Reply::Empty) => connection.reply(&header, &()).await,
+            Err(error) => return self.domain_error(&header, error).await,
+        }
+        .map_err(|_| BusError::Transport)
+    }
+
+    async fn domain_error(
+        &self,
+        header: &zbus::message::Header<'_>,
+        error: Error,
+    ) -> Result<(), BusError> {
+        self.error(header, error_name(error)).await
+    }
+    async fn error(&self, header: &zbus::message::Header<'_>, name: &str) -> Result<(), BusError> {
+        self.connection
+            .as_ref()
+            .ok_or(BusError::Transport)?
+            .reply_error(header, name, &"Native request rejected")
+            .await
+            .map_err(|_| BusError::Transport)
+    }
+}
+
+impl Drop for SelectionBus {
+    fn drop(&mut self) {
+        self.closed.cancel();
+        self.pump.abort();
+    }
+}
+
+fn error_name(error: Error) -> &'static str {
+    match error {
+        Error::InvalidInput => "io.github.morozhenko_apps.RQuickShare.Error.InvalidInput",
+        Error::Capacity => "io.github.morozhenko_apps.RQuickShare.Error.Capacity",
+        Error::UnknownClient => "io.github.morozhenko_apps.RQuickShare.Error.UnknownClient",
+        Error::UnknownUpload => "io.github.morozhenko_apps.RQuickShare.Error.UnknownUpload",
+        Error::InvalidState => "io.github.morozhenko_apps.RQuickShare.Error.InvalidState",
+        Error::UnknownSelection => "io.github.morozhenko_apps.RQuickShare.Error.UnknownSelection",
+        Error::UnknownTransfer => "io.github.morozhenko_apps.RQuickShare.Error.UnknownTransfer",
+        Error::UnknownEndpoint => "io.github.morozhenko_apps.RQuickShare.Error.UnknownEndpoint",
+        Error::WrongOwner => "io.github.morozhenko_apps.RQuickShare.Error.WrongOwner",
+        Error::ReplayConflict => "io.github.morozhenko_apps.RQuickShare.Error.ReplayConflict",
+        Error::StaleConsent => "io.github.morozhenko_apps.RQuickShare.Error.StaleConsent",
+        Error::StaleControl => "io.github.morozhenko_apps.RQuickShare.Error.StaleControl",
+        Error::Unsynchronized => "io.github.morozhenko_apps.RQuickShare.Error.Unsynchronized",
+        Error::NotRunning => "io.github.morozhenko_apps.RQuickShare.Error.NotRunning",
+        Error::Busy => "io.github.morozhenko_apps.RQuickShare.Error.Busy",
+        Error::Exhausted => "io.github.morozhenko_apps.RQuickShare.Error.Exhausted",
+    }
+}
+
+fn owner_rule(name: &str) -> zbus::Result<zbus::MatchRule<'_>> {
+    Ok(zbus::MatchRule::builder()
+        .msg_type(MessageType::Signal)
+        .sender("org.freedesktop.DBus")?
+        .path("/org/freedesktop/DBus")?
+        .interface("org.freedesktop.DBus")?
+        .member("NameOwnerChanged")?
+        .arg(0, name)?
+        .arg(2, "")?
+        .build())
+}
+
+enum AuthenticationError {
+    Denied,
+    Coordinator(Error),
+}
+
+enum Reply {
+    Token(String),
+    Sequence(u32),
+    Upload(u32, &'static str, String),
+    Empty,
+}
+fn token(epoch: u128, counter: u64) -> String {
+    format!("{epoch:032x}-{counter:016x}")
+}
+fn upload_id(value: &str, epoch: u128) -> Result<UploadId, Error> {
+    if value.len() != 49
+        || value.as_bytes()[32] != b'-'
+        || !value
+            .bytes()
+            .enumerate()
+            .all(|(n, byte)| n == 32 || byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err(Error::InvalidInput);
+    }
+    let supplied_epoch = u128::from_str_radix(&value[..32], 16).map_err(|_| Error::InvalidInput)?;
+    let counter = u64::from_str_radix(&value[33..], 16).map_err(|_| Error::InvalidInput)?;
+    if supplied_epoch != epoch || counter == 0 {
+        return Err(Error::InvalidInput);
+    }
+    Ok(UploadId(supplied_epoch, counter))
+}
+
+#[derive(Type)]
+#[zvariant(signature = "a(hs)")]
+struct Batch<'a>(Vec<(Fd<'a>, &'a str)>);
+impl<'de> Deserialize<'de> for Batch<'de> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Entries;
+        impl<'de> Visitor<'de> for Entries {
+            type Value = Batch<'de>;
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("1..16 descriptor/name entries")
+            }
+            fn visit_seq<A: SeqAccess<'de>>(
+                self,
+                mut sequence: A,
+            ) -> Result<Self::Value, A::Error> {
+                let mut entries = Vec::with_capacity(BATCH_FILES);
+                while let Some(entry) = sequence.next_element::<(Fd<'de>, &'de str)>()? {
+                    if entries.len() == BATCH_FILES {
+                        return Err(de::Error::custom("FD batch limit exceeded"));
+                    }
+                    entries.push(entry);
+                }
+                if entries.is_empty() {
+                    return Err(de::Error::custom("Empty FD batch"));
+                }
+                Ok(Batch(entries))
+            }
+        }
+        deserializer.deserialize_seq(Entries)
+    }
+}
+
+fn execute(
+    coordinator: &mut Coordinator,
+    client: ClientId,
+    method: &str,
+    message: &Message,
+) -> Result<Reply, Error> {
+    if method != "AppendFiles" && !message.data().fds().is_empty() {
+        return Err(Error::InvalidInput);
+    }
+    let invalid = |_| Error::InvalidInput;
+    let body = message.body();
+    match method {
+        "BeginSelection" => {
+            let request: &str = body.deserialize().map_err(invalid)?;
+            let id = coordinator.begin_selection(client, request)?;
+            Ok(Reply::Token(token(id.0, id.1)))
+        }
+        "AppendFiles" => {
+            let (id, sequence, batch): (&str, u32, Batch<'_>) =
+                body.deserialize().map_err(invalid)?;
+            let id = upload_id(id, coordinator.epoch)?;
+            let unique: BTreeSet<_> = batch.0.iter().map(|(fd, _)| fd.as_raw_fd()).collect();
+            if unique.len() != batch.0.len() || unique.len() != message.data().fds().len() {
+                return Err(Error::InvalidInput);
+            }
+            let files: Result<Vec<_>, _> = batch
+                .0
+                .into_iter()
+                .map(|(fd, name)| {
+                    let handle = fd
+                        .as_fd()
+                        .try_clone_to_owned()
+                        .map_err(|_| Error::InvalidInput)?;
+                    OpenedFile::adopt(File::from(handle), name.to_owned())
+                        .map_err(|_| Error::InvalidInput)
+                })
+                .collect();
+            Ok(Reply::Sequence(
+                coordinator.append_files(client, id, sequence, files?)?,
+            ))
+        }
+        "GetUpload" | "CommitSelection" | "AbortSelection" => {
+            let id: &str = body.deserialize().map_err(invalid)?;
+            let id = upload_id(id, coordinator.epoch)?;
+            match method {
+                "GetUpload" => {
+                    let view = coordinator.get_upload(client, id)?;
+                    let (state, selection) = match view.state {
+                        UploadState::Preparing => ("preparing", String::new()),
+                        UploadState::Aborted => ("aborted", String::new()),
+                        UploadState::Committed(id) => ("committed", token(id.0, id.1)),
+                    };
+                    Ok(Reply::Upload(view.next_sequence, state, selection))
+                }
+                "CommitSelection" => {
+                    let id = coordinator.commit_selection(client, id)?;
+                    Ok(Reply::Token(token(id.0, id.1)))
+                }
+                _ => {
+                    coordinator.abort_selection(client, id)?;
+                    Ok(Reply::Empty)
+                }
+            }
+        }
+        _ => Err(Error::InvalidInput),
+    }
+}
+
+#[cfg(test)]
+mod tests;

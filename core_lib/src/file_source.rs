@@ -194,26 +194,37 @@ pub(crate) fn validate_files<'a>(
     let mut names: Vec<&str> = Vec::new();
     let mut total = 0;
     for file in files {
-        if file.relative_name.split('/').count() - 1 > limits.max_depth {
-            return Err(invalid("Selection manifest depth budget exceeded"));
-        }
-        if names.len() >= limits.max_files {
-            return Err(invalid("Selection file budget exceeded"));
-        }
-        total = checked_total(total, file.size, limits.max_bytes)?;
-        if names.iter().any(|name| {
-            *name == file.relative_name
-                || name
-                    .strip_prefix(&file.relative_name)
-                    .is_some_and(|suffix| suffix.starts_with('/'))
-                || file
-                    .relative_name
-                    .strip_prefix(name)
-                    .is_some_and(|suffix| suffix.starts_with('/'))
-        }) {
-            return Err(invalid("Duplicate destination name"));
-        }
+        total = validate_next_file(file, names.iter().copied(), names.len(), total, limits)?;
         names.push(&file.relative_name);
+    }
+    Ok(total)
+}
+
+fn validate_next_file<'a>(
+    file: &OpenedFile,
+    mut names: impl Iterator<Item = &'a str>,
+    count: usize,
+    total: u64,
+    limits: SelectionLimits,
+) -> io::Result<u64> {
+    if file.relative_name.split('/').count() - 1 > limits.max_depth {
+        return Err(invalid("Selection manifest depth budget exceeded"));
+    }
+    if count >= limits.max_files {
+        return Err(invalid("Selection file budget exceeded"));
+    }
+    let total = checked_total(total, file.size, limits.max_bytes)?;
+    if names.any(|name| {
+        name == file.relative_name
+            || name
+                .strip_prefix(&file.relative_name)
+                .is_some_and(|suffix| suffix.starts_with('/'))
+            || file
+                .relative_name
+                .strip_prefix(name)
+                .is_some_and(|suffix| suffix.starts_with('/'))
+    }) {
+        return Err(invalid("Duplicate destination name"));
     }
     Ok(total)
 }
@@ -245,8 +256,13 @@ impl SelectionBuilder {
     }
 
     fn push(&mut self, file: OpenedFile) -> io::Result<()> {
-        self.total_bytes =
-            validate_files(self.files.iter().chain(std::iter::once(&file)), self.limits)?;
+        self.total_bytes = validate_next_file(
+            &file,
+            self.files.iter().map(OpenedFile::relative_name),
+            self.files.len(),
+            self.total_bytes,
+            self.limits,
+        )?;
         self.files.push(file);
         Ok(())
     }

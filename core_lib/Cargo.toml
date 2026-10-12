@@ -13,7 +13,9 @@ path = "src/bin.rs"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = { version = "0.17", features = ["full"], optional = true }
-rustix = { version = "1.0", features = ["fs"] }
+rustix = { version = "1.0", features = ["fs", "net", "process"] }
+async-trait = "0.1"
+zbus = { version = "=5.19.0", default-features = false, features = ["tokio"] }
 
 [target.'cfg(all(target_arch = "aarch64", target_os = "linux"))'.dependencies]
 dbus = { version = "0.9", features = ["vendored"] }

@@ -239,6 +239,9 @@ impl NativeRuntime {
     ) -> Result<(), Error> {
         self.coordinator.abort_selection(client, upload)
     }
+    pub(super) fn selection_coordinator(&mut self) -> &mut Coordinator {
+        &mut self.coordinator
+    }
     pub fn discard_selection(
         &mut self,
         client: ClientId,

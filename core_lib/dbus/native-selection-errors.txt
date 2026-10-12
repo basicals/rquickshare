@@ -1,0 +1,16 @@
+io.github.morozhenko_apps.RQuickShare.Error.InvalidInput
+io.github.morozhenko_apps.RQuickShare.Error.Capacity
+io.github.morozhenko_apps.RQuickShare.Error.UnknownClient
+io.github.morozhenko_apps.RQuickShare.Error.UnknownUpload
+io.github.morozhenko_apps.RQuickShare.Error.InvalidState
+io.github.morozhenko_apps.RQuickShare.Error.UnknownSelection
+io.github.morozhenko_apps.RQuickShare.Error.UnknownTransfer
+io.github.morozhenko_apps.RQuickShare.Error.UnknownEndpoint
+io.github.morozhenko_apps.RQuickShare.Error.WrongOwner
+io.github.morozhenko_apps.RQuickShare.Error.ReplayConflict
+io.github.morozhenko_apps.RQuickShare.Error.StaleConsent
+io.github.morozhenko_apps.RQuickShare.Error.StaleControl
+io.github.morozhenko_apps.RQuickShare.Error.Unsynchronized
+io.github.morozhenko_apps.RQuickShare.Error.NotRunning
+io.github.morozhenko_apps.RQuickShare.Error.Busy
+io.github.morozhenko_apps.RQuickShare.Error.Exhausted

@@ -1,6 +1,14 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
 
+## 2026-10-12: transactional native D-Bus selection ingress implemented
+
+The user chose the architecturally preferred option 1 from [native-dbus-selection-review.md](native-dbus-selection-review.md). [native-selection-transactions.md](native-selection-transactions.md) records the frozen Manager1 methods, owner-bound preparations, atomic commit/replay, shared aggregate quotas, safe CLOEXEC receipt and predecode frame/FD limits. A serial same-UID zbus adapter now hosts the retained native runtime and joins it on requested stop/bus loss. Exact per-caller disconnect subscriptions avoid unrelated session traffic; all broker authority replies are sender-checked. The library does not register itself on the user's bus or replace the UI.
+
+35 new regression methods. One full local run passed **389 unit/export + 4 integration = 393**; the later fixture-only relocation passed all 22 affected bus methods. Final Clippy/format/diff passed; no-default-features compiled with the 9 existing inactive-feature warnings. Actual outcomes, the corrected serializer test assumption, source FD cleanup proof, category counts, rollback and remaining work are recorded in the selection SSOT. CI test jobs now declare their private-broker prerequisite; no remote CI/package/hardware run is claimed. No user package install, system policy, live service registration, push or master promotion.
+
+Next: remaining snapshot/discovery/send/control wire methods and native executable; bounded retention review before continuous deployment; approved GTK clock-area chooser and Dolphin ingress; physical Google compatibility. Earlier pending-D-Bus statements below are historical and superseded by this entry.
+
 ## 2026-10-12: native coordinator/core runtime implemented
 
 [native-core-runtime.md](native-core-runtime.md) records the completed serial coordinator/core mapping, bounded pending dispatch, discovery-only routes, truthful consent processing receipts and awaited shutdown. [native-core-events.md](native-core-events.md) records ordered bounded TCP/BLE lifecycle events and readiness without polling. Startup retains its owner across cancellation; shutdown closes admission before adopting buffered inbound sessions. The legacy Tauri app remains unchanged. Runtime implementation: `c7674e8`; ordered events/admission: `fb316c2`. The next new public D-Bus selection choice is recorded in [native-dbus-selection-review.md](native-dbus-selection-review.md); no bus contract is implemented before that choice.

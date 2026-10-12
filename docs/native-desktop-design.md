@@ -142,3 +142,8 @@ The offline coordinator is implemented and verified as specified in [native-serv
 - [Linux open manual](https://www.man7.org/linux/man-pages/man2/open.2.html): acquired object lifetime, access modes and shared open-file descriptions.
 - [Linux openat2 manual](https://www.man7.org/linux/man-pages/man2/openat2.2.html): descriptor-relative resolution and confinement restrictions.
 - [XDG Document portal](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Documents.html): handle-based resource acquisition and application permission mediation.
+
+
+## 2026-10-12 selection adapter checkpoint
+
+The descriptor boundary now has implemented bounded transactional D-Bus ingress: see [native-selection-transactions.md](native-selection-transactions.md) for the authoritative Manager1 five-method fixture, lifecycle, authentication and measured results. Historical path-taking CreateSelection proposals in this document are not an implementation contract. Snapshot/send/control wire APIs, executable activation, retention review and the GTK chooser remain pending; the legacy window is still the current UI.
