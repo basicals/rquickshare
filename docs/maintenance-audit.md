@@ -1,5 +1,12 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+
+## 2026-10-12: native coordinator/core runtime implemented
+
+[native-core-runtime.md](native-core-runtime.md) records the completed serial coordinator/core mapping, bounded pending dispatch, discovery-only routes, truthful consent processing receipts and awaited shutdown. [native-core-events.md](native-core-events.md) records ordered bounded TCP/BLE lifecycle events and readiness without polling. Startup retains its owner across cancellation; shutdown closes admission before adopting buffered inbound sessions. The legacy Tauri app remains unchanged.
+
+28 regression methods added. One completed full core run passed 350 unit/export plus 4 integration tests; final runtime changes passed 23 affected methods. Final Clippy/format/diff checks passed; no-default-features compiled with 9 existing inactive-feature warnings. Current inventory is 354 unit/export plus 4 integration, with no claim of one final-source 358-method run. Full measured details and remaining physical/API/UI gates are in the runtime handoff. No daemon registration, system install, push or master promotion occurred. Older pending-runtime statements below are historical checkpoints superseded by this entry.
+
 _Last updated: 2026-10-12_
 
 ## Native coordinator continuation — 2026-10-12

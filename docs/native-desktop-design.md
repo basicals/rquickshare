@@ -2,6 +2,8 @@
 
 _2026-10-12. Mode A. Status: descriptor input approved; offline file/core boundary implemented and validated._
 
+Current integration checkpoint: the single-owner coordinator/core runtime and ordered native session events are implemented and verified in [native-core-runtime.md](native-core-runtime.md) and [native-core-events.md](native-core-events.md). Earlier pending-adapter descriptions below are historical prerequisites; authenticated D-Bus, activated daemon, native UI and physical Google parity remain open.
+
 ## Accepted scope and source of truth
 
 [product-direction.md](product-direction.md) records the product goals. The user selected the compact tray panel plus native notifications and requested file-manager context-menu sending. The existing oversized drop-zone window must be replaced. NativePair's Rust daemon, D-Bus and GTK4/gtk-rs direction is accepted; this document proposes the remaining process/API/security contract.

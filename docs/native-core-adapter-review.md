@@ -2,6 +2,8 @@
 
 Recorded: 2026-10-12. Mode A. Coordinator foundation is implemented in `0b0d9fd`; this review records the next concrete integration blockers before changing transport orchestration.
 
+Current integration checkpoint: the single-owner coordinator/core runtime and ordered native session events are implemented and verified in [native-core-runtime.md](native-core-runtime.md) and [native-core-events.md](native-core-events.md). Earlier pending-adapter descriptions below are historical prerequisites; authenticated D-Bus, activated daemon, native UI and physical Google parity remain open.
+
 ## Immediate bounded fix plan
 
 Source inspection of `core_lib/src/manager.rs` found inconsistent outbound failure correlation: queue/startup errors use `SendInfo.id`, but errors inside the handshake/transfer loop use `SendInfo.addr`. The coordinator must map every core observation to its transfer; an address is not that identity. A separate `State::Initial` error arm silently suppresses a terminal failure. That arm is a source-level finding, not a claim that a normal post-init test can reach it. Already terminal transfers must retain their outcomes on subsequent I/O failure.

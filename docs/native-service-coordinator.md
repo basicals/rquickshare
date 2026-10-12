@@ -2,6 +2,8 @@
 
 Status: implemented and verified offline, 2026-10-12. Primary mode: A (Feature / Refactor).
 
+Current integration checkpoint: the single-owner coordinator/core runtime and ordered native session events are implemented and verified in [native-core-runtime.md](native-core-runtime.md) and [native-core-events.md](native-core-events.md). Earlier pending-adapter descriptions below are historical prerequisites; authenticated D-Bus, activated daemon, native UI and physical Google parity remain open.
+
 ## Scope and decisions
 
 This slice implements the already accepted background-service ownership model from [native-desktop-design.md](native-desktop-design.md). It does not publish an IPC interface, activate a daemon or change the current Tauri app. A Linux-only `core_lib::service` module is the reusable, synchronous state owner; the future single daemon task serializes calls into it. Keeping it beside the owned-file types avoids another dependency graph before the executable and bus boundary exist. It has no GUI, BlueZ, clock, network, global state or asynchronous worker dependency. Epoch is injected by the future daemon (fresh nonzero value each startup) and is carried in every internal token, so a token from an older instance cannot alias a new one with the same sequence number.
