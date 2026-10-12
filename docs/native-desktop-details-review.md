@@ -102,7 +102,7 @@ This is a targeted disclosure fix, not a claim that all repository logging is
 privacy-audited. Rust format/diff checks passed.
 
 GtkBuilder parsed the committed source against actual GTK 4.22.4. Three mapped
-widget trees were captured after their frame-clock after-paint event, at 420x498:
+widget trees were captured after their frame-clock after-paint event, at 420x497:
 nearby, incoming and transfers. Native render-node/texture PNG export succeeded;
 all three images were visually inspected. The Python preview launcher compiles.
 No fixed sleep or periodic polling is used to wait for layout. The launcher runs
@@ -112,7 +112,7 @@ terminal closed. Nothing was installed or activated on the user's desktop.
 
 The widget-only prototype is docs/prototypes/native-panel.ui and .css; rendering
 utility scripts/render_native_panel_preview.py. Reproduce with GTK4 GI available:
-`dbus-run-session -- xvfb-run -a /usr/bin/python3 scripts/render_native_panel_preview.py --page nearby --output /absolute/path/preview.png`
+`dbus-run-session --config-file docs/prototypes/preview-bus.conf -- xvfb-run -a /usr/bin/python3 scripts/render_native_panel_preview.py --page nearby --output /absolute/path/preview.png`
 Set GI_TYPELIB_PATH to the private extracted typelib directory if using the same
 host preparation, GDK_BACKEND=x11, GSK_RENDERER=cairo and GTK_A11Y=none. Other page
 values: incoming, transfers. Native pixels do not establish tray coordinates,
@@ -124,3 +124,11 @@ Await user's option 1/2 before changing public metadata/readiness/security-facin
 presentation under global AGENTS.md sections 3 and 3.1. This is the actual stopping
 condition, not an arbitrary milestone boundary. The next agent can resume from
 this review without guessing a schema or replaying old source selections.
+
+Preview isolation refinement: the default private session broker initially
+activated portal/accessibility helpers. Their logged PIDs were checked afterward:
+none remained alive. The committed preview-bus.conf now has no service directories,
+so GTK cannot activate those helpers. Rerendered all three affected previews using
+that fixture: all succeeded at 420x497, no service activation in logs. This rerun
+was justified by the changed isolation configuration, not a repeated stability
+loop. Remaining Xvfb DRI3 warnings are non-fatal; texture capture uses Cairo.

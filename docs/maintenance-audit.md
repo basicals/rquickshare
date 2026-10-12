@@ -3,7 +3,7 @@
 ## 2026-10-12: native GTK widget preview and detail-contract review prepared
 
 Client projections/controls are committed as `cb1b0d3`. Work continued into an
-actual GTK4 widget prototype: three 420x498 native captures were parsed/rendered
+actual GTK4 widget prototype: three 420x497 native captures were parsed/rendered
 under owned private broker/Xvfb, with temporary extracted GI typelibs. No package
 installation/user-session changes. [native-desktop-details-review.md](native-desktop-details-review.md)
 records the prototype, reproduction and the next required public-contract choice.
@@ -20,7 +20,9 @@ Source inspection also exposed seven normal logs with device/file/PIN/consent
 metadata. Fixed diagnostic messages now replace those identified disclosures;
 transfer logic is unchanged. Strict library Clippy and format/diff passed; no
 redundant protocol test loop. This is not a whole-repository privacy audit. Review
-utility compiles; three native images visually inspected. All owned processes
+utility compiles; three native images visually inspected. A preview-only broker
+configuration prevents portal/helper activation; all three captures were rerendered
+after that isolation change. Logged initial helper PIDs were verified exited. All owned processes
 exited. Native executable UI/placement, notifications, settings, Dolphin/package
 activation and physical Google parity remain unfinished. Terminal closed.
 
