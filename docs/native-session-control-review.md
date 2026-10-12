@@ -1,6 +1,6 @@
 # Native session control readiness review
 
-2026-10-12, Mode A. Status: awaiting the user's substantial-refactor choice. Completed checkpoints: TCP supervision `ee2139a`; owned native outgoing dispatch/startup rollback `2354c1d`. This review does not approve its own implementation.
+2026-10-12, Mode A. Status: option 1 approved by the user; implementation follows [native-session-controls.md](native-session-controls.md). Completed checkpoints: TCP supervision `ee2139a`; owned native outgoing dispatch/startup rollback `2354c1d`.
 
 ## Current source evidence
 
@@ -32,4 +32,4 @@ Recommendation: option 1 because full Google parity and one service owner are th
 4. Legacy Tauri construction/control remains an explicit reversible bridge. Keep framing/crypto and original-file ownership. Do not mask native command loss with fabricated coordinator events or a feature flag in tests.
 5. Keep event loss explicit and fail closed; no authoritative recovery or persistent snapshot is invented by this control refactor. Live bus authentication, descriptor decoding budgets, retention policy and GTK positioning remain separate gates.
 
-After the user's choice: record a detailed transport/handler/adapter branch and interaction inventory before production code, implement in reversible milestones, run affected checks once and record measured results. No new tests or production control changes have been made for this review.
+The user selected option 1. No further confirmation is needed for the common TCP/BLE session-control refactor. The detailed inventory and implementation milestones are recorded before code in [native-session-controls.md](native-session-controls.md).
