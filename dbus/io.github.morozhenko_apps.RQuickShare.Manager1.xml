@@ -1,0 +1,32 @@
+<node>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Manager1">
+    <method name="BeginSelection">
+      <arg name="request_id" type="s" direction="in"/>
+      <arg name="upload_id" type="s" direction="out"/>
+    </method>
+    <method name="AppendFiles">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="batch_seq" type="u" direction="in"/>
+      <arg name="entries" type="a(hs)" direction="in"/>
+      <arg name="next_batch_seq" type="u" direction="out"/>
+    </method>
+    <method name="GetUpload">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="next_batch_seq" type="u" direction="out"/>
+      <arg name="state" type="s" direction="out"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
+    <method name="CommitSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
+    <method name="AbortSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+    </method>
+  </interface>
+  <interface name="org.freedesktop.DBus.Introspectable">
+    <method name="Introspect">
+      <arg name="xml_data" type="s" direction="out"/>
+    </method>
+  </interface>
+</node>

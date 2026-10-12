@@ -1,6 +1,6 @@
 # Native D-Bus selection contract review
 
-2026-10-12. Mode A. Status: pending user choice for the new public selection transaction contract. No bus adapter, method fixture, activation file or system policy is implemented by this review. The accepted FD boundary, native runtime, Rust/zbus direction and compact tray UX do not need reapproval.
+2026-10-12. Mode A. Status: option 1 approved by the user on 2026-10-12 (choose the architecturally preferable option). Implementation is tracked in native-selection-transactions.md. No bus adapter, method fixture, activation file or system policy is implemented by this review. The accepted FD boundary, native runtime, Rust/zbus direction and compact tray UX do not need reapproval.
 
 ## Evidence and reason for review
 
@@ -46,4 +46,4 @@ Authentication uses the actual bus message sender and connection credentials, wi
 3. Add authenticated private-bus integration against a task-owned temporary bus, then connect it to the retained native runtime owner. No user session registration, package installation or hardware test is implied.
 4. Review terminal/replay retention before a continuously running production daemon; continue native GTK/KDE placement and Dolphin only once the actual chooser/binary work. Physical Google compatibility remains required.
 
-Rollback: documentation only until approval. Option implementation must be isolated from the core runtime/legacy UI and reversible without altering user settings or source files.
+Decision: implement option 1; option 2 is not selected. Rollback: retain the legacy UI/core entry points. Option implementation must be isolated from the core runtime/legacy UI and reversible without altering user settings or source files.
