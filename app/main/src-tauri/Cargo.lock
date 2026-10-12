@@ -4127,6 +4127,7 @@ dependencies = [
  "prost",
  "prost-build",
  "rand",
+ "rustix",
  "serde",
  "sha2",
  "sys_metrics 0.2.7 (git+https://github.com/Martichou/sys_metrics)",

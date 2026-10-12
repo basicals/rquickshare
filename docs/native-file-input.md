@@ -1,6 +1,6 @@
 # Native file input: approved descriptor boundary
 
-_2026-10-12. Mode A. Status: planned before implementation._
+_2026-10-12. Mode A. Status: resource/core implementation complete; final validation in progress._
 
 ## Scope and decisions
 
@@ -19,6 +19,8 @@ Use a Linux-only `core_lib::file_source` module with safe rustix wrappers (no ap
 - Acquisition errors are atomic: missing/unreadable/unsafe sources invalidate the selection; no silent partial send. Symlinks and special files invalidate native folder selections. Legacy path preparation's existing skip behavior remains until the desktop migration replaces it.
 - `read_chunk_at` uses positioned reads from an explicit byte offset, independent of shared open-file position. Never read past the acquired size; premature EOF or a changed size is an error, not a successful zero-byte chunk. Same-size concurrent changes remain possible: no immutable snapshot claim.
 - Source metadata/errors must not dump absolute paths or file contents in the new resource layer's Debug/errors. This does not certify existing application logs as private.
+- Destination components are bounded to 255 UTF-8 bytes, complete relative names to 16 KiB, and received manifests to the same depth budget as local folder walks. Reject drive separators, empty/dot components and file-versus-directory prefix collisions. Roots with the same display name fail instead of silently merging trees.
+- Core preparation duplicates each selected file handle once, so the integration may temporarily retain up to twice the selected-file budget plus active directory traversal handles. Future service-wide accounting must include these duplicates and all queued/active selections; a per-selection cap alone is insufficient.
 - Legacy wire metadata remains equivalent. The existing path route still exists for rollback; its ancestor check/open race is not declared fixed merely because the new handle route exists. New native operations must use the handle route exclusively.
 
 ## Plan, risk and rollback
@@ -45,6 +47,8 @@ Risks: Linux kernel support for openat2 (fail closed on unsupported/restricted c
 
 External transport is not mocked as the subject: acquisition and reader tests exercise real disposable local files, kernel descriptors and production functions. Filesystem storage is necessary for these integration contracts; no real network, clocks, sleeps or Bluetooth. Tests use isolated temp directories and explicit mutation points, not probabilistic race loops.
 
+Core entrypoint integration also uses real loopback TCP sockets and explicit established-session test keys, exercising the actual constructor, encrypted introduction, consent, file-frame and cancellation handlers. Planned cases: exact introduction/file bytes/terminal frame, source growth/truncation before send, and cancellation before first file read. The peer fixture verifies HMAC, decrypts AES-CBC and checks message sequence numbers. This is local encrypted-framing coverage, not a physical peer or full UKEY2 handshake claim. Domain handlers are not mocked. Descriptor reception must use atomic close-on-exec support in the future IPC adapter; adoption reinforces CLOEXEC but cannot retrospectively make receipt atomic.
+
 ## Negative and interaction matrix
 
 Every inventory row is planned for Positive plus applicable categories below; non-applicable categories are explicit. Full protocol branch coverage is not part of this finite resource slice.
@@ -61,5 +65,7 @@ Interactions: root file/folder × valid/invalid name; relative tree × rename/sy
 ## Progress
 
 - F0: plan/inventory recorded before code.
-- F1/F2/F3: pending.
+- F1/F2: implemented together around one owned-resource/core contract. They will share one atomic feature commit because the private handle-adaptation seam is consumed by the outbound integration; the native reader contract also supplies the existing sender's bounded-read correction. No protocol framing or crypto production code changed. Final format/Clippy/stability/coverage verification is pending below.
+- F3 mutation review: 18 copied-source mutants were killed by assertion failures, not compile failures. The first pass exposed missing in-root symlink coverage, which was added; manifest depth was also enforced for received handles during review. Baseline source was copied to scratch, never mutated in place.
+- F3 full ten-run validation: pending.
 - No native hardware/UI compatibility claims. D-Bus coordinator and GTK implementation remain subsequent stages.

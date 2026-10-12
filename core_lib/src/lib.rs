@@ -24,6 +24,9 @@ use crate::manager::TcpServer;
 
 pub mod channel;
 mod errors;
+mod file_reader;
+#[cfg(target_os = "linux")]
+pub mod file_source;
 mod hdl;
 mod manager;
 mod protocol;
