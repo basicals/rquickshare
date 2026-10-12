@@ -1,5 +1,19 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: continuous-service retention review prepared
+
+[native-retention-review.md](native-retention-review.md) analyzes the retained
+256-transfer/128-receipt limits and prepares the next new API/data-model choice.
+Recommended option 1 keeps 64 safely closed current-run terminal records in memory;
+option 2 persists bounded history in a local transactional journal. Both use a
+proposed additive ordered/acknowledged operation protocol so retired sequences
+cannot be executed again, while Manager1 replay contracts stay compatible. History
+cleanup requires owner closure and real reader release, not terminal phase alone.
+
+Await user confirmation of history lifetime under AGENTS sections 3/3.1 before
+changing behavior/wire contracts. No implementation, user-session change or test
+rerun in this review. The executable/recovery slice below remains the current code.
+
 ## 2026-10-12: native executable and hidden visibility recovery implemented
 
 The user selected option 2 and rejected manual JSON repair. Plan committed before
