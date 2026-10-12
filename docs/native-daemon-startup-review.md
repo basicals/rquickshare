@@ -1,7 +1,8 @@
 # Native daemon startup and settings error policy
 
-2026-10-12. Mode A. Analysis complete; implementation waits for the narrow visibility
-error policy decision below. Previous state API work is complete in `7f41750`.
+2026-10-12. Mode A. The user selected option 2 and requested an ordinary UI repair
+path instead of manual JSON editing. Implementation SSOT: native-daemon-startup.md.
+Previous state API work is complete in `7f41750`.
 
 ## Source evidence
 
@@ -98,7 +99,7 @@ package lifecycle are ready.
 
 ## Handoff
 
-Await option 1 or 2 before implementing startup/visibility behavior. The current
+Option 2 is selected; no further visibility policy approval is pending. The current
 repository remains on dev with the fourteen-method library adapter and old GUI.
 This review is documentation only. No tests were rerun on unchanged source.
 All owned read/commit command sessions exited; terminal closed.
