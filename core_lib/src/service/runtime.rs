@@ -421,9 +421,10 @@ impl NativeRuntime {
                 if !crate::sessions::terminal(&snapshot.state) {
                     return self.fault();
                 }
-                self.coordinator.observe(
+                self.coordinator.observe_details(
                     binding.transfer,
                     phase(&snapshot.state, &snapshot.direction),
+                    snapshot.details,
                 )?;
                 self.coordinator.owner_closed(binding.transfer)?;
                 return Ok(());
@@ -438,9 +439,10 @@ impl NativeRuntime {
         };
         self.deferred.remove(&binding.transfer);
         binding.consent = snapshot.consent;
-        let observed = self.coordinator.observe(
+        let observed = self.coordinator.observe_details(
             binding.transfer,
             phase(&snapshot.state, &snapshot.direction),
+            snapshot.details,
         );
         if observed.is_err() {
             return self.fault();

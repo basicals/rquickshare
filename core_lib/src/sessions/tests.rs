@@ -645,3 +645,120 @@ async fn given_full_hub_when_lease_drops_or_hub_closes_then_readiness_wakes_with
     hub.close();
     assert_eq!(available.await, Err(SessionError::Closed));
 }
+
+#[test]
+fn given_same_consent_phase_when_details_arrive_then_ordered_readiness_preserves_round_and_clears_pin_on_exit(
+) {
+    // Arrange
+    let hub = hub();
+    let mut events = hub.subscribe_fresh().unwrap();
+    let (mut session, control, token) = waiting(&hub);
+    let details = crate::sessions::details::TransferDetails {
+        status: crate::sessions::details::DetailsStatus::Ready,
+        sender: "phone".into(),
+        pin: "0123".into(),
+        files: vec![crate::sessions::details::FileDetail {
+            name: "item".into(),
+            size: 3,
+        }]
+        .into(),
+        total_bytes: 3,
+        ..Default::default()
+    };
+    // Act
+    session.observe_details(&State::WaitingForUserConsent, details.clone());
+    // Assert
+    assert_eq!(control.snapshot().consent, Some(token));
+    assert_eq!(*control.snapshot().details, details);
+    assert!(matches!(
+        events.try_recv().unwrap(),
+        SessionEvent::Opened(_)
+    ));
+    let SessionEvent::Changed(initial) = events.try_recv().unwrap() else {
+        panic!("Missing initial round")
+    };
+    let SessionEvent::Changed(ready) = events.try_recv().unwrap() else {
+        panic!("Missing ordered details")
+    };
+    assert_eq!(initial.consent, ready.consent);
+    assert_eq!(
+        initial.details.status,
+        crate::sessions::details::DetailsStatus::Unavailable
+    );
+    assert_eq!(*ready.details, details);
+    session.observe(&State::ReceivingFiles);
+    assert_eq!(control.snapshot().details.pin, "");
+    assert_eq!(ready.details.pin, "0123");
+    session.observe(&State::Finished);
+    let terminal = control.snapshot();
+    session.observe_details(&State::WaitingForUserConsent, details);
+    assert_eq!(control.snapshot(), terminal);
+}
+
+#[test]
+fn given_ready_consent_when_description_changes_in_same_round_then_old_presentation_cannot_authorize_new_files(
+) {
+    // Arrange
+    let (mut session, control, token) = waiting(&hub());
+    let details = crate::sessions::details::TransferDetails {
+        status: crate::sessions::details::DetailsStatus::Ready,
+        sender: "phone".into(),
+        pin: "0123".into(),
+        total_bytes: 3,
+        files: vec![crate::sessions::details::FileDetail {
+            name: "item".into(),
+            size: 3,
+        }]
+        .into(),
+        ..Default::default()
+    };
+    session.observe_details(&State::WaitingForUserConsent, details.clone());
+    // Act
+    let mut replaced = details;
+    replaced.files = vec![crate::sessions::details::FileDetail {
+        name: "different-item".into(),
+        size: 3,
+    }]
+    .into();
+    session.observe_details(&State::WaitingForUserConsent, replaced);
+    // Assert
+    assert_eq!(control.snapshot().consent, Some(token));
+    assert_eq!(
+        control.snapshot().details.status,
+        crate::sessions::details::DetailsStatus::Unsupported
+    );
+    assert!(control.snapshot().details.pin.is_empty());
+    assert!(control.snapshot().details.files.is_empty());
+}
+
+#[test]
+fn given_previous_prepared_round_when_state_only_observation_enters_new_consent_then_readiness_and_old_pin_are_not_reused(
+) {
+    // Arrange
+    let (mut session, control, old_token) = waiting(&hub());
+    let details = crate::sessions::details::TransferDetails {
+        status: crate::sessions::details::DetailsStatus::Ready,
+        sender: "phone".into(),
+        pin: "0123".into(),
+        total_bytes: 3,
+        files: vec![crate::sessions::details::FileDetail {
+            name: "item".into(),
+            size: 3,
+        }]
+        .into(),
+        ..Default::default()
+    };
+    session.observe_details(&State::WaitingForUserConsent, details);
+    // Act
+    session.observe(&State::ReceivingFiles);
+    session.observe(&State::WaitingForUserConsent);
+    // Assert
+    let current = control.snapshot();
+    assert_ne!(current.consent, Some(old_token));
+    assert_eq!(
+        current.details.status,
+        crate::sessions::details::DetailsStatus::Unavailable
+    );
+    assert!(current.details.pin.is_empty());
+    assert!(current.details.files.is_empty());
+}

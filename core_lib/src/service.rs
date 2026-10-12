@@ -159,6 +159,7 @@ pub struct TransferSnapshot {
     pub phase: Phase,
     pub consent_revision: Option<u64>,
     pub pending_control: Option<ControlIntent>,
+    pub details: Arc<crate::sessions::details::TransferDetails>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -543,6 +544,7 @@ impl Coordinator {
                     phase: Phase::Queued,
                     consent_revision: None,
                     pending_control: None,
+                    details: Arc::default(),
                 },
                 source: Arc::downgrade(&pending.resource),
                 owner_closed: true,
@@ -611,6 +613,7 @@ impl Coordinator {
                     phase: Phase::Active,
                     consent_revision: None,
                     pending_control: None,
+                    details: Arc::default(),
                 },
                 resource: None,
                 endpoint: None,
@@ -627,6 +630,28 @@ impl Coordinator {
 
     /// Trusted core adapter input; terminal states absorb subsequent observations.
     pub fn observe(&mut self, id: TransferId, phase: Phase) -> Result<(), Error> {
+        let mut details = (*self
+            .transfers
+            .get(&id)
+            .ok_or(Error::UnknownTransfer)?
+            .view
+            .details)
+            .clone();
+        if phase != Phase::AwaitingConsent {
+            details.pin.clear();
+        }
+        self.observe_details(id, phase, Arc::new(details))
+    }
+
+    pub(crate) fn observe_details(
+        &mut self,
+        id: TransferId,
+        phase: Phase,
+        details: Arc<crate::sessions::details::TransferDetails>,
+    ) -> Result<(), Error> {
+        if !details.valid(phase == Phase::AwaitingConsent) {
+            return Err(Error::InvalidInput);
+        }
         let transfer = self.transfers.get(&id).ok_or(Error::UnknownTransfer)?;
         if transfer.view.phase.is_terminal() {
             return Ok(());
@@ -639,17 +664,32 @@ impl Coordinator {
         {
             return Err(Error::InvalidInput);
         }
-        if phase == transfer.view.phase
+        let details = if phase == Phase::AwaitingConsent
+            && transfer.view.phase == phase
+            && transfer.view.details.status == crate::sessions::details::DetailsStatus::Ready
+            && details.status == crate::sessions::details::DetailsStatus::Ready
+            && !transfer.view.details.same_description(&details)
+        {
+            Arc::new(crate::sessions::details::TransferDetails::unsupported())
+        } else {
+            details
+        };
+        if (phase == transfer.view.phase && transfer.view.details == details)
             || (transfer.view.phase == Phase::CancelRequested && !phase.is_terminal())
         {
             return Ok(());
         }
         let revision = self.advance()?;
         if let Some(transfer) = self.transfers.get_mut(&id) {
+            let phase_changed = transfer.view.phase != phase;
             transfer.view.phase = phase;
-            transfer.view.consent_revision = (phase == Phase::AwaitingConsent).then_some(revision);
-            transfer.view.pending_control = None;
-            if phase == Phase::AwaitingConsent {
+            transfer.view.details = details;
+            if phase_changed {
+                transfer.view.consent_revision =
+                    (phase == Phase::AwaitingConsent).then_some(revision);
+                transfer.view.pending_control = None;
+            }
+            if phase_changed && phase == Phase::AwaitingConsent {
                 transfer.answer = None;
             }
             if phase.is_terminal() {
@@ -737,6 +777,7 @@ impl Coordinator {
         let revision = self.advance()?;
         if let Some(transfer) = self.transfers.get_mut(&id) {
             transfer.view.consent_revision = None;
+            Arc::make_mut(&mut transfer.view.details).pin.clear();
             if transfer.view.phase == Phase::Queued {
                 transfer.view.phase = Phase::Cancelled;
                 transfer.terminal_revision = Some(revision);
@@ -775,6 +816,7 @@ impl Coordinator {
         self.queue.clear();
         for (id, transfer) in &mut self.transfers {
             transfer.view.consent_revision = None;
+            Arc::make_mut(&mut transfer.view.details).pin.clear();
             if transfer.view.phase == Phase::Queued {
                 transfer.view.phase = Phase::Cancelled;
                 transfer.terminal_revision = Some(revision);

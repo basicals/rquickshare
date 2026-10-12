@@ -1888,7 +1888,7 @@ impl OutboundRequest {
         f(&mut self.state);
 
         if let Some(session) = self.session.as_mut() {
-            session.observe(&self.state.state);
+            session.observe_state(&self.state);
         }
 
         if !inform {

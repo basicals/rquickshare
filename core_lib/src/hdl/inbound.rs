@@ -2053,7 +2053,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         f(&mut self.state);
 
         if let Some(session) = self.session.as_mut() {
-            session.observe(&self.state.state);
+            session.observe_state(&self.state);
         }
 
         if !inform {
@@ -2445,6 +2445,99 @@ mod security_tests {
                 "mode-b-duplicate.bin".to_owned(),
                 "1_mode-b-duplicate.bin".to_owned()
             ]
+        );
+    }
+
+    #[tokio::test]
+    async fn given_managed_introduction_when_files_are_prepared_and_retired_then_ordered_details_keep_complete_manifest_and_progress(
+    ) {
+        // Arrange
+        let mut request = test_request();
+        request.state.remote_device_info = Some(RemoteDeviceInfo {
+            name: "phone".into(),
+            device_type: crate::utils::DeviceType::Phone,
+        });
+        request.state.pin_code = Some("0123".into());
+        let hub = crate::sessions::SessionHub::new(123).unwrap();
+        let mut events = hub.subscribe_fresh().unwrap();
+        let session = hub
+            .open(
+                crate::channel::TransferType::Inbound,
+                None,
+                tokio_util::sync::CancellationToken::new(),
+            )
+            .unwrap();
+        let control = session.control();
+        request.session = Some(session);
+        let frame = introduction_frame(
+            vec![
+                file_metadata("native-complete-a.bin", 101, 5),
+                file_metadata("native-complete-b.bin", 102, 7),
+            ],
+            vec![],
+            vec![],
+        );
+        // Act
+        request.process_introduction(&frame).await.unwrap();
+        // Assert
+        let ready = control.snapshot();
+        assert_eq!(
+            ready.details.status,
+            crate::sessions::details::DetailsStatus::Ready
+        );
+        assert_eq!(ready.details.pin, "0123");
+        assert_eq!(ready.details.files.len(), 2);
+        assert!(matches!(
+            events.try_recv().unwrap(),
+            crate::sessions::SessionEvent::Opened(_)
+        ));
+        let crate::sessions::SessionEvent::Changed(waiting) = events.try_recv().unwrap() else {
+            panic!("Missing waiting state")
+        };
+        let crate::sessions::SessionEvent::Changed(described) = events.try_recv().unwrap() else {
+            panic!("Missing ready details")
+        };
+        assert_eq!(
+            waiting.details.status,
+            crate::sessions::details::DetailsStatus::Unavailable
+        );
+        assert_eq!(waiting.consent, described.consent);
+        request
+            .update_state(
+                |state| {
+                    state.state = State::ReceivingFiles;
+                    state.transferred_files.remove(&101);
+                    state.transfer_metadata.as_mut().unwrap().ack_bytes = 5;
+                },
+                true,
+            )
+            .await;
+        let progress = control.snapshot();
+        assert_eq!(progress.details.files, ready.details.files);
+        assert!(std::sync::Arc::ptr_eq(
+            &progress.details.files,
+            &ready.details.files
+        ));
+        assert_eq!(progress.details.transferred_bytes, 5);
+        assert!(progress.details.pin.is_empty());
+        request
+            .update_state(
+                |state| {
+                    state.transferred_files.clear();
+                    state.state = State::Finished;
+                    state.transfer_metadata.as_mut().unwrap().ack_bytes = 12;
+                },
+                true,
+            )
+            .await;
+        let finished = control.snapshot();
+        assert_eq!(finished.details.files, ready.details.files);
+        assert_eq!(
+            (
+                finished.details.total_bytes,
+                finished.details.transferred_bytes
+            ),
+            (12, 12)
         );
     }
 

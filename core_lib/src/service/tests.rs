@@ -1340,3 +1340,51 @@ fn given_exhausted_revision_when_worker_drops_last_payload_then_resource_refresh
     assert_eq!(service.reservations.len(), 1);
     assert_eq!(service.revision, u64::MAX);
 }
+
+#[test]
+fn given_pending_consent_when_metadata_changes_then_one_revision_updates_details_without_replacing_control_or_round(
+) {
+    // Arrange
+    let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+    let client = coordinator.connect().unwrap();
+    let id = coordinator.register_inbound().unwrap();
+    coordinator.observe(id, Phase::AwaitingConsent).unwrap();
+    let round = view(&mut coordinator, client, id).consent_revision.unwrap();
+    coordinator.respond(client, id, round, false).unwrap();
+    let old = coordinator.snapshot(client).unwrap();
+    let details = Arc::new(crate::sessions::details::TransferDetails {
+        status: crate::sessions::details::DetailsStatus::Ready,
+        sender: "phone".into(),
+        pin: "0123".into(),
+        files: vec![crate::sessions::details::FileDetail {
+            name: "item".into(),
+            size: 3,
+        }]
+        .into(),
+        total_bytes: 3,
+        ..Default::default()
+    });
+    // Act
+    coordinator
+        .observe_details(id, Phase::AwaitingConsent, details.clone())
+        .unwrap();
+    // Assert
+    let next = coordinator.snapshot(client).unwrap();
+    assert_eq!(next.revision, old.revision + 1);
+    assert_eq!(next.transfers[0].consent_revision, Some(round));
+    assert_eq!(
+        next.transfers[0].pending_control,
+        old.transfers[0].pending_control
+    );
+    assert_eq!(next.transfers[0].details, details);
+    coordinator
+        .observe_details(id, Phase::AwaitingConsent, details)
+        .unwrap();
+    assert_eq!(
+        coordinator.snapshot(client).unwrap().revision,
+        next.revision
+    );
+    coordinator.cancel(client, id).unwrap();
+    assert!(view(&mut coordinator, client, id).details.pin.is_empty());
+    assert_eq!(next.transfers[0].details.pin, "0123");
+}

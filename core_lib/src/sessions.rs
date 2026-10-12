@@ -10,6 +10,9 @@ use tokio_util::sync::CancellationToken;
 use crate::channel::{ChannelMessage, TransferType};
 use crate::State;
 
+pub mod details;
+use details::TransferDetails;
+
 const SESSION_LIMIT: usize = 32;
 pub(crate) const EVENT_LIMIT: usize = 512;
 
@@ -60,6 +63,7 @@ pub struct SessionSnapshot {
     pub direction: TransferType,
     pub state: State,
     pub consent: Option<ConsentToken>,
+    pub details: Arc<TransferDetails>,
 }
 
 impl fmt::Debug for SessionSnapshot {
@@ -305,6 +309,7 @@ impl SessionHub {
             direction,
             state: State::Initial,
             consent: None,
+            details: Arc::default(),
         };
         let (status, receiver) = watch::channel(Status {
             snapshot,
@@ -370,7 +375,44 @@ impl SessionLease {
         self.control.snapshot().event_id
     }
 
+    pub fn observe_state(&mut self, actual: &crate::hdl::InnerState) {
+        let previous = self.status.borrow().snapshot.clone();
+        let waiting = actual.state == State::WaitingForUserConsent;
+        let details = if waiting && previous.state != actual.state {
+            TransferDetails::default()
+        } else if !waiting && previous.details.status == details::DetailsStatus::Ready {
+            // Core working maps retire completed files; retain the prepared immutable manifest.
+            let mut details = (*previous.details).clone();
+            details.pin.clear();
+            if let Some(metadata) = &actual.transfer_metadata {
+                details.transferred_bytes = metadata.ack_bytes;
+                if metadata.total_bytes != details.total_bytes || !details.valid(false) {
+                    details = TransferDetails::unsupported();
+                }
+            } else {
+                details = TransferDetails::unsupported();
+            }
+            details
+        } else {
+            TransferDetails::from_state(actual)
+        };
+        self.observe_details(&actual.state, details);
+    }
+
     pub fn observe(&mut self, actual: &State) {
+        let previous = self.status.borrow().snapshot.clone();
+        let mut details = if *actual == State::WaitingForUserConsent && previous.state != *actual {
+            TransferDetails::default()
+        } else {
+            (*previous.details).clone()
+        };
+        if *actual != State::WaitingForUserConsent {
+            details.pin.clear();
+        }
+        self.observe_details(actual, details);
+    }
+
+    pub fn observe_details(&mut self, actual: &State, details: TransferDetails) {
         let mut status = self.status.borrow().clone();
         if terminal(&status.snapshot.state) {
             return;
@@ -393,7 +435,22 @@ impl SessionLease {
         } else if *actual != State::WaitingForUserConsent {
             status.snapshot.consent = None;
         }
-        if status.snapshot.state != *actual
+        let details = if *actual == State::WaitingForUserConsent
+            && status.snapshot.state == *actual
+            && status.snapshot.details.status == details::DetailsStatus::Ready
+            && details.status == details::DetailsStatus::Ready
+            && !status.snapshot.details.same_description(&details)
+        {
+            TransferDetails::unsupported()
+        } else {
+            details
+        };
+        let details_changed = *status.snapshot.details != details;
+        if details_changed {
+            status.snapshot.details = Arc::new(details);
+        }
+        if details_changed
+            || status.snapshot.state != *actual
             || status.snapshot.consent != self.status.borrow().snapshot.consent
         {
             status.snapshot.state = actual.clone();

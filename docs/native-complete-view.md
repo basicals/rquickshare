@@ -59,10 +59,10 @@ per summary row, in identical ID order, all part of the same immutable capture.
 Add GetFilePage(ssu) -> ua(st): snapshot ID, transfer ID, offset -> next offset,
 (name,size) rows. At most 16 records/page, canonical current epoch tokens,
 connection-owned captures, strict unknown/foreign/offset behavior and no FDs.
-Absent/unsupported header: empty sender/device/PIN, zero bytes/count. Immutable
+Absent/unsupported header: empty sender/PIN, unknown device, zero bytes/count. Immutable
 Arc manifests are shared by captures; no live-map reads or source handles.
 Capture limits: existing 128 endpoints/128 selections/256 transfers, 16 retained
-captures, <=17 MiB logical metadata per capture and <=32 MiB globally. Charge
+captures, <=20 MiB logical metadata per capture and <=40 MiB globally. Charge
 shared detail data conservatively once per capture, minimum 512 KiB per capture;
 preflight these charges before any snapshot copy. A failed replacement preserves
 its previous capture and counter. All reply bodies <=48 KiB/full frames <=64 KiB.
@@ -74,13 +74,13 @@ not a mutable component outside the capture. Capture failure never truncates.
 
 ## Milestones and rollback
 
-1. [ ] Ordered core projection: validate/redact immutable metadata, publish same-
+1. [x] Ordered core projection: validate/redact immutable metadata, publish same-
    phase changes, atomically observe phase/details in coordinator/runtime. Preserve
    legacy channel and protocol behavior. Commit with focused source checks.
-2. [ ] Replace unpublished interface; capture headers/manifests with preflight
+2. [x] Replace unpublished interface; capture headers/manifests with preflight
    budgets, add typed page dispatch/XML and SDK decoding. Ready matched details
-   are required before SDK accepts consent; retain exact admitted retry behavior.
-3. [ ] Focused domain/private-broker regression checks, one affected test run,
+   are required before native bus accepts consent; retain exact admitted retry behavior.
+3. [x] Focused domain/private-broker regression checks, one affected test run,
    strict core/desktop Clippy and format/diff. Record actual results and commits.
 4. [ ] Continue native controller/shell integration using this complete view;
    physical placement/Google interoperability remain external acceptance work.
@@ -113,4 +113,49 @@ manifest truncation, excessive stale-capture memory and falsely claiming peer ac
 
 ## Verification observations
 
-Plan recorded before code. Implementation and measured results pending.
+Plan frozen in 55b5cf1 before implementation. Manager2 replaces the unpublished
+Manager1 fixture/namespace, all native consumers use it; Operations1 is unchanged.
+Ordered core observations carry allowlisted Arc details and a shared immutable
+manifest. Both handlers publish it, runtime observes phase/details together, and
+same-phase progress advances the shared revision without erasing controls/rounds.
+Native acceptance requires a ready complete current description; rejection and
+cancellation remain available. SDK reads all headers/manifests before publishing.
+
+Actual checks: initial test compilation failed on an incorrect protobuf enum
+fixture (fixed to generated Default). First complete execution: 479 passed, one
+existing bus fixture failed because it attempted blind acceptance. Prepared real
+validated details in the fixture, preserving its original assertions. A newly
+added handler test needed a qualified CancellationToken import before execution.
+Then 487 unit/export + 8 integration passed. Review added same-round description
+immutability: affected full core run passed 488 + 8. The final state-only new-round
+reset added one test: all 32 affected session tests passed, 457 other unit/export
+and 8 integration filtered. Current inventory 489 + 8 = 497, not a fresh whole-
+497 run. These reruns follow actual changes/failures, not repeated stability runs.
+Strict core all-feature/all-target and desktop no-default-feature/all-target
+locked Clippy -D warnings passed. Initial Clippy found one unnecessary test cast;
+removed it. Nightly format checks for both crates and diff check passed. Existing
+bluer future-incompatibility notice remains. No live Google/KDE/BlueZ test.
+
+15 new test methods with parameter tables. Primary categories: Positive 4,
+N1 2, N2 2, N5 5, N7 2. Secondary N4 exact replay, N9 interruption/late ownership,
+N10 private fields and Debug exclusion. Existing owner-loss/FD/storage tests
+remain in the complete run. No new locale/clock, billing or storage operation
+(N8/N11/N12). No Mode B exhaustive coverage or executed mutation-tool claim.
+All owned commands/processes exited; Terminal closed.
+
+Source refinement before final verification: core working maps remove completed
+files. SessionLease therefore retains a separately immutable Arc file manifest
+and updates only the measured byte fields after preparation. New consent entry
+starts unavailable, never borrowing an earlier round. Progress/terminal updates
+cannot drop previously described files or copy all names on each chunk. The
+capture budget was dimensioned at 20 MiB / 40 MiB global to include 256 maximum
+64KiB manifests plus file-row allocation/metadata, not name bytes alone.
+Native Respond checks readiness for new acceptance, preserving stale-round error
+precedence and already admitted exact replay; rejection remains available. Client
+TransferView.can_accept is presentation readiness; daemon remains authoritative.
+
+Prepared sender/device/PIN/manifest/total is immutable within a consent round.
+An unexpected same-round replacement becomes unsupported instead of authorizing
+new attachments with the old presentation. Measured progress may change without
+changing the round or admitted control. This is an internal fail-closed invariant,
+not a synthesized new user consent round.
