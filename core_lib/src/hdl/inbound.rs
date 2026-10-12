@@ -987,7 +987,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             .cipher_commitment
             .as_ref()
             .ok_or_else(|| anyhow!("Missing cipher commitment"))?;
-        if cipher_commitment.commitment() != sha512.as_slice() {
+        if cipher_commitment.commitment() != &sha512[..] {
             error!("cipher_commitment isn't equals to sha512(frame_data)");
             return Err(anyhow!("UKey2: cipher_commitment != sha512"));
         }
@@ -1078,12 +1078,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             .ok_or_else(|| anyhow!("Missing receive HMAC key"))?;
         let mut hmac = HmacSha256::new_from_slice(recv_hmac_key)?;
         hmac.update(&smsg.header_and_body);
-        if !hmac
-            .finalize()
-            .into_bytes()
-            .as_slice()
-            .eq(smsg.signature.as_slice())
-        {
+        if !hmac.finalize().into_bytes()[..].eq(smsg.signature.as_slice()) {
             return Err(anyhow!("hmac!=signature"));
         }
 

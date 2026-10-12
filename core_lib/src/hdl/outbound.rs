@@ -1000,12 +1000,7 @@ impl OutboundRequest {
             .ok_or_else(|| anyhow!("Missing receive HMAC key"))?;
         let mut hmac = HmacSha256::new_from_slice(recv_hmac_key)?;
         hmac.update(&smsg.header_and_body);
-        if !hmac
-            .finalize()
-            .into_bytes()
-            .as_slice()
-            .eq(smsg.signature.as_slice())
-        {
+        if !hmac.finalize().into_bytes()[..].eq(smsg.signature.as_slice()) {
             return Err(anyhow!("hmac!=signature"));
         }
 
