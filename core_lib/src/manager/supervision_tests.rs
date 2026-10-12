@@ -21,6 +21,8 @@ use crate::securegcm::{
 };
 use crate::utils::RemoteDeviceInfo;
 
+mod managed_tests;
+
 async fn scenario(operation: impl Future<Output = ()>) {
     // Watchdog only: normal progress always waits on explicit I/O/channel conditions.
     tokio::time::timeout(Duration::from_secs(5), operation)
@@ -173,7 +175,7 @@ async fn rig<C: Connector>(
         tcp_listener: TrackingListener { listener, accepted },
         connector: Arc::new(connector),
         sender: sender.clone(),
-        connect_receiver: receiver,
+        connect_receiver: receiver.into(),
         bwu_router: router,
     };
     let token = CancellationToken::new();
@@ -660,7 +662,7 @@ async fn given_pre_cancelled_manager_when_queue_contains_work_then_no_connector_
             tcp_listener: listener,
             connector: Arc::new(connector),
             sender,
-            connect_receiver: receiver,
+            connect_receiver: receiver.into(),
             bwu_router: BwuRouter::new(),
         };
         // Act
@@ -884,7 +886,7 @@ async fn given_fatal_accept_failure_when_outbound_is_blocked_then_child_workers_
             tcp_listener: FaultListener(Arc::clone(&fault)),
             connector: Arc::new(connector),
             sender,
-            connect_receiver: receiver,
+            connect_receiver: receiver.into(),
             bwu_router: BwuRouter::new(),
         };
         let token = CancellationToken::new();
@@ -988,7 +990,7 @@ async fn given_invalid_budgets_when_manager_runs_then_network_and_queue_are_unto
         tcp_listener: listener,
         connector: Arc::new(connector),
         sender,
-        connect_receiver: receiver,
+        connect_receiver: receiver.into(),
         bwu_router: BwuRouter::new(),
     };
     let token = CancellationToken::new();
@@ -1010,7 +1012,7 @@ async fn given_invalid_budgets_when_manager_runs_then_network_and_queue_are_unto
         started.try_recv(),
         Err(mpsc::error::TryRecvError::Empty)
     ));
-    assert_eq!(server.connect_receiver.try_recv().unwrap().id, "one");
+    assert_eq!(server.connect_receiver.try_recv().unwrap().info.id, "one");
 }
 
 #[tokio::test]

@@ -83,9 +83,20 @@ impl<C: Connector> SessionContext<C> {
         }
     }
 
+    #[cfg(test)]
     pub(super) async fn execute_outbound(&self, token: CancellationToken, info: SendInfo) {
+        self.execute_managed(token, CancellationToken::new(), info)
+            .await;
+    }
+
+    pub(super) async fn execute_managed(
+        &self,
+        token: CancellationToken,
+        cancellation: CancellationToken,
+        info: SendInfo,
+    ) {
         let id = info.id.clone();
-        if let Err(error) = self.connect(&token, info).await {
+        if let Err(error) = self.connect(&token, &cancellation, info).await {
             error!("TcpServer: outbound worker failed: {error}");
             if let Some(message) = outbound_failure(&id, &State::Initial, None, &error) {
                 let _ = self.sender.send(message);
@@ -96,9 +107,12 @@ impl<C: Connector> SessionContext<C> {
     async fn connect(
         &self,
         token: &CancellationToken,
+        cancellation: &CancellationToken,
         info: SendInfo,
     ) -> Result<(), anyhow::Error> {
-        let Some(socket) = until_stopped(token, self.connector.connect(&info.addr)).await else {
+        let Some(socket) =
+            until_either_stops(token, cancellation, self.connector.connect(&info.addr)).await
+        else {
             self.cancel_queued(&info.id);
             return Ok(());
         };
@@ -114,14 +128,15 @@ impl<C: Connector> SessionContext<C> {
             },
         )?;
 
-        let result: Option<Result<(), anyhow::Error>> = until_stopped(token, async {
-            request.send_connection_request().await?;
-            request.send_ukey2_client_init().await?;
-            loop {
-                request.handle().await?;
-            }
-        })
-        .await;
+        let result: Option<Result<(), anyhow::Error>> =
+            until_either_stops(token, cancellation, async {
+                request.send_connection_request().await?;
+                request.send_ukey2_client_init().await?;
+                loop {
+                    request.handle().await?;
+                }
+            })
+            .await;
 
         let message = match result {
             None => cancellation_message(
@@ -212,5 +227,18 @@ impl<C: Connector> SessionContext<C> {
         if let Some(message) = message {
             let _ = self.sender.send(message);
         }
+    }
+}
+
+async fn until_either_stops<T>(
+    service: &CancellationToken,
+    request: &CancellationToken,
+    operation: impl Future<Output = T>,
+) -> Option<T> {
+    tokio::select! {
+        biased;
+        _ = service.cancelled() => None,
+        _ = request.cancelled() => None,
+        result = operation => Some(result),
     }
 }

@@ -1,6 +1,6 @@
 # Structured TCP transfer supervision
 
-2026-10-12, Mode A. Status: S0–S2 complete; S3 continues in the managed adapter slice. The user approved option 1 from [native-core-adapter-review.md](native-core-adapter-review.md): fix bounded task supervision now, then continue the native service integration.
+2026-10-12, Mode A. Status: S0–S2 complete; S3 ownership seam is complete in [native-managed-dispatch.md](native-managed-dispatch.md); live state/consent mapping remains pending. The user approved option 1 from [native-core-adapter-review.md](native-core-adapter-review.md): fix bounded task supervision now, then continue the native service integration.
 
 ## Analysis and invariants
 

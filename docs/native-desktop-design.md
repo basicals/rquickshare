@@ -124,8 +124,10 @@ The native migration does not complete Google parity. The full feature/peer inve
 - File/security decision: B approved. The A API table is historical only and must not be implemented. No additional approval is needed for the already accepted descriptor-based file-input refactor.
 - The user also authorized immediate fixes to brittle internal workarounds across projects, asking before substantial refactors. The preference is persisted in the global agent guide. It does not authorize unrelated cleanup.
 - The first implementation slice and complete scoped branch/test inventory are recorded in [native-file-input.md](native-file-input.md). This implements the reusable file resource boundary and core entrypoint before publishing D-Bus methods. No desktop registration, settings migration or process activation is part of that slice.
-- That slice is complete in implementation commit `c8d537e`: 62 new methods, all 258 automated checks passing ten times, and 18 assertion-killed copied-source mutants. This is the file-boundary portion of D1/D2; the daemon/coordinator, D-Bus endpoint and native UI are not implemented yet.
+- That slice is complete in implementation commit `c8d537e`: 62 new methods, all 258 automated checks passing ten times, and 18 assertion-killed copied-source mutants. This is the file-boundary portion of D1/D2; the subsequent coordinator is recorded below; the live daemon, D-Bus endpoint and native UI remain pending.
 - Later service wire schemas are not frozen by the historical A table. Record their concrete contracts before service implementation; ask only for new significant decisions outside the accepted design.
+
+The approved core supervision refactor is implemented in `ee2139a`; the subsequent [managed dispatch slice](native-managed-dispatch.md) adds owned outgoing cancellation, resource-release acknowledgement, queue-closure health input and startup rollback. The latest full core run passed 288 tests once; an affected 44-method manager check followed the final admission-fairness correction. Native inbound consent still lacks an owned processing acknowledgement. Live service/state mapping, D-Bus and GTK are not certified by these foundations.
 
 ## Primary references checked on 2026-10-12
 

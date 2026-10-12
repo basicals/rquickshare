@@ -5,7 +5,6 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::Sender;
-use tokio::sync::mpsc::Receiver;
 use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
@@ -16,6 +15,7 @@ use crate::hdl::info::TransferMetadata;
 use crate::hdl::{
     peek_client_introduction, BwuClientIntroductionIdentity, BwuRouter, OutboundPayload, State,
 };
+use crate::managed::{acknowledge_release, OutboundJob, OutboundReceiver};
 mod session;
 use session::{Connector, SessionContext, TcpConnector};
 
@@ -203,7 +203,7 @@ pub(crate) struct TcpServer<L = TcpListener, C = TcpConnector> {
     tcp_listener: L,
     connector: Arc<C>,
     sender: Sender<ChannelMessage>,
-    connect_receiver: Receiver<SendInfo>,
+    connect_receiver: OutboundReceiver,
     bwu_router: BwuRouter,
 }
 
@@ -212,7 +212,7 @@ impl TcpServer {
         endpoint_id: [u8; 4],
         tcp_listener: TcpListener,
         sender: Sender<ChannelMessage>,
-        connect_receiver: Receiver<SendInfo>,
+        connect_receiver: impl Into<OutboundReceiver>,
         bwu_router: BwuRouter,
     ) -> Result<Self, anyhow::Error> {
         Ok(Self {
@@ -220,7 +220,7 @@ impl TcpServer {
             tcp_listener,
             connector: Arc::new(TcpConnector),
             sender,
-            connect_receiver,
+            connect_receiver: connect_receiver.into(),
             bwu_router,
         })
     }
@@ -250,14 +250,26 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
         let lifetime = ctk.child_token();
         let mut workers = JoinSet::new();
         let mut active_ids = HashSet::new();
-        let mut pending: Option<SendInfo> = None;
+        let mut pending: Option<OutboundJob> = None;
         let context = self.context();
         info!("TcpServer: supervised service starting");
 
         let mut outcome = loop {
+            if lifetime.is_cancelled() {
+                break Ok(());
+            }
             tokio::select! {
-                biased;
                 _ = lifetime.cancelled() => break Ok(()),
+                _ = async {
+                    if let Some(job) = pending.as_ref() {
+                        job.cancellation.cancelled().await;
+                    }
+                }, if pending.is_some() => {
+                    if let Some(job) = pending.take() {
+                        context.cancel_queued(&job.info.id);
+                        job.release();
+                    }
+                }
                 result = workers.join_next(), if !workers.is_empty() => {
                     match result {
                         Some(Ok(Some(id))) => { active_ids.remove(&id); },
@@ -266,15 +278,17 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
                     }
                 }
                 Ok(permit) = Arc::clone(&sessions).acquire_owned(),
-                    if pending.as_ref().is_some_and(|info| !active_ids.contains(&info.id)) => {
-                    if let Some(info) = pending.take() {
+                    if pending.as_ref().is_some_and(|job| !active_ids.contains(&job.info.id)) => {
+                    if let Some(job) = pending.take() {
+                        let OutboundJob { info, cancellation, completion } = job;
                         let id = info.id.clone();
                         active_ids.insert(id.clone());
                         let context = context.clone();
                         let token = lifetime.child_token();
                         workers.spawn(async move {
                             let _permit = permit;
-                            context.execute_outbound(token, info).await;
+                            context.execute_managed(token, cancellation, info).await;
+                            acknowledge_release(completion);
                             Some(id)
                         });
                     }
@@ -310,11 +324,13 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
         // Close admission first; then cancel and join every owned worker.
         self.connect_receiver.close();
         lifetime.cancel();
-        if let Some(info) = pending.take() {
-            context.cancel_queued(&info.id);
+        if let Some(job) = pending.take() {
+            context.cancel_queued(&job.info.id);
+            job.release();
         }
-        while let Ok(info) = self.connect_receiver.try_recv() {
-            context.cancel_queued(&info.id);
+        while let Ok(job) = self.connect_receiver.try_recv() {
+            context.cancel_queued(&job.info.id);
+            job.release();
         }
         while let Some(result) = workers.join_next().await {
             if result.is_err() && outcome.is_ok() {

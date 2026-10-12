@@ -1,11 +1,14 @@
 #[macro_use]
 extern crate log;
 
+use std::future::Future;
+use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
 use anyhow::anyhow;
 use channel::ChannelMessage;
+use futures::FutureExt;
 use hdl::MDnsDiscovery;
 #[cfg(all(feature = "experimental", target_os = "linux"))]
 use hdl::{receiver_service_data, BleAdvertiser, ReceiverAdvertiser, ReceiverGattServer};
@@ -28,6 +31,7 @@ mod file_reader;
 #[cfg(target_os = "linux")]
 pub mod file_source;
 mod hdl;
+pub mod managed;
 mod manager;
 mod protocol;
 #[cfg(target_os = "linux")]
@@ -124,19 +128,69 @@ impl RQS {
     pub async fn run(
         &mut self,
     ) -> Result<(mpsc::Sender<SendInfo>, broadcast::Receiver<()>), anyhow::Error> {
+        let (sender, receiver) = mpsc::channel(10);
+        let nearby = self.start(receiver.into()).await?;
+        Ok((sender, nearby))
+    }
+
+    pub async fn run_managed(
+        &mut self,
+    ) -> Result<(managed::ManagedSender, broadcast::Receiver<()>), anyhow::Error> {
+        let (sender, receiver) = managed::ManagedSender::channel();
+        let nearby = self.start(receiver).await?;
+        Ok((sender, nearby))
+    }
+
+    async fn start(
+        &mut self,
+        receiver: managed::OutboundReceiver,
+    ) -> Result<broadcast::Receiver<()>, anyhow::Error> {
+        let (tracker, ctoken, startup_guard) = self.begin_startup()?;
+        let result = self.start_transports(receiver, &tracker, &ctoken).await;
+        tracker.close();
+        let nearby = self.complete_startup(result).await?;
+        startup_guard.disarm();
+        Ok(nearby)
+    }
+
+    fn begin_startup(
+        &mut self,
+    ) -> Result<(TaskTracker, CancellationToken, tokio_util::sync::DropGuard), anyhow::Error> {
+        if self.tracker.is_some() {
+            return Err(anyhow!(
+                "The service is already started; stop it before restarting"
+            ));
+        }
         let tracker = TaskTracker::new();
         let ctoken = CancellationToken::new();
         self.tracker = Some(tracker.clone());
         self.ctoken = Some(ctoken.clone());
+        let guard = ctoken.clone().drop_guard();
+        Ok((tracker, ctoken, guard))
+    }
 
+    async fn complete_startup<T>(
+        &mut self,
+        result: Result<T, anyhow::Error>,
+    ) -> Result<T, anyhow::Error> {
+        if result.is_err() {
+            self.stop().await;
+        }
+        result
+    }
+
+    async fn start_transports(
+        &mut self,
+        receiver: managed::OutboundReceiver,
+        tracker: &TaskTracker,
+        ctoken: &CancellationToken,
+    ) -> Result<broadcast::Receiver<()>, anyhow::Error> {
         let endpoint_id: Vec<u8> = rand::rng().sample_iter(Alphanumeric).take(4).collect();
         let tcp_listener =
             TcpListener::bind(format!("0.0.0.0:{}", self.port_number.unwrap_or(0))).await?;
         let binded_addr = tcp_listener.local_addr()?;
         info!("TcpListener on: {}", binded_addr);
 
-        // MPSC for the TcpServer
-        let send_channel = mpsc::channel(10);
         let bwu_router = crate::hdl::BwuRouter::new();
 
         // Start TcpServer in own "task". The same listener also accepts
@@ -145,11 +199,14 @@ impl RQS {
             endpoint_id[..4].try_into()?,
             tcp_listener,
             self.message_sender.clone(),
-            send_channel.1,
+            receiver,
             bwu_router.clone(),
         )?;
         let ctk = ctoken.clone();
-        tracker.spawn(async move { server.run(ctk).await });
+        tracker.spawn(async move {
+            let lifetime = ctk.clone();
+            supervise_tcp(server.run(ctk), lifetime).await;
+        });
 
         #[cfg(feature = "experimental")]
         {
@@ -247,9 +304,10 @@ impl RQS {
             });
         }
 
-        tracker.close();
-
-        Ok((send_channel.0, self.ble_sender.subscribe()))
+        if ctoken.is_cancelled() {
+            return Err(anyhow!("Core transports stopped during startup"));
+        }
+        Ok(self.ble_sender.subscribe())
     }
 
     pub fn discovery(
@@ -296,6 +354,7 @@ impl RQS {
         }
 
         if let Some(tracker) = &self.tracker {
+            tracker.close();
             tracker.wait().await;
         }
 
@@ -312,3 +371,19 @@ impl RQS {
         }
     }
 }
+
+async fn supervise_tcp(
+    operation: impl Future<Output = Result<(), anyhow::Error>>,
+    lifetime: CancellationToken,
+) -> bool {
+    let result = AssertUnwindSafe(operation).catch_unwind().await;
+    let failed = !matches!(result, Ok(Ok(()))) || !lifetime.is_cancelled();
+    if failed {
+        error!("TCP supervisor stopped unexpectedly; cancelling core transports");
+        lifetime.cancel();
+    }
+    failed
+}
+
+#[cfg(test)]
+mod lifecycle_tests;

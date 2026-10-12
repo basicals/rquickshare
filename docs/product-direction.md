@@ -2,7 +2,7 @@
 
 _Recorded: 2026-10-12. Status: tray-panel and descriptor decisions accepted; file/core boundary and offline service coordinator implemented; live service/native shell pending._
 
-Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). This does not certify authenticated IPC, live transport supervision or a native UI.
+Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). Bounded TCP workers and the owned native dispatch/cancellation/startup seam are implemented in [native-transfer-supervision.md](native-transfer-supervision.md) and [native-managed-dispatch.md](native-managed-dispatch.md). Authenticated IPC, live service mapping and native UI remain pending.
 
 ## Authoritative correction
 
@@ -51,7 +51,7 @@ Decision: A, because the parity target needs a durable device chooser and transf
 
 The concrete service, file-selection trust boundary and migration proposal is in [native-desktop-design.md](native-desktop-design.md). The selected interaction and descriptor boundary no longer require an A/B question. Record the concrete wire contract before publishing the service API; ask only about new significant decisions outside the accepted design.
 
-The user subsequently approved descriptor/capability input. The reusable Linux acquisition/owned-file core route is implemented and validated in [native-file-input.md](native-file-input.md); the old path-opening D-Bus proposal must not be implemented. The daemon/coordinator and GTK4 shell remain pending.
+The user subsequently approved descriptor/capability input. The reusable Linux acquisition/owned-file core route is implemented and validated in [native-file-input.md](native-file-input.md); the old path-opening D-Bus proposal must not be implemented. The coordinator is implemented; the live daemon/D-Bus adapter and GTK4 shell remain pending.
 
 GTK4 removed cross-backend global positioning APIs; a generic GtkWindow cannot be assumed to provide a tray-anchored panel. Validate supported compositor/desktop integration first. Source: [GTK4 migration guide](https://docs.gtk.org/gtk4/migrating-3to4.html). The current host does not expose `gtk4` through pkg-config; dependencies are not installed by this documentation pass.
 
@@ -69,7 +69,7 @@ The target is the Google Quick Share capability surface, mapped by platform/vers
 | Everyone/temporary/hidden visibility | Partial local modes | Google-compatible timing, restoration and authenticated identity modes |
 | Google Account, Contacts, Your devices, own-device auto-accept | Not implemented | Identity/certificate/service feasibility, secure credentials and real peers; required parity work |
 | Google-compatible nearby QR | Proto field alone | Actual Google handshake, encode/decode and Android camera/Quick Share flow |
-| Multiple recipients/queueing | Not implemented | Independent recipient state; bounded parallelism only where supported |
+| Multiple recipients/queueing | Bounded core concurrency/FIFO foundation implemented; native recipient UX/policy pending | Independent recipient state; bounded parallelism only where supported |
 | Discovery and transport combinations | BLE/GATT and Wi-Fi LAN implemented | Per-platform transport inventory, network-isolation/direct-link scenarios and measured cold discovery |
 | Desktop share integration | User requested context-menu sending; not implemented | Dolphin service-menu adapter first for the target KDE environment, shared recipient flow, then other desktop adapters; accessibility and package checks |
 | Google cross-platform AirDrop/Apple paths | Not implemented | Separate transport/backend feasibility and physical peer matrix |
