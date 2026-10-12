@@ -23,7 +23,7 @@ use super::{ClientId, Coordinator, Error, SelectionId, TransferId, UploadId};
 use crate::file_source::OpenedFile;
 
 mod state;
-mod transport;
+pub(super) mod transport;
 
 pub const SERVICE: &str = "io.github.morozhenko_apps.RQuickShare";
 pub const PATH: &str = "/io/github/morozhenko_apps/RQuickShare";
@@ -689,7 +689,7 @@ impl Drop for SelectionBus {
     }
 }
 
-fn error_name(error: Error) -> &'static str {
+pub(super) fn error_name(error: Error) -> &'static str {
     match error {
         Error::InvalidInput => "io.github.morozhenko_apps.RQuickShare.Error.InvalidInput",
         Error::Capacity => "io.github.morozhenko_apps.RQuickShare.Error.Capacity",
@@ -977,4 +977,4 @@ fn execute_operation(
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

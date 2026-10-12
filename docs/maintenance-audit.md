@@ -1,5 +1,28 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: native operation client with automatic receipt acknowledgement
+
+Plan committed before production code in `6551265`;
+[native-client.md](native-client.md) records the isolated dedicated-connection SDK,
+actual broker/UID/unique-daemon/epoch validation and existing bounded transport.
+No wire additions or Manager1 fallback. Exact command/FD-batch state is retained
+before await; cancelled replies reconcile accepted progress on the same owner.
+Validated outcomes are recorded before automatic acknowledgement. Lost ack retries
+ack only, and a distinct AcknowledgementPending error preserves accepted-send
+semantics. Changed daemon never receives a replay of old pending work.
+
+14 new private-broker/validation regressions. Initial full affected service run:
+177 passed. An additional ack-disposition check found a missing error mapping;
+production mapping was corrected, final 14 client checks passed. Inventory is now
+470 core checks; no fresh whole-470 run is claimed. Core/desktop strict Clippy,
+Rust formatting and diff checks passed. Exact counts and actual observations are
+in the SSOT. No lock/version change, ten-run repetition or live user services.
+
+Next: native state projection/invalidation and consent/cancel adapters, then GTK
+tray/settings/notifications, Dolphin, packaging and physical Google parity. The
+new SDK is not an installed GUI and the old Tauri presentation remains current.
+Terminal closed.
+
 ## 2026-10-12: bounded current-run history and ordered operations implemented
 
 The user selected retention option 1. Plan/contract frozen before code in

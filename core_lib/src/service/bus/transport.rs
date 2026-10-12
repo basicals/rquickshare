@@ -21,7 +21,7 @@ fn invalid() -> io::Error {
     )
 }
 
-pub(super) struct BoundedSocket(pub UnixStream);
+pub(in crate::service) struct BoundedSocket(pub UnixStream);
 
 impl Socket for BoundedSocket {
     type ReadHalf = BoundedRead;
@@ -40,7 +40,7 @@ impl Socket for BoundedSocket {
 }
 
 #[derive(Debug)]
-pub(super) struct BoundedRead {
+pub(in crate::service) struct BoundedRead {
     read: Arc<OwnedReadHalf>,
     handshake_bytes: usize,
 }

@@ -829,3 +829,5 @@ pub mod process;
 pub mod operations;
 
 mod retention;
+
+pub mod client;

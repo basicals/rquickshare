@@ -43,6 +43,8 @@ owner: not accepted => submit the retained command; accepted => obtain its typed
 receipt; any unexpected gap/ack/kind/result is a protocol failure, never new work.
 Record the validated result in bounded local state before AcknowledgeThrough.
 A cancelled/lost ack wait retains the result and replays only acknowledgement.
+Ack failures return a distinct AcknowledgementPending code, never Rejected: the
+validated outcome has already been recorded and may be an accepted send.
 After successful ack, retain the most recent outcome for cancellation at caller
 boundaries. Accepted work survives client closure; a pending/failed ack cannot be
 reported as a rejected send. Callers can inspect the recorded outcome separately
@@ -72,11 +74,11 @@ slice before GTK; bootstrap snapshot is only epoch acquisition, not UI state.
 
 1. [x] Analyze existing wire/transport/file ownership, NativePair and GTK status;
    record this SSOT and scoped verification inventory before production edits.
-2. [ ] Implement owner/UID/epoch pinning, fixed error decoding and one bounded
+2. [x] Implement owner/UID/epoch pinning, fixed error decoding and one bounded
    pending mutation/batch state with cancellation-safe automatic acknowledgement.
-3. [ ] Verify actual client/daemon logic using owned private brokers and injected
+3. [x] Verify actual client/daemon logic using owned private brokers and injected
    reply-observation barriers; add no mocks of coordinator/client state logic.
-4. [ ] Run affected checks once, record actual results, update diary and commit.
+4. [x] Run affected checks once, record actual results, update diary and commit.
 
 Plan and implementation are separate conventional commits on dev. Rollback is
 module removal (and internal receive visibility), with no daemon behavior/storage
@@ -93,7 +95,10 @@ logging remote error bodies. Explicit retained state and sender checks address t
 | Descriptor batch owner | 3 | real files/offsets; 0/16/17; original file lifetime; lost append reply; before-admission cancellation; next sequence mismatch/closed upload; release clones | N1,N2,N4,N5,N9,N12 |
 | Continuous owner/disconnect | 2 | thousands of abort cycles without receipt quota; pending/accepted work and source cleanup on explicit close; no replacement replay | N4,N5,N9 |
 
-12 planned tests with parameterized subcases; refine count with reasons below.
+12 initially planned tests with parameterized subcases. Split explicit-close
+cleanup from the continuous-use case and add accepted-result/ack-failure
+disposition as independent regressions: 14 final tests. This avoids concealing
+accepted transfers behind a generic rejection/transport error.
 Use existing private-bus harness plus actual coordinator. Observation barriers
 wait for a real method result then notify and suspend before the client observes
 it; cancellation is event-driven, not a sleep/timeout. This injects external reply
@@ -106,5 +111,52 @@ source lifetime (no database). No ten-run development gate or coverage percentag
 
 ## Actual verification and handoff
 
-Implementation pending. Previous measured retention results remain in
-native-retention.md. Terminal closed.
+Plan frozen in `6551265` before code. NativeClient now implements the described
+bounded operation/batch owner in core_lib/src/service/client.rs. Only crate-local
+visibility was widened for the existing bounded receive socket and fixed error
+mapper; the production daemon methods, payload ownership and wire are unchanged.
+Existing owned private-broker/harness fixtures are shared with new client tests.
+Transfer connection stamps are receipt provenance, not service-control authority:
+future transfer controls must use current epoch/ID and the existing same-UID rule,
+not apply upload/selection connection ownership to service-owned transfers.
+
+14 new tests (parameterized real-broker subcases): Positive 2, N2 2, N4 4,
+N6 1, N7 2, N9 3. Counts are primary categories, not overlapping double counts.
+N1 malformed counts/IDs/kinds overlap N2/N7; N3 closed bootstrap socket and missing/
+replaced daemon; N5 shared offsets/reply interruption and original-resource
+lifetime; N10 fixed diagnostics/sender/error allowlist. N8/N11 are not applicable
+(no locale/clock or billing); N12 handle/source lifetime covered alongside the
+existing lower-level source/FD failure checks. No new persistence/transaction path.
+
+Actual observations (not planned checks):
+
+- Initial affected locked all-feature service suite: 177 passed, no failures or
+  ignored tests; 284 other unit/export and eight integration tests filtered.
+  This included the first 13 new tests and all 164 pre-existing service cases.
+- Added an independent accepted-send/failed-ack check and stricter UID/receipt
+  validation subcases. First client-only run: 13 passed, one failed; the ack path
+  still propagated DaemonChanged instead of the documented accepted-result code.
+  Corrected the production mapping, without weakening the assertion.
+- Final affected client-only run: all 14 passed, zero failures/ignored, 448 other
+  unit/export and eight integration tests filtered. Total current core inventory
+  is 462 unit/export + 8 integration = 470; there was no fresh whole-470 run.
+- Thousand-cycle real client test performs 2,000 accepted/automatically acknowledged
+  mutations on one dedicated connection, without receipt/preparation exhaustion.
+  Both pre-submit and accepted-but-unobserved reply cancellation were tested for
+  all four operations; ack interruption was crossed with both retirement states.
+- Real FD batches cover 0/1/16/17, lost replies on both admission sides, changed
+  shared offsets, closed/advanced recovery state and cleanup of pending sources.
+  Explicit close leaves accepted queued transfers intact and never unlinks sources.
+- Locked all-feature/all-target core Clippy and locked no-default-feature/all-target
+  desktop Clippy with `-D warnings` passed. Nightly format checks for both crates
+  and diff checks passed. Existing bluer future-incompatibility notice remains.
+
+No dependency/version/lock changes, repeated unchanged frontend/whole-core suite,
+ten-run gate, live user bus, BlueZ/peer test, GTK launch, package install or push.
+The module is an SDK foundation, not an installed native application. Original
+legacy UI remains current. No task-owned terminal/process remains. Terminal closed.
+
+Next bounded stage: native client immutable state projection/invalidation handling
+and existing consent/cancel controls; then the GTK tray controller/prototype,
+settings/notifications, Dolphin and package/physical interoperability gates.
+Previous measured retention results remain authoritative in native-retention.md.

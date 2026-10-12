@@ -8,13 +8,13 @@ use tokio::sync::watch;
 use super::*;
 use crate::service::{Lifecycle, Limits, ResourceUsage};
 
-struct PrivateBus {
+pub(crate) struct PrivateBus {
     child: Child,
     directory: tempfile::TempDir,
     address: String,
 }
 impl PrivateBus {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let directory = tempfile::tempdir().unwrap();
         let address = format!("unix:path={}", directory.path().join("bus").display());
         let child = Command::new("dbus-daemon")
@@ -42,12 +42,12 @@ impl PrivateBus {
         assert!(bus.address.starts_with("unix:path="));
         bus
     }
-    async fn socket(&self) -> UnixStream {
+    pub(crate) async fn socket(&self) -> UnixStream {
         UnixStream::connect(self.directory.path().join("bus"))
             .await
             .unwrap()
     }
-    async fn client(&self) -> Connection {
+    pub(crate) async fn client(&self) -> Connection {
         zbus::connection::Builder::address(self.address.as_str())
             .unwrap()
             .build()
@@ -62,19 +62,19 @@ impl Drop for PrivateBus {
     }
 }
 
-struct Harness {
+pub(crate) struct Harness {
     stop: CancellationToken,
     task: Option<JoinHandle<(Coordinator, Result<(), BusError>)>>,
     clients: watch::Receiver<usize>,
 }
 impl Harness {
-    fn start(bus: SelectionBus) -> Self {
+    pub(crate) fn start(bus: SelectionBus) -> Self {
         Self::with_limits(bus, Limits::default())
     }
     fn with_limits(bus: SelectionBus, limits: Limits) -> Self {
         Self::with_coordinator(bus, Coordinator::new(123, limits).unwrap())
     }
-    fn with_coordinator(bus: SelectionBus, coordinator: Coordinator) -> Self {
+    pub(crate) fn with_coordinator(bus: SelectionBus, coordinator: Coordinator) -> Self {
         Self::with_endpoints(bus, coordinator, Vec::new())
     }
     fn with_endpoints(
@@ -119,7 +119,7 @@ impl Harness {
             clients,
         }
     }
-    async fn finish(mut self) -> (Coordinator, Result<(), BusError>) {
+    pub(crate) async fn finish(mut self) -> (Coordinator, Result<(), BusError>) {
         self.stop.cancel();
         self.task.take().unwrap().await.unwrap()
     }
