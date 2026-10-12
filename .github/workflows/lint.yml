@@ -126,3 +126,8 @@ jobs:
       - name: Clippy
         working-directory: ${{ matrix.directory }}
         run: cargo +stable clippy ${{ matrix.clippy_args }} -- -D warnings
+
+      - name: Desktop Rust unit tests
+        if: matrix.directory == 'app/main/src-tauri'
+        working-directory: ./app/main/src-tauri
+        run: cargo +stable test --no-default-features --bin rquickshare
