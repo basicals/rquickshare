@@ -77,7 +77,7 @@ impl Harness {
     pub(crate) fn with_coordinator(bus: SelectionBus, coordinator: Coordinator) -> Self {
         Self::with_endpoints(bus, coordinator, Vec::new())
     }
-    fn with_endpoints(
+    pub(crate) fn with_endpoints(
         mut bus: SelectionBus,
         mut coordinator: Coordinator,
         endpoints: Vec<(String, String)>,

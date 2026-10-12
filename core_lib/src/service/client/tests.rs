@@ -10,7 +10,7 @@ use crate::service::bus::tests::{Harness, PrivateBus};
 use crate::service::bus::SelectionBus;
 use crate::service::{Coordinator, Limits, ResourceUsage};
 
-async fn fixture() -> (PrivateBus, Harness, NativeClient) {
+pub(super) async fn fixture() -> (PrivateBus, Harness, NativeClient) {
     let bus = PrivateBus::new();
     let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
     coordinator.set_endpoints(vec!["peer".into()]).unwrap();
@@ -21,19 +21,19 @@ async fn fixture() -> (PrivateBus, Harness, NativeClient) {
     let client = NativeClient::connect(bus.socket().await).await.unwrap();
     (bus, host, client)
 }
-fn source() -> (tempfile::NamedTempFile, Vec<OpenedFile>) {
+pub(super) fn source() -> (tempfile::NamedTempFile, Vec<OpenedFile>) {
     let mut file = tempfile::NamedTempFile::new().unwrap();
     file.write_all(b"original bytes").unwrap();
     let opened =
         OpenedFile::adopt(File::open(file.path()).unwrap(), "folder/document".into()).unwrap();
     (file, vec![opened])
 }
-async fn scenario(test: impl Future<Output = ()>) {
+pub(super) async fn scenario(test: impl Future<Output = ()>) {
     tokio::time::timeout(std::time::Duration::from_secs(30), test)
         .await
         .expect("Owned client scenario must finish");
 }
-fn hook(client: &mut NativeClient, method: &'static str, after: bool) -> Arc<Notify> {
+pub(super) fn hook(client: &mut NativeClient, method: &'static str, after: bool) -> Arc<Notify> {
     let reached = Arc::new(Notify::new());
     client.hook = Some(ReplyHook {
         method,
@@ -42,7 +42,7 @@ fn hook(client: &mut NativeClient, method: &'static str, after: bool) -> Arc<Not
     });
     reached
 }
-async fn interrupted<T>(future: impl Future<Output = Result<T>>, reached: Arc<Notify>) {
+pub(super) async fn interrupted<T>(future: impl Future<Output = Result<T>>, reached: Arc<Notify>) {
     tokio::pin!(future);
     tokio::select! {
         _=reached.notified()=>(),

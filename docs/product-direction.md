@@ -6,7 +6,8 @@ methods and directed state invalidations implemented; the native daemon executab
 and hidden visibility recovery are now implemented. Bounded current-run history
 and seven additive Operations1 methods are implemented. A dedicated native
 operation client now reconciles replies and acknowledges automatically; its state
-projection/controls and the graphical shell remain pending._
+projections, invalidations and consent/cancel controls are implemented; the
+graphical shell and bounded transfer detail contract remain pending._
 
 Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). Bounded TCP workers and the owned native dispatch/cancellation/startup seam are implemented in [native-transfer-supervision.md](native-transfer-supervision.md) and [native-managed-dispatch.md](native-managed-dispatch.md). Common TCP/BLE session capabilities and consent processing receipts are implemented in [native-session-controls.md](native-session-controls.md). The single-owner coordinator/core runtime is implemented in [native-core-runtime.md](native-core-runtime.md), using [ordered lifecycle events](native-core-events.md). Authenticated selection IPC is implemented in [native-selection-transactions.md](native-selection-transactions.md), with additive [transfer controls](native-dbus-controls.md) and [bounded state pages/invalidation](native-dbus-state.md). A registered daemon and native UI remain pending. Historical stage descriptions below must be read with these checkpoints.
 

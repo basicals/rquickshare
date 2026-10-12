@@ -53,11 +53,11 @@ No public bus method, source authority, settings write, dependency or activation
 
 1. [x] Analyze fixed schema, zbus backpressure, source/client lifecycle and GTK
    availability; record plan before code.
-2. [ ] Implement typed projections, retained captures, owned coalescing signal pump
+2. [x] Implement typed projections, retained captures, owned coalescing signal pump
    and existing controls; update native client lifecycle.
-3. [ ] Add scoped unit/private-broker regression checks and run affected Rust checks
+3. [x] Add scoped unit/private-broker regression checks and run affected Rust checks
    once. Preserve previous measured results and report any corrections honestly.
-4. [ ] Commit the recoverable implementation and proceed to native shell feasibility/
+4. [x] Commit the recoverable implementation and proceed to native shell feasibility/
    prototype within the accepted compact tray/notification design.
 
 Rollback this additive client slice before any shell which consumes it. No daemon
@@ -84,7 +84,36 @@ No ten-run development stability gate or exhaustive repository coverage claim.
 
 ## Actual observations / continuation
 
-Implementation pending. GTK4 runtime 4.22 is present, but GTK4 and GTK4 Layer Shell
+Plan frozen in `ea0840b` before source edits. Typed immutable views, retained
+capture replacement, one owned signal pump, freshness/sticky owner-failure and
+existing discard/consent/cancel adapters are implemented. Pump subscriptions are
+installed before bootstrap reads, drained continuously and explicitly joined on
+close. No new wire method/dependency or daemon behavior.
+
+12 new checks with table subcases: Positive 2, N2 2, N4 2, N5 1, N7 3, N9 2
+(primary categories; flags and malformed fields also cover N1/N6, sender/privacy
+checks cover N10). No new N8/N11/N12 behavior; inherited FD/storage cases remain.
+Initial compilation identified an untyped page offset; explicitly typed u32 before
+execution. The affected service run then passed all 190 tests, no failures/ignored,
+with 284 other unit/export and eight integration tests filtered. Strict Clippy
+identified one unchecked private-host cleanup result in a new test; asserted its
+success and reran that changed owner-loss check once (passed). Final core all-
+feature/all-target and desktop no-default-feature/all-target locked Clippy with
+-D warnings, both nightly format checks and diff checks passed. Current inventory:
+474 unit/export + 8 integration = 482, not a fresh whole-482 result. Existing bluer
+future-incompatibility notice remains. No ten-run repetitions or new full-suite
+coverage claim. The pre-existing thousand-cycle client case also passed with the
+new signal pump, proving replies progress without consumer polling of hints.
+
+The state API deliberately lacks sender/file/PIN/progress details. Source review
+confirms existing TransferMetadata holds those values while SessionSnapshot does
+not; safely exposing live consent in GTK requires the next contract decision.
+Prepare a reviewable GTK widget prototype and a bounded metadata proposal before
+changing that public/security-facing presentation. Continue authorized preparation;
+no blind accept UI or invented metadata. No live user service/settings changes.
+Terminal closed.
+
+GTK4 runtime 4.22 is present, but GTK4 and GTK4 Layer Shell
 development pkg-config files are absent. GTK4 Layer Shell upstream documents KDE
 Plasma Wayland support; this is feasibility evidence, not physical tray-placement
 acceptance. Build dependencies may be extracted privately for verification, without

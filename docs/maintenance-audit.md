@@ -1,5 +1,24 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: native client projections, invalidations and controls implemented
+
+Plan frozen before code in `ea0840b`; [native-client-state.md](native-client-state.md)
+records checked immutable pages, one owned continuously drained/coalescing signal
+pump, sticky daemon replacement and exact existing consent/cancel/discard methods.
+It avoids zbus subscription backpressure blocking replies, partial view publication
+and source-owning request loss. Same-UID transfer controls are not bound to the
+originating client. Cancellation admission remains distinct from terminal closure.
+
+12 new checks; all 190 affected service tests passed. One changed cleanup assertion
+passed its targeted rerun; strict core/desktop Clippy, Rust format and diff checks
+passed. Current inventory 482; no fresh whole-482 run/ten-run claim. No dependencies,
+wire changes, activation, user-session/settings changes or physical peer proof.
+
+Continue with a reviewable native compact-panel prototype and bounded transfer
+metadata contract. The current coarse state has no sender/files/PIN/progress for
+safe consent presentation; do not fabricate those fields or ship blind accept.
+Terminal closed.
+
 ## 2026-10-12: native operation client with automatic receipt acknowledgement
 
 Plan committed before production code in `6551265`;

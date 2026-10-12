@@ -35,6 +35,9 @@ impl fmt::Display for ClientError {
 }
 impl std::error::Error for ClientError {}
 
+pub mod state;
+mod watch;
+
 type Result<T> = std::result::Result<T, ClientError>;
 
 macro_rules! handle {
@@ -138,6 +141,10 @@ pub struct NativeClient {
     last: u64,
     pending: Option<Pending>,
     last_outcome: Option<Outcome>,
+    watcher: Option<watch::WatchOwner>,
+    capture: Option<String>,
+    last_view: Option<state::StateView>,
+    view_incomplete: bool,
     #[cfg(test)]
     hook: Option<ReplyHook>,
 }
@@ -244,6 +251,10 @@ impl NativeClient {
             last: 0,
             pending: None,
             last_outcome: None,
+            watcher: None,
+            capture: None,
+            last_view: None,
+            view_incomplete: true,
             #[cfg(test)]
             hook: None,
         };
@@ -257,6 +268,13 @@ impl NativeClient {
             .deserialize::<u32>()
             .map_err(|_| ClientError::Protocol)?;
         same_uid(uid, rustix::process::geteuid().as_raw())?;
+        client.watcher = Some(
+            watch::WatchOwner::subscribe(
+                client.connection.as_ref().ok_or(ClientError::Closed)?,
+                &client.owner,
+            )
+            .await?,
+        );
         let reply = client.wire(INTERFACE, "BeginSnapshot", &()).await?;
         type Metadata = (
             String,
@@ -334,6 +352,15 @@ impl NativeClient {
         method: &'static str,
         body: &B,
     ) -> Result<Message> {
+        if let Some(watcher) = &self.watcher {
+            let hint = watcher.receiver.borrow();
+            if let Some(error) = hint.failure {
+                return Err(error);
+            }
+            if self.epoch != 0 && hint.epoch.is_some_and(|epoch| epoch != self.epoch) {
+                return Err(ClientError::DaemonChanged);
+            }
+        }
         if self.name_owner().await? != self.owner {
             return Err(ClientError::DaemonChanged);
         }
@@ -746,12 +773,23 @@ impl NativeClient {
     }
     pub async fn close(mut self) -> Result<()> {
         self.pending = None;
-        self.connection
+        let mut failed = false;
+        if let Some(watcher) = self.watcher.as_mut() {
+            watcher.stop.cancel();
+            if let Some(task) = watcher.task.take() {
+                failed = task.await.is_err();
+            }
+        }
+        let closed = self
+            .connection
             .take()
             .ok_or(ClientError::Closed)?
             .close()
-            .await
-            .map_err(|_| ClientError::Transport)
+            .await;
+        if failed || closed.is_err() {
+            return Err(ClientError::Transport);
+        }
+        Ok(())
     }
 
     #[cfg(test)]
@@ -777,3 +815,11 @@ struct ReplyHook {
 
 #[cfg(test)]
 mod tests;
+
+impl Drop for NativeClient {
+    fn drop(&mut self) {
+        if let Some(watcher) = &self.watcher {
+            watcher.stop.cancel();
+        }
+    }
+}
