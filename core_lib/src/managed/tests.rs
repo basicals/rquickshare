@@ -188,3 +188,45 @@ async fn given_legacy_receiver_when_closed_then_buffered_inputs_are_drained_with
     assert!(receiver.recv().await.is_none());
     assert!(sender.send(info("closed")).await.is_err());
 }
+
+#[tokio::test]
+async fn given_full_queue_when_rejected_then_no_phantom_session_is_published() {
+    use futures::FutureExt;
+    use tokio::sync::broadcast;
+
+    use crate::sessions::SessionEvent;
+    // Arrange
+    let (sender, mut receiver) = ManagedSender::channel().unwrap();
+    let mut events = sender.sessions().subscribe_fresh().unwrap();
+    for index in 0..QUEUE_CAPACITY {
+        sender.try_send(info(&index.to_string())).unwrap();
+    }
+    for _ in 0..QUEUE_CAPACITY {
+        assert!(matches!(
+            events.try_recv().unwrap(),
+            SessionEvent::Opened(_)
+        ));
+    }
+    let ready = sender.ready();
+    tokio::pin!(ready);
+    // Act / Assert
+    assert!(ready.as_mut().now_or_never().is_none());
+    assert_eq!(
+        sender.try_send(info("full")).err().unwrap().kind,
+        RejectionKind::Full
+    );
+    assert!(matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    ));
+    receiver.recv().await.unwrap().release();
+    assert_eq!(ready.await, Ok(()));
+    receiver.close();
+    assert_eq!(
+        sender.ready().await,
+        Err(crate::sessions::SessionError::Closed)
+    );
+    while let Ok(job) = receiver.try_recv() {
+        job.release();
+    }
+}

@@ -105,6 +105,18 @@ impl ManagedSender {
     }
 
     pub fn try_send(&self, info: SendInfo) -> Result<TransferControl, RejectedSend> {
+        let permit = match self.sender.try_reserve() {
+            Ok(permit) => permit,
+            Err(error) => {
+                return Err(RejectedSend {
+                    kind: match error {
+                        mpsc::error::TrySendError::Full(_) => RejectionKind::Full,
+                        mpsc::error::TrySendError::Closed(_) => RejectionKind::Closed,
+                    },
+                    request: Box::new(info),
+                })
+            }
+        };
         let cancellation = CancellationToken::new();
         let session = match self.sessions.open(
             TransferType::Outbound,
@@ -135,17 +147,21 @@ impl ManagedSender {
             completion: Some(completion),
             session: Some(session),
         };
-        self.sender.try_send(job).map_err(|error| {
-            let (kind, job) = match error {
-                mpsc::error::TrySendError::Full(job) => (RejectionKind::Full, job),
-                mpsc::error::TrySendError::Closed(job) => (RejectionKind::Closed, job),
-            };
-            RejectedSend {
-                kind,
-                request: Box::new(job.info),
-            }
-        })?;
+        permit.send(job);
         Ok(control)
+    }
+
+    /// Readiness only: no permit escapes this call and concurrent admission can still win.
+    pub async fn ready(&self) -> Result<(), crate::sessions::SessionError> {
+        tokio::select! {
+            biased;
+            _ = self.sender.closed() => Err(crate::sessions::SessionError::Closed),
+            result = async {
+                self.sessions.available().await?;
+                drop(self.sender.reserve().await.map_err(|_| crate::sessions::SessionError::Closed)?);
+                Ok(())
+            } => result,
+        }
     }
 
     pub fn is_closed(&self) -> bool {

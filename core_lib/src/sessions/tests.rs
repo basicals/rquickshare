@@ -547,3 +547,101 @@ async fn given_consent_queued_in_old_round_when_new_wait_begins_then_old_answer_
     );
     live.wait().await.unwrap();
 }
+
+#[test]
+fn given_short_lived_session_when_observed_later_then_lifecycle_order_survives_owner_drop() {
+    // Arrange
+    let hub = SessionHub::new(7).unwrap();
+    let mut events = hub.subscribe_fresh().unwrap();
+    let mut lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    let id = lease.control().snapshot().id;
+    // Act
+    lease.observe(&State::WaitingForUserConsent);
+    lease.observe(&State::Finished);
+    lease.observe(&State::Disconnected);
+    drop(lease);
+    // Assert
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Opened(control) if control.snapshot().id == id)
+    );
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Changed(s) if s.id == id && s.consent.is_some())
+    );
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Changed(s) if s.state == State::Finished)
+    );
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Closed(s) if s.state == State::Finished)
+    );
+    assert!(matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    ));
+}
+
+#[test]
+fn given_late_subscription_or_owner_loss_when_read_then_no_recovery_or_terminal_is_invented() {
+    // Arrange
+    let hub = SessionHub::new(7).unwrap();
+    let mut events = hub.subscribe_fresh().unwrap();
+    let lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    // Act / Assert
+    assert!(matches!(hub.subscribe_fresh(), Err(SessionError::Stale)));
+    drop(lease);
+    assert!(matches!(
+        events.try_recv().unwrap(),
+        SessionEvent::Opened(_)
+    ));
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Closed(s) if s.state == State::Initial)
+    );
+    hub.close();
+    assert!(matches!(hub.subscribe_fresh(), Err(SessionError::Closed)));
+}
+
+#[test]
+fn given_more_than_bounded_events_when_unpolled_then_loss_is_explicit() {
+    // Arrange
+    let hub = SessionHub::new(7).unwrap();
+    let mut events = hub.subscribe_fresh().unwrap();
+    // Act
+    for _ in 0..=EVENT_LIMIT / 2 {
+        drop(
+            hub.open(TransferType::Inbound, None, CancellationToken::new())
+                .unwrap(),
+        );
+    }
+    // Assert
+    assert!(matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Lagged(2))
+    ));
+}
+
+#[tokio::test]
+async fn given_full_hub_when_lease_drops_or_hub_closes_then_readiness_wakes_without_timer() {
+    use futures::FutureExt;
+    // Arrange
+    let hub = SessionHub::with_limit(7, 1).unwrap();
+    let lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    let available = hub.available();
+    tokio::pin!(available);
+    // Act / Assert
+    assert!(available.as_mut().now_or_never().is_none());
+    drop(lease);
+    assert_eq!(available.await, Ok(()));
+    let _lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    let available = hub.available();
+    tokio::pin!(available);
+    assert!(available.as_mut().now_or_never().is_none());
+    hub.close();
+    assert_eq!(available.await, Err(SessionError::Closed));
+}

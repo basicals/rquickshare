@@ -11,6 +11,15 @@ use crate::channel::{ChannelMessage, TransferType};
 use crate::State;
 
 const SESSION_LIMIT: usize = 32;
+pub(crate) const EVENT_LIMIT: usize = 512;
+
+/// Ordered observations for a single trusted native owner. Lag requires fail-closed handling.
+#[derive(Clone)]
+pub enum SessionEvent {
+    Opened(SessionControl),
+    Changed(SessionSnapshot),
+    Closed(SessionSnapshot),
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SessionId {
@@ -186,6 +195,8 @@ struct HubState {
     limit: usize,
     open: bool,
     sessions: BTreeMap<SessionId, SessionControl>,
+    events: broadcast::Sender<SessionEvent>,
+    membership: watch::Sender<()>,
 }
 
 impl SessionHub {
@@ -203,7 +214,45 @@ impl SessionHub {
             limit,
             open: true,
             sessions: BTreeMap::new(),
+            events: broadcast::channel(EVENT_LIMIT).0,
+            membership: watch::channel(()).0,
         }))))
+    }
+
+    /// Subscribe before the first session. A late subscription is not recovery.
+    pub fn subscribe_fresh(&self) -> Result<broadcast::Receiver<SessionEvent>, SessionError> {
+        let state = self.0.lock().map_err(|_| SessionError::OwnerLost)?;
+        if !state.open {
+            return Err(SessionError::Closed);
+        }
+        if state.sequence != 0 {
+            return Err(SessionError::Stale);
+        }
+        Ok(state.events.subscribe())
+    }
+
+    pub(crate) async fn available(&self) -> Result<(), SessionError> {
+        let mut membership = self
+            .0
+            .lock()
+            .map_err(|_| SessionError::OwnerLost)?
+            .membership
+            .subscribe();
+        loop {
+            {
+                let state = self.0.lock().map_err(|_| SessionError::OwnerLost)?;
+                if !state.open {
+                    return Err(SessionError::Closed);
+                }
+                if state.sessions.len() < state.limit {
+                    return Ok(());
+                }
+            }
+            membership
+                .changed()
+                .await
+                .map_err(|_| SessionError::Closed)?;
+        }
     }
 
     pub fn active(&self) -> Result<Vec<SessionControl>, SessionError> {
@@ -220,6 +269,7 @@ impl SessionHub {
     pub(crate) fn close(&self) {
         if let Ok(mut state) = self.0.lock() {
             state.open = false;
+            state.membership.send_replace(());
             for control in state.sessions.values() {
                 control.cancel();
             }
@@ -268,6 +318,7 @@ impl SessionHub {
         };
         state.sequence = sequence;
         state.sessions.insert(id, control.clone());
+        let _ = state.events.send(SessionEvent::Opened(control.clone()));
         Ok(SessionLease {
             id,
             hub: Arc::downgrade(&self.0),
@@ -300,6 +351,15 @@ impl fmt::Debug for SessionLease {
 }
 
 impl SessionLease {
+    fn publish(&self, status: Status) {
+        let snapshot = status.snapshot.clone();
+        self.status.send_replace(status);
+        if let Some(hub) = self.hub.upgrade() {
+            if let Ok(state) = hub.lock() {
+                let _ = state.events.send(SessionEvent::Changed(snapshot));
+            }
+        }
+    }
     pub fn control(&self) -> SessionControl {
         self.control.clone()
     }
@@ -320,7 +380,7 @@ impl SessionLease {
                 status.snapshot.state = actual.clone();
                 status.snapshot.consent = None;
                 status.decision = None;
-                self.status.send_replace(status);
+                self.publish(status);
                 self.control.cancel();
                 return;
             };
@@ -337,7 +397,7 @@ impl SessionLease {
             || status.snapshot.consent != self.status.borrow().snapshot.consent
         {
             status.snapshot.state = actual.clone();
-            self.status.send_replace(status);
+            self.publish(status);
         }
     }
 
@@ -378,6 +438,10 @@ impl Drop for SessionLease {
         if let Some(hub) = self.hub.upgrade() {
             if let Ok(mut state) = hub.lock() {
                 state.sessions.remove(&self.id);
+                let _ = state
+                    .events
+                    .send(SessionEvent::Closed(self.control.snapshot()));
+                state.membership.send_replace(());
             }
         }
     }
