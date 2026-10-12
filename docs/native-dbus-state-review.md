@@ -1,7 +1,8 @@
 # Native D-Bus state read contract review
 
-2026-10-12. Mode A. Status: prepared for a new public API decision; no state
-methods or signals are implemented by this document. The preceding transfer
+2026-10-12. Mode A. Status: the user selected option 1. The concrete implementation
+contract and progress are in [native-dbus-state.md](native-dbus-state.md). This
+review records the decision, not implementation evidence. The preceding transfer
 control slice is complete in `1b3b84c`, with actual measurements in
 [native-dbus-controls.md](native-dbus-controls.md).
 
@@ -106,6 +107,6 @@ Google compatibility remain separate milestones.
 
 ## Handoff
 
-Stop before implementing this contract until the user selects option 1 or 2.
+The user selected option 1; no further approval is pending for this contract.
 All previously authorized transfer-control work is committed and verified. No
 test session, watcher or private broker remains running. Terminal closed.
