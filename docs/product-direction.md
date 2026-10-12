@@ -23,6 +23,11 @@ approved 64-record safely closed current-run history and additive Operations1.
 acknowledge these receipts on a dedicated, daemon-pinned connection.
 History is not persisted and this does not establish Google feature parity.
 
+[Native GTK preview and transfer detail review](native-desktop-details-review.md)
+now provide real widget captures of the compact panel. The GUI is still a review
+prototype. Live consent requires the next bounded sender/file/PIN/progress contract;
+no details are fabricated and no acceptance controls are enabled in the preview.
+
 ## Authoritative correction
 
 The user clarified that the intended product includes:

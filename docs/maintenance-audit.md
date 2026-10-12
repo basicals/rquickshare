@@ -1,5 +1,29 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: native GTK widget preview and detail-contract review prepared
+
+Client projections/controls are committed as `cb1b0d3`. Work continued into an
+actual GTK4 widget prototype: three 420x498 native captures were parsed/rendered
+under owned private broker/Xvfb, with temporary extracted GI typelibs. No package
+installation/user-session changes. [native-desktop-details-review.md](native-desktop-details-review.md)
+records the prototype, reproduction and the next required public-contract choice.
+
+Current Manager1/SessionSnapshot have no sender/files/PIN/progress. The legacy
+TransferMetadata contains these and private destination/text fields, but separately
+bridging its broadcast would break ordered/recoverable native state. Recommend
+additive focused typed detail reads (option 1); option 2 is a complete Manager2
+immutable view with a larger migration/cache contract. Await selection under
+AGENTS 3/3.1 before new schema/live consent presentation. No blind accept or invented
+verification data. Graphical examples are marked Preview, not live functionality.
+
+Source inspection also exposed seven normal logs with device/file/PIN/consent
+metadata. Fixed diagnostic messages now replace those identified disclosures;
+transfer logic is unchanged. Strict library Clippy and format/diff passed; no
+redundant protocol test loop. This is not a whole-repository privacy audit. Review
+utility compiles; three native images visually inspected. All owned processes
+exited. Native executable UI/placement, notifications, settings, Dolphin/package
+activation and physical Google parity remain unfinished. Terminal closed.
+
 ## 2026-10-12: native client projections, invalidations and controls implemented
 
 Plan frozen before code in `ea0840b`; [native-client-state.md](native-client-state.md)

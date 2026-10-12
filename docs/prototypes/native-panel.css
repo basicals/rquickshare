@@ -1,0 +1,12 @@
+/* GTK4 native widget preview. Product colors will follow the desktop theme. */
+window { border-radius: 18px; }
+.panel-title { font-size: 20px; font-weight: 700; }
+.preview-badge { font-size: 11px; padding: 5px 9px; border-radius: 20px; background: alpha(currentColor, 0.08); }
+.selection-card { padding: 12px; border-radius: 12px; background: alpha(currentColor, 0.05); }
+.device-row { padding: 12px; border-radius: 12px; border: 1px solid alpha(currentColor, 0.10); }
+.consent-card { padding: 12px; border-radius: 12px; border: 1px solid alpha(currentColor, 0.10); }
+.row-title { font-weight: 600; }
+.dim-label { opacity: 0.65; }
+.verification-code { font-size: 26px; font-weight: 600; padding: 5px 0; }
+.footer-note { font-size: 11px; }
+stackswitcher button { min-width: 75px; }
