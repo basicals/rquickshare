@@ -28,7 +28,7 @@ Recommendation: option 1 before the live core adapter. The coordinator's ownersh
 
 ## Verification facts
 
-The bounded correlation fix is implemented in `90067ee`. `outbound_failure` is shared by queue/startup and in-loop failures; `execute_outbound` is the same owner entrypoint used by `run` and the two loopback tests. No orchestration change is implemented or approved by this document.
+The bounded correlation fix is implemented in `90067ee`. `outbound_failure` is shared by queue/startup and in-loop failures; `execute_outbound` is the same owner entrypoint used by `run` and the two loopback tests. The subsequently approved orchestration change is implemented and verified separately in [native-transfer-supervision.md](native-transfer-supervision.md); the observations below are historical evidence for the correlation fix.
 
 - One `cargo +stable test --all-features manager::tests` invocation passed **9 tests**, including the **3 new methods**. The earlier full coordinator/core run (237 tests) is recorded in [native-service-coordinator.md](native-service-coordinator.md); it was not repeated after this localized manager change. The current compiled unit-test inventory is 236 plus 4 integration tests; this is an inventory count, not a claim of a new 240-test execution.
 - `cargo +stable clippy --all-features --all-targets -- -D warnings` passed after this change. Format/diff checks passed. Only the existing bluer future-incompatibility warning remains. No test retry loop, sleep, external peer or live desktop process was used. Command sessions exited (terminal closed).

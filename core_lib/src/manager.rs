@@ -1,20 +1,23 @@
+use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::Receiver;
+use tokio::sync::Semaphore;
+use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use ts_rs::TS;
 
 use crate::channel::{ChannelDirection, ChannelMessage, TransferType};
-use crate::errors::AppError;
 use crate::hdl::info::TransferMetadata;
 use crate::hdl::{
-    peek_client_introduction, BwuClientIntroductionIdentity, BwuRouter, InboundRequest,
-    OutboundPayload, OutboundRequest, State,
+    peek_client_introduction, BwuClientIntroductionIdentity, BwuRouter, OutboundPayload, State,
 };
-use crate::utils::RemoteDeviceInfo;
+mod session;
+use session::{Connector, SessionContext, TcpConnector};
 
 const INNER_NAME: &str = "TcpServer";
 const MAX_UI_ERROR_CHARS: usize = 512;
@@ -100,10 +103,7 @@ fn outbound_failure(
     meta: Option<TransferMetadata>,
     error: &anyhow::Error,
 ) -> Option<ChannelMessage> {
-    if matches!(
-        state,
-        State::Finished | State::Cancelled | State::Rejected | State::Disconnected
-    ) {
+    if terminal(state) {
         return None;
     }
     Some(ChannelMessage {
@@ -117,6 +117,63 @@ fn outbound_failure(
     })
 }
 
+fn terminal(state: &State) -> bool {
+    matches!(
+        state,
+        State::Finished | State::Cancelled | State::Rejected | State::Disconnected
+    )
+}
+
+fn cancellation_message(
+    id: &str,
+    direction: TransferType,
+    state: &State,
+    meta: Option<TransferMetadata>,
+) -> Option<ChannelMessage> {
+    if terminal(state) || (direction == TransferType::Inbound && *state == State::Initial) {
+        return None;
+    }
+    Some(ChannelMessage {
+        id: id.to_owned(),
+        direction: ChannelDirection::LibToFront,
+        rtype: Some(direction),
+        state: Some(State::Cancelled),
+        meta,
+        ..Default::default()
+    })
+}
+
+#[derive(Clone, Copy)]
+struct TcpLimits {
+    sessions: usize,
+    classifiers: usize,
+}
+
+impl Default for TcpLimits {
+    fn default() -> Self {
+        Self {
+            sessions: 16,
+            classifiers: 4,
+        }
+    }
+}
+
+impl TcpLimits {
+    fn validate(self) -> Result<Self, anyhow::Error> {
+        if self.sessions == 0
+            || self.classifiers == 0
+            || self
+                .sessions
+                .checked_add(self.classifiers)
+                .filter(|total| *total <= Semaphore::MAX_PERMITS)
+                .is_none()
+        {
+            return Err(anyhow::anyhow!("Invalid TCP worker budgets"));
+        }
+        Ok(self)
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, TS)]
 #[ts(export)]
 pub struct SendInfo {
@@ -126,9 +183,25 @@ pub struct SendInfo {
     pub ob: OutboundPayload,
 }
 
-pub struct TcpServer {
+pub(crate) trait AcceptSource: Send + Sync {
+    fn accept(
+        &self,
+    ) -> impl std::future::Future<Output = std::io::Result<(TcpStream, std::net::SocketAddr)>> + Send;
+}
+
+impl AcceptSource for TcpListener {
+    fn accept(
+        &self,
+    ) -> impl std::future::Future<Output = std::io::Result<(TcpStream, std::net::SocketAddr)>> + Send
+    {
+        TcpListener::accept(self)
+    }
+}
+
+pub(crate) struct TcpServer<L = TcpListener, C = TcpConnector> {
     endpoint_id: [u8; 4],
-    tcp_listener: TcpListener,
+    tcp_listener: L,
+    connector: Arc<C>,
     sender: Sender<ChannelMessage>,
     connect_receiver: Receiver<SendInfo>,
     bwu_router: BwuRouter,
@@ -145,178 +218,121 @@ impl TcpServer {
         Ok(Self {
             endpoint_id,
             tcp_listener,
+            connector: Arc::new(TcpConnector),
             sender,
             connect_receiver,
             bwu_router,
         })
     }
+}
+
+impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
+    fn context(&self) -> SessionContext<C> {
+        SessionContext::new(
+            self.endpoint_id,
+            self.sender.clone(),
+            Arc::clone(&self.connector),
+        )
+    }
 
     pub async fn run(&mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
-        info!("{INNER_NAME}: service starting");
+        self.run_with_limits(ctk, TcpLimits::default()).await
+    }
 
-        loop {
-            let cctk = ctk.clone();
+    async fn run_with_limits(
+        &mut self,
+        ctk: CancellationToken,
+        limits: TcpLimits,
+    ) -> Result<(), anyhow::Error> {
+        let limits = limits.validate()?;
+        let sessions = Arc::new(Semaphore::new(limits.sessions));
+        let classifiers = Arc::new(Semaphore::new(limits.classifiers));
+        let lifetime = ctk.child_token();
+        let mut workers = JoinSet::new();
+        let mut active_ids = HashSet::new();
+        let mut pending: Option<SendInfo> = None;
+        let context = self.context();
+        info!("TcpServer: supervised service starting");
 
+        let mut outcome = loop {
             tokio::select! {
-                _ = ctk.cancelled() => {
-                    info!("{INNER_NAME}: tracker cancelled, breaking");
-                    break;
+                biased;
+                _ = lifetime.cancelled() => break Ok(()),
+                result = workers.join_next(), if !workers.is_empty() => {
+                    match result {
+                        Some(Ok(Some(id))) => { active_ids.remove(&id); },
+                        Some(Ok(None)) | None => {},
+                        Some(Err(_)) => break Err(anyhow::anyhow!("TCP worker task failed")),
+                    }
                 }
-                Some(i) = self.connect_receiver.recv() => {
-                    info!("{INNER_NAME}: outbound request queued for {}", i.addr);
-                    self.execute_outbound(cctk, i).await;
+                Ok(permit) = Arc::clone(&sessions).acquire_owned(),
+                    if pending.as_ref().is_some_and(|info| !active_ids.contains(&info.id)) => {
+                    if let Some(info) = pending.take() {
+                        let id = info.id.clone();
+                        active_ids.insert(id.clone());
+                        let context = context.clone();
+                        let token = lifetime.child_token();
+                        workers.spawn(async move {
+                            let _permit = permit;
+                            context.execute_outbound(token, info).await;
+                            Some(id)
+                        });
+                    }
                 }
-                r = self.tcp_listener.accept() => {
-                    match r {
-                        Ok((socket, remote_addr)) => {
-                            info!("{INNER_NAME}: accepted inbound client from {remote_addr}");
-                            let esender = self.sender.clone();
-                            let csender = self.sender.clone();
-                            let bwu_router = self.bwu_router.clone();
-
-                            tokio::spawn(async move {
-                                let socket = match route_bandwidth_upgrade_if_pending(
-                                    socket,
-                                    &bwu_router,
-                                )
-                                .await
-                                {
-                                    Ok(Some(socket)) => socket,
-                                    Ok(None) => {
-                                        info!(
-                                            "{INNER_NAME}: routed bandwidth-upgrade client from {remote_addr}"
-                                        );
-                                        return;
-                                    }
-                                    Err(error) => {
-                                        warn!(
-                                            "{INNER_NAME}: failed to classify inbound client {remote_addr}: {error}"
-                                        );
-                                        return;
-                                    }
-                                };
-
-                                let mut ir = InboundRequest::new(socket, remote_addr.to_string(), csender);
-
-                                loop {
-                                    match ir.handle().await {
-                                        Ok(_) => {},
-                                        Err(e) => match e.downcast_ref() {
-                                            Some(AppError::NotAnError) => {
-                                                debug!("{INNER_NAME}: inbound session {remote_addr} completed");
-                                                break;
-                                            },
-                                            None => {
-                                                if ir.state.state == State::Initial {
-                                                    warn!(
-                                                        "{INNER_NAME}: inbound client {remote_addr} failed during initial handshake: {e}"
-                                                    );
-                                                    break;
-                                                }
-
-                                                if ir.state.state != State::Finished {
-                                                    let _ = esender.send(ChannelMessage {
-                                                        id: remote_addr.to_string(),
-                                                        direction: ChannelDirection::LibToFront,
-                                                        state: Some(State::Disconnected),
-                                                        meta: ir.state.transfer_metadata.clone(),
-                                                        error: Some(error_for_ui(&e)),
-                                                        ..Default::default()
-                                                    });
-                                                }
-                                                error!(
-                                                    "{INNER_NAME}: error while handling inbound client {remote_addr}: {e} ({:?})",
-                                                    ir.state.state
-                                                );
-                                                break;
-                                            }
-                                        },
-                                    }
-                                }
+                Some(info) = self.connect_receiver.recv(), if pending.is_none() => {
+                    pending = Some(info);
+                }
+                accepted = async {
+                    let permit = Arc::clone(&classifiers).acquire_owned().await
+                        .map_err(|_| anyhow::anyhow!("TCP classifier budget closed"))?;
+                    let accepted = self.tcp_listener.accept().await?;
+                    Ok::<_, anyhow::Error>((permit, accepted))
+                } => {
+                    match accepted {
+                        Ok((permit, (socket, remote_addr))) => {
+                            let context = context.clone();
+                            let token = lifetime.child_token();
+                            let router = self.bwu_router.clone();
+                            let sessions = Arc::clone(&sessions);
+                            workers.spawn(async move {
+                                context.classify_inbound(
+                                    token, socket, remote_addr, router, sessions, permit,
+                                ).await;
+                                None
                             });
-                        },
-                        Err(err) => {
-                            error!("{INNER_NAME}: error accepting: {err}");
-                            break;
                         }
+                        Err(error) => break Err(error),
                     }
                 }
             }
-        }
+        };
 
-        Ok(())
+        // Close admission first; then cancel and join every owned worker.
+        self.connect_receiver.close();
+        lifetime.cancel();
+        if let Some(info) = pending.take() {
+            context.cancel_queued(&info.id);
+        }
+        while let Ok(info) = self.connect_receiver.try_recv() {
+            context.cancel_queued(&info.id);
+        }
+        while let Some(result) = workers.join_next().await {
+            if result.is_err() && outcome.is_ok() {
+                outcome = Err(anyhow::anyhow!("TCP worker task failed during shutdown"));
+            }
+        }
+        info!("TcpServer: supervised workers stopped");
+        outcome
     }
 
+    #[cfg(test)]
     async fn execute_outbound(&self, ctk: CancellationToken, info: SendInfo) {
-        let id = info.id.clone();
-        if let Err(error) = self.connect(ctk, info).await {
-            error!("{INNER_NAME}: error sending: {error}");
-            if let Some(message) = outbound_failure(&id, &State::Initial, None, &error) {
-                let _ = self.sender.send(message);
-            }
-        }
-    }
-
-    /// To be called inside a separate task if we want to handle concurrency
-    pub async fn connect(&self, ctk: CancellationToken, si: SendInfo) -> Result<(), anyhow::Error> {
-        info!("{INNER_NAME}: connecting to outbound peer {}", si.addr);
-        let socket = TcpStream::connect(si.addr.clone()).await?;
-        info!("{INNER_NAME}: TCP connection established to {}", si.addr);
-
-        let mut or = OutboundRequest::new(
-            self.endpoint_id,
-            socket,
-            si.id,
-            self.sender.clone(),
-            si.ob,
-            RemoteDeviceInfo {
-                device_type: crate::DeviceType::Unknown,
-                name: si.name,
-            },
-        )?;
-
-        // Send connection request
-        or.send_connection_request().await?;
-        debug!("{INNER_NAME}: connection request sent to {}", si.addr);
-        // Send UKEY init
-        or.send_ukey2_client_init().await?;
-        debug!("{INNER_NAME}: UKEY2 client init sent to {}", si.addr);
-
-        loop {
-            tokio::select! {
-                _ = ctk.cancelled() => {
-                    info!("{INNER_NAME}: tracker cancelled, breaking");
-                    break;
-                },
-                r = or.handle() => {
-                    if let Err(e) = r {
-                        match e.downcast_ref() {
-                            Some(AppError::NotAnError) => break,
-                            None => {
-                                if let Some(message) = outbound_failure(
-                                    &or.state.id,
-                                    &or.state.state,
-                                    or.state.transfer_metadata.clone(),
-                                    &e,
-                                ) {
-                                    let _ = self.sender.send(message);
-                                }
-                                error!(
-                                    "{INNER_NAME}: error while handling outbound peer {}: {e} ({:?})",
-                                    si.addr,
-                                    or.state.state
-                                );
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
+        self.context().execute_outbound(ctk, info).await;
     }
 }
+
+#[cfg(all(test, target_os = "linux"))]
+mod supervision_tests;
 
 #[cfg(test)]
 mod tests {
@@ -331,7 +347,7 @@ mod tests {
         offline_frame, v1_frame, BandwidthUpgradeNegotiationFrame, OfflineFrame, V1Frame,
     };
 
-    fn client_introduction(endpoint_id: &str) -> Vec<u8> {
+    pub(super) fn client_introduction(endpoint_id: &str) -> Vec<u8> {
         client_introduction_with_last(endpoint_id, None)
     }
 
