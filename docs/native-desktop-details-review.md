@@ -1,7 +1,9 @@
 # Native transfer detail and consent presentation review
 
 2026-10-12. Mode A. Client state/control implementation: native-client-state.md.
-This is review/prototype preparation, not approval to publish another data contract.
+Decision: the user selected option 2 and confirmed there are no old native clients.
+Implementation SSOT: native-complete-view.md. Historical alternatives below are
+retained as decision context, not pending approval.
 
 ## Verified source findings
 
@@ -132,3 +134,11 @@ so GTK cannot activate those helpers. Rerendered all three affected previews usi
 that fixture: all succeeded at 420x497, no service activation in logs. This rerun
 was justified by the changed isolation configuration, not a repeated stability
 loop. Remaining Xvfb DRI3 warnings are non-fatal; texture capture uses Cairo.
+
+## Accepted decision
+
+2026-10-12: option 2 accepted. Replace the unpublished Manager1 interface and
+fixture with Manager2; update all in-repository native consumers atomically. Do
+not implement a legacy Manager1 adapter. Operations1 remains the ordered mutation
+protocol, not an old-client compatibility layer. The existing Tauri channel is
+independent and remains until product migration acceptance.
