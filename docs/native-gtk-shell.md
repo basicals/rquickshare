@@ -1,0 +1,91 @@
+# Native GTK shell integration
+
+2026-10-12. Mode A. Accepted compact GTK4 tray panel, complete Manager2 view and
+bounded controller. Existing preview is docs/prototypes/native-panel.ui/.css.
+This implementation remains uninstalled until compositor/package acceptance.
+
+## Analysis and plan before code
+
+The host has GTK4 4.22.4 runtime; GTK/Graphene development metadata and GTK4 Layer
+Shell 1.3 development/runtime were downloaded/extracted under chat work/, without
+apt installation. Use a separate native_desktop Rust crate to isolate GTK4/GLib
+0.22 dependencies from existing GTK3/Tauri. Pin compatible GTK4 0.11 and Layer
+Shell 0.8; preserve existing core/desktop lockfiles. Seed the new lockfile from
+core to avoid unrelated core dependency upgrades. New shell depends on the SDK,
+never creates RQS, opens network-peer sockets or owns transfer lifetime.
+
+Milestones:
+1. [ ] Add native Rust crate/lockfile, pure tray-coordinate placement, GtkBuilder
+   production widget source derived from the review and actual state rendering.
+2. [ ] Connect injected controller on owned Tokio runtime, GLib-only widgets,
+   explicit file/folder chooser acquisition and send/consent/cancel/discard.
+3. [ ] StatusNotifierItem activation on KDE session bus; bounded activation hints,
+   owned registration, no implicit installed daemon launch or fallback window.
+4. [ ] Focused pure/native widget/private-broker checks, one affected check run,
+   strict lint/format/build, isolated actual rendering; record results and commit.
+
+## Invariants and boundaries
+
+One owned runtime/controller for the GTK application's lifetime. GLib receives
+coalesced watch state asynchronously, no timer polling or blocking GTK callbacks.
+Close/Escape hides the surface; explicit Quit joins local clients/acquisition and
+tray tasks, not daemon stop. All mutations use the bounded controller and explicit
+user actions. Complete sender/manifest/PIN is shown before acceptance. Treat sender
+as advertised/unverified, labels as plain text, no markup evaluation. View exposes
+unsupported payload truthfully and allows decline/cancel. No percentages implying
+remote durable acknowledgement. All file rows are available in bounded scrolling.
+
+Chooser acquires selected local roots through OpenedSelection::acquire on one
+owned blocking ingress task; source paths never enter daemon IPC. Only one chooser/
+acquisition is active, joined on exit, and acquiring/choosing does not send.
+Existing committed selection must be sent/discarded before selecting another.
+No forwarded CLI paths, new desktop selection handoff endpoint, settings writer,
+Google identity/clipboard/credentials or notifications implementation in this slice.
+Those still require their documented ownership/contracts and follow next.
+
+Normal mode requires supported GTK4 Layer Shell and registers the KDE
+org.kde.StatusNotifierItem. Activate coordinates are screen-coordinate hints,
+not trusted file/transfer authority. Validate containing monitor geometry, choose
+nearest monitor edge and clamp 420px panel margins within monitor; use logical
+monitor coordinates (no additional integer scaling). Layer surface has zero
+exclusive zone and on-demand keyboard interaction. Window remains hidden until
+tray activation. Never claim physical clock anchoring from an Xvfb capture.
+Preview is explicit --preview/--preview-output, never automatic platform fallback;
+it does not connect a service or register a tray item, all controls disabled.
+
+Status notifier registration uses a separate connection from NativeClient's
+exclusive ordered ledger. Bounded latest activation hint, owned registration/
+shutdown. Same-user session bus only. Sender/credentials on activation are checked;
+no methods open paths or mutate transfers. Register/handle actual watcher ownership
+changes without unbounded streams/tasks, or fail explicitly until restarted.
+No live registration is performed by verification: private broker fixture only.
+
+## Verification inventory / risks / rollback
+
+Pure placement tables: all edges, monitor origin/negative origin, point outside,
+small/invalid monitors, integer overflow, panel/margin clamping and scale semantics.
+Native widget smoke: actual GtkBuilder parse/mapping, truthful ready/unavailable/
+unsupported incoming state, complete scrolling rows, disabled stale/busy controls,
+plain text and close/hide. Private tray fixture: activation coalescing, ownership/
+UID checks, fixed interface/properties, registration/loss/close; no user tray.
+Controller already has real private-broker action/lifetime checks; do not mirror
+all business rules in GTK E2E. N1,N2,N3,N5,N7,N9,N10 applicable; N8 no locale/time,
+N11 no billing, N12 source IO uses existing acquisition tests. Expected 5-8 pure/
+widget/tray methods, record actual counts. No full Google/KDE hardware acceptance.
+
+Rollback standalone native_desktop before the controller/core API. Risks: blocking
+GTK, orphan source acquisition, false placement/scale, stale accept button, hidden
+service failure and accidentally registering on user's real bus. No install,
+settings modification, source deletion, Tauri retirement or push.
+
+Sources:
+https://docs.gtk.org/gtk4/section-threading.html
+https://gtk-rs.org/gtk4-rs/stable/latest/book/main_event_loop.html
+https://docs.rs/gtk4-layer-shell/0.8.0/gtk4_layer_shell/trait.LayerShell.html
+https://specifications.freedesktop.org/status-notifier-item/latest/status-notifier-item.html
+https://github.com/KDE/plasma-workspace/blob/master/applets/systemtray/statusnotifieritemsource.cpp
+KDE uses org.kde interfaces although the freedesktop specification uses org.freedesktop.
+
+## Actual observations
+
+Plan recorded before code. Physical placement/keyboard/scale acceptance pending.
