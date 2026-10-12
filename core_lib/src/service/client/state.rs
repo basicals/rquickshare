@@ -1,9 +1,12 @@
-//! Checked immutable client projections of the existing paged wire schema.
+//! Checked immutable complete client projections of Manager2 captures.
+
+use std::sync::Arc;
 
 use serde::de::DeserializeOwned;
 
 use super::*;
 use crate::service::{ControlAction, Direction, Lifecycle, Phase, ResourceUsage};
+pub use crate::sessions::details::{DetailsStatus, DeviceKind, FileDetail, TransferDetails};
 
 pub(super) type Metadata = (
     String,
@@ -18,6 +21,8 @@ pub(super) type Metadata = (
     u32,
     u32,
 );
+pub(super) type DetailRow = (String, String, String, String, String, u64, u64, u32);
+
 pub(super) type TransferRow = (String, String, String, bool, u64, bool, String, u64);
 
 #[derive(Clone, Eq, PartialEq)]
@@ -37,6 +42,17 @@ pub struct TransferView {
     pub phase: Phase,
     pub consent_revision: Option<u64>,
     pub pending_control: Option<(ControlAction, u64)>,
+    pub details: Arc<TransferDetails>,
+}
+impl TransferView {
+    /// Presentation readiness only; the daemon revalidates the live round.
+    pub fn can_accept(&self) -> bool {
+        self.phase == Phase::AwaitingConsent
+            && self.pending_control.is_none()
+            && self.consent_revision.is_some()
+            && self.details.status == DetailsStatus::Ready
+            && self.details.valid(true)
+    }
 }
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StartupWarning {
@@ -112,6 +128,51 @@ fn sorted<'a>(ids: impl IntoIterator<Item = &'a str>) -> Result<()> {
     Ok(())
 }
 
+fn decode_details(row: DetailRow) -> Result<(TransferDetails, u32)> {
+    let status = match row.1.as_str() {
+        "unavailable" => DetailsStatus::Unavailable,
+        "ready" => DetailsStatus::Ready,
+        "unsupported" => DetailsStatus::Unsupported,
+        _ => return Err(ClientError::Protocol),
+    };
+    let device = match row.3.as_str() {
+        "unknown" => DeviceKind::Unknown,
+        "phone" => DeviceKind::Phone,
+        "tablet" => DeviceKind::Tablet,
+        "laptop" => DeviceKind::Laptop,
+        _ => return Err(ClientError::Protocol),
+    };
+    if row.7 > 256
+        || row.2.len() > 256
+        || row.2.chars().any(char::is_control)
+        || row.4.len() > 4
+        || !row.4.bytes().all(|b| b.is_ascii_digit())
+        || row.6 > row.5
+        || (status == DetailsStatus::Ready && (row.2.is_empty() || row.7 == 0))
+        || (status != DetailsStatus::Ready
+            && (!row.2.is_empty()
+                || device != DeviceKind::Unknown
+                || !row.4.is_empty()
+                || row.5 != 0
+                || row.6 != 0
+                || row.7 != 0))
+    {
+        return Err(ClientError::Protocol);
+    }
+    Ok((
+        TransferDetails {
+            status,
+            sender: row.2,
+            device,
+            pin: row.4,
+            total_bytes: row.5,
+            transferred_bytes: row.6,
+            files: Arc::default(),
+        },
+        row.7,
+    ))
+}
+
 impl NativeClient {
     fn empty_view(&self, metadata: &Metadata) -> Result<StateView> {
         let current = epoch(&metadata.1)?;
@@ -180,6 +241,7 @@ impl NativeClient {
             phase,
             consent_revision,
             pending_control,
+            details: Arc::default(),
         })
     }
     async fn pages<T: DeserializeOwned + Type>(
@@ -188,10 +250,24 @@ impl NativeClient {
         id: &str,
         count: u32,
     ) -> Result<Vec<T>> {
+        self.pages_for(method, id, count, None).await
+    }
+    async fn pages_for<T: DeserializeOwned + Type>(
+        &mut self,
+        method: &'static str,
+        id: &str,
+        count: u32,
+        transfer: Option<&str>,
+    ) -> Result<Vec<T>> {
         let mut rows = Vec::with_capacity(count as usize);
         let mut offset: u32 = 0;
         loop {
-            let reply = self.wire(INTERFACE, method, &(id, offset)).await?;
+            let reply = if let Some(transfer) = transfer {
+                self.wire(INTERFACE, method, &(id, transfer, offset))
+                    .await?
+            } else {
+                self.wire(INTERFACE, method, &(id, offset)).await?
+            };
             let (next, page): (u32, Vec<T>) = reply
                 .body()
                 .deserialize()
@@ -259,6 +335,38 @@ impl NativeClient {
             view.transfers.push(self.transfer_view(row, view.revision)?);
         }
         sorted(view.transfers.iter().map(|v| v.transfer.id()))?;
+        let headers: Vec<DetailRow> = self
+            .pages("GetTransferDetailsPage", &metadata.0, metadata.10)
+            .await?;
+        for (transfer, header) in view.transfers.iter_mut().zip(headers) {
+            if transfer.transfer.id() != header.0 || header.7 > 256 {
+                return Err(ClientError::Protocol);
+            }
+            let mut details = decode_details(header)?;
+            let rows: Vec<(String, u64)> = self
+                .pages_for(
+                    "GetFilePage",
+                    &metadata.0,
+                    details.1,
+                    Some(transfer.transfer.id()),
+                )
+                .await?;
+            details.0.files = rows
+                .into_iter()
+                .map(|(name, size)| FileDetail { name, size })
+                .collect::<Vec<_>>()
+                .into();
+            if !details.0.valid(transfer.phase == Phase::AwaitingConsent)
+                || details
+                    .0
+                    .files
+                    .windows(2)
+                    .any(|files| (&files[0].name, files[0].size) > (&files[1].name, files[1].size))
+            {
+                return Err(ClientError::Protocol);
+            }
+            transfer.details = Arc::new(details.0);
+        }
         let warnings: Vec<String> = self
             .wire(INTERFACE, "GetStartupWarnings", &())
             .await?

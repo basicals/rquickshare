@@ -43,6 +43,7 @@ async fn read_pages<T: serde::de::DeserializeOwned + Type>(
                 "GetEndpointPage" => "ua(ss)",
                 "GetSelectionPage" => "uas",
                 "GetTransferPage" => "ua(sssbtbst)",
+                "GetTransferDetailsPage" => "ua(sssssttu)",
                 _ => panic!("Unknown page method"),
             }
         );
@@ -440,4 +441,89 @@ fn given_serialized_state_reply_limits_when_checked_then_exact_body_and_frame_ca
         .unwrap();
     assert!(message.body().is_empty());
     assert!(!state_message_bounded(&message));
+}
+
+#[tokio::test]
+async fn given_new_detail_pages_when_bodies_tokens_or_offsets_are_invalid_then_fixed_errors_and_wire_limits_are_preserved(
+) {
+    scenario(async {
+        // Arrange
+        let private = PrivateBus::new();
+        let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+        let transfer = coordinator.register_inbound().unwrap();
+        let details = std::sync::Arc::new(crate::sessions::details::TransferDetails {
+            status: crate::sessions::details::DetailsStatus::Ready,
+            sender: "phone".into(),
+            pin: "0123".into(),
+            total_bytes: 32,
+            files: (0..32)
+                .map(|n| crate::sessions::details::FileDetail {
+                    name: format!("{n:03}{}", "a".repeat(1021)),
+                    size: 1,
+                })
+                .collect::<Vec<_>>()
+                .into(),
+            ..Default::default()
+        });
+        coordinator
+            .observe_details(transfer, Phase::AwaitingConsent, details)
+            .unwrap();
+        let host = Harness::with_coordinator(
+            SelectionBus::connect(private.socket().await).await.unwrap(),
+            coordinator,
+        );
+        let owner = private.client().await;
+        let other = private.client().await;
+        let header = capture(&owner).await;
+        let id = token(transfer.0, transfer.1);
+        // Act / Assert
+        let rows = read_pages::<(String, String, String, String, String, u64, u64, u32)>(
+            &owner,
+            "GetTransferDetailsPage",
+            &header.0,
+        )
+        .await;
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].4, "0123");
+        assert_eq!(rows[0].7, 32);
+        for offset in [0, 1, 15, 16, 17, 31, 32] {
+            let reply = call(&owner, "GetFilePage", &(&header.0, &id, offset))
+                .await
+                .unwrap();
+            assert!(state_message_bounded(&reply));
+            assert_eq!(reply.body().signature().to_string_no_parens(), "ua(st)");
+            let (next, files): (u32, Vec<(String, u64)>) = reply.body().deserialize().unwrap();
+            assert_eq!(next, (offset + 16).min(32));
+            assert_eq!(files.len(), (next - offset) as usize);
+            assert!(files
+                .iter()
+                .all(|(name, size)| name.len() == 1024 && *size == 1));
+        }
+        for offset in [33, u32::MAX] {
+            rejected(
+                call(&owner, "GetFilePage", &(&header.0, &id, offset)).await,
+                "InvalidInput",
+            );
+        }
+        rejected(
+            call(&other, "GetFilePage", &(&header.0, &id, 0u32)).await,
+            "WrongOwner",
+        );
+        rejected(
+            call(&owner, "GetFilePage", &(&header.0, token(123, 999), 0u32)).await,
+            "UnknownTransfer",
+        );
+        for method in ["GetTransferDetailsPage", "GetFilePage"] {
+            rejected(call(&owner, method, &()).await, "InvalidInput");
+            rejected(call(&owner, method, &1u32).await, "InvalidInput");
+        }
+        for id in [String::new(), token(124, 1), token(123, 0)] {
+            rejected(
+                call(&owner, "GetFilePage", &(&header.0, id, 0u32)).await,
+                "InvalidInput",
+            );
+        }
+        assert_eq!(host.finish().await.1, Ok(()));
+    })
+    .await;
 }

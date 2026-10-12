@@ -28,9 +28,9 @@ pub(super) mod transport;
 pub const SERVICE: &str = "io.github.morozhenko_apps.RQuickShare";
 pub const PATH: &str = "/io/github/morozhenko_apps/RQuickShare";
 pub const OPERATIONS_INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Operations1";
-pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Manager1";
+pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Manager2";
 pub const INTROSPECTION: &str =
-    include_str!("../../dbus/io.github.morozhenko_apps.RQuickShare.Manager1.xml");
+    include_str!("../../dbus/io.github.morozhenko_apps.RQuickShare.Manager2.xml");
 const INBOX: usize = 8;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -526,6 +526,8 @@ impl SelectionBus {
             "GetEndpointPage",
             "GetSelectionPage",
             "GetTransferPage",
+            "GetTransferDetailsPage",
+            "GetFilePage",
             "EndSnapshot",
         ]
         .contains(&member)
@@ -539,6 +541,8 @@ impl SelectionBus {
                 Ok(StateReply::Endpoints(page)) => self.state_reply(&header, &page).await,
                 Ok(StateReply::Selections(page)) => self.state_reply(&header, &page).await,
                 Ok(StateReply::Transfers(page)) => self.state_reply(&header, &page).await,
+                Ok(StateReply::Details(page)) => self.state_reply(&header, &page).await,
+                Ok(StateReply::Files(page)) => self.state_reply(&header, &page).await,
                 Ok(StateReply::Empty) => self.state_reply(&header, &()).await,
                 Err(error) => self.domain_error(&header, error).await,
             };
@@ -599,6 +603,16 @@ impl SelectionBus {
             self.state.end(client, id)?;
             return Ok(StateReply::Empty);
         }
+        if member == "GetFilePage" {
+            let (id, transfer, offset): (&str, &str, u32) =
+                body.deserialize().map_err(|_| Error::InvalidInput)?;
+            token_parts(id, coordinator.epoch)?;
+            token_parts(transfer, coordinator.epoch)?;
+            return self
+                .state
+                .file_page(client, id, transfer, offset)
+                .map(StateReply::Files);
+        }
         let (id, offset): (&str, u32) = body.deserialize().map_err(|_| Error::InvalidInput)?;
         token_parts(id, coordinator.epoch)?;
         match member {
@@ -610,6 +624,10 @@ impl SelectionBus {
                 .state
                 .selection_page(client, id, offset)
                 .map(StateReply::Selections),
+            "GetTransferDetailsPage" => self
+                .state
+                .detail_page(client, id, offset)
+                .map(StateReply::Details),
             "GetTransferPage" => self
                 .state
                 .transfer_page(client, id, offset)
@@ -742,6 +760,8 @@ enum StateReply {
     Endpoints((u32, Vec<state::EndpointRow>)),
     Selections((u32, Vec<String>)),
     Transfers((u32, Vec<state::TransferRow>)),
+    Details((u32, Vec<state::DetailRow>)),
+    Files((u32, Vec<state::FileRow>)),
     Empty,
 }
 
@@ -891,7 +911,22 @@ fn execute(
         "Respond" => {
             let (id, revision, accept): (&str, u64, bool) = body.deserialize().map_err(invalid)?;
             let (epoch, counter) = token_parts(id, coordinator.epoch)?;
-            coordinator.respond(client, TransferId(epoch, counter), revision, accept)?;
+            let transfer = TransferId(epoch, counter);
+            if accept {
+                let current = coordinator
+                    .transfers
+                    .get(&transfer)
+                    .ok_or(Error::UnknownTransfer)?;
+                // Preserve stale-round error precedence and exact admitted replays.
+                if current.view.phase == crate::service::Phase::AwaitingConsent
+                    && current.view.consent_revision == Some(revision)
+                    && current.answer.is_none()
+                    && current.view.details.status != crate::sessions::details::DetailsStatus::Ready
+                {
+                    return Err(Error::InvalidState);
+                }
+            }
+            coordinator.respond(client, transfer, revision, accept)?;
             Ok(Reply::Empty)
         }
         "Cancel" => {

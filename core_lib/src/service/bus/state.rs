@@ -2,16 +2,20 @@
 
 use std::collections::BTreeMap;
 use std::mem::size_of;
+use std::sync::Arc;
 
 use super::{token, ClientId, Coordinator, Error};
 use crate::service::{ControlAction, Direction, Lifecycle, Phase};
+use crate::sessions::details::{DetailsStatus, DeviceKind, TransferDetails};
 
 pub(super) const PAGE: usize = 16;
 const ENDPOINTS: usize = 128;
 const SELECTIONS: usize = 128;
 const TRANSFERS: usize = 256;
-const CAPTURE_BYTES: usize = 512 * 1024;
-const CACHE_BYTES: usize = 8 * 1024 * 1024;
+const BASE_BYTES: usize = 512 * 1024;
+const CAPTURE_BYTES: usize = 20 * 1024 * 1024;
+const CAPTURES: usize = 16;
+const CACHE_BYTES: usize = 40 * 1024 * 1024;
 
 pub(super) type Metadata = (
     String,
@@ -38,7 +42,21 @@ pub(super) type TransferRow = (
     u64,
 );
 
+pub(super) type DetailRow = (
+    String,
+    &'static str,
+    String,
+    &'static str,
+    String,
+    u64,
+    u64,
+    u32,
+);
+pub(super) type FileRow = (String, u64);
+
 struct Capture {
+    charge: usize,
+    details: Vec<(String, Arc<TransferDetails>)>,
     metadata: Metadata,
     endpoints: Vec<EndpointRow>,
     selections: Vec<String>,
@@ -95,8 +113,7 @@ impl StateCache {
         endpoints: impl ExactSizeIterator<Item = (&'a str, &'a str)>,
     ) -> Result<Metadata, Error> {
         coordinator.client(client)?;
-        if (!self.captures.contains_key(&client)
-            && self.captures.len() >= CACHE_BYTES / CAPTURE_BYTES)
+        if (!self.captures.contains_key(&client) && self.captures.len() >= CAPTURES)
             || endpoints.len() > ENDPOINTS
             || coordinator
                 .selections
@@ -105,6 +122,29 @@ impl StateCache {
                 .count()
                 > SELECTIONS
             || coordinator.transfers.len() > TRANSFERS
+        {
+            return Err(Error::Capacity);
+        }
+        // Charge immutable referenced data, including old captures, before projection.
+        let charge = coordinator
+            .transfers
+            .values()
+            .try_fold(BASE_BYTES, |bytes, transfer| {
+                bytes
+                    .checked_add(transfer.view.details.retained_bytes())
+                    .ok_or(Error::Capacity)
+            })?;
+        let retained = self
+            .captures
+            .iter()
+            .filter(|(owner, _)| **owner != client)
+            .try_fold(0usize, |bytes, (_, capture)| {
+                bytes.checked_add(capture.charge).ok_or(Error::Capacity)
+            })?;
+        if charge > CAPTURE_BYTES
+            || retained
+                .checked_add(charge)
+                .is_none_or(|bytes| bytes > CACHE_BYTES)
         {
             return Err(Error::Capacity);
         }
@@ -130,6 +170,11 @@ impl StateCache {
             .selections
             .into_iter()
             .map(|id| token(id.0, id.1))
+            .collect();
+        let details = snapshot
+            .transfers
+            .iter()
+            .map(|view| (token(view.id.0, view.id.1), view.details.clone()))
             .collect();
         let transfers: Vec<_> = snapshot
             .transfers
@@ -163,6 +208,8 @@ impl StateCache {
             transfers.len() as u32,
         );
         let capture = Capture {
+            charge,
+            details,
             metadata,
             endpoints: endpoint_rows,
             selections: selected,
@@ -191,7 +238,7 @@ impl StateCache {
                 .iter()
                 .map(|row| row.0.capacity())
                 .sum::<usize>();
-        if bytes > CAPTURE_BYTES {
+        if bytes > BASE_BYTES {
             return Err(Error::Capacity);
         }
         let result = capture.metadata.clone();
@@ -234,6 +281,62 @@ impl StateCache {
         offset: u32,
     ) -> Result<(u32, Vec<TransferRow>), Error> {
         page(&self.get(client, id)?.transfers, offset)
+    }
+    pub(super) fn detail_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<DetailRow>), Error> {
+        let (next, rows) = page(&self.get(client, id)?.details, offset)?;
+        Ok((
+            next,
+            rows.into_iter()
+                .map(|(id, details)| {
+                    (
+                        id,
+                        match details.status {
+                            DetailsStatus::Unavailable => "unavailable",
+                            DetailsStatus::Ready => "ready",
+                            DetailsStatus::Unsupported => "unsupported",
+                        },
+                        details.sender.clone(),
+                        match details.device {
+                            DeviceKind::Unknown => "unknown",
+                            DeviceKind::Phone => "phone",
+                            DeviceKind::Tablet => "tablet",
+                            DeviceKind::Laptop => "laptop",
+                        },
+                        details.pin.clone(),
+                        details.total_bytes,
+                        details.transferred_bytes,
+                        details.files.len() as u32,
+                    )
+                })
+                .collect(),
+        ))
+    }
+    pub(super) fn file_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        transfer: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<FileRow>), Error> {
+        let capture = self.get(client, id)?;
+        let details = &capture
+            .details
+            .iter()
+            .find(|(id, _)| id == transfer)
+            .ok_or(Error::UnknownTransfer)?
+            .1;
+        let (next, rows) = page(&details.files, offset)?;
+        Ok((
+            next,
+            rows.into_iter()
+                .map(|file| (file.name, file.size))
+                .collect(),
+        ))
     }
     pub(super) fn end(&mut self, client: ClientId, id: &str) -> Result<(), Error> {
         match self.get(client, id) {

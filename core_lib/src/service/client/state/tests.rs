@@ -39,7 +39,24 @@ async fn seeded(count: usize, waiting: bool) -> (PrivateBus, Harness, NativeClie
     for _ in 0..count {
         let id = coordinator.register_inbound().unwrap();
         if waiting {
-            coordinator.observe(id, Phase::AwaitingConsent).unwrap();
+            coordinator
+                .observe_details(
+                    id,
+                    Phase::AwaitingConsent,
+                    Arc::new(TransferDetails {
+                        status: DetailsStatus::Ready,
+                        sender: "phone".into(),
+                        pin: "0123".into(),
+                        total_bytes: 3,
+                        files: vec![FileDetail {
+                            name: "item".into(),
+                            size: 3,
+                        }]
+                        .into(),
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
         }
     }
     let endpoints: Vec<_> = (0..count.min(128))
@@ -528,6 +545,176 @@ async fn given_interrupted_control_reply_when_exact_action_is_retried_then_no_ne
                 assert_eq!(host.finish().await.1, Ok(()));
             }
         }
+    })
+    .await;
+}
+
+#[test]
+fn given_detail_header_and_consent_readiness_boundaries_when_decoded_then_malformed_or_partial_descriptions_cannot_enable_acceptance(
+) {
+    // Arrange
+    let header: DetailRow = (
+        format!("{:032x}-{:016x}", 123, 1),
+        "ready".into(),
+        "phone".into(),
+        "phone".into(),
+        "0123".into(),
+        3,
+        0,
+        1,
+    );
+    // Act / Assert
+    for device in ["unknown", "phone", "tablet", "laptop"] {
+        let mut row = header.clone();
+        row.3 = device.into();
+        assert!(decode_details(row).is_ok());
+    }
+    for count in [1, 255, 256, 257] {
+        let mut row = header.clone();
+        row.7 = count;
+        assert_eq!(decode_details(row).is_ok(), count <= 256);
+    }
+    for field in 0..12 {
+        let mut row = header.clone();
+        match field {
+            0 => row.1 = "future".into(),
+            1 => row.2.clear(),
+            2 => row.2 = "a".repeat(257),
+            3 => row.2 = "phone\n".into(),
+            4 => row.3 = "future".into(),
+            5 => row.4 = "12345".into(),
+            6 => row.4 = "1a34".into(),
+            7 => row.6 = 4,
+            8 => row.7 = 0,
+            9 => row.1 = "unsupported".into(),
+            10 => row.1 = "unavailable".into(),
+            _ => row.4 = "１２３４".into(),
+        }
+        assert!(
+            matches!(decode_details(row), Err(ClientError::Protocol)),
+            "{field}"
+        );
+    }
+    for status in ["unavailable", "unsupported"] {
+        let row = (
+            header.0.clone(),
+            status.into(),
+            String::new(),
+            "unknown".into(),
+            String::new(),
+            0,
+            0,
+            0,
+        );
+        assert!(decode_details(row).is_ok());
+    }
+    let (mut details, _) = decode_details(header.clone()).unwrap();
+    details.files = vec![FileDetail {
+        name: "item".into(),
+        size: 3,
+    }]
+    .into();
+    let mut transfer = TransferView {
+        transfer: Transfer {
+            id: header.0,
+            connection: "test".into(),
+        },
+        direction: Direction::Inbound,
+        phase: Phase::AwaitingConsent,
+        consent_revision: Some(1),
+        pending_control: None,
+        details: Arc::new(details),
+    };
+    assert!(transfer.can_accept());
+    transfer.pending_control = Some((ControlAction::Accept, 2));
+    assert!(!transfer.can_accept());
+    transfer.pending_control = None;
+    transfer.phase = Phase::Receiving;
+    assert!(!transfer.can_accept());
+    transfer.phase = Phase::AwaitingConsent;
+    Arc::make_mut(&mut transfer.details).pin.clear();
+    assert!(!transfer.can_accept());
+    transfer.details = Arc::default();
+    assert!(!transfer.can_accept());
+}
+
+#[tokio::test]
+async fn given_real_complete_manager2_view_when_read_then_all_files_pin_and_progress_share_one_revision(
+) {
+    scenario(async {
+        // Arrange
+        let private = PrivateBus::new();
+        let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+        for count in [1, 16, 17, 256] {
+            let id = coordinator.register_inbound().unwrap();
+            coordinator
+                .observe_details(
+                    id,
+                    Phase::AwaitingConsent,
+                    Arc::new(TransferDetails {
+                        status: DetailsStatus::Ready,
+                        sender: "phone".into(),
+                        device: DeviceKind::Phone,
+                        pin: "0123".into(),
+                        total_bytes: count as u64,
+                        files: (0..count)
+                            .map(|n| FileDetail {
+                                name: format!("{n:03}{}", "a".repeat(253)),
+                                size: 1,
+                            })
+                            .collect::<Vec<_>>()
+                            .into(),
+                        ..Default::default()
+                    }),
+                )
+                .unwrap();
+        }
+        let host = Harness::with_coordinator(
+            SelectionBus::connect(private.socket().await).await.unwrap(),
+            coordinator,
+        );
+        let mut client = NativeClient::connect(private.socket().await).await.unwrap();
+        // Act
+        let view = client.read_state().await.unwrap();
+        // Assert
+        assert_eq!(view.transfers.len(), 4);
+        assert!(!client.state_is_stale());
+        for (transfer, count) in view.transfers.iter().zip([1, 16, 17, 256]) {
+            assert!(transfer.can_accept());
+            assert_eq!(transfer.details.files.len(), count);
+            assert_eq!(
+                (
+                    transfer.details.pin.as_str(),
+                    transfer.details.total_bytes,
+                    transfer.details.transferred_bytes
+                ),
+                ("0123", count as u64, 0)
+            );
+            assert!(transfer
+                .details
+                .files
+                .iter()
+                .all(|file| file.name.len() == 256 && file.size == 1));
+        }
+        let xml = client
+            .wire("org.freedesktop.DBus.Introspectable", "Introspect", &())
+            .await
+            .unwrap()
+            .body()
+            .deserialize::<String>()
+            .unwrap();
+        assert!(xml.contains("RQuickShare.Manager2"));
+        assert!(!xml.contains("RQuickShare.Manager1"));
+        assert!(client
+            .wire(
+                "io.github.morozhenko_apps.RQuickShare.Manager1",
+                "BeginSnapshot",
+                &()
+            )
+            .await
+            .is_err());
+        client.close().await.unwrap();
+        assert_eq!(host.finish().await.1, Ok(()));
     })
     .await;
 }

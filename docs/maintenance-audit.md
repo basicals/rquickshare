@@ -1,5 +1,20 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: complete native Manager2 view implemented
+
+The user selected option 2 and confirmed there are no old native clients. Manager2
+replaces unpublished Manager1 in daemon, client and XML; no compatibility adapter.
+[native-complete-view.md](native-complete-view.md) is authoritative for ordered
+sender/files/PIN/progress, immutable manifests, complete bounded captures and
+safe native acceptance. Prior pending-choice/Manager1 summaries below are historical.
+
+Measured full run: 488 unit/export + 8 integration passed; final round-reset
+change passed 32 affected session tests. Current inventory 497, not a fresh whole-
+497 run. Strict core/desktop Clippy, format and diff checks passed. No installation,
+push or user-session changes. Continue native panel/controller integration; GTK
+clock placement, notifications, settings/Dolphin/package and physical Google parity
+remain unfinished. Terminal closed.
+
 ## 2026-10-12: native GTK widget preview and detail-contract review prepared
 
 Client projections/controls are committed as `cb1b0d3`. Work continued into an

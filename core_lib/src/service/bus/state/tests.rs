@@ -479,3 +479,138 @@ fn given_immutable_capture_when_live_history_is_trimmed_then_old_pages_remain_st
     let rows = cache.transfer_page(client, &current.0, 0).unwrap().1;
     assert_eq!(rows[0].0, token(second.0, second.1));
 }
+
+fn detailed(count: usize, waiting: bool) -> Arc<TransferDetails> {
+    Arc::new(TransferDetails {
+        status: DetailsStatus::Ready,
+        sender: "phone".into(),
+        device: DeviceKind::Phone,
+        pin: if waiting {
+            "0123".into()
+        } else {
+            String::new()
+        },
+        total_bytes: count as u64,
+        files: (0..count)
+            .map(|n| crate::sessions::details::FileDetail {
+                name: format!("{n:03}{}", "a".repeat(1021)),
+                size: 1,
+            })
+            .collect::<Vec<_>>()
+            .into(),
+        ..Default::default()
+    })
+}
+#[test]
+fn given_complete_capture_when_live_files_progress_and_terminal_change_then_every_old_manifest_page_stays_immutable(
+) {
+    // Arrange
+    let (mut coordinator, owner, mut cache) = setup();
+    let foreign = coordinator.connect().unwrap();
+    let id = coordinator.register_inbound().unwrap();
+    coordinator
+        .observe_details(id, Phase::AwaitingConsent, detailed(32, true))
+        .unwrap();
+    let header = cache
+        .capture(&mut coordinator, owner, std::iter::empty())
+        .unwrap();
+    let transfer = token(id.0, id.1);
+    let old_header = cache.detail_page(owner, &header.0, 0).unwrap();
+    // Act
+    let mut progress = (*coordinator.transfers[&id].view.details).clone();
+    progress.pin.clear();
+    progress.transferred_bytes = 31;
+    coordinator
+        .observe_details(id, Phase::Receiving, Arc::new(progress))
+        .unwrap();
+    coordinator.observe(id, Phase::Finished).unwrap();
+    // Assert
+    assert_eq!(cache.detail_page(owner, &header.0, 0).unwrap(), old_header);
+    assert_eq!(old_header.1[0].4, "0123");
+    for offset in 0..=32u32 {
+        let (next, page) = cache
+            .file_page(owner, &header.0, &transfer, offset)
+            .unwrap();
+        assert_eq!(next, (offset + 16).min(32));
+        assert_eq!(page.len(), (next - offset) as usize);
+        assert!(page
+            .iter()
+            .all(|(name, size)| name.len() == 1024 && *size == 1));
+    }
+    assert_eq!(
+        cache.file_page(owner, &header.0, &transfer, 33),
+        Err(Error::InvalidInput)
+    );
+    assert_eq!(
+        cache.file_page(owner, &header.0, &transfer, u32::MAX),
+        Err(Error::InvalidInput)
+    );
+    assert_eq!(
+        cache.file_page(foreign, &header.0, &transfer, 0),
+        Err(Error::WrongOwner)
+    );
+    assert_eq!(
+        cache.file_page(owner, &header.0, &token(123, 999), 0),
+        Err(Error::UnknownTransfer)
+    );
+    assert_eq!(
+        cache.detail_page(foreign, &header.0, 0),
+        Err(Error::WrongOwner)
+    );
+    let current = cache
+        .capture(&mut coordinator, owner, std::iter::empty())
+        .unwrap();
+    let projected = cache.detail_page(owner, &current.0, 0).unwrap().1.remove(0);
+    assert_eq!(
+        (projected.4.as_str(), projected.6, projected.7),
+        ("", 31, 32)
+    );
+    assert_eq!(
+        cache.file_page(owner, &header.0, &transfer, 0),
+        Err(Error::UnknownSnapshot)
+    );
+}
+#[test]
+fn given_large_retained_manifests_when_global_budget_is_exceeded_then_failed_capture_preserves_prior_view_and_counter(
+) {
+    // Arrange
+    let (mut coordinator, owner, mut cache) = setup();
+    let first = cache
+        .capture(&mut coordinator, owner, std::iter::empty())
+        .unwrap();
+    let manifest = detailed(64, false); // Exactly 64 KiB of display names.
+    for _ in 0..256 {
+        let id = coordinator.register_inbound().unwrap();
+        coordinator
+            .observe_details(id, Phase::Active, manifest.clone())
+            .unwrap();
+    }
+    let other = coordinator.connect().unwrap();
+    let third = coordinator.connect().unwrap();
+    cache
+        .capture(&mut coordinator, other, std::iter::empty())
+        .unwrap();
+    cache
+        .capture(&mut coordinator, third, std::iter::empty())
+        .unwrap();
+    let before = cache.sequence;
+    // Act / Assert
+    assert_eq!(
+        cache.capture(&mut coordinator, owner, std::iter::empty()),
+        Err(Error::Capacity)
+    );
+    assert_eq!(cache.sequence, before);
+    assert_eq!(cache.detail_page(owner, &first.0, 0).unwrap(), (0, vec![]));
+    cache.disconnect(other);
+    assert!(cache
+        .capture(&mut coordinator, owner, std::iter::empty())
+        .is_ok());
+    assert!(
+        cache
+            .captures
+            .values()
+            .map(|capture| capture.charge)
+            .sum::<usize>()
+            <= CACHE_BYTES
+    );
+}

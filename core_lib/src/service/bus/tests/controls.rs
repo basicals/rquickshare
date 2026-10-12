@@ -157,7 +157,22 @@ async fn given_current_consent_when_answered_over_bus_then_only_exact_replays_pr
             let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
             let inbound = coordinator.register_inbound().unwrap();
             coordinator
-                .observe(inbound, Phase::AwaitingConsent)
+                .observe_details(
+                    inbound,
+                    Phase::AwaitingConsent,
+                    std::sync::Arc::new(crate::sessions::details::TransferDetails {
+                        status: crate::sessions::details::DetailsStatus::Ready,
+                        sender: "phone".into(),
+                        pin: "0123".into(),
+                        total_bytes: 3,
+                        files: vec![crate::sessions::details::FileDetail {
+                            name: "item".into(),
+                            size: 3,
+                        }]
+                        .into(),
+                        ..Default::default()
+                    }),
+                )
                 .unwrap();
             let revision = coordinator.transfers[&inbound]
                 .view
@@ -401,7 +416,22 @@ fn given_uncertain_active_transfer_when_cancel_supersedes_answer_then_late_respo
     let (mut coordinator, client, _) = setup(Limits::default());
     let inbound = coordinator.register_inbound().unwrap();
     coordinator
-        .observe(inbound, Phase::AwaitingConsent)
+        .observe_details(
+            inbound,
+            Phase::AwaitingConsent,
+            std::sync::Arc::new(crate::sessions::details::TransferDetails {
+                status: crate::sessions::details::DetailsStatus::Ready,
+                sender: "phone".into(),
+                pin: "0123".into(),
+                total_bytes: 3,
+                files: vec![crate::sessions::details::FileDetail {
+                    name: "item".into(),
+                    size: 3,
+                }]
+                .into(),
+                ..Default::default()
+            }),
+        )
         .unwrap();
     let revision = coordinator.transfers[&inbound]
         .view
@@ -521,4 +551,55 @@ fn given_unknown_or_inapplicable_transfer_when_controlled_then_no_false_consent_
     assert_eq!(coordinator.snapshot(client).unwrap(), before);
     assert_eq!(before.transfers[0].phase, Phase::Finished);
     assert_eq!(before.resources, ResourceUsage::default());
+}
+
+#[test]
+fn given_incomplete_native_consent_when_accepted_then_no_control_is_admitted_and_rejection_remains_available(
+) {
+    // Arrange / Act / Assert
+    for status in [
+        crate::sessions::details::DetailsStatus::Unavailable,
+        crate::sessions::details::DetailsStatus::Unsupported,
+    ] {
+        let (mut coordinator, client, _) = setup(Limits::default());
+        let inbound = coordinator.register_inbound().unwrap();
+        coordinator
+            .observe_details(
+                inbound,
+                Phase::AwaitingConsent,
+                std::sync::Arc::new(crate::sessions::details::TransferDetails {
+                    status,
+                    ..Default::default()
+                }),
+            )
+            .unwrap();
+        let revision = coordinator.transfers[&inbound]
+            .view
+            .consent_revision
+            .unwrap();
+        let id = token(inbound.0, inbound.1);
+        let before = coordinator.snapshot(client).unwrap();
+        assert!(matches!(
+            execute(
+                &mut coordinator,
+                client,
+                "Respond",
+                &message("Respond", &(&id, revision, true))
+            ),
+            Err(Error::InvalidState)
+        ));
+        assert_eq!(coordinator.snapshot(client).unwrap(), before);
+        assert!(coordinator.next_control().is_none());
+        assert!(execute(
+            &mut coordinator,
+            client,
+            "Respond",
+            &message("Respond", &(&id, revision, false))
+        )
+        .is_ok());
+        assert_eq!(
+            coordinator.next_control().unwrap().action,
+            ControlAction::Reject
+        );
+    }
 }
