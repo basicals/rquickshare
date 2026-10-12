@@ -1,6 +1,8 @@
 # Product direction: native desktop and Google Quick Share parity
 
-_Recorded: 2026-10-12. Status: tray-panel and descriptor decisions accepted; file/core boundary implemented; service/native shell pending._
+_Recorded: 2026-10-12. Status: tray-panel and descriptor decisions accepted; file/core boundary and offline service coordinator implemented; live service/native shell pending._
+
+Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). This does not certify authenticated IPC, live transport supervision or a native UI.
 
 ## Authoritative correction
 

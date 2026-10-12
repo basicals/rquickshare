@@ -2,6 +2,14 @@
 
 _Last updated: 2026-10-12_
 
+## Native coordinator continuation — 2026-10-12
+
+The user superseded development repetition requirements: one appropriate verification run, no ten-run loop or redundant polling. Global AGENTS section 12 records this preference. Previous measured repetitions remain in their original verification sections.
+
+The accepted native service design now has a reusable Linux coordinator: caller-owned unsent selections, service-owned queued/active sends, bounded aggregate outbound-source reservations including sender duplicates, per-client idempotency, revisioned snapshots/consent, cancellation acknowledgement and draining. A terminal event cannot release admission quota while a worker still holds the original payload. Core event loss pauses sends/consent and remains explicit after reconnect; no invented resynchronization. This is internal state logic, not an activated daemon or authenticated IPC endpoint.
+
+Plan, complete scoped inventory, 53-method index, category counts, results and next adapter gates are in [native-service-coordinator.md](native-service-coordinator.md). One full core run passed (233 unit/export + 4 integration tests), with format/Clippy and diff checks passing. Existing desktop/frontend/analyzer code was unchanged and its suites were not repeated. No physical compatibility or clock-area UI acceptance is claimed. No live service, package registration or system settings were changed.
+
 This document is the working log for the `morozhenko-apps/rquickshare` maintenance pass. It is intentionally kept separate from release notes: it tracks audit scope, upstream triage, CI gates, fixes, and the final Mode B verification before fast-forwarding `dev` into `master`.
 
 The 2026-10-12 offline continuation, recovered diary references, implementation plan and validation results are recorded in [offline-maintenance.md](offline-maintenance.md). Dated hardware evidence remains in [mode-b-inventory.md](mode-b-inventory.md).

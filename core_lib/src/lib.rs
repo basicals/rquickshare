@@ -30,6 +30,8 @@ pub mod file_source;
 mod hdl;
 mod manager;
 mod protocol;
+#[cfg(target_os = "linux")]
+pub mod service;
 mod utils;
 
 pub use hdl::{
