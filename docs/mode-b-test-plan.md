@@ -142,7 +142,9 @@ Status: IN PROGRESS
 Rollback: atomic `test:` or `refactor:` commits per logical change.
 
 ### Milestone 4 - Mutation and coverage review
-Status: NOT STARTED
+Status: FRESH OFFLINE COVERAGE RECORDED; FULL PROTOCOL MUTATION REVIEW OPEN
+
+The 2026-10-12 core/desktop/frontend snapshot and ten caught analyzer mutations are recorded in `offline-maintenance.md`. This does not complete the broader protocol mutation/branch review.
 
 - Re-run targeted mutation analysis for changed high-risk logic.
 - Re-measure Rust/frontend coverage.
@@ -151,7 +153,9 @@ Status: NOT STARTED
 Rollback: tests/refactors remain isolated in atomic commits.
 
 ### Milestone 5 - Ten-run automated stability gate
-Status: WORKFLOW READY, EXECUTION PENDING
+Status: PRELIMINARY OFFLINE 10X PASSED; FINAL POST-HARDWARE EXECUTION PENDING
+
+The offline continuation passed all four complete suites ten times on final implementation `2051314`, after an earlier successful loop on `29c3dc8`. The exact SHA, coverage limitations and results are recorded in `offline-maintenance.md`. Physical-device and final post-hardware completion remain open.
 
 The SSOT supplied on 2026-10-06 is authoritative for this pass. The complete automated suite must pass ten consecutive runs for the final Mode B gate. This is stricter than the earlier repository policy of stable 1x plus selected flaky-sensitive tests 10x.
 

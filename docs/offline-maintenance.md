@@ -60,11 +60,11 @@ Supporting tests for notification body generation are deferred until their compl
 - M1: COMPLETE. Preflight executes desktop tests after its existing desktop Clippy check; Mode B repeats desktop assertions alongside core/Vue; manual/final coverage includes the desktop crate. `--no-default-features` follows the existing desktop Clippy contract. Local stable desktop execution: **8 passed, 0 failed**. The command session exited normally (terminal closed). Three pre-existing `generic_array::as_slice` deprecation warnings appeared in core dependencies; no assertion failed.
 - M2: COMPLETE. Added source-confirmed reconciliation with explicit remaining scope; corrected implemented BWU/text/model claims, stale workflow descriptions, historical coverage labels, BUILD instructions and literal README newline escapes. Historical hardware observations remain intact.
 - M3: COMPLETE. `scripts/analyze_receiver_smoke.py` emits a conservative JSON evidence report; 25 deterministic unittest methods (table-driven variants included) passed locally. Preflight and all Mode B iterations execute them. Launcher invocation remains unchanged; usage/limitations are recorded in the hardware automation plan. Ten targeted mutations are checked on temporary copies: treatment checks, failed-retry retention, normal disconnect, missing-start marker, slot0-path requirement, exit ordering, exact input limit, inbound/outbound filtering and raw-event leakage.
-- M4: IN PROGRESS. Exact four-suite loop extracted from `mode-b.yml` passed ten consecutive local iterations against implementation commit `29c3dc8`. Fresh coverage is running; final handoff follows measurement.
+- M4: COMPLETE. Exact four-suite loop extracted from `mode-b.yml` passed ten consecutive local iterations against final implementation commit `2051314`; an earlier loop passed on `29c3dc8` before the explicit-Rejected correction. Fresh core/desktop/Vue/analyzer coverage and targeted mutation results are recorded below. All task-owned command sessions exited (terminals closed); no watchers, desktop app or device processes were started or left running.
 
 ## 2026-10-12 validation evidence
 
-Implementation head: `29c3dc8`. Later work-log-only commits do not change this tested implementation. Tests ran sequentially; no desktop app, Bluetooth session, ADB device or package installer was started.
+Final implementation head: `2051314e91294b29e1c3364d1b9753acd6f9d2bb`. Later work-log-only commits do not change this tested implementation. The final log was independently checked for exactly 40 suite invocations and ten successful results for every suite. Tests ran sequentially; no desktop app, Bluetooth session, ADB device or package installer was started. Runtime versions: Rust stable 1.99.0, Node 24.21.0, pnpm 9.7.0, Python 3.14.4. Both Cargo lockfiles and the pnpm lockfile are tracked and unchanged by this task.
 
 | Suite | Per iteration | Consecutive successful iterations |
 |---|---:|---:|
@@ -96,6 +96,48 @@ Each change below was applied independently to a temporary copy of the real anal
 | Count outbound state as inbound | Exact inbound count and transfer-event count | Caught |
 
 This is a targeted mutation check of the new analyzer, not a replacement for the historical/full protocol mutation review.
+
+### Fresh coverage snapshot
+
+Measured with `cargo-llvm-cov 0.9.1` / stable Rust 1.99.0, Vitest V8 and Python's standard-library `trace`. Rust/Vue sources are unchanged between `29c3dc8` and the rejection-evidence correction `2051314`; analyzer trace is refreshed after that correction.
+
+| Scope | Lines | Functions | Other measured data |
+|---|---:|---:|---|
+| Core Rust | 48.05% | 45.78% | Regions 50.15% |
+| Desktop Rust, excluding core dependency | 21.31% | 16.18% | Regions 21.91% |
+| Vue frontend | 54.69% | 64.81% | Branches 84.79% |
+| Offline analyzer | 99.3% | Not measured | Standard-library executable-line tracing, not branch coverage |
+
+**Limits:** LLVM reports include inline `#[cfg(test)]` code in the source files. They are not production-only coverage or evidence of exhaustive business-rule testing. Rust branch counters were not enabled (the report shows `-`), so regions must not be called branch coverage. Python trace's uncovered CLI exit statement is exercised separately by actual CLI help; no 100% branch claim is made.
+
+| Important production file | Current line coverage | Remaining work |
+|---|---:|---|
+| `hdl/inbound.rs` | 48.93% | Secure state-machine/error/storage/migration branches |
+| `hdl/outbound.rs` | 50.37% | Text consent/send/cancel integration and filesystem errors |
+| `hdl/gatt.rs` | 32.67% | Weave reassembly/fragmentation and BlueZ lifecycle |
+| `hdl/ble.rs` | 5.59% | Active-fallback lifecycle and hardware backend selection |
+| `hdl/ble_monitor.rs` | 21.31% | Real D-Bus monitor registration/events/cancellation |
+| `hdl/bwu.rs`, `hdl/migratable.rs` | 100.00% each | Line coverage does not replace migration/order/identity invariants or the full branch review |
+| `lib.rs`, `hdl/mdns_discovery.rs` | 0.55%, 0.00% | OS/task/discovery lifecycle |
+| Desktop `main.rs`, `store.rs` | 0.00% each | Settings/lifecycle seams and packaged hardware smoke |
+| Desktop `notification.rs` | 10.82% | Body formatting fallback, actions, expiry/cancellation and synchronization |
+| Desktop `logger.rs` | 29.66% | Rotation/setup/failure paths beyond capped-writer tests |
+| Desktop `cmds/open_download_destination.rs` | 65.19% | Native file-manager integration and platform branches |
+| Desktop `cmds/clipboard_image.rs` | 49.49% | Native clipboard/image-save/error lifecycle |
+
+The tool was installed under the task's scratch directory, not added as a project dependency. No system package installation was necessary. Existing non-blocking warnings remain: older core-lock BlueZ future incompatibility, newer desktop-lock GenericArray deprecations in the core dependency, and the frontend's legacy `eslint-env` comment warning. These were not hidden or changed as part of the analyzer/CI scope.
+
+## Handoff and continuation
+
+- Work is committed locally on `dev`; no push, remote workflow dispatch, PR, package publication or `master` promotion was performed. Local offline checks validate commands, not execution of a newly published Actions run.
+- Reproduce suite commands from `BUILD.md`; the complete ten-run sequence is the `Run complete suite ten consecutive times` step in `.github/workflows/mode-b.yml`. `CARGO_TARGET_DIR` may point both Rust commands at one scratch cache without changing their separate tracked dependency locks.
+- Reproduce coverage using the commands in `.github/workflows/coverage.yml` and the final Mode B coverage job. Install `cargo-llvm-cov --locked` and the stable `llvm-tools-preview` component when absent. Python line coverage can use standard-library `trace`; its percentage is not branch coverage.
+- The new analyzer's planned cases are implemented; its targeted mutations are caught. No broad refactor or application protocol change was required for testability: the analyzer is a pure function with a separate file/CLI adapter, and desktop assertions use the existing crate.
+- Next deterministic work is **not completed by this slice**: text state-machine integration, Weave reassembly/fragmentation, desktop notification body/action handling, settings/error/event interactions and full protocol mutation review. Preregister the selected artifact's full contract/branch/matrix before adding tests.
+- Next physical work remains the dated Pixel/KDE matrix, controlled discovery A/B, notification/Android synchronization and a fresh installed debug package. Do not turn analyzer PASS into payload-integrity or Android-UI signoff.
+- Ask the user before choosing corrupt-settings visibility recovery or changing notification/product/security policy. Do not silently apply the known visibility-panic fix with a chosen privacy fallback.
+
+Rollback checkpoints: `065858a` records the plan; `c4ad7b7` adds desktop CI/coverage; `4a706ae` reconciles documentation; `29c3dc8` adds analyzer/tests/CI; `2051314` preserves explicit rejection. Revert dependent commits in reverse order for full rollback, or revert a single independent stage when appropriate. No persisted app data or external state requires migration.
 
 ## Remaining decisions and hardware gates
 

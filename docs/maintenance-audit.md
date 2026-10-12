@@ -18,6 +18,8 @@ The 2026-10-12 offline continuation, recovered diary references, implementation 
 
 ## Current gate status
 
+Offline continuation (2026-10-12): all four suites passed ten consecutive local runs on final implementation `2051314` (122 core + 8 desktop + 41 frontend + 25 analyzer checks per iteration), after an earlier loop on `29c3dc8`. Fresh line measurements are core 48.05%, desktop 21.31% and frontend 54.69%, with measurement limits and ten caught analyzer mutations recorded in `offline-maintenance.md`. Physical-device completion, broader Mode B review and final promotion remain open.
+
 The Pixel/BLE foundation and current Full Quick Share work are consolidated into the maintained two-branch workflow. On 2026-10-07 the user explicitly requested an **interim snapshot** fast-forward of `dev` at `0bc9b50` into `master` (400 commits ahead, zero behind). Both refs were verified identical after the non-forced update. This promotion is **not** a final Mode B completion or hardware release signoff: the remaining cold GATT startup latency and current-build Pixel -> Linux text smoke are still open. The complete 10x Mode B gate has not been claimed as passed.
 
 - The final implementation head `e229ac8` passed all five preflight jobs (run `37687010250`) and manual Linux debug `.deb` package smoke (run `37688585293`). The promoted `0bc9b50` differs only by subsequent documentation describing Pixel smoke results.
