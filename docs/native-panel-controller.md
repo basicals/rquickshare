@@ -48,9 +48,9 @@ https://gtk-rs.org/gtk4-rs/stable/latest/book/main_event_loop.html.
 
 ## Milestones / rollback
 
-1. [ ] Implement bounded commands/worker/watch/completion and control validation.
-2. [ ] Regression checks using actual private broker/coordinator/native client.
-3. [ ] Run affected checks once, strict Clippy/format; record actual results, commit.
+1. [x] Implement bounded commands/worker/watch/completion and control validation.
+2. [x] Regression checks using actual private broker/coordinator/native client.
+3. [x] Run affected checks once, strict Clippy/format; record actual results, commit.
 4. [ ] Connect GTK Rust shell to controller, prove isolated widget integration.
 
 Rollback this client-only module before any consuming shell. No daemon/protocol
@@ -75,4 +75,24 @@ No Mode B exhaustive coverage or ten-run development gate.
 
 ## Actual observations
 
-Pending implementation. All previous verification remains in its stage SSOT.
+Implemented client/controller.rs with seven regression methods (six planned plus
+independent explicit abort recovery). Primary Positive 1,N2 1,N4 1,N5 1,N7 1,N9 2.
+One test compilation failed on a private fixture field; removed the redundant
+fixture-state wait and assert final joined cleanup instead. Six methods then
+passed in 0.60s. Added explicit abort recovery tables, passed that affected method
+once; no repeated full run. Final all-feature/all-target locked core Clippy and
+format/diff passed. Current inventory 496 unit/export + 8 integration = 504;
+not a fresh whole-504 run. Prior measured 488+8 and final 32 sessions stay in
+native-complete-view.md. Existing bluer future-incompatibility notice remains.
+No live desktop/bus registration or system installation. Terminal closed.
+
+Preparation retains the acquired sources and exact upload/batch stage across
+failed/interrupted IO. Recover resumes that same preparation (including a lost
+commit); AbortPreparation reconciles then discards/aborts unsent resources, with
+an independently interrupted abort recoverable too. Non-recovery actions are
+rejected while uncertainty remains. Successful outcomes remain successful when a
+following view refresh fails; the coalesced state exposes that refresh error.
+An accepted send recovered during abort returns its original outcome; it is never
+silently cancelled. Same-UID transfer ID matching deliberately ignores client
+provenance, preserving service-owned controls. No timer/polling/per-action task.
+GTK integration continues next.

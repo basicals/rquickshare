@@ -35,6 +35,7 @@ impl fmt::Display for ClientError {
 }
 impl std::error::Error for ClientError {}
 
+pub mod controller;
 pub mod state;
 mod watch;
 

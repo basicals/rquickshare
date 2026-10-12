@@ -1,5 +1,15 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: bounded native panel controller implemented
+
+[native-panel-controller.md](native-panel-controller.md) records one dedicated SDK
+worker, eight queued actions, coalesced complete views and exact preparation/
+mutation recovery. Choose never sends; explicit Send does. Hide is independent of
+controller close; accepted transfers survive it. Native controls refresh current
+matched details before admission. Seven private-broker checks passed across the
+initial six-case run and one added abort case. Core Clippy/format/diff passed.
+Continue GTK adapter/placement and notifications; no live UI/registration yet.
+
 ## 2026-10-12: complete native Manager2 view implemented
 
 The user selected option 2 and confirmed there are no old native clients. Manager2
