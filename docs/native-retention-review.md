@@ -153,7 +153,12 @@ changes. Existing Manager1 and the legacy GUI remain available; no settings/sour
 migration in option 1. Option 2 needs its own nondestructive journal rollback plan.
 GTK chooser/settings/notifications and Dolphin follow; this is not Google parity.
 
-## Handoff
+## Approved choice
+
+The user selected option 1. Implementation contract and progress now live in
+[native-retention.md](native-retention.md). The review below is historical.
+
+## Handoff (historical)
 
 Await the user's history-lifetime choice before implementing new public contracts
 or changing retention. The existing executable stays unchanged, with known finite
