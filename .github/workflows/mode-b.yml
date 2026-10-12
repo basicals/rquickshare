@@ -63,6 +63,9 @@ jobs:
               cd app/main
               pnpm exec vitest run
             )
+
+            echo "=== Mode B attempt ${attempt}/10: offline analyzer ==="
+            python3 -m unittest discover -s scripts/tests
           done
 
   coverage:

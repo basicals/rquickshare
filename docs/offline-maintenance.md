@@ -31,6 +31,8 @@ No protocol, crypto, persistent-settings contract, notification lifetime or visi
 
 Input: one UTF-8 log path and required variant (`baseline`, `skip-deferred`, `periodic-10`); experiment (`periodic` or `slot0`) defaults to `periodic`. Output: JSON with schema version, requested variant/experiment, evidence verdict/reasons, sanitized event types and source line numbers, terminal-state counts, scan/slot0 observations. Never copy raw lines, paths, peer/session IDs, addresses, payload content or timestamps into the report. This allowlist makes synthetic PII tests meaningful without pretending arbitrary raw traces are safe to publish.
 
+Implementation detail: accept only the current Fern envelope and expected Rust module targets after stripping ANSI color codes. Require one logger-start marker and one of each diagnostic marker to avoid validating concatenated runs. Parse the fixed leading `ChannelMessage` Debug fields rather than searching payload/metadata text for states. CLI input is bounded to 16 MiB (the application log cap is 5 MiB; launcher stdout captures may be larger); oversized input is rejected before decoding. Unknown diagnostic values and malformed channel records cannot create a pass. This is a conservative evidence-format contract, not a generic parser for arbitrary logs.
+
 Verdicts describe **Linux log evidence only**, never physical interoperability or a winning A/B treatment:
 - `FAIL`: any Cancelled/Disconnected terminal transfer without a preceding Finished for that same transfer, or contradictory diagnostic treatment. A later successful retry must not erase the failure.
 - `INCONCLUSIVE`: missing/conflicting run boundaries, absent expected diagnostics, no Finished, incomplete consent session, unconfirmed graceful exit, or a slot0 experiment without an offset-zero read. Uncorrelated terminal records cannot establish success.
@@ -57,7 +59,7 @@ Supporting tests for notification body generation are deferred until their compl
 - Plan and analyzer inventory: COMPLETE, before implementation.
 - M1: COMPLETE. Preflight executes desktop tests after its existing desktop Clippy check; Mode B repeats desktop assertions alongside core/Vue; manual/final coverage includes the desktop crate. `--no-default-features` follows the existing desktop Clippy contract. Local stable desktop execution: **8 passed, 0 failed**. The command session exited normally (terminal closed). Three pre-existing `generic_array::as_slice` deprecation warnings appeared in core dependencies; no assertion failed.
 - M2: IMPLEMENTED. Added source-confirmed reconciliation with explicit remaining scope; corrected implemented BWU/text/model claims, stale workflow descriptions, historical coverage labels and literal README newline escapes. Historical hardware observations remain intact.
-- M3: PLANNED.
+- M3: COMPLETE. `scripts/analyze_receiver_smoke.py` emits a conservative JSON evidence report; 25 deterministic unittest methods (table-driven variants included) passed locally. Preflight and all Mode B iterations execute them. Launcher invocation remains unchanged; usage/limitations are recorded in the hardware automation plan. Ten targeted mutations are checked on temporary copies: treatment checks, failed-retry retention, normal disconnect, missing-start marker, slot0-path requirement, exit ordering, exact input limit, inbound/outbound filtering and raw-event leakage.
 - M4: PLANNED.
 
 ## Remaining decisions and hardware gates

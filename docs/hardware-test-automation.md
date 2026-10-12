@@ -1,6 +1,6 @@
 # Hardware test automation and local-access plan
 
-_Status: proposal / backlog, 2026-10-08. No local desktop access or Android automation has been established by this document._
+_Status: hardware runner/ADB proposal; offline evidence analysis implemented 2026-10-12. No physical-device automation has been established by this document._
 
 ## Goal
 
@@ -66,3 +66,21 @@ The previous rough estimate was **70–80% less manual work** with desktop acces
 ## Advancement criteria
 
 Product feature development on `dev` can continue when immediate discovery/notification/completion blockers are characterized or fixed with regression coverage; it does not require all 33 trials before every feature. A final validated promotion to `master` requires the agreed hardware package smoke, complete Mode B review, stability gate and explicit unresolved-risk acceptance. Keep all baseline evidence and avoid reporting conditional A/B cases as passed when the protocol path was not exercised.
+
+## Offline evidence analysis (implemented 2026-10-12)
+
+After capturing one run with the existing launcher, analyze its log locally:
+
+```bash
+python3 scripts/analyze_receiver_smoke.py path/to/baseline.log --variant baseline
+python3 scripts/analyze_receiver_smoke.py path/to/skip-deferred.log --variant skip-deferred --experiment slot0
+python3 scripts/analyze_receiver_smoke.py path/to/periodic-10.log --variant periodic-10
+```
+
+The CLI requires one current-format Fern trace, matching debug treatment markers, correlated inbound state events and a clean tray-Quit/mDNS-unregister sequence. `--experiment slot0` additionally requires an offset-zero slot0 read. A direct-TCP-only run is inconclusive for that experiment. A failed/cancelled attempt remains a failure even if a retry succeeds.
+
+JSON verdicts describe **Linux log evidence only**. They do not prove Android completion, payload byte/hash correctness, foreground/background trial matching, native notification usability, latency causation, or a winning A/B variant. The report emits only fixed event names, source line numbers, counts and reason codes; raw trace contents, timestamps, file paths, peer identifiers and payloads are excluded. Keep raw traces local. The analyzer cannot attest authenticity of supplied logs.
+
+Exit code 0 means a report was generated, including `FAIL` or `INCONCLUSIVE`; callers must inspect `verdict`. Invalid options/unreadable or malformed UTF-8 input/inputs over 16 MiB exit nonzero. Concatenated runs, missing markers, uncorrelated channel records and incomplete sessions cannot produce `PASS`.
+
+Tests use the standard library only: `python3 -m unittest discover -s scripts/tests -v`. The tests run in preflight and every Mode B iteration. The physical Ubuntu runner, package SHA validation, ADB bridge and synchronized Android timeline remain backlog. See [offline-maintenance.md](offline-maintenance.md) for the preregistered parser contract and handoff log.

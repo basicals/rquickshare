@@ -63,4 +63,10 @@ pnpm exec vitest run
 
 Desktop unit tests run without launching the GUI but require Linux development libraries. Core/frontend tests do not substitute for desktop assertions.
 
+From the repository root, run the offline evidence analyzer tests (Python 3.9+; no third-party packages):
+
+```bash
+python3 -m unittest discover -s scripts/tests -v
+```
+
 The preflight runs checks once. The manual/tag-triggered Mode B workflow repeats complete suites ten times and measures coverage. Physical Pixel/KDE checks and final post-hardware signoff remain separate; see [Mode B plan](docs/mode-b-test-plan.md) and [offline work log](docs/offline-maintenance.md).
