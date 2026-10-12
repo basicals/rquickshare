@@ -1,6 +1,6 @@
 # Product direction: native desktop and Google Quick Share parity
 
-_Recorded: 2026-10-12. Status: user goals accepted; desktop interaction choice pending._
+_Recorded: 2026-10-12. Status: tray-panel interaction accepted; service contract review pending._
 
 ## Authoritative correction
 
@@ -9,6 +9,7 @@ The user clarified that the intended product includes:
 1. A redesigned experience in the notification/system-tray area near the clock, replacing the current main-window presentation.
 2. Migration away from Tauri to the technology direction chosen for NativePair.
 3. Feature parity and full interoperability with Google Quick Share, not only basic Android file transfer.
+4. A file-manager context-menu action to send selected files/folders through rQuickShare.
 
 These goals supersede the old roadmap order that put custom device naming next and treated native desktop migration as absent from scope. The completed offline maintenance slice is infrastructure work, not completion of this product goal. Do not silently reduce parity to LAN files or relabel local substitutes as Google-compatible features.
 
@@ -35,16 +36,18 @@ Reference repository: `/home/morozhenko/Documents/GitHub/NativePair`, inspected 
 
 Exact public D-Bus methods/versioning, caller authorization, persistence migration and desktop integration require a concrete design review before implementation. This document establishes direction, not an implicitly approved detailed API/security contract.
 
-## Material desktop interaction choice (STOP FACTOR)
+## Accepted desktop interaction
 
-The phrase "near the clock" does not uniquely distinguish an app panel from the desktop notification center. Do not implement either interpretation until the user selects it.
+The user selected option A on 2026-10-12 and explicitly rejected the current oversized drop-zone window. The primary experience is a compact tray panel with native desktop notifications. The context-menu sender must enter the same recipient-selection flow; it must not open the old full-size window or start an independent protocol instance.
 
 | Option | Description | Pros | Cons | Risks |
 |---|---|---|---|---|
 | A — tray panel plus native notifications (recommended) | Tray icon opens a compact device/send/receive/progress panel; incoming requests and background status use desktop notifications; settings are secondary | Persistent place for device selection, transfer controls and recovery; fits full feature surface | Requires panel placement/focus/keyboard/multi-monitor design | GTK4/Wayland anchoring near an external tray must be proven on target KDE; never promise it from a positioned ordinary window |
 | B — notification-led interaction | Incoming operations use system notifications; a tray menu exposes controls and a separate native sender/settings view when needed | Strong desktop notification integration; small always-on surface | Device selection/history/advanced operations need an additional view | Notification expiry, Do Not Disturb and action availability can hide controls; these need explicit fallback semantics |
 
-Recommendation: A, because the parity target needs a durable device chooser and transfer controls as well as notifications. This is a recommendation awaiting a user decision, not a selected UX.
+Decision: A, because the parity target needs a durable device chooser and transfer controls as well as notifications. Option B is retained above only as decision history. A dominant empty drop zone is not part of the accepted design. Drag-and-drop may remain a secondary input on the compact panel. Settings are a secondary surface.
+
+The concrete service, file-selection trust boundary and migration proposal is in [native-desktop-design.md](native-desktop-design.md). It requires the significant API/security decision described there before service implementation. The selected interaction itself no longer requires an A/B question.
 
 GTK4 removed cross-backend global positioning APIs; a generic GtkWindow cannot be assumed to provide a tray-anchored panel. Validate supported compositor/desktop integration first. Source: [GTK4 migration guide](https://docs.gtk.org/gtk4/migrating-3to4.html). The current host does not expose `gtk4` through pkg-config; dependencies are not installed by this documentation pass.
 
@@ -64,7 +67,7 @@ The target is the Google Quick Share capability surface, mapped by platform/vers
 | Google-compatible nearby QR | Proto field alone | Actual Google handshake, encode/decode and Android camera/Quick Share flow |
 | Multiple recipients/queueing | Not implemented | Independent recipient state; bounded parallelism only where supported |
 | Discovery and transport combinations | BLE/GATT and Wi-Fi LAN implemented | Per-platform transport inventory, network-isolation/direct-link scenarios and measured cold discovery |
-| Desktop share integration | Not implemented | Native file-manager/share entrypoints and accessibility |
+| Desktop share integration | User requested context-menu sending; not implemented | Dolphin service-menu adapter first for the target KDE environment, shared recipient flow, then other desktop adapters; accessibility and package checks |
 | Google cross-platform AirDrop/Apple paths | Not implemented | Separate transport/backend feasibility and physical peer matrix |
 | Google's encrypted cloud QR to Apple browsers | Not implemented | Google service access/identity/limits feasibility; a custom server is not equivalent |
 | Device-dependent recent features, including tap-to-share | Not inventoried | Platform/hardware applicability and current official-source inventory |
@@ -81,11 +84,11 @@ Additional protocol capabilities already in the roadmap (previews, resume/hash i
 
 ## Staged implementation plan
 
-1. **P0 — direction and acceptance inventory.** Record this correction, confirm A/B interaction, enumerate the versioned Google feature/peer matrix and produce a concrete service/API/security design for approval. Documentation-only rollback. Status: goals recorded; choices/review pending.
+1. **P0 — direction and acceptance inventory.** Record this correction, confirm A/B interaction, enumerate the versioned Google feature/peer matrix and produce a concrete service/API/security design for approval. Documentation-only rollback. Status: option A and context-menu goal accepted; concrete service proposal recorded; contract review and complete Google capability inventory pending.
 2. **P1 — background service boundary.** Reuse existing core behind a thin Rust service, add deterministic lifecycle/consent/snapshot/reconnect contracts and a headless client. Keep protocol framing/crypto unchanged. Rollback: keep the existing desktop build usable while the new path is validated.
 3. **P2 — native desktop shell and UX.** Add GTK4 desktop client, selected tray/notification behavior, settings, device selection and transfer controls. Prove KDE/Wayland placement and fallback behavior before presenting a final visual design. Rollback: isolated shell/package changes; no persisted-data loss.
 4. **P3 — migrate desktop capabilities and packaging.** Transfer clipboard, file dialogs, reveal/open, autostart, logs, updates and settings migration. Document per-feature old/new equivalence. Retire Tauri/Vue only after native feature and package checks pass. Rollback: independent commits and preserved settings backup/migration contract.
 5. **P4 — close Google parity gaps in vertical slices.** Each feature receives protocol research, branch/negative/interaction inventory, deterministic tests and real Google peer acceptance. Account/QR/Apple/service dependencies are release blockers for claiming full parity, not optional tasks silently dropped from the goal. Keep transport and UI changes separable.
 6. **P5 — release acceptance.** Complete core/service/native-client tests, ten consecutive stability runs, package/install checks and the physical compatibility matrix on the final implementation. Publish only capabilities with evidence; promote `master` only under the existing release policy.
 
-These milestones are not time estimates. Exact native service/API/UI implementation has not started in this documentation pass. Stop before implementation until the pending material UX choice is answered; do not use the completed Tauri maintenance checks as native-shell verification.
+These milestones are not time estimates. Exact native service/API/UI implementation has not started in this documentation pass. The user has answered the material UX choice. Stop before service implementation until the concrete API/security proposal is approved; do not use the completed Tauri maintenance checks as native-shell verification.

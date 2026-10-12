@@ -273,3 +273,9 @@ Refactoring is required, but the work is split by risk.
 No broad architectural refactor should be merged solely to improve style before real Pixel smoke. Before the smoke test, only pure helpers, duplicated validation, tests and isolated infrastructure may be extracted. Protocol state-machine refactoring starts only after the current behavior is proven end-to-end.
 
 **Audit conclusion:** no additional architectural refactor is required before the real-device smoke. The next mandatory refactor for maintainability is the shared secure-session extraction, but it should begin only after the current Pixel send/receive behavior is proven so protocol regressions can be distinguished from structural changes.
+
+## 2026-10-12: accepted compact tray panel and context-menu direction
+
+The user selected the tray-panel-plus-native-notifications option in [product-direction.md](product-direction.md), explicitly rejected the current oversized drop-zone window, and requested a file-manager context-menu sender. This is accepted product scope; do not ask the A/B desktop-interaction question again.
+
+[native-desktop-design.md](native-desktop-design.md) records the current Tauri/core coupling, proposed service API/security boundary, Dolphin adapter, phased implementation/validation and rollback points. The remaining review is the path-based versus descriptor-based file-selection contract. No native implementation, package registration or settings migration has started. The historical protocol-refactor guardrail above still applies; the newly authorized desktop migration must keep protocol behavior separable from shell changes.
