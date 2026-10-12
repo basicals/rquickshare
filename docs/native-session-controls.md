@@ -36,7 +36,7 @@ Rollback: the common-session slice is independent of file descriptors/coordinato
 | BLE / BWU | generic BLE stream shares same lease/control, stream upgrade retains capability, cancelled BWU route pruned, old waiter cannot consume later route, alias precedence retained | Duplex + loopback/kernel, 4 |
 | GATT task group | exact/over budget, close versus admission, cancellation/join, migrated worker survives bridge completion, panic observed, no caller cancellation, repeat stop | Controlled futures, 6 |
 
-Estimate: 39 new methods plus existing protocol/manager/coordinator/file tests. Table cases cover independent state/limit variants. Only external sockets/streams/tasks are controlled; handlers, registry and replay rules are real. Five-second outer watchdogs detect deadlock; synchronization waits on frames, channels, watch/token changes or task completion, never sleeps.
+Estimate: 39 new methods plus existing protocol/manager/coordinator/file tests. Table cases cover independent state/limit variants. Only external sockets/streams/tasks are controlled; handlers, registry and replay rules are real. Transport/task tests use five-second outer watchdogs to detect deadlock; synchronization waits on frames, channels, watch/token changes or task completion, never sleeps.
 
 | Artifact | Positive | N1 | N2 | N3 | N4 | N5 | N6 | N7 | N8 | N9 | N10 | N11 | N12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -54,7 +54,7 @@ Final branch review adds two explicit queued-command interleavings: a duplicate/
 
 ## Verification facts
 
-- U0 completed in `b774770`, before production changes. U1–U3 implement `sessions.rs` and its private GATT task group; shared handler leases/mailboxes; managed outgoing registration; TCP/GATT/RQS propagation; closed BWU waiter pruning and cooperative handler yields. No dependency, lockfile, wire schema, crypto, settings, package registration or native GUI change.
+- U0 completed in `b774770`, before production changes. Implementation checkpoint: `963ef1a`. U1–U3 implement `sessions.rs` and its private GATT task group; shared handler leases/mailboxes; managed outgoing registration; TCP/GATT/RQS propagation; closed BWU waiter pruning and cooperative handler yields. No dependency, lockfile, wire schema, crypto, settings, package registration or native GUI change.
 - One full `cargo +stable test --all-features` assertion run executed 324 unit/export methods: **323 passed, 1 BLE fixture failed**. The initial preceding attempt had stopped at compilation on a test trying to move a State out of a Drop type; it was corrected to clone before assertions executed. Cargo did not run the integration binary after the failed BLE assertion.
 - The failed fixture used a custom remote OutboundRequest loop that incorrectly required NotAnError after the handler had already reached Finished; EOF after that terminal state is normally absorbed by the actual manager. Replaced the custom loop with the real TCP manager. The updated BLE tests retain exact sender/receiver terminal assertions and additionally assert actual received text. One affected two-method BLE invocation passed, including Accept and Reject. No production defect was hidden by weakening a delivery assertion.
 - Two added queued-command race methods passed once. Six lifecycle tests passed once after adding constructor/registration cancellation. The previously unexecuted modern_protocol integration binary passed all **4** methods once.

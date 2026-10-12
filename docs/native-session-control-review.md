@@ -1,6 +1,6 @@
 # Native session control readiness review
 
-2026-10-12, Mode A. Status: option 1 approved by the user; implementation follows [native-session-controls.md](native-session-controls.md). Completed checkpoints: TCP supervision `ee2139a`; owned native outgoing dispatch/startup rollback `2354c1d`.
+2026-10-12, Mode A. Status: option 1 implemented in `963ef1a`; implementation and verification are recorded in [native-session-controls.md](native-session-controls.md). Completed checkpoints: TCP supervision `ee2139a`; owned native outgoing dispatch/startup rollback `2354c1d`.
 
 ## Current source evidence
 
