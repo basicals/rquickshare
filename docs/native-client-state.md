@@ -90,9 +90,11 @@ existing discard/consent/cancel adapters are implemented. Pump subscriptions are
 installed before bootstrap reads, drained continuously and explicitly joined on
 close. No new wire method/dependency or daemon behavior.
 
-12 new checks with table subcases: Positive 2, N2 2, N4 2, N5 1, N7 3, N9 2
-(primary categories; flags and malformed fields also cover N1/N6, sender/privacy
-checks cover N10). No new N8/N11/N12 behavior; inherited FD/storage cases remain.
+12 new checks with table subcases: Positive 2, N1 1, N2 2, N3 1, N4 1,
+N5 1, N7 3, N9 1 (primary categories: frozen enums/current consent; optional
+flags; collection caps/real pages; owner loss; control retries; coalescing; stale/
+foreign/forged authority; interrupted read). Malformed/old fields overlap N6 and
+sender/privacy checks overlap N10. No new N8/N11/N12 behavior; inherited FD/storage cases remain.
 Initial compilation identified an untyped page offset; explicitly typed u32 before
 execution. The affected service run then passed all 190 tests, no failures/ignored,
 with 284 other unit/export and eight integration tests filtered. Strict Clippy
