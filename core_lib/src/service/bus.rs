@@ -22,6 +22,7 @@ use super::uploads::{UploadState, BATCH_FILES};
 use super::{ClientId, Coordinator, Error, SelectionId, TransferId, UploadId};
 use crate::file_source::OpenedFile;
 
+mod state;
 mod transport;
 
 pub const SERVICE: &str = "io.github.morozhenko_apps.RQuickShare";
@@ -53,6 +54,8 @@ pub struct SelectionBus {
     failed: CancellationToken,
     closed: CancellationToken,
     clients: BTreeMap<String, ClientId>,
+    state: state::StateCache,
+    notified: BTreeMap<ClientId, u64>,
     uid: u32,
 }
 
@@ -103,6 +106,8 @@ impl SelectionBus {
             failed,
             closed,
             clients: BTreeMap::new(),
+            state: state::StateCache::default(),
+            notified: BTreeMap::new(),
             uid,
         };
         let initialized = async {
@@ -182,19 +187,27 @@ impl SelectionBus {
                 result = runtime.step() => result.map_err(BusError::Runtime)?,
                 message = self.inbox.recv() => {
                     let message = message.ok_or(BusError::Transport)?;
+                    let (coordinator, endpoints) = runtime.bus_state_parts();
                     // Keep broker waits/replies cancellable without dropping the runtime owner.
                     tokio::select! {
                         _ = stop.cancelled() => return Ok(()),
                         _ = failure.cancelled() => return Err(BusError::Transport),
-                        result = self.dispatch(runtime.selection_coordinator(), message) => result?,
+                        result = self.dispatch(coordinator, endpoints, message) => result?,
                     }
                 }
+            }
+            tokio::select! {
+                _ = stop.cancelled() => return Ok(()),
+                _ = failure.cancelled() => return Err(BusError::Transport),
+                result = self.publish_changes(runtime.selection_coordinator()) => result?,
             }
         }
     }
 
     fn disconnect_clients(&mut self, coordinator: &mut Coordinator) -> Result<(), BusError> {
         let mut result = Ok(());
+        self.state.clear();
+        self.notified.clear();
         for (_, client) in std::mem::take(&mut self.clients) {
             if let Err(error) = coordinator.disconnect(client) {
                 result = Err(BusError::Coordinator(error));
@@ -298,6 +311,8 @@ impl SelectionBus {
         sender: &str,
     ) -> Result<(), BusError> {
         if let Some(client) = self.clients.remove(sender) {
+            self.state.disconnect(client);
+            self.notified.remove(&client);
             coordinator
                 .disconnect(client)
                 .map_err(BusError::Coordinator)?;
@@ -338,9 +353,10 @@ impl SelectionBus {
         Ok(reply)
     }
 
-    async fn dispatch(
+    async fn dispatch<'a>(
         &mut self,
         coordinator: &mut Coordinator,
+        endpoints: impl ExactSizeIterator<Item = (&'a str, &'a str)>,
         message: Message,
     ) -> Result<(), BusError> {
         let connection = self.connection.as_ref().ok_or(BusError::Transport)?.clone();
@@ -430,6 +446,28 @@ impl SelectionBus {
                 .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
                 .await;
         };
+        if [
+            "BeginSnapshot",
+            "GetEndpointPage",
+            "GetSelectionPage",
+            "GetTransferPage",
+            "EndSnapshot",
+        ]
+        .contains(&member)
+        {
+            if !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            let reply = self.execute_state(coordinator, client, endpoints, member, &message);
+            return match reply {
+                Ok(StateReply::Metadata(metadata)) => self.state_reply(&header, &metadata).await,
+                Ok(StateReply::Endpoints(page)) => self.state_reply(&header, &page).await,
+                Ok(StateReply::Selections(page)) => self.state_reply(&header, &page).await,
+                Ok(StateReply::Transfers(page)) => self.state_reply(&header, &page).await,
+                Ok(StateReply::Empty) => self.state_reply(&header, &()).await,
+                Err(error) => self.domain_error(&header, error).await,
+            };
+        }
         if ![
             "BeginSelection",
             "AppendFiles",
@@ -459,6 +497,97 @@ impl SelectionBus {
             Err(error) => return self.domain_error(&header, error).await,
         }
         .map_err(|_| BusError::Transport)
+    }
+
+    fn execute_state<'a>(
+        &mut self,
+        coordinator: &mut Coordinator,
+        client: ClientId,
+        endpoints: impl ExactSizeIterator<Item = (&'a str, &'a str)>,
+        member: &str,
+        message: &Message,
+    ) -> Result<StateReply, Error> {
+        if !message.data().fds().is_empty() {
+            return Err(Error::InvalidInput);
+        }
+        let body = message.body();
+        if member == "BeginSnapshot" {
+            body.deserialize::<()>().map_err(|_| Error::InvalidInput)?;
+            return self
+                .state
+                .capture(coordinator, client, endpoints)
+                .map(StateReply::Metadata);
+        }
+        if member == "EndSnapshot" {
+            let id: &str = body.deserialize().map_err(|_| Error::InvalidInput)?;
+            token_parts(id, coordinator.epoch)?;
+            self.state.end(client, id)?;
+            return Ok(StateReply::Empty);
+        }
+        let (id, offset): (&str, u32) = body.deserialize().map_err(|_| Error::InvalidInput)?;
+        token_parts(id, coordinator.epoch)?;
+        match member {
+            "GetEndpointPage" => self
+                .state
+                .endpoint_page(client, id, offset)
+                .map(StateReply::Endpoints),
+            "GetSelectionPage" => self
+                .state
+                .selection_page(client, id, offset)
+                .map(StateReply::Selections),
+            "GetTransferPage" => self
+                .state
+                .transfer_page(client, id, offset)
+                .map(StateReply::Transfers),
+            _ => Err(Error::InvalidInput),
+        }
+    }
+
+    async fn state_reply<B: serde::Serialize + Type>(
+        &self,
+        header: &zbus::message::Header<'_>,
+        body: &B,
+    ) -> Result<(), BusError> {
+        let connection = self.connection.as_ref().ok_or(BusError::Transport)?;
+        let message = Message::method_return(header)
+            .map_err(|_| BusError::Transport)?
+            .sender(connection.unique_name().ok_or(BusError::Transport)?)
+            .map_err(|_| BusError::Transport)?
+            .build(body)
+            .map_err(|_| BusError::Transport)?;
+        if !state_message_bounded(&message) {
+            return self.domain_error(header, Error::Capacity).await;
+        }
+        connection
+            .send(&message)
+            .await
+            .map_err(|_| BusError::Transport)
+    }
+
+    async fn publish_changes(&mut self, coordinator: &Coordinator) -> Result<(), BusError> {
+        let connection = self.connection.as_ref().ok_or(BusError::Transport)?;
+        for (sender, client) in &self.clients {
+            if self.notified.get(client) == Some(&coordinator.revision) {
+                continue;
+            }
+            let message = Message::signal(PATH, INTERFACE, "StateChanged")
+                .map_err(|_| BusError::Transport)?
+                .sender(connection.unique_name().ok_or(BusError::Transport)?)
+                .map_err(|_| BusError::Transport)?
+                .destination(sender.as_str())
+                .map_err(|_| BusError::Transport)?
+                .build(&(format!("{:032x}", coordinator.epoch), coordinator.revision))
+                .map_err(|_| BusError::Transport)?;
+            if !state_message_bounded(&message) {
+                return Err(BusError::Transport);
+            }
+            connection
+                .send(&message)
+                .await
+                .map_err(|_| BusError::Transport)?;
+            self.notified.insert(*client, coordinator.revision);
+        }
+        Ok(())
     }
 
     async fn domain_error(
@@ -491,6 +620,7 @@ fn error_name(error: Error) -> &'static str {
         Error::Capacity => "io.github.morozhenko_apps.RQuickShare.Error.Capacity",
         Error::UnknownClient => "io.github.morozhenko_apps.RQuickShare.Error.UnknownClient",
         Error::UnknownUpload => "io.github.morozhenko_apps.RQuickShare.Error.UnknownUpload",
+        Error::UnknownSnapshot => "io.github.morozhenko_apps.RQuickShare.Error.UnknownSnapshot",
         Error::InvalidState => "io.github.morozhenko_apps.RQuickShare.Error.InvalidState",
         Error::UnknownSelection => "io.github.morozhenko_apps.RQuickShare.Error.UnknownSelection",
         Error::UnknownTransfer => "io.github.morozhenko_apps.RQuickShare.Error.UnknownTransfer",
@@ -518,6 +648,7 @@ fn owner_rule(name: &str) -> zbus::Result<zbus::MatchRule<'_>> {
         .build())
 }
 
+#[derive(Debug)]
 enum AuthenticationError {
     Denied,
     Coordinator(Error),
@@ -528,6 +659,18 @@ enum Reply {
     Sequence(u32),
     Upload(u32, &'static str, String),
     Empty,
+}
+
+enum StateReply {
+    Metadata(state::Metadata),
+    Endpoints((u32, Vec<state::EndpointRow>)),
+    Selections((u32, Vec<String>)),
+    Transfers((u32, Vec<state::TransferRow>)),
+    Empty,
+}
+
+fn state_message_bounded(message: &Message) -> bool {
+    message.body().len() <= 48 * 1024 && message.data().len() <= 64 * 1024
 }
 fn token(epoch: u128, counter: u64) -> String {
     format!("{epoch:032x}-{counter:016x}")

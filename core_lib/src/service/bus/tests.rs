@@ -74,7 +74,14 @@ impl Harness {
     fn with_limits(bus: SelectionBus, limits: Limits) -> Self {
         Self::with_coordinator(bus, Coordinator::new(123, limits).unwrap())
     }
-    fn with_coordinator(mut bus: SelectionBus, mut coordinator: Coordinator) -> Self {
+    fn with_coordinator(bus: SelectionBus, coordinator: Coordinator) -> Self {
+        Self::with_endpoints(bus, coordinator, Vec::new())
+    }
+    fn with_endpoints(
+        mut bus: SelectionBus,
+        mut coordinator: Coordinator,
+        endpoints: Vec<(String, String)>,
+    ) -> Self {
         let stop = CancellationToken::new();
         let end = stop.clone();
         let failure = bus.failed.clone();
@@ -89,7 +96,13 @@ impl Harness {
                         let result = tokio::select! {
                             _ = end.cancelled() => break Ok(()),
                             _ = failure.cancelled() => break Err(BusError::Transport),
-                            result = bus.dispatch(&mut coordinator, message) => result,
+                            result = bus.dispatch(&mut coordinator, endpoints.iter().map(|(id, name)| (id.as_str(), name.as_str())), message) => result,
+                        };
+                        if let Err(error) = result { break Err(error); }
+                        let result = tokio::select! {
+                            _ = end.cancelled() => break Ok(()),
+                            _ = failure.cancelled() => break Err(BusError::Transport),
+                            result = bus.publish_changes(&coordinator) => result,
                         };
                         if let Err(error) = result { break Err(error); }
                         observed.send_replace(bus.clients.len());
@@ -113,6 +126,7 @@ impl Harness {
 }
 
 mod controls;
+mod state;
 impl Drop for Harness {
     fn drop(&mut self) {
         self.stop.cancel();
@@ -737,6 +751,7 @@ fn given_internal_errors_when_mapped_then_wire_names_match_the_frozen_allowlist(
         Error::Capacity,
         Error::UnknownClient,
         Error::UnknownUpload,
+        Error::UnknownSnapshot,
         Error::InvalidState,
         Error::UnknownSelection,
         Error::UnknownTransfer,

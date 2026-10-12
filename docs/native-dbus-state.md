@@ -9,7 +9,7 @@ same-UID authorization, consent, retention, settings or protocol behavior.
 
 | Method | Input signature | Output signature |
 |---|---|---|
-| BeginSnapshot | empty | sstsb uutuuu (spaces below are explanatory only) |
+| BeginSnapshot | empty | sstsbuutuuu |
 | GetEndpointPage | su | ua(ss) |
 | GetSelectionPage | su | uas |
 | GetTransferPage | su | ua(sssbtbst) |
@@ -93,11 +93,11 @@ file summaries, PINs, credential metadata or peer completion.
 
 ## Milestones and rollback
 
-- [ ] V0: Record selected contract/inventory and commit before code.
-- [ ] V1: Implement pure bounded capture/cache and enum mapping; add domain checks.
-- [ ] V2: Integrate authenticated state methods/directed invalidations and coherent
+- [x] V0: Record selected contract/inventory and commit before code (`9546431`).
+- [x] V1: Implement pure bounded capture/cache and enum mapping; add domain checks.
+- [x] V2: Integrate authenticated state methods/directed invalidations and coherent
   discovery revisions; add private-bus/runtime checks and fixed fixtures.
-- [ ] V3: Run appropriate core checks once, record outcomes and diary, commit.
+- [x] V3: Run appropriate core checks once, record outcomes and diary, commit.
 
 Rollback V2 before V1 restores the nine-method adapter. No on-disk migration or
 legacy UI change occurs. Risks: mixed live pages, leaked captures, cross-owner
@@ -132,4 +132,80 @@ ten-run final stability gate.
 
 ## Verification observations
 
-Pending. Prior completed measurement: 401 checks in native-dbus-controls.md.
+The first complete all-feature core test invocation stopped at compilation because
+test unwrap diagnostics required Debug on the redacted AuthenticationError enum;
+the enum now derives Debug without adding sensitive fields. The next invocation
+executed **415 unit/export methods: 410 passed, 5 failed**, zero ignored, in 0.90 s.
+All five failures were an incorrect test comparison of the SDK Signature display
+form `(sstsbuutuuu)` with the actual D-Bus argument-list form `sstsbuutuuu`.
+Inspected cached zbus message/fields.rs: it encodes Signature using
+`to_string_no_parens`. The test now checks that exact wire representation, and also
+checks every page signature against the frozen XML. No contract/assertion was
+relaxed and no production signature was changed to fit a test.
+
+After that correction and explicit sender headers on the new encoded replies and
+signals, all **46 affected bus methods passed**, zero failures/ignored, in 0.34 s.
+The four previously unexecuted `modern_protocol` integration methods then passed.
+Current inventory is **415 unit/export + 4 integration = 419**, including **18 new
+methods** (9 pure cache/projection, 7 wire/private-bus, 2 real-runtime discovery).
+The 369 unaffected unit/export methods passed in the preceding complete run;
+there was no redundant final 419-method run and no ten-run stability gate.
+Schema round trips are not Google device compatibility evidence.
+
+Final source review strengthened the no-extra-signal assertion with an ordered
+broker fence on the sending connection and round trips on both receiving
+connections; this prevents relying on receiver-task scheduling or a guessed wait.
+Only that affected notification method was rerun, passing in 0.02 s. Final
+all-feature/all-target `cargo +stable clippy ... --locked -- -D warnings`, nightly
+format check and `git diff --check` passed after this test-only change. Existing
+bluer future-incompatibility notice remains. No disabled-feature, instrumented
+coverage, remote CI, package build or live bootstrap check was run in this slice.
+
+All scenarios use real coordinator/runtime logic, SDK messages and disposable
+private brokers/socket ownership. Maximum real wire capture includes 128 endpoints
+with 256-byte UTF-8 labels, 128 descriptor-backed selections and 256 transfer
+records; all pages satisfy the encoded body/frame guards and expose complete rows.
+One real authenticated connection owns the prepared fixture state. Cross-owner
+read/end, disconnect cleanup, new epoch, stable old pages, replacement at full
+cache and explicit Capacity are exercised. Releasing views does not delete source
+files, transfer history or upload/send receipts. The tests do not start BlueZ/mDNS
+or an installed daemon and do not fabricate processing/completion.
+
+Primary category counts, one category per new method: Positive 3; N1 2; N2 7;
+N5 3; N7 2; N9 1. N4/N6/N8/N10 are secondary assertions for repeated release,
+reconnect/epoch/unsynchronized state, UTF-8 byte limits and metadata redaction.
+N3 retains existing bus-loss/host cleanup tests in the affected suite; no new
+network-peer fault scenario was added. N11/N12 introduce no billing/storage write.
+No exhaustive Mode B branch/line percentage is claimed.
+
+Assertion/mutation review: removed owner guards fail foreign-page/end checks;
+live-map paging fails immutable old-view checks; relaxed offsets/count/cache/size
+caps fail exact/over tables; truncation fails complete row/count comparisons;
+unversioned discovery changes fail shared revision assertions; mutation before
+exhaustion fails route/sequence preservation; broadcast/uncoalesced signals fail
+destination/ordered-empty-stream checks; fake consent completion fails explicit
+phase/presence/revision rows. This is assertion review, not executed mutation tooling.
+
+## Handoff and remaining work
+
+Manager1 now has 14 methods and a directed StateChanged signal. The serial host
+passes a borrowed bounded discovery iterator to read projection; no eager global
+endpoint copy, extra owner or per-call task was introduced. New source is
+`service/bus/state.rs`; regressions are in its tests and bus/tests/state.rs. Exact
+XML/error/enum fixtures live inside core_lib/dbus. The native runtime now advances
+the same revision for label/address changes and validates it before route mutation.
+
+Closing the bus clears read captures and delivered revisions alongside existing
+caller cleanup. Publication is inside the host's stop/failure select; externally
+abandoning run still requires retained-owner close/shutdown as previously specified.
+Core faults retain the preceding fail-closed runtime behavior; a read capture is
+not a recovery mechanism. No transfer progress/file-summary fields, executable,
+settings migration, GTK UI, installed registration or terminal/replay eviction
+policy has been added.
+
+Next: native executable/user-bus address discovery and owned signal-driven process
+shutdown; continuous-service terminal/replay retention review; native client and
+GTK tray/notifications; Dolphin; physical KDE/BlueZ and Google peer matrix. Existing
+Tauri remains the current GUI. All owned terminal commands completed; terminal
+closed. No user-session bus service, package install, external policy, push or
+master promotion occurred.

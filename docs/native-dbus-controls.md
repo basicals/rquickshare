@@ -1,5 +1,10 @@
 # Native D-Bus transfer controls
 
+Current continuation: immutable read pages and directed invalidations are implemented
+in [native-dbus-state.md](native-dbus-state.md). The nine-method-only checkpoint
+below records this earlier control slice; the current interface has fourteen
+methods plus StateChanged. Executable and native UI work remain pending.
+
 2026-10-12. Mode A. Continuation of the accepted native service direction and
 existing coordinator command contracts. This slice exposes the already specified
 DiscardSelection, SendSelection, Respond and Cancel operations through Manager1.

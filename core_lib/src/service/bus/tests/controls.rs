@@ -23,7 +23,7 @@ fn setup(limits: Limits) -> (Coordinator, ClientId, SelectionId) {
     (coordinator, client, id)
 }
 
-async fn committed(client: &Connection, source: &File) -> (String, String) {
+pub(super) async fn committed(client: &Connection, source: &File) -> (String, String) {
     let upload = begin(client, "choose").await;
     append(client, &upload, 0, &[(source, "folder/document")])
         .await

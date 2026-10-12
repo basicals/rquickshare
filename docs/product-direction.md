@@ -1,11 +1,11 @@
 # Product direction: native desktop and Google Quick Share parity
 
 _Recorded: 2026-10-12. Status: tray-panel and descriptor decisions accepted;
-file/core boundary, coordinator, native runtime and nine authenticated Manager1
-selection/control methods implemented. State/discovery wire API, daemon executable
-and native shell remain pending._
+file/core boundary, coordinator, native runtime, fourteen authenticated Manager1
+methods and directed state invalidations implemented. Daemon executable, retention
+review and native shell remain pending._
 
-Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). Bounded TCP workers and the owned native dispatch/cancellation/startup seam are implemented in [native-transfer-supervision.md](native-transfer-supervision.md) and [native-managed-dispatch.md](native-managed-dispatch.md). Common TCP/BLE session capabilities and consent processing receipts are implemented in [native-session-controls.md](native-session-controls.md). The single-owner coordinator/core runtime is implemented in [native-core-runtime.md](native-core-runtime.md), using [ordered lifecycle events](native-core-events.md). Authenticated selection IPC is implemented in [native-selection-transactions.md](native-selection-transactions.md), with additive [transfer controls](native-dbus-controls.md). State/discovery IPC, a registered daemon and native UI remain pending. Historical stage descriptions below must be read with these checkpoints.
+Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). Bounded TCP workers and the owned native dispatch/cancellation/startup seam are implemented in [native-transfer-supervision.md](native-transfer-supervision.md) and [native-managed-dispatch.md](native-managed-dispatch.md). Common TCP/BLE session capabilities and consent processing receipts are implemented in [native-session-controls.md](native-session-controls.md). The single-owner coordinator/core runtime is implemented in [native-core-runtime.md](native-core-runtime.md), using [ordered lifecycle events](native-core-events.md). Authenticated selection IPC is implemented in [native-selection-transactions.md](native-selection-transactions.md), with additive [transfer controls](native-dbus-controls.md) and [bounded state pages/invalidation](native-dbus-state.md). A registered daemon and native UI remain pending. Historical stage descriptions below must be read with these checkpoints.
 
 ## Authoritative correction
 

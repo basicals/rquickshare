@@ -1,5 +1,30 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: bounded native state reads and invalidations implemented
+
+The user selected stable snapshot pages (option 1). Plan/contract committed before
+code in `9546431`; [native-dbus-state.md](native-dbus-state.md) records exact typed
+signatures, view ownership, 16-record pages, checked 48-KiB bodies/64-KiB frames,
+fixed 512-KiB capture reservations and 8-MiB aggregate cache. Successful replacement,
+release, disconnect and close reclaim metadata without discarding transfers or
+receipts. StateChanged is directed only to authenticated clients and coalesced by
+the shared revision; effective discovery label/address updates now advance that
+revision before mutation. Fourteen Manager1 methods and one signal are implemented.
+
+18 new methods. The complete unit/export invocation passed 410/415 and exposed
+five test Signature-display assumptions; exact wire-form comparison corrected
+them. All 46 affected bus methods and four integration methods then passed. The
+369 unaffected methods were already green. One later notification-test ordering
+fence change passed its affected method. Final Clippy/format/diff checks passed.
+Inventory is 419 checks, with no claim of a final single 419-method full run or ten
+repetitions. The state SSOT preserves actual failures, outcomes, category counts,
+limits and rollback. No installed service/UI, hardware certification or remote run.
+
+Next: executable/process lifecycle, terminal/replay retention before continuous
+deployment, native client/GTK, Dolphin and actual Google peers. The older state
+contract choice below is answered; historical pending wire-state entries are
+superseded by this checkpoint. No new significant decision is made in this slice.
+
 ## 2026-10-12: native D-Bus send and transfer controls implemented
 
 [native-dbus-controls.md](native-dbus-controls.md) records the plan committed before

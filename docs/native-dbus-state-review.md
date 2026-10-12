@@ -1,6 +1,7 @@
 # Native D-Bus state read contract review
 
-2026-10-12. Mode A. Status: the user selected option 1. The concrete implementation
+2026-10-12. Mode A. Status: the user selected option 1; implementation and offline
+verification are complete. The concrete implementation
 contract and progress are in [native-dbus-state.md](native-dbus-state.md). This
 review records the decision, not implementation evidence. The preceding transfer
 control slice is complete in `1b3b84c`, with actual measurements in

@@ -27,6 +27,7 @@ pub enum Error {
     Capacity,
     UnknownClient,
     UnknownUpload,
+    UnknownSnapshot,
     InvalidState,
     UnknownSelection,
     UnknownTransfer,

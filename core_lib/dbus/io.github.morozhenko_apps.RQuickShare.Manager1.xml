@@ -40,6 +40,44 @@
     <method name="Cancel">
       <arg name="transfer_id" type="s" direction="in"/>
     </method>
+    <method name="BeginSnapshot">
+      <arg name="snapshot_id" type="s" direction="out"/>
+      <arg name="epoch" type="s" direction="out"/>
+      <arg name="revision" type="t" direction="out"/>
+      <arg name="lifecycle" type="s" direction="out"/>
+      <arg name="synchronized" type="b" direction="out"/>
+      <arg name="resource_selections" type="u" direction="out"/>
+      <arg name="reserved_handles" type="u" direction="out"/>
+      <arg name="selected_bytes" type="t" direction="out"/>
+      <arg name="endpoint_count" type="u" direction="out"/>
+      <arg name="selection_count" type="u" direction="out"/>
+      <arg name="transfer_count" type="u" direction="out"/>
+    </method>
+    <method name="GetEndpointPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="endpoints" type="a(ss)" direction="out"/>
+    </method>
+    <method name="GetSelectionPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="selections" type="as" direction="out"/>
+    </method>
+    <method name="GetTransferPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="transfers" type="a(sssbtbst)" direction="out"/>
+    </method>
+    <method name="EndSnapshot">
+      <arg name="snapshot_id" type="s" direction="in"/>
+    </method>
+    <signal name="StateChanged">
+      <arg name="epoch" type="s"/>
+      <arg name="revision" type="t"/>
+    </signal>
   </interface>
   <interface name="org.freedesktop.DBus.Introspectable">
     <method name="Introspect">

@@ -30,6 +30,87 @@ fn fixture() -> Fixture {
         discovery,
     }
 }
+
+#[test]
+fn given_existing_discovery_when_name_or_route_changes_then_shared_revision_changes_only_for_effective_updates(
+) {
+    // Arrange
+    let mut fixture = fixture();
+    let runtime = &mut fixture.runtime;
+    let client = runtime.connect().unwrap();
+    let mut info = advertisement("device");
+    runtime.discovered(info.clone()).unwrap();
+    let first = runtime.snapshot(client).unwrap();
+    let id = runtime.endpoints()[0].id.clone();
+    // Act / Assert
+    runtime.discovered(info.clone()).unwrap();
+    assert_eq!(runtime.snapshot(client).unwrap().revision, first.revision);
+    info.name = Some("Renamed device".into());
+    runtime.discovered(info.clone()).unwrap();
+    let second = runtime.snapshot(client).unwrap();
+    assert_eq!(second.revision, first.revision + 1);
+    assert_eq!(
+        runtime.endpoints()[0],
+        EndpointSnapshot {
+            id: id.clone(),
+            name: "Renamed device".into()
+        }
+    );
+    info.port = Some("4321".into());
+    runtime.discovered(info.clone()).unwrap();
+    assert_eq!(
+        runtime.snapshot(client).unwrap().revision,
+        second.revision + 1
+    );
+    assert_eq!(runtime.routes[&id].addr.port(), 4321);
+    info.present = Some(false);
+    runtime.discovered(info.clone()).unwrap();
+    let removed = runtime.snapshot(client).unwrap();
+    assert_eq!(removed.revision, second.revision + 2);
+    assert!(runtime.routes.is_empty() && runtime.coordinator.endpoints.is_empty());
+    runtime.discovered(info).unwrap();
+    assert_eq!(runtime.snapshot(client).unwrap().revision, removed.revision);
+}
+
+#[test]
+fn given_exhausted_revision_when_discovery_mutates_then_existing_route_and_endpoint_sequence_remain_unchanged(
+) {
+    // Arrange
+    for change in ["name", "route", "remove", "insert"] {
+        let mut fixture = fixture();
+        let runtime = &mut fixture.runtime;
+        let mut info = advertisement("device");
+        runtime.discovered(info.clone()).unwrap();
+        let before = runtime.endpoints();
+        let id = before[0].id.clone();
+        let addr = runtime.routes[&id].addr;
+        let sequence = runtime.endpoint_sequence;
+        runtime.coordinator.revision = u64::MAX;
+        match change {
+            "name" => info.name = Some("Changed".into()),
+            "route" => info.port = Some("4321".into()),
+            "remove" => info.present = Some(false),
+            _ => info.fullname = "new-device".into(),
+        }
+        // Act / Assert
+        assert_eq!(
+            runtime.discovered(info),
+            Err(RuntimeError::Coordinator(Error::Exhausted))
+        );
+        assert_eq!(runtime.endpoints(), before);
+        assert_eq!(runtime.routes[&id].addr, addr);
+        assert_eq!(runtime.endpoint_sequence, sequence);
+        assert_eq!(
+            runtime
+                .coordinator
+                .endpoints
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>(),
+            vec![id]
+        );
+    }
+}
 fn advertisement(fullname: &str) -> EndpointInfo {
     EndpointInfo {
         fullname: fullname.into(),

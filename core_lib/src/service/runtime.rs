@@ -242,6 +242,19 @@ impl NativeRuntime {
     pub(super) fn selection_coordinator(&mut self) -> &mut Coordinator {
         &mut self.coordinator
     }
+    pub(super) fn bus_state_parts(
+        &mut self,
+    ) -> (
+        &mut Coordinator,
+        impl ExactSizeIterator<Item = (&str, &str)>,
+    ) {
+        (
+            &mut self.coordinator,
+            self.routes
+                .iter()
+                .map(|(id, route)| (id.as_str(), route.name.as_str())),
+        )
+    }
     pub fn discard_selection(
         &mut self,
         client: ClientId,
@@ -298,6 +311,13 @@ impl NativeRuntime {
             .find_map(|(id, route)| (route.fullname == info.fullname).then(|| id.clone()));
         if info.present == Some(false) {
             if let Some(id) = existing {
+                self.coordinator.set_endpoints(
+                    self.routes
+                        .keys()
+                        .filter(|key| **key != id)
+                        .cloned()
+                        .collect(),
+                )?;
                 self.routes.remove(&id);
             }
         } else if info.present == Some(true) {
@@ -320,19 +340,30 @@ impl NativeRuntime {
                 return Ok(());
             }
             let id = match existing {
-                Some(id) => id,
+                Some(id) => {
+                    let route = &self.routes[&id];
+                    if route.name == name && route.addr == addr {
+                        return Ok(());
+                    }
+                    // Label and route updates must share the snapshot revision.
+                    // Check exhaustion before mutating the already visible route.
+                    self.coordinator.advance()?;
+                    id
+                }
                 None => {
                     if self.routes.len() >= self.coordinator.limits.endpoints {
                         return Ok(());
                     }
-                    self.endpoint_sequence = self
+                    let sequence = self
                         .endpoint_sequence
                         .checked_add(1)
                         .ok_or(Error::Exhausted)?;
-                    format!(
-                        "ep-{:032x}-{:016x}",
-                        self.coordinator.epoch, self.endpoint_sequence
-                    )
+                    let id = format!("ep-{:032x}-{:016x}", self.coordinator.epoch, sequence);
+                    let mut endpoints: Vec<_> = self.routes.keys().cloned().collect();
+                    endpoints.push(id.clone());
+                    self.coordinator.set_endpoints(endpoints)?;
+                    self.endpoint_sequence = sequence;
+                    id
                 }
             };
             self.routes.insert(
@@ -344,8 +375,6 @@ impl NativeRuntime {
                 },
             );
         }
-        self.coordinator
-            .set_endpoints(self.routes.keys().cloned().collect())?;
         Ok(())
     }
 

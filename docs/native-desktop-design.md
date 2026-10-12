@@ -152,3 +152,9 @@ The subsequent [native-dbus-controls.md](native-dbus-controls.md) checkpoint add
 DiscardSelection, SendSelection, Respond and Cancel without changing those ownership
 or trust rules. Nine methods now exist; snapshot/discovery/invalidation wire APIs,
 executable activation, retention and the GTK chooser remain pending.
+
+The current [native-dbus-state.md](native-dbus-state.md) checkpoint implements the
+user-selected immutable bounded read pages and directed StateChanged hints. There
+are now fourteen methods plus one signal. Executable activation, terminal/replay
+retention and the native chooser still remain; historical JSON/path API proposals
+above are not the current wire contract.
