@@ -17,7 +17,7 @@ Scope inventory/branches: failure builder (initial/active/terminal, bounded Unic
 
 `TcpServer::run` calls `self.connect(...).await` directly inside its main `select!` loop. `connect` includes TCP connection establishment, handshake, remote consent and the entire outbound transfer. While it is pending, that task does not poll `tcp_listener.accept()` or another queued outbound. Inbound requests are spawned into independent tasks only after accept, so an outgoing transfer waiting for peer consent can block accepting a new incoming transfer. Cancellation during TCP connect/initial writes is also outside the inner transfer-loop cancellation select. This is source-level evidence; it has not been benchmarked on a physical peer. Do not present the current manager as concurrently servicing outbound and inbound work.
 
-This cannot be fixed by a panel spinner or by inventing coordinator events. Structured supervision changes core task ownership, concurrency and shutdown; the user explicitly requires approval before substantial refactoring. Do not implement this portion until a choice is recorded.
+This cannot be fixed by a panel spinner or by inventing coordinator events. Structured supervision changes core task ownership, concurrency and shutdown. The user approved option 1 on 2026-10-12: "1. fix it and continue". Implementation/verification is tracked in [native-transfer-supervision.md](native-transfer-supervision.md).
 
 | Option | Concrete change | Benefits | Costs / risks |
 |---|---|---|---|
@@ -35,4 +35,4 @@ The bounded correlation fix is implemented in `90067ee`. `outbound_failure` is s
 - New primary-category counts: N1=1 (malformed peer handshake), N7=1 (constructor failure retains request identity), N4=1 (all 18 states and absorbing terminal outcomes). Positive/N2/N3/N5/N9 overlap these methods; they are not counted again. Existing Unicode/error-bound tests also ran. N6/N8/N10/N11/N12 add no independent coordinator/manager contract in this slice, as explained in the inventory.
 - Assertions reject address-as-ID, missing Outbound type, missing/duplicate failure event, losing metadata, unbounded Unicode error text and overriding a terminal outcome. This is assertion/source mutation reasoning, not executed mutation tooling.
 
-Continuation is paused **only at the substantial supervision refactor decision above**. Record the user's choice here before planning its core task/lifecycle changes and tests. The current Tauri app, file capability input and new coordinator remain independently reversible; no native daemon or UI is installed/activated.
+The supervision decision is approved; continuation is active. The current Tauri app, file capability input and new coordinator remain independently reversible; no native daemon or UI is installed/activated by this review.
