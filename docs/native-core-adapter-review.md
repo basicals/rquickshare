@@ -28,4 +28,11 @@ Recommendation: option 1 before the live core adapter. The coordinator's ownersh
 
 ## Verification facts
 
-Pending the bounded correlation fix. No orchestration change is implemented or approved by this document.
+The bounded correlation fix is implemented. `outbound_failure` is shared by queue/startup and in-loop failures; `execute_outbound` is the same owner entrypoint used by `run` and the two loopback tests. No orchestration change is implemented or approved by this document.
+
+- One `cargo +stable test --all-features manager::tests` invocation passed **9 tests**, including the **3 new methods**. The earlier full coordinator/core run (237 tests) is recorded in [native-service-coordinator.md](native-service-coordinator.md); it was not repeated after this localized manager change. The current compiled unit-test inventory is 236 plus 4 integration tests; this is an inventory count, not a claim of a new 240-test execution.
+- `cargo +stable clippy --all-features --all-targets -- -D warnings` passed after this change. Format/diff checks passed. Only the existing bluer future-incompatibility warning remains. No test retry loop, sleep, external peer or live desktop process was used. Command sessions exited (terminal closed).
+- New primary-category counts: N1=1 (malformed peer handshake), N7=1 (constructor failure retains request identity), N4=1 (all 18 states and absorbing terminal outcomes). Positive/N2/N3/N5/N9 overlap these methods; they are not counted again. Existing Unicode/error-bound tests also ran. N6/N8/N10/N11/N12 add no independent coordinator/manager contract in this slice, as explained in the inventory.
+- Assertions reject address-as-ID, missing Outbound type, missing/duplicate failure event, losing metadata, unbounded Unicode error text and overriding a terminal outcome. This is assertion/source mutation reasoning, not executed mutation tooling.
+
+Continuation is paused **only at the substantial supervision refactor decision above**. Record the user's choice here before planning its core task/lifecycle changes and tests. The current Tauri app, file capability input and new coordinator remain independently reversible; no native daemon or UI is installed/activated.

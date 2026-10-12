@@ -7,8 +7,9 @@ use tokio::sync::mpsc::Receiver;
 use tokio_util::sync::CancellationToken;
 use ts_rs::TS;
 
-use crate::channel::{ChannelDirection, ChannelMessage};
+use crate::channel::{ChannelDirection, ChannelMessage, TransferType};
 use crate::errors::AppError;
+use crate::hdl::info::TransferMetadata;
 use crate::hdl::{
     peek_client_introduction, BwuClientIntroductionIdentity, BwuRouter, InboundRequest,
     OutboundPayload, OutboundRequest, State,
@@ -93,6 +94,29 @@ fn error_for_ui(error: &anyhow::Error) -> String {
     error.to_string().chars().take(MAX_UI_ERROR_CHARS).collect()
 }
 
+fn outbound_failure(
+    id: &str,
+    state: &State,
+    meta: Option<TransferMetadata>,
+    error: &anyhow::Error,
+) -> Option<ChannelMessage> {
+    if matches!(
+        state,
+        State::Finished | State::Cancelled | State::Rejected | State::Disconnected
+    ) {
+        return None;
+    }
+    Some(ChannelMessage {
+        id: id.to_owned(),
+        direction: ChannelDirection::LibToFront,
+        rtype: Some(TransferType::Outbound),
+        state: Some(State::Disconnected),
+        meta,
+        error: Some(error_for_ui(error)),
+        ..Default::default()
+    })
+}
+
 #[derive(Debug, Deserialize, Serialize, TS)]
 #[ts(export)]
 pub struct SendInfo {
@@ -140,17 +164,7 @@ impl TcpServer {
                 }
                 Some(i) = self.connect_receiver.recv() => {
                     info!("{INNER_NAME}: outbound request queued for {}", i.addr);
-                    let request_id = i.id.clone();
-                    if let Err(e) = self.connect(cctk, i).await {
-                        error!("{INNER_NAME}: error sending: {}", e);
-                        let _ = self.sender.send(ChannelMessage {
-                            id: request_id,
-                            direction: ChannelDirection::LibToFront,
-                            state: Some(State::Disconnected),
-                            error: Some(error_for_ui(&e)),
-                            ..Default::default()
-                        });
-                    }
+                    self.execute_outbound(cctk, i).await;
                 }
                 r = self.tcp_listener.accept() => {
                     match r {
@@ -233,6 +247,16 @@ impl TcpServer {
         Ok(())
     }
 
+    async fn execute_outbound(&self, ctk: CancellationToken, info: SendInfo) {
+        let id = info.id.clone();
+        if let Err(error) = self.connect(ctk, info).await {
+            error!("{INNER_NAME}: error sending: {error}");
+            if let Some(message) = outbound_failure(&id, &State::Initial, None, &error) {
+                let _ = self.sender.send(message);
+            }
+        }
+    }
+
     /// To be called inside a separate task if we want to handle concurrency
     pub async fn connect(&self, ctk: CancellationToken, si: SendInfo) -> Result<(), anyhow::Error> {
         info!("{INNER_NAME}: connecting to outbound peer {}", si.addr);
@@ -269,23 +293,13 @@ impl TcpServer {
                         match e.downcast_ref() {
                             Some(AppError::NotAnError) => break,
                             None => {
-                                if or.state.state == State::Initial {
-                                    warn!(
-                                        "{INNER_NAME}: outbound peer {} failed during initial handshake: {e}",
-                                        si.addr
-                                    );
-                                    break;
-                                }
-
-                                if or.state.state != State::Finished && or.state.state != State::Cancelled {
-                                    let _ = self.sender.clone().send(ChannelMessage {
-                                        id: si.addr.clone(),
-                                        direction: ChannelDirection::LibToFront,
-                                        state: Some(State::Disconnected),
-                                        meta: or.state.transfer_metadata.clone(),
-                                        error: Some(error_for_ui(&e)),
-                                        ..Default::default()
-                                    });
+                                if let Some(message) = outbound_failure(
+                                    &or.state.id,
+                                    &or.state.state,
+                                    or.state.transfer_metadata.clone(),
+                                    &e,
+                                ) {
+                                    let _ = self.sender.send(message);
                                 }
                                 error!(
                                     "{INNER_NAME}: error while handling outbound peer {}: {e} ({:?})",
@@ -463,6 +477,141 @@ mod tests {
 
         router.cancel("peer-1234").await;
         drop(receiver);
+    }
+
+    #[test]
+    fn given_outbound_state_when_failure_is_reported_then_active_requests_finish_and_terminal_outcomes_survive(
+    ) {
+        // Arrange
+        let cases = [
+            (State::Initial, true),
+            (State::ReceivedConnectionRequest, true),
+            (State::SentUkeyServerInit, true),
+            (State::SentUkeyClientInit, true),
+            (State::SentUkeyClientFinish, true),
+            (State::SentPairedKeyEncryption, true),
+            (State::ReceivedUkeyClientFinish, true),
+            (State::SentConnectionResponse, true),
+            (State::SentPairedKeyResult, true),
+            (State::SentIntroduction, true),
+            (State::ReceivedPairedKeyResult, true),
+            (State::WaitingForUserConsent, true),
+            (State::ReceivingFiles, true),
+            (State::SendingFiles, true),
+            (State::Finished, false),
+            (State::Cancelled, false),
+            (State::Rejected, false),
+            (State::Disconnected, false),
+        ];
+        let error = anyhow::anyhow!("é".repeat(MAX_UI_ERROR_CHARS + 1));
+        // Act / Assert
+        for (state, report) in cases {
+            let metadata = TransferMetadata {
+                total_bytes: 17,
+                ..Default::default()
+            };
+            let result = outbound_failure("stable-transfer", &state, Some(metadata), &error);
+            assert_eq!(result.is_some(), report, "{state:?}");
+            if let Some(message) = result {
+                assert_eq!(message.id, "stable-transfer");
+                assert_eq!(message.direction, ChannelDirection::LibToFront);
+                assert_eq!(message.rtype, Some(TransferType::Outbound));
+                assert_eq!(message.state, Some(State::Disconnected));
+                assert_eq!(message.meta.unwrap().total_bytes, 17);
+                assert_eq!(message.error.unwrap(), "é".repeat(MAX_UI_ERROR_CHARS));
+            }
+        }
+    }
+
+    async fn outbound_fixture() -> (TcpServer, tokio::sync::broadcast::Receiver<ChannelMessage>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let (sender, receiver) = tokio::sync::broadcast::channel(16);
+        let (_, queue) = tokio::sync::mpsc::channel(1);
+        (
+            TcpServer::new(*b"TEST", listener, sender, queue, BwuRouter::new()).unwrap(),
+            receiver,
+        )
+    }
+
+    fn only_outbound_failure(
+        events: &mut tokio::sync::broadcast::Receiver<ChannelMessage>,
+    ) -> ChannelMessage {
+        let message = events
+            .try_recv()
+            .expect("the completed outbound worker must report failure");
+        assert_eq!(message.id, "stable-transfer");
+        assert_eq!(message.direction, ChannelDirection::LibToFront);
+        assert_eq!(message.rtype, Some(TransferType::Outbound));
+        assert_eq!(message.state, Some(State::Disconnected));
+        let error = message.error.as_ref().unwrap();
+        assert!(!error.is_empty());
+        assert!(error.chars().count() <= MAX_UI_ERROR_CHARS);
+        assert!(matches!(
+            events.try_recv(),
+            Err(tokio::sync::broadcast::error::TryRecvError::Empty)
+        ));
+        message
+    }
+
+    #[tokio::test]
+    async fn given_connected_peer_when_payload_constructor_fails_then_one_failure_uses_request_identity(
+    ) {
+        // Arrange
+        let (server, mut events) = outbound_fixture().await;
+        let peer_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let info = SendInfo {
+            id: "stable-transfer".into(),
+            addr: peer_listener.local_addr().unwrap().to_string(),
+            name: "loopback peer".into(),
+            ob: OutboundPayload::EphemeralFiles(vec!["/unmanaged-source".into()]),
+        };
+        let peer = async {
+            let (mut socket, _) = peer_listener.accept().await.unwrap();
+            let mut byte = [0];
+            assert_eq!(socket.read(&mut byte).await.unwrap(), 0);
+        };
+        // Act
+        tokio::join!(
+            server.execute_outbound(CancellationToken::new(), info),
+            peer
+        );
+        // Assert
+        assert!(only_outbound_failure(&mut events).meta.is_none());
+    }
+
+    #[tokio::test]
+    async fn given_malformed_peer_handshake_when_worker_exits_then_failure_keeps_request_identity_and_metadata(
+    ) {
+        // Arrange
+        let (server, mut events) = outbound_fixture().await;
+        let peer_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let info = SendInfo {
+            id: "stable-transfer".into(),
+            addr: peer_listener.local_addr().unwrap().to_string(),
+            name: "loopback peer".into(),
+            ob: OutboundPayload::Text("test payload".into()),
+        };
+        let peer = async {
+            let (mut socket, _) = peer_listener.accept().await.unwrap();
+            for _ in 0..2 {
+                let length = socket.read_u32().await.unwrap();
+                assert!(length > 0 && length < 64 * 1024);
+                let mut frame = vec![0; length as usize];
+                socket.read_exact(&mut frame).await.unwrap();
+            }
+            socket.write_all(&[0, 0, 0, 1, 0xff]).await.unwrap();
+            socket.shutdown().await.unwrap();
+        };
+        // Act
+        tokio::join!(
+            server.execute_outbound(CancellationToken::new(), info),
+            peer
+        );
+        // Assert
+        let message = only_outbound_failure(&mut events);
+        let metadata = message.meta.unwrap();
+        assert_eq!(metadata.text_payload.as_deref(), Some("test payload"));
+        assert_eq!(metadata.source.unwrap().name, "loopback peer");
     }
 
     #[test]
