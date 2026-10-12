@@ -1,8 +1,10 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-12_
 
 This document is the working log for the `morozhenko-apps/rquickshare` maintenance pass. It is intentionally kept separate from release notes: it tracks audit scope, upstream triage, CI gates, fixes, and the final Mode B verification before fast-forwarding `dev` into `master`.
+
+The 2026-10-12 offline continuation, recovered diary references, implementation plan and validation results are recorded in [offline-maintenance.md](offline-maintenance.md). Dated hardware evidence remains in [mode-b-inventory.md](mode-b-inventory.md).
 
 ## Current CI policy
 
@@ -19,7 +21,7 @@ This document is the working log for the `morozhenko-apps/rquickshare` maintenan
 The Pixel/BLE foundation and current Full Quick Share work are consolidated into the maintained two-branch workflow. On 2026-10-07 the user explicitly requested an **interim snapshot** fast-forward of `dev` at `0bc9b50` into `master` (400 commits ahead, zero behind). Both refs were verified identical after the non-forced update. This promotion is **not** a final Mode B completion or hardware release signoff: the remaining cold GATT startup latency and current-build Pixel -> Linux text smoke are still open. The complete 10x Mode B gate has not been claimed as passed.
 
 - The final implementation head `e229ac8` passed all five preflight jobs (run `37687010250`) and manual Linux debug `.deb` package smoke (run `37688585293`). The promoted `0bc9b50` differs only by subsequent documentation describing Pixel smoke results.
-- The next development-only experiment is the debug-only `RQS_DIAG_SLOT0_ADV_REFRESH=0` A/B variant. It must remain on `dev` until measured and validated; ordinary/release behavior must not change.
+- The debug-only slot0 and periodic advertising A/B controls and launcher are implemented on `dev`. Controlled slot0-reaching trials and matched foreground/background comparisons remain open; ordinary/release behavior must not change based on inconclusive evidence.
 - Historical pre-smoke Mode B is green after the BWU test hardening: stable suite 1x plus selected async transport/BWU tests 10x (run `37475497104`). The current SSOT is stricter, so a complete-suite 10x run is still required before completion.
 - Targeted mutation audit now reports 22 caught, 18 unviable, 1 missed and 0 timeouts across 41 mutants. The only survivor is the `MigratableStream::poll_flush -> Ok(())` mutation, which is equivalent/unobservable for the current concrete `DuplexStream` and `TcpStream` transports; the real delegation remains in production code.
 - Residual `unwrap`/`expect`/panic review of the 11 changed Rust modules found no such calls in production regions; remaining occurrences are under `#[cfg(test)]`.
@@ -159,13 +161,13 @@ The implementation now lives on `dev`. It must pass the final complete Mode B ga
 
 Coverage is measured explicitly instead of inferring quality from test count. The detailed Mode B scope, inventory, branch map, Positive/N1-N12 matrix, interaction matrix and coverage map are maintained in `docs/mode-b-test-plan.md` and `docs/mode-b-inventory.md`.
 
-Current automated suite on the Pixel receiver branch:
+Historical baseline on the Pixel receiver branch (not current counts):
 
 - **Rust:** 50 tests pass with `cargo test --all-features`.
 - **Frontend:** 25 Vitest tests pass across 6 test files.
 - **Total:** 75 automated tests before the separate package/live smoke checks.
 
-Final measured coverage after the Mode B regression expansion:
+Historical measured coverage before later protocol/text/folder/desktop changes (not final current coverage):
 
 - **Rust core:** 30.37% line coverage, 29.75% function coverage, 31.19% region coverage.
 - `hdl/inbound.rs`: 31.67% lines, up from 14.58% before the introduction/state tests.
@@ -179,7 +181,7 @@ Final measured coverage after the Mode B regression expansion:
 - `Heading.vue`: 100% lines/functions/branches.
 - `SideMenu.vue`: 98.21% lines.
 
-The remaining low global percentages are concentrated in OS/service orchestration rather than pure protocol logic: BlueZ/GATT service lifecycle, mDNS daemons/discovery, Tauri startup/window/tray wiring and the monolithic `HomePage.vue` event bootstrap. These paths require package/live smoke or explicit dependency seams before unit coverage becomes representative.
+The historical low percentages include OS/service orchestration: BlueZ/GATT lifecycle, mDNS, Tauri startup/window/tray and `HomePage.vue`. The original coverage jobs omitted the desktop Rust crate entirely. The offline continuation adds desktop measurement; its result must be recorded separately rather than inferred from core/Vue coverage.
 
 No arbitrary repository-wide percentage gate is being introduced in this pass. The useful gate is regression coverage for validated defects plus live Linux/Android smoke for OS-bound behavior. Coverage should rise further as the post-smoke refactors create testable seams.
 
@@ -230,7 +232,7 @@ Refactoring is required, but the work is split by risk.
 
 3. **Split outbound transfer construction from secure transport.**
    - `process_consent` is roughly 230 lines and mixes consent state, file metadata, file I/O and payload transmission.
-   - Text sending remains TODO in two outbound locations.
+   - Text sending is implemented; the earlier two TODO locations are obsolete. Accepted/rejected/cancelled text state-machine coverage remains distinct from helper coverage.
    - Recommended split: transfer plan/payload source abstraction separate from crypto/channel transport.
 
 ### Medium-priority cleanup

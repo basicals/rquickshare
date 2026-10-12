@@ -1,8 +1,10 @@
 # Mode B inventory, branch map, and test matrix
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-12_
 
 This document is subordinate to `docs/mode-b-test-plan.md` and records Stages 3-8 for the current maintenance/Pixel receiver scope.
+
+The original tables below retain their historical planning estimates. For cases implemented after those tables were written, the **2026-10-12 source reconciliation** below is authoritative; historical `P` cells are not evidence that an implemented regression is missing. Hardware-only `S` cells remain open unless dated physical evidence explicitly satisfies them. Offline continuation and exact validation results are tracked in [offline-maintenance.md](offline-maintenance.md).
 
 Legend:
 - `C` = covered by an existing automated test.
@@ -84,7 +86,7 @@ Legend:
 4. Endpoint-info length must fit one byte.
 5. Service-data framing length must match the encoded connection advertisement.
 
-**Observed defect candidate:** byte truncation is not UTF-8-boundary-aware. A multibyte name can be cut mid-codepoint while the PR contract currently claims safe UTF-8 truncation.
+**Historical defect, fixed:** byte truncation was not UTF-8-boundary-aware. Current receiver advertisement and mDNS encoding preserve UTF-8 boundaries with regression tests.
 
 ### BWU router
 1. Empty endpoint -> reject registration.
@@ -199,13 +201,13 @@ Legend:
 8. Folder depth or unsafe/non-UTF8 parent component beyond contract -> reject.
 9. File metadata and every FILE payload header carry the same parent-folder value.
 10. Total byte-size/payload-id invariants remain identical to ordinary multi-file transfer.
-4. image/video/audio/apk/other -> correct attachment type.
-5. Missing filename -> error.
-6. Non-UTF8 filename -> error.
-7. Payload ID collision -> regenerate.
-8. File size not representable in i64 -> error.
-9. Total transfer size overflow -> error.
-10. Empty input -> empty deterministic plan.
+11. image/video/audio/apk/other -> correct attachment type.
+12. Missing filename -> error.
+13. Non-UTF8 filename -> error.
+14. Payload ID collision -> regenerate.
+15. File size not representable in i64 -> error.
+16. Total transfer size overflow -> error.
+17. Empty input -> reject with no transfer plan.
 
 ### BWU listener classifier
 1. No pending route -> return socket immediately.
@@ -480,6 +482,38 @@ Estimated delta: **24-37 scenarios**, preferably table-driven where the branch/r
 | `app/main/src/vue_lib/utils.ts` | ephemeral cleanup during clear/reset | Missing direct coverage | Deterministic unit seam already exists through VM invoke contract |
 
 The final Mode B gate must use this extension together with the original Stage 3-8 inventory. Hardware smoke does not replace these deterministic cases.
+
+## 2026-10-12 source reconciliation
+
+These mappings come from current test source, not historical coverage percentages. Execution results belong to the offline work log. A listed test proves only its assertions; remaining cases are not silently marked covered.
+
+| Historical gap | Existing regression evidence | Remaining scope |
+|---|---|---|
+| Port non-finite inputs | `tests/unit/example.test.ts`: NaN and both infinities | Settings/backend failures and event races |
+| Receiver/mDNS UTF-8 | `blea.rs` receiver-data boundary; `utils.rs` multibyte-name truncation | BlueZ advertiser lifecycle |
+| BWU router lifecycle | `bwu.rs`: empty/unknown IDs, dropped receiver, duplicate race, cancel, exact-ID precedence and old-ID alias | Route lifetime during full migration |
+| Weave pure framing | `gatt.rs`: packet-size boundaries, wrong command/inverted range, confirm encoding, frame-size/trailing-byte boundaries | Reassembly/fragmentation/session lifecycle |
+| Migratable TCP | `migratable.rs`: TCP round trip and shutdown forwarding | BLE-to-TCP crypto-state continuity |
+| Filename/Wi-Fi abuse | `inbound.rs`: filename byte boundaries and malformed Wi-Fi table including invalid UTF-8 | Complete file-write/storage-failure matrix |
+| Plain framing/BWU flags | `inbound.rs`: oversized read, empty send, one-shot flags | Truncated prefix/body and maximum send/read review |
+| mDNS malformed records | `utils.rs`: Base64/UTF-8/truncated/compact tests | OS discovery/cache behavior |
+| LAN selection | `utils.rs`: pure private preference, public fallback, IPv6/loopback/link-local/tunnel rejection and order | Real interface-enumeration failure |
+| Listener/UI errors | `manager.rs`: no-pending, malformed, unrelated route, alias, non-consuming route and error truncation | Incomplete-prefix deadline, EOF, orchestration |
+| Modern proto defaults | `tests/modern_protocol.rs`: legacy defaults plus modern/QR/resume round trips | Malformed/unknown enum review |
+| Text helpers | `outbound.rs`: classification shapes, title/payload bounds, empty/UTF-8 handling | Accepted/rejected/cancelled text state-machine integration |
+| BYTE chunk boundaries | `outbound.rs`: empty/exact-chunk/chunk+1/max and reconstruction/terminal marker | Sensitive/header and integration review |
+| Managed ephemeral ownership | `outbound.rs`: name boundaries, idempotent remove, forbidden request, normal-file no-delete, drop cleanup | Removal-error/race matrix |
+| Desktop cleanup command | `cmds/clipboard_image.rs`: shared core managed-path guard | Native clipboard backend smoke; execute existing test in CI |
+| Clipboard/reset | `content-status.test.ts`: blank-text image fallback/running discovery; `utils.test.ts`: cleanup success/failure/no-delete/state reset | Rapid retry and plugin/storage combinations |
+| SAE metadata | `inbound.rs`: `introduction_preserves_sae_wifi_security_type` | Full SAE transfer/rejection/privacy |
+
+There is no separate Tauri `managed_temp_path` implementation now: the command delegates to core `ManagedEphemeralFile`. Do not plan duplicate validation in a nonexistent helper.
+
+Desktop inventory: two `notification.rs` preview tests, two `logger.rs` capped-writer tests, three `cmds/open_download_destination.rs` path tests and one `cmds/clipboard_image.rs` cleanup test. These eight assertions were omitted from preflight/Mode B before the offline continuation. Notification body/action/lifecycle and settings persistence are not comprehensively covered by them.
+
+Remaining deterministic priorities: text consent/send/cancel integration, explicit Weave/framing branches without broad transport extraction, and scoped notification/settings/event logic after preregistering its contracts. Fresh core/desktop/Vue coverage and meaningful mutation review remain required. The offline analyzer has a separate inventory in `offline-maintenance.md`.
+
+The corrupted numeric `visibility` panic remains a settings defect. Recovery visibility changes privacy/discoverability and requires the user's policy decision. Hardware findings below remain authoritative for physical gates.
 
 ## Hardware smoke findings - 2026-10-06
 

@@ -1,6 +1,6 @@
 # Mode B test plan and coverage map
 
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-12_
 
 ## Status
 
@@ -8,9 +8,9 @@ _Last updated: 2026-10-06_
 
 Branch consolidation note: PR #2 and PR #3 are now integrated into `dev`. Stages 3-8 were completed for the Pixel/BLE maintenance scope, but the newly integrated Full Quick Share artifacts expand the active `dev` scope and require an inventory/matrix refresh before final execution.
 
-The repository has measured line/function/branch coverage, regression tests, a targeted mutation audit, and a pre-smoke stability run. Those artifacts are useful evidence, but they do not yet satisfy the full Mode B SSOT because the mandatory test inventory, branch map, Positive/N1-N12 matrix, interaction matrix, per-production-file coverage map, and literal completion gate are not fully recorded.
+The repository has historical coverage, regression tests, a targeted mutation audit, and a pre-smoke stability run. Stages 3-8 are recorded for the original scope and the Full Quick Share extension, but some recorded gaps were subsequently implemented without updating their rows. The dated reconciliation in `mode-b-inventory.md` distinguishes source-confirmed coverage from genuine remaining cases. Exhaustive current-scope review, fresh measurement, full-suite stability and physical-device gates remain open.
 
-No new tests may be added until Stages 3-8 below are complete.
+No new tests may be added without a complete inventory/branch/matrix/interaction/count/coverage plan for their scoped artifacts. The offline analyzer's preregistered scope is recorded in `docs/offline-maintenance.md`.
 
 ## Scope
 
@@ -84,7 +84,7 @@ Baseline before the current SSOT remediation:
 - Rust core coverage: 30.37% lines, 29.75% functions, 31.19% regions.
 - Frontend coverage: 46.18% lines/statements, 82.71% branches, 53.33% functions.
 
-These percentages are now stale because the branch contains additional tests and production fixes. They must not be reported as final Mode B coverage. The current branch adds 28 Rust test functions plus 3 additional frontend table cases relative to that baseline; execution and final counts are pending the new Mode B gate.
+These percentages and counts are stale because the branch contains additional tests and production fixes. They must not be reported as final Mode B coverage. The complete automated gate must include core Rust, desktop Rust, Vue and the offline analyzer; the original gate omitted desktop assertions.
 - High-value file coverage currently recorded:
   - `hdl/bwu.rs`: 95.83% lines.
   - `hdl/migratable.rs`: 81.40% lines.
@@ -98,14 +98,14 @@ These percentages are now stale because the branch contains additional tests and
 
 The current evidence does **not** yet prove complete Mode B compliance.
 
-Missing mandatory artifacts:
+Remaining review and execution work (historical missing-artifact entries are superseded by the inventory and its dated reconciliation):
 - Stage 3: exhaustive test inventory with risk, level, rationale, expected count, and Positive/N1-N12 applicability.
 - Stage 4: executable branch map for every scoped public/business-rule method.
 - Stage 5: complete Positive/N1-N12 matrix with no empty cells.
 - Stage 6: meaningful interaction combinations.
 - Stage 7: expected test-count estimate per artifact/category.
 - Stage 8: per-production-file function/branch coverage map with remaining reasons.
-- Stage 11: literal SSOT requires ten consecutive successful complete-suite runs; the current workflow repeats only selected stability-sensitive tests.
+- Stage 11: literal SSOT requires ten consecutive successful complete-suite runs. The workflow repeats full suites; the offline continuation adds the previously omitted desktop suite and analyzer. The final post-hardware execution remains outstanding.
 - Stage 12: explicit YES/NO completion gate for public methods, branches, business rules, invariants, boundaries, N1-N12, and interactions.
 - Deliverable D2: test counts broken down by Positive and each N-category.
 - Deliverable D4: explicit testability refactors with risk and compatibility assessment.
@@ -155,7 +155,7 @@ Status: WORKFLOW READY, EXECUTION PENDING
 
 The SSOT supplied on 2026-10-06 is authoritative for this pass. The complete automated suite must pass ten consecutive runs for the final Mode B gate. This is stricter than the earlier repository policy of stable 1x plus selected flaky-sensitive tests 10x.
 
-The Mode B workflow now runs the complete Rust and frontend suite ten consecutive times and, only after those runs succeed, measures fresh Rust and frontend coverage on the same HEAD.
+The Mode B workflow repeats core Rust, desktop Rust, frontend and offline-analyzer suites ten consecutive times and, only after success, measures fresh core/desktop/frontend coverage on the same HEAD. A preliminary offline run does not certify later production changes or hardware signoff.
 
 The final hardware/package smoke remains separate and cannot be replaced by CI repetition.
 
@@ -201,12 +201,12 @@ Remaining deterministic work is limited to gaps that can be covered without broa
 
 Current state:
 
-- all public methods tested? **NO - inventory incomplete**
-- all branches tested? **NO - branch map incomplete**
-- all business rules tested? **NO - matrix incomplete**
+- all public methods tested? **NO - current-scope mapping and desktop/orchestration gaps remain**
+- all branches tested? **NO - protocol state-machine and OS-bound branches remain**
+- all business rules tested? **NO - full current-scope review remains**
 - all invariants tested? **NO - hardware-bound invariants remain**
 - all boundary values tested? **NO - full boundary map incomplete**
-- all applicable N1-N12 tested? **NO - matrix incomplete**
-- all interaction combinations tested? **NO - interaction matrix incomplete**
+- all applicable N1-N12 tested? **NO - recorded planned cases and hardware checks remain**
+- all interaction combinations tested? **NO - state-machine and physical-device combinations remain**
 
 Therefore Mode B is **NOT COMPLETE**.

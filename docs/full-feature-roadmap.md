@@ -1,6 +1,6 @@
 # Full Quick Share roadmap
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-12_
 
 The maintained fork is no longer scoped to "make upstream rQuickShare work again". The product goal is a first-class Linux Quick Share client that implements the useful protocol surface available to Android/Windows peers, while clearly separating open/local protocol work from Google-account or Apple-specific interoperability that requires additional reverse engineering.
 
@@ -31,7 +31,7 @@ The maintained fork is no longer scoped to "make upstream rQuickShare work again
 
 ### Phase 1 — complete the everyday Quick Share experience
 
-1. **Modern sharing protocol model**
+1. **Modern sharing protocol model** — implemented on `dev`; wire compatibility tests exist
    - Preserve the existing Rust module namespace for compatibility.
    - Add modern wire fields by their canonical field numbers:
      - file parent folder, attachment hash and sensitive-content flag;
@@ -46,7 +46,7 @@ The maintained fork is no longer scoped to "make upstream rQuickShare work again
      - binding frames.
    - Add compatibility tests for old + new frames.
 
-2. **Outbound text / clipboard**
+2. **Outbound text / clipboard** — implemented on `dev`; state-machine coverage and current-package hardware smoke remain
    - Send plain text, URL, address and phone-number metadata as BYTE payloads.
    - Share current clipboard text from UI.
    - Share clipboard images as regular image files without leaking temporary files.
@@ -104,6 +104,7 @@ The maintained fork is no longer scoped to "make upstream rQuickShare work again
    - Keep live media use cases optional.
 
 10. **Remote Copy**
+    - Current outbound text already advertises `REMOTE_COPY`; this does not prove complete capability negotiation or Android clipboard interoperability.
     - Implement `SharingUseCase.REMOTE_COPY` for clipboard-oriented transfers where Android peers support it.
     - Treat this as protocol capability negotiation, not merely a UI shortcut.
 
@@ -170,6 +171,8 @@ A prospective local Ubuntu + physical Pixel/ADB hardware automation harness is s
 
 ## Current implementation order
 
+The first three steps have implementations. Current offline maintenance is tracked in [offline-maintenance.md](offline-maintenance.md); the next product feature remains custom device naming after the documented discovery/notification blockers are characterized.
+
 1. Modern protocol model.
 2. Clipboard/text outbound.
 3. Folder hierarchy.
@@ -182,13 +185,13 @@ A prospective local Ubuntu + physical Pixel/ADB hardware automation harness is s
 
 ## Modern BWU endpoint identity compatibility
 
-Hardware smoke on 2026-10-07 exposed intermittent image-transfer startup latency/failure while text payloads remained reliable. A protocol audit against current Google Nearby found a concrete compatibility gap in the Wi-Fi bandwidth-upgrade handshake:
+Hardware smoke on 2026-10-07 exposed intermittent image-transfer startup latency/failure while text payloads remained reliable. A protocol audit identified the following compatibility gap, now **implemented with regression tests on `dev`**:
 
 - Modern `BandwidthUpgradeNegotiationFrame.ClientIntroduction` includes optional field 3, `last_endpoint_id`, used when the peer changes endpoint identity during dynamic BWU role switching.
-- rQuickShare currently models only `endpoint_id` and requires it to exactly match the BLE session's endpoint id. The primary TCP listener likewise routes a BWU socket only by the new `endpoint_id`.
-- A modern peer that sends a new endpoint id plus the prior BLE id in `last_endpoint_id` can therefore be rejected or dropped even though it belongs to the pending upgrade.
+- Previously, rQuickShare modeled only `endpoint_id` and routed a BWU socket only by that id; a peer changing endpoint identity could be rejected despite belonging to a pending upgrade.
+- `validate_client_introduction`, `ClientIntroductionIdentity::matches_expected`, `BwuRouter::route_with_alias` and the TCP listener now preserve and use `last_endpoint_id`.
 - Compatibility rule: prefer an exact current-id match, otherwise accept/reroute only when the advertised `last_endpoint_id` exactly matches a pending/expected endpoint. Never consume an unrelated pending route.
 - Legacy peers that omit `last_endpoint_id` keep the existing exact-match behavior.
-- Add regression coverage for exact match, valid old-id alias, unrelated ids, missing ids and preservation of unrelated pending routes.
+- Existing inbound/router/listener tests cover exact-match precedence, valid old-id aliases, missing/malformed identity and preservation of unrelated pending routes. Keep broader secure-session/migration hardware gates separate.
 - Keep BWU phase timeouts unchanged until hardware logs distinguish TCP-route timeout from old-channel drain timeout; do not hide handshake defects by shortening timers.
 

@@ -55,8 +55,8 @@ Supporting tests for notification body generation are deferred until their compl
 
 - Analysis and diary review: COMPLETE.
 - Plan and analyzer inventory: COMPLETE, before implementation.
-- M1: PLANNED.
-- M2: PLANNED.
+- M1: COMPLETE. Preflight executes desktop tests after its existing desktop Clippy check; Mode B repeats desktop assertions alongside core/Vue; manual/final coverage includes the desktop crate. `--no-default-features` follows the existing desktop Clippy contract. Local stable desktop execution: **8 passed, 0 failed**. The command session exited normally (terminal closed). Three pre-existing `generic_array::as_slice` deprecation warnings appeared in core dependencies; no assertion failed.
+- M2: IMPLEMENTED. Added source-confirmed reconciliation with explicit remaining scope; corrected implemented BWU/text/model claims, stale workflow descriptions, historical coverage labels and literal README newline escapes. Historical hardware observations remain intact.
 - M3: PLANNED.
 - M4: PLANNED.
 
