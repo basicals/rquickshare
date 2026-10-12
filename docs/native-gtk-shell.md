@@ -89,3 +89,22 @@ KDE uses org.kde interfaces although the freedesktop specification uses org.free
 ## Actual observations
 
 Plan recorded before code. Physical placement/keyboard/scale acceptance pending.
+
+### Implementation review before final hardening
+
+The standalone shell, controller binding, chooser ingress and KDE tray fixture
+are implemented. Native crate check/build and strict Clippy passed after a tooltip
+type alias; seven new methods passed across the initial six-success/one-failure
+run and corrected two-widget run. The widget expectation initially omitted the
+advertised-device suffix; the assertion now checks the complete literal label.
+One later affected widget rerun passed after explicit GLib task ownership.
+Three compiled executable preview captures are 420x498, not physical KDE proof.
+
+Review identified ordinary zbus framing on the new tray connection while the SDK
+already uses the hardened 64KiB/16-FD predecode socket. Before committing the shell,
+expose a narrow shared connection builder around that existing socket and use it
+for the SDK and tray. This is transport reuse, no new wire/auth/selection ownership
+contract. Preserve queue eight and existing credential checks. Run affected SDK
+and private tray checks once; do not repeat unchanged widget/business suites.
+GLib subscriptions and the single completion waiter are explicitly aborted on
+exit; tracked filesystem acquisition, controller and tray IO tasks are joined.
