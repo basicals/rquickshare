@@ -34,7 +34,7 @@ Input: one UTF-8 log path and required variant (`baseline`, `skip-deferred`, `pe
 Implementation detail: accept only the current Fern envelope and expected Rust module targets after stripping ANSI color codes. Require one logger-start marker and one of each diagnostic marker to avoid validating concatenated runs. Parse the fixed leading `ChannelMessage` Debug fields rather than searching payload/metadata text for states. CLI input is bounded to 16 MiB (the application log cap is 5 MiB; launcher stdout captures may be larger); oversized input is rejected before decoding. Unknown diagnostic values and malformed channel records cannot create a pass. This is a conservative evidence-format contract, not a generic parser for arbitrary logs.
 
 Verdicts describe **Linux log evidence only**, never physical interoperability or a winning A/B treatment:
-- `FAIL`: any Cancelled/Disconnected terminal transfer without a preceding Finished for that same transfer, or contradictory diagnostic treatment. A later successful retry must not erase the failure.
+- `FAIL`: any Rejected/Cancelled/Disconnected terminal transfer without a preceding Finished for that same transfer, or contradictory diagnostic treatment. A later successful retry must not erase the failure. Source reconciliation confirms `Rejected` is a distinct production `State`, so its terminal evidence must be preserved too.
 - `INCONCLUSIVE`: missing/conflicting run boundaries, absent expected diagnostics, no Finished, incomplete consent session, unconfirmed graceful exit, or a slot0 experiment without an offset-zero read. Uncorrelated terminal records cannot establish success.
 - `PASS`: matching debug diagnostics, a correlated Finished transfer, no failed/incomplete transfer, clean tray Quit followed by `MDnsServer: service unregistered: OK`, and required experiment-path evidence.
 - CLI exits 0 after a valid report regardless of evidence verdict; invalid arguments/unreadable or invalid-UTF8 input exit nonzero. This prevents shell launch semantics from being confused with transfer success.
@@ -58,9 +58,44 @@ Supporting tests for notification body generation are deferred until their compl
 - Analysis and diary review: COMPLETE.
 - Plan and analyzer inventory: COMPLETE, before implementation.
 - M1: COMPLETE. Preflight executes desktop tests after its existing desktop Clippy check; Mode B repeats desktop assertions alongside core/Vue; manual/final coverage includes the desktop crate. `--no-default-features` follows the existing desktop Clippy contract. Local stable desktop execution: **8 passed, 0 failed**. The command session exited normally (terminal closed). Three pre-existing `generic_array::as_slice` deprecation warnings appeared in core dependencies; no assertion failed.
-- M2: IMPLEMENTED. Added source-confirmed reconciliation with explicit remaining scope; corrected implemented BWU/text/model claims, stale workflow descriptions, historical coverage labels and literal README newline escapes. Historical hardware observations remain intact.
+- M2: COMPLETE. Added source-confirmed reconciliation with explicit remaining scope; corrected implemented BWU/text/model claims, stale workflow descriptions, historical coverage labels, BUILD instructions and literal README newline escapes. Historical hardware observations remain intact.
 - M3: COMPLETE. `scripts/analyze_receiver_smoke.py` emits a conservative JSON evidence report; 25 deterministic unittest methods (table-driven variants included) passed locally. Preflight and all Mode B iterations execute them. Launcher invocation remains unchanged; usage/limitations are recorded in the hardware automation plan. Ten targeted mutations are checked on temporary copies: treatment checks, failed-retry retention, normal disconnect, missing-start marker, slot0-path requirement, exit ordering, exact input limit, inbound/outbound filtering and raw-event leakage.
-- M4: PLANNED.
+- M4: IN PROGRESS. Exact four-suite loop extracted from `mode-b.yml` passed ten consecutive local iterations against implementation commit `29c3dc8`. Fresh coverage is running; final handoff follows measurement.
+
+## 2026-10-12 validation evidence
+
+Implementation head: `29c3dc8`. Later work-log-only commits do not change this tested implementation. Tests ran sequentially; no desktop app, Bluetooth session, ADB device or package installer was started.
+
+| Suite | Per iteration | Consecutive successful iterations |
+|---|---:|---:|
+| Core Rust | 118 unit/export tests + 4 protocol contract tests | 10 |
+| Desktop Rust | 8 unit/integration tests | 10 |
+| Vue/Vitest | 41 tests in 7 files | 10 |
+| Offline analyzer | 25 unittest methods, with table-driven subcases | 10 |
+| Total | 196 test executions | 10 (1,960 executions) |
+
+Rust format, core Clippy, desktop Clippy, frontend ESLint and Vue typecheck passed. Seven workflow YAML files parsed successfully; the launcher passes `bash -n`; the analyzer's actual CLI help entrypoint exits normally. Core tests include generated TypeScript export assertions and must not be represented as 122 independent business rules. These are preliminary offline stability results, not final post-hardware release signoff.
+
+Analyzer methods by primary purpose (categories do not imply repository-wide N coverage): Positive 6; N1 3; N2 5; N4 3; N6 3; N7 2; N9 1; N10 1; N12 1 = 25. N3/N5/N8/N11 are not applicable for the reasons stated in the preregistered inventory. Table subcases exercise multiple variants within those methods.
+
+### Targeted analyzer mutation review
+
+Each change below was applied independently to a temporary copy of the real analyzer, with the unmodified test suite copied beside it. All 25 methods executed for every mutant; every mutant failed assertions (no compilation/import-error mutants counted). No source mutation was applied to the working tree.
+
+| Mutation | Assertion that catches it | Result |
+|---|---|---|
+| Emit raw event text in JSON | Private-content absence and exact event-key allowlist | Caught |
+| Ignore slot0 treatment mismatch | Wrong/unknown knob verdict and reason | Caught |
+| Ignore periodic treatment mismatch | Wrong/unknown knob verdict and reason | Caught |
+| Forget failed attempt after successful retry | Failed-session count and FAIL verdict | Caught |
+| Treat post-Finished disconnect as failure | Normal teardown counts and PASS verdict | Caught |
+| Accept missing logger-start marker | Missing-marker INCONCLUSIVE verdict | Caught |
+| Accept slot0 experiment without offset-zero read | Missing/continuation-offset path verdict | Caught |
+| Reverse Quit/unregister ordering | Valid baseline and reversed-exit cases | Caught |
+| Reject exact 16 MiB boundary (`>` to `>=`) | Exact-limit CLI acceptance | Caught |
+| Count outbound state as inbound | Exact inbound count and transfer-event count | Caught |
+
+This is a targeted mutation check of the new analyzer, not a replacement for the historical/full protocol mutation review.
 
 ## Remaining decisions and hardware gates
 

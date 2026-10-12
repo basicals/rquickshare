@@ -99,7 +99,7 @@ def analyze(text: str, variant: str, experiment: str = "periodic") -> dict:
                 uncertain.add("uncorrelated_channel_record")
                 continue
             state = channel["state"]
-            if state not in ("WaitingForUserConsent", "Finished", "Cancelled", "Disconnected"):
+            if state not in ("WaitingForUserConsent", "Finished", "Rejected", "Cancelled", "Disconnected"):
                 continue
             session = sessions.setdefault(identity, {"finished": False, "failed": False, "pending": False})
             if state == "WaitingForUserConsent":

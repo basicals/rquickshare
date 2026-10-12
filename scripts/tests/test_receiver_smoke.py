@@ -110,7 +110,7 @@ class EvidenceTests(unittest.TestCase):
                 self.assertIn("no_correlated_finished_transfer", report["reasons"])
 
     def test_Given_failed_transfer_and_retry_When_analyzed_Then_failure_is_preserved(self):
-        for state in ("Cancelled", "Disconnected"):
+        for state in ("Rejected", "Cancelled", "Disconnected"):
             for retry_identity in ("peer-private", "retry-private"):
                 with self.subTest(state=state, retry=retry_identity):
                     # Arrange
