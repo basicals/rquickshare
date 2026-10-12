@@ -22,6 +22,13 @@ Next: concrete bounded snapshot/discovery/invalidation contract; executable,
 continuous-service retention, native GTK panel and Dolphin. The old five-method-only
 checkpoints below are historical; the current Manager1 exposes nine methods.
 
+The concrete next public API choice is recorded in
+[native-dbus-state-review.md](native-dbus-state-review.md): stable bounded typed
+snapshot pages (recommended option 1) versus a larger bounded complete JSON reply
+(option 2). It addresses aggregate state exceeding a symmetric 64-KiB message,
+read consistency, cache ownership and invalidation. Implementation awaits the
+user's choice under AGENTS sections 3/3.1; no old architecture approval is pending.
+
 
 ## 2026-10-12: transactional native D-Bus selection ingress implemented
 
