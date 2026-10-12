@@ -23,6 +23,23 @@
     <method name="AbortSelection">
       <arg name="upload_id" type="s" direction="in"/>
     </method>
+    <method name="DiscardSelection">
+      <arg name="selection_id" type="s" direction="in"/>
+    </method>
+    <method name="SendSelection">
+      <arg name="selection_id" type="s" direction="in"/>
+      <arg name="endpoint_id" type="s" direction="in"/>
+      <arg name="request_id" type="s" direction="in"/>
+      <arg name="transfer_id" type="s" direction="out"/>
+    </method>
+    <method name="Respond">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="consent_revision" type="t" direction="in"/>
+      <arg name="accept" type="b" direction="in"/>
+    </method>
+    <method name="Cancel">
+      <arg name="transfer_id" type="s" direction="in"/>
+    </method>
   </interface>
   <interface name="org.freedesktop.DBus.Introspectable">
     <method name="Introspect">

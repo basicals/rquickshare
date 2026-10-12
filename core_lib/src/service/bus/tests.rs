@@ -71,13 +71,15 @@ impl Harness {
     fn start(bus: SelectionBus) -> Self {
         Self::with_limits(bus, Limits::default())
     }
-    fn with_limits(mut bus: SelectionBus, limits: Limits) -> Self {
+    fn with_limits(bus: SelectionBus, limits: Limits) -> Self {
+        Self::with_coordinator(bus, Coordinator::new(123, limits).unwrap())
+    }
+    fn with_coordinator(mut bus: SelectionBus, mut coordinator: Coordinator) -> Self {
         let stop = CancellationToken::new();
         let end = stop.clone();
         let failure = bus.failed.clone();
         let (observed, clients) = watch::channel(0);
         let task = tokio::spawn(async move {
-            let mut coordinator = Coordinator::new(123, limits).unwrap();
             let outcome = loop {
                 tokio::select! {
                     _ = end.cancelled() => break Ok(()),
@@ -109,6 +111,8 @@ impl Harness {
         self.task.take().unwrap().await.unwrap()
     }
 }
+
+mod controls;
 impl Drop for Harness {
     fn drop(&mut self) {
         self.stop.cancel();

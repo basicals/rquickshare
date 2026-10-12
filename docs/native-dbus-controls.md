@@ -50,10 +50,10 @@ completion. Runtime receipts and state observations remain authoritative.
 
 ## Milestones, risks and rollback
 
-- [ ] C0: Record this plan before code and commit it independently.
-- [ ] C1: Extend the fixed fixture, canonical ID decoding and serial dispatcher;
+- [x] C0: Record this plan before code and commit it independently (`7527abd`).
+- [x] C1: Extend the fixed fixture, canonical ID decoding and serial dispatcher;
   add focused regressions against the real coordinator/private broker.
-- [ ] C2: Run the core suite once, all-target Clippy and format/diff checks;
+- [x] C2: Run the core suite once, all-target Clippy and format/diff checks;
   record actual results, update the diary and commit implementation.
 
 Rollback C1 removes only the additive native wire methods and their tests; the five
@@ -89,5 +89,45 @@ No broad Mode B branch/coverage or ten-run stability claim is planned.
 
 ## Verification observations
 
-Not run yet. Previous 393-test measurements remain in
-[native-selection-transactions.md](native-selection-transactions.md).
+One `cargo +stable test --manifest-path core_lib/Cargo.toml --all-features --locked`
+passed **397 unit/export + 4 integration = 401 checks**, zero failures/ignored;
+unit execution 0.97 s after compilation. This includes all **8 new methods** with
+table-driven inputs. No repeated development loop was run. Final all-feature,
+all-target Clippy with `--locked -- -D warnings`, nightly formatting and
+`git diff --check` passed. Existing bluer future-incompatibility notice remains.
+Previous 393-test observations remain in the selection SSOT.
+
+The four new private-bus methods use real broker connections, descriptor
+upload/commit and the actual coordinator. Their harness deliberately does not
+start mDNS/BlueZ or simulate consent processing; it inspects the retained intent
+and ownership after serial dispatch. Existing runtime/real-worker checks ran in
+the same complete suite. This is not full native-executable or Google-peer smoke.
+
+Four unit wire-decoding methods additionally exercise all new signatures,
+otherwise valid bodies with forbidden ancillary descriptors, canonical epoch
+tokens, unknown IDs, exact/over identifier bounds, queue capacity, desynchronization,
+failed admission/retry and cancellation versus held resources. No coordinator,
+use case or protocol state machine is mocked. The test-only raw FD fixture uses
+SDK-encoded body/signature bytes with an extra unused owned descriptor; it does
+not add unsafe production code.
+
+Primary counts (each new method counted once): Positive 1; N1 1; N2 1; N4 1;
+N6 1; N7 2; N9 1. N3/N5/N10 retain shared bus/runtime coverage described above;
+N8/N11/N12 introduce no applicable new operation. No instrumented coverage or
+executed mutation-tool percentage is claimed. Assertion review: duplicate sends
+fail exact queue/transfer counts; removed owner/replay/epoch/FD guards fail rejection
+and unchanged-state checks; premature active release fails resource accounting;
+fake command completion fails phase/intent assertions; stale acknowledgements
+cannot remove a newer cancellation.
+
+Changed production files: `service/bus.rs` and the Manager1 XML. Test harness
+preparation was extracted without changing its serial lifecycle, allowing a real
+coordinator to supply discovered endpoints/inbound sessions. New regressions are
+in `service/bus/tests/controls.rs`. No dependencies, lockfiles, settings or legacy
+desktop code changed. All owned commands exited; terminal closed. No user bus
+registration, installation, push or release promotion occurred.
+
+Next: freeze the bounded snapshot/discovery/invalidation read contract before
+implementing it, then executable/lifecycle and retention work. The panel still
+cannot obtain a native wire state view. Nine Manager1 methods are implemented;
+there is no installed native daemon or replacement UI yet.

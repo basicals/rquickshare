@@ -147,3 +147,8 @@ The offline coordinator is implemented and verified as specified in [native-serv
 ## 2026-10-12 selection adapter checkpoint
 
 The descriptor boundary now has implemented bounded transactional D-Bus ingress: see [native-selection-transactions.md](native-selection-transactions.md) for the authoritative Manager1 five-method fixture, lifecycle, authentication and measured results. Historical path-taking CreateSelection proposals in this document are not an implementation contract. Snapshot/send/control wire APIs, executable activation, retention review and the GTK chooser remain pending; the legacy window is still the current UI.
+
+The subsequent [native-dbus-controls.md](native-dbus-controls.md) checkpoint adds
+DiscardSelection, SendSelection, Respond and Cancel without changing those ownership
+or trust rules. Nine methods now exist; snapshot/discovery/invalidation wire APIs,
+executable activation, retention and the GTK chooser remain pending.

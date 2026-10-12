@@ -1,4 +1,4 @@
-//! Serial same-UID selection IPC. Names are metadata; only owned descriptors enter the core.
+//! Serial same-UID selection/control IPC. Only owned descriptors enter the core.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -19,7 +19,7 @@ use zbus::{Connection, Message, MessageStream};
 
 use super::runtime::{NativeRuntime, RuntimeError};
 use super::uploads::{UploadState, BATCH_FILES};
-use super::{ClientId, Coordinator, Error, UploadId};
+use super::{ClientId, Coordinator, Error, SelectionId, TransferId, UploadId};
 use crate::file_source::OpenedFile;
 
 mod transport;
@@ -436,6 +436,10 @@ impl SelectionBus {
             "GetUpload",
             "CommitSelection",
             "AbortSelection",
+            "DiscardSelection",
+            "SendSelection",
+            "Respond",
+            "Cancel",
         ]
         .contains(&member)
         {
@@ -528,7 +532,7 @@ enum Reply {
 fn token(epoch: u128, counter: u64) -> String {
     format!("{epoch:032x}-{counter:016x}")
 }
-fn upload_id(value: &str, epoch: u128) -> Result<UploadId, Error> {
+fn token_parts(value: &str, epoch: u128) -> Result<(u128, u64), Error> {
     if value.len() != 49
         || value.as_bytes()[32] != b'-'
         || !value
@@ -543,7 +547,12 @@ fn upload_id(value: &str, epoch: u128) -> Result<UploadId, Error> {
     if supplied_epoch != epoch || counter == 0 {
         return Err(Error::InvalidInput);
     }
-    Ok(UploadId(supplied_epoch, counter))
+    Ok((supplied_epoch, counter))
+}
+
+fn upload_id(value: &str, epoch: u128) -> Result<UploadId, Error> {
+    let (epoch, counter) = token_parts(value, epoch)?;
+    Ok(UploadId(epoch, counter))
 }
 
 #[derive(Type)]
@@ -641,6 +650,36 @@ fn execute(
                     Ok(Reply::Empty)
                 }
             }
+        }
+        "DiscardSelection" => {
+            let id: &str = body.deserialize().map_err(invalid)?;
+            let (epoch, counter) = token_parts(id, coordinator.epoch)?;
+            coordinator.discard_selection(client, SelectionId(epoch, counter))?;
+            Ok(Reply::Empty)
+        }
+        "SendSelection" => {
+            let (id, endpoint, request): (&str, &str, &str) =
+                body.deserialize().map_err(invalid)?;
+            let (epoch, counter) = token_parts(id, coordinator.epoch)?;
+            let transfer = coordinator.send_selection(
+                client,
+                SelectionId(epoch, counter),
+                endpoint,
+                request,
+            )?;
+            Ok(Reply::Token(token(transfer.0, transfer.1)))
+        }
+        "Respond" => {
+            let (id, revision, accept): (&str, u64, bool) = body.deserialize().map_err(invalid)?;
+            let (epoch, counter) = token_parts(id, coordinator.epoch)?;
+            coordinator.respond(client, TransferId(epoch, counter), revision, accept)?;
+            Ok(Reply::Empty)
+        }
+        "Cancel" => {
+            let id: &str = body.deserialize().map_err(invalid)?;
+            let (epoch, counter) = token_parts(id, coordinator.epoch)?;
+            coordinator.cancel(client, TransferId(epoch, counter))?;
+            Ok(Reply::Empty)
         }
         _ => Err(Error::InvalidInput),
     }

@@ -1,5 +1,27 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: native D-Bus send and transfer controls implemented
+
+[native-dbus-controls.md](native-dbus-controls.md) records the plan committed before
+code (`7527abd`), additive Manager1 fixture and verification. DiscardSelection,
+SendSelection, Respond and Cancel now delegate through the same serial authenticated
+adapter into the existing coordinator/runtime. Selected files are never reopened
+by path; explicit send moves ownership to the service; control replies acknowledge
+admission rather than core processing or peer completion. No new trust, consent,
+retention, settings or UI policy was introduced.
+
+One full core run passed **397 unit/export + 4 integration = 401**, including eight
+new regression methods. Final Clippy, formatting and diff checks passed. Tests
+include actual private-broker send/replay/disconnect, foreign selection rejection,
+accept/reject intent preservation and another same-UID panel cancelling queued
+work; wire-level unit checks cover signatures/FDs/tokens, capacity and uncertainty.
+Measured results and category counts are in the control SSOT. No package install,
+live registration, hardware run, push or master promotion occurred. Terminal closed.
+
+Next: concrete bounded snapshot/discovery/invalidation contract; executable,
+continuous-service retention, native GTK panel and Dolphin. The old five-method-only
+checkpoints below are historical; the current Manager1 exposes nine methods.
+
 
 ## 2026-10-12: transactional native D-Bus selection ingress implemented
 

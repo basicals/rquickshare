@@ -1,5 +1,11 @@
 # Native selection transactions
 
+Current checkpoint: the original five methods below remain compatible. The four
+additive transfer/control methods and current 401-check measurement are documented
+in [native-dbus-controls.md](native-dbus-controls.md). Snapshot/discovery/events and
+the executable remain pending; the older five-method-only descriptions below
+record the completed selection slice.
+
 2026-10-12. Mode A. User-approved option 1 from native-dbus-selection-review.md. This document is the implementation SSOT. The existing descriptor boundary and native runtime remain authoritative. No sources are reopened by destination name, no implicit send occurs, and no Google compatibility claim follows from these checks.
 
 ## Milestones and rollback
