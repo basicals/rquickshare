@@ -14,6 +14,8 @@ Follow-up core inspection found outbound errors correlated to the network addres
 
 This document is the working log for the `morozhenko-apps/rquickshare` maintenance pass. It is intentionally kept separate from release notes: it tracks audit scope, upstream triage, CI gates, fixes, and the final Mode B verification before fast-forwarding `dev` into `master`.
 
+Native continuation checkpoint: TCP supervision `ee2139a`, managed outgoing dispatch/startup rollback `2354c1d`. [native-session-control-review.md](native-session-control-review.md) records the next substantial-refactor choice: managed per-session controls/receipts for both TCP and BLE, or staged TCP-first migration. Work on that new control-plane change waits for the user's choice under AGENTS sections 3/3.1. Earlier accepted UX/file boundaries do not need reconfirmation.
+
 The 2026-10-12 offline continuation, recovered diary references, implementation plan and validation results are recorded in [offline-maintenance.md](offline-maintenance.md). Dated hardware evidence remains in [mode-b-inventory.md](mode-b-inventory.md).
 
 The subsequent user correction establishes the native tray/notification-area redesign, Tauri migration following NativePair and full Google parity as the target. See [product-direction.md](product-direction.md); maintenance completion does not complete that goal.
