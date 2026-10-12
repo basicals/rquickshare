@@ -9,6 +9,7 @@ io.github.morozhenko_apps.RQuickShare.Error.UnknownTransfer
 io.github.morozhenko_apps.RQuickShare.Error.UnknownEndpoint
 io.github.morozhenko_apps.RQuickShare.Error.WrongOwner
 io.github.morozhenko_apps.RQuickShare.Error.ReplayConflict
+io.github.morozhenko_apps.RQuickShare.Error.RequestExpired
 io.github.morozhenko_apps.RQuickShare.Error.StaleConsent
 io.github.morozhenko_apps.RQuickShare.Error.StaleControl
 io.github.morozhenko_apps.RQuickShare.Error.Unsynchronized

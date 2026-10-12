@@ -55,15 +55,17 @@ files are never deleted. Bounds on FD/session/thread admission are unchanged.
 
 1. [x] Analyze coordinator uploads/send ledger, runtime close/release/control
    futures, authenticated dispatch and immutable captures; freeze this contract.
-2. [ ] Implement separate pure ordered ledger and typed upload origin, extracting
+2. [x] Implement separate pure ordered ledger and typed upload origin, extracting
    shared upload/enqueue helpers without changing Manager1 legacy semantics.
-3. [ ] Add truthful closure/release/control barriers and bounded retirement;
+3. [x] Add truthful closure/release/control barriers and bounded retirement;
    integrate the serial runtime and additive authenticated dispatcher/fixtures.
-4. [ ] Add focused domain/runtime/private-bus regression checks; run affected
+4. [x] Add focused domain/runtime/private-bus regression checks; run affected
    Rust suite and strict formatting/Clippy once; record actual observations here.
-5. [ ] Update diary and handoff, commit reversible stages on dev.
+5. [x] Update diary and handoff, commit reversible stages on dev.
 
-Each milestone is an atomic conventional English commit. Rollback additive
+The plan freeze and integrated implementation are separate atomic commits. The
+ledger and closure changes share the retention invariant and are committed
+together so an intermediate checkout cannot expose premature cleanup. Rollback additive
 interface/ledger first, then retirement/barriers. No file/storage migration.
 Risks: bypassed closure, late receipt targeting retired state, lost commit result,
 legacy ID eviction, revision overflow and accidental source lifetime shortening.
@@ -96,4 +98,51 @@ Mode A gate. Any added scenarios or changed estimates are recorded below.
 
 ## Actual verification and continuation
 
-Plan frozen before production edits. Implementation pending. Terminal closed.
+Plan frozen in `52b5347` before production edits. The separate ordered ledger,
+typed upload origin, checked shared enqueue, Operations1 dispatch and XML/error
+fixtures are implemented. Legacy strings have no implicit eviction; their
+original validation/admission error ordering was restored during final review.
+
+Owner/release/control-receipt barriers are adapter-only bookkeeping, not public
+snapshot changes; actual metadata retirement advances the public revision.
+Missing terminal revision is ineligible rather than assigned a fabricated age.
+The runtime records Closed after removing its binding, awaits each identified
+outbound release, pins late consent receipts and explicitly closes work which
+never acquired a core owner. History maintenance runs before admission dispatch
+and after observed progress; acknowledgement/disconnect unpins it on the next
+serial runtime step. No timer or user intervention is involved.
+
+19 new regression tests: Positive 2, N1 1, N2 5, N4 5, N5 4, N7 2 (primary
+category counts, no double counting). Cross-category checks also cover cancellation,
+disconnect, privacy-safe receipts and old-contract compatibility. N3/N6/N10 remain
+covered by existing transport, fixture and redacted-error checks. N8/N11/N12 add no
+new applicable wall-clock, billing or persistent-storage behavior in this slice.
+Existing source-adoption/storage failure checks remain unchanged.
+
+Actual observations:
+
+- Full locked all-feature core run: 448 unit/export tests and 8 integration tests
+  passed, including the owned executable tests. No failures/ignored tests.
+- After restoring legacy error ordering and excluding missing terminal revisions,
+  the affected service run passed all 164 tests (284 other unit/export tests and
+  eight integration tests filtered). No redundant full-suite repetition.
+- Locked all-feature/all-target core Clippy with `-D warnings` passed.
+- New continuous-use case performs 1,000 complete prepare/commit/send/cancel/ack
+  cycles (3,000 accepted ordered mutations) on one connection. Every iteration
+  asserts empty closed-upload/receipt maps, released source budgets, at most 64
+  records and an existing original file; the first request stays expired.
+- Real adapter tests exercise both Closed/release orders and a late consent
+  receipt. Private-broker tests exercise exact typed replies, ownership, rejected
+  attached FDs/signatures and lost/retried/expired results. Cached pages survive
+  removal and a fresh view sees the increased revision and reduced record count.
+
+Locked desktop no-default-feature/all-target Clippy with `-D warnings`, nightly
+format checks for both Rust crates and `git diff --check` passed. An independent
+XML parser verified all seven Operations1 input/output signatures and fifteen
+unchanged Manager1 methods. No package versions or dependency locks changed.
+Terminal closed; no owned terminal/process remains running.
+No frontend/UI changes, physical-peer proof, live discovery/session changes,
+installed activation or ten-run stability/coverage-percentage claim. The existing
+bluer future-incompatibility notice remains. Next product stage: a native client
+which automatically reconciles/acknowledges receipts, then GTK tray/settings/
+notifications, Dolphin and package/device interoperability validation.

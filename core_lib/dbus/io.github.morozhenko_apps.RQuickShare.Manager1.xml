@@ -82,6 +82,39 @@
       <arg name="revision" type="t"/>
     </signal>
   </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Operations1">
+    <method name="BeginSelection">
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="upload_id" type="s" direction="out"/>
+    </method>
+    <method name="CommitSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
+    <method name="AbortSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+    </method>
+    <method name="SendSelection">
+      <arg name="selection_id" type="s" direction="in"/>
+      <arg name="endpoint_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="transfer_id" type="s" direction="out"/>
+    </method>
+    <method name="GetOperationState">
+      <arg name="last_accepted" type="t" direction="out"/>
+      <arg name="acknowledged_through" type="t" direction="out"/>
+    </method>
+    <method name="GetReceipt">
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="kind" type="s" direction="out"/>
+      <arg name="result_id" type="s" direction="out"/>
+    </method>
+    <method name="AcknowledgeThrough">
+      <arg name="operation_seq" type="t" direction="in"/>
+    </method>
+  </interface>
   <interface name="org.freedesktop.DBus.Introspectable">
     <method name="Introspect">
       <arg name="xml_data" type="s" direction="out"/>

@@ -448,3 +448,34 @@ fn given_released_source_reservation_when_captured_then_metadata_uses_refreshed_
     assert_eq!(header.2, coordinator.revision);
     assert_eq!(coordinator.usage(), Default::default());
 }
+
+#[test]
+fn given_immutable_capture_when_live_history_is_trimmed_then_old_pages_remain_stable() {
+    // Arrange
+    let (mut coordinator, client, mut cache) = setup();
+    coordinator.limits.transfers = 2;
+    let first = coordinator.register_inbound().unwrap();
+    coordinator
+        .observe(first, crate::service::Phase::Finished)
+        .unwrap();
+    coordinator.owner_closed(first).unwrap();
+    let second = coordinator.register_inbound().unwrap();
+    coordinator
+        .observe(second, crate::service::Phase::Finished)
+        .unwrap();
+    coordinator.owner_closed(second).unwrap();
+    let capture = cache
+        .capture(&mut coordinator, client, std::iter::empty())
+        .unwrap();
+    let before = cache.transfer_page(client, &capture.0, 0).unwrap();
+    // Act / Assert
+    assert!(coordinator.maintain_history().unwrap());
+    assert_eq!(cache.transfer_page(client, &capture.0, 0).unwrap(), before);
+    let current = cache
+        .capture(&mut coordinator, client, std::iter::empty())
+        .unwrap();
+    assert!(current.2 > capture.2);
+    assert_eq!(current.10, 1);
+    let rows = cache.transfer_page(client, &current.0, 0).unwrap().1;
+    assert_eq!(rows[0].0, token(second.0, second.1));
+}

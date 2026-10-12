@@ -27,6 +27,7 @@ mod transport;
 
 pub const SERVICE: &str = "io.github.morozhenko_apps.RQuickShare";
 pub const PATH: &str = "/io/github/morozhenko_apps/RQuickShare";
+pub const OPERATIONS_INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Operations1";
 pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Manager1";
 pub const INTROSPECTION: &str =
     include_str!("../../dbus/io.github.morozhenko_apps.RQuickShare.Manager1.xml");
@@ -470,6 +471,35 @@ impl SelectionBus {
                 .await
                 .map_err(|_| BusError::Transport);
         }
+        if interface == Some(OPERATIONS_INTERFACE) {
+            let Some(member) = member else {
+                return self
+                    .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                    .await;
+            };
+            if ![
+                "BeginSelection",
+                "CommitSelection",
+                "AbortSelection",
+                "SendSelection",
+                "GetOperationState",
+                "GetReceipt",
+                "AcknowledgeThrough",
+            ]
+            .contains(&member)
+            {
+                return self
+                    .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                    .await;
+            }
+            return match execute_operation(coordinator, client, member, &message) {
+                Ok(OperationReply::Token(id)) => self.state_reply(&header, &id).await,
+                Ok(OperationReply::State(state)) => self.state_reply(&header, &state).await,
+                Ok(OperationReply::Receipt(receipt)) => self.state_reply(&header, &receipt).await,
+                Ok(OperationReply::Empty) => self.state_reply(&header, &()).await,
+                Err(error) => self.domain_error(&header, error).await,
+            };
+        }
         if interface != Some(INTERFACE) {
             return self
                 .error(&header, "org.freedesktop.DBus.Error.UnknownInterface")
@@ -671,6 +701,7 @@ fn error_name(error: Error) -> &'static str {
         Error::UnknownTransfer => "io.github.morozhenko_apps.RQuickShare.Error.UnknownTransfer",
         Error::UnknownEndpoint => "io.github.morozhenko_apps.RQuickShare.Error.UnknownEndpoint",
         Error::WrongOwner => "io.github.morozhenko_apps.RQuickShare.Error.WrongOwner",
+        Error::RequestExpired => "io.github.morozhenko_apps.RQuickShare.Error.RequestExpired",
         Error::ReplayConflict => "io.github.morozhenko_apps.RQuickShare.Error.ReplayConflict",
         Error::StaleConsent => "io.github.morozhenko_apps.RQuickShare.Error.StaleConsent",
         Error::StaleControl => "io.github.morozhenko_apps.RQuickShare.Error.StaleControl",
@@ -868,6 +899,78 @@ fn execute(
             let (epoch, counter) = token_parts(id, coordinator.epoch)?;
             coordinator.cancel(client, TransferId(epoch, counter))?;
             Ok(Reply::Empty)
+        }
+        _ => Err(Error::InvalidInput),
+    }
+}
+
+enum OperationReply {
+    Token(String),
+    State((u64, u64)),
+    Receipt((&'static str, String)),
+    Empty,
+}
+
+fn execute_operation(
+    coordinator: &mut Coordinator,
+    client: ClientId,
+    method: &str,
+    message: &Message,
+) -> Result<OperationReply, Error> {
+    if !message.data().fds().is_empty() {
+        return Err(Error::InvalidInput);
+    }
+    let body = message.body();
+    let invalid = |_| Error::InvalidInput;
+    match method {
+        "BeginSelection" => {
+            let sequence: u64 = body.deserialize().map_err(invalid)?;
+            let id = coordinator.ordered_begin(client, sequence)?;
+            Ok(OperationReply::Token(token(id.0, id.1)))
+        }
+        "CommitSelection" | "AbortSelection" => {
+            let (id, sequence): (&str, u64) = body.deserialize().map_err(invalid)?;
+            let id = upload_id(id, coordinator.epoch)?;
+            if method == "CommitSelection" {
+                let id = coordinator.ordered_commit(client, id, sequence)?;
+                Ok(OperationReply::Token(token(id.0, id.1)))
+            } else {
+                coordinator.ordered_abort(client, id, sequence)?;
+                Ok(OperationReply::Empty)
+            }
+        }
+        "SendSelection" => {
+            let (id, endpoint, sequence): (&str, &str, u64) =
+                body.deserialize().map_err(invalid)?;
+            let (epoch, counter) = token_parts(id, coordinator.epoch)?;
+            let id = coordinator.ordered_send(
+                client,
+                SelectionId(epoch, counter),
+                endpoint,
+                sequence,
+            )?;
+            Ok(OperationReply::Token(token(id.0, id.1)))
+        }
+        "GetOperationState" => {
+            body.deserialize::<()>().map_err(invalid)?;
+            Ok(OperationReply::State(coordinator.operation_state(client)?))
+        }
+        "GetReceipt" => {
+            let sequence: u64 = body.deserialize().map_err(invalid)?;
+            let receipt = coordinator.operation_receipt(client, sequence)?;
+            use super::operations::OperationResult;
+            let result = match receipt.result {
+                OperationResult::Upload(id) => token(id.0, id.1),
+                OperationResult::Selection(id) => token(id.0, id.1),
+                OperationResult::Transfer(id) => token(id.0, id.1),
+                OperationResult::Empty => String::new(),
+            };
+            Ok(OperationReply::Receipt((receipt.kind, result)))
+        }
+        "AcknowledgeThrough" => {
+            let sequence: u64 = body.deserialize().map_err(invalid)?;
+            coordinator.acknowledge_operations(client, sequence)?;
+            Ok(OperationReply::Empty)
         }
         _ => Err(Error::InvalidInput),
     }

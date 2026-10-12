@@ -3,8 +3,9 @@
 _Recorded: 2026-10-12. Status: tray-panel and descriptor decisions accepted;
 file/core boundary, coordinator, native runtime, fifteen authenticated Manager1
 methods and directed state invalidations implemented; the native daemon executable
-and hidden visibility recovery are now implemented. Retention review and native
-shell remain pending._
+and hidden visibility recovery are now implemented. Bounded current-run history
+and seven additive Operations1 methods are implemented; the native client/shell
+remain pending._
 
 Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). Bounded TCP workers and the owned native dispatch/cancellation/startup seam are implemented in [native-transfer-supervision.md](native-transfer-supervision.md) and [native-managed-dispatch.md](native-managed-dispatch.md). Common TCP/BLE session capabilities and consent processing receipts are implemented in [native-session-controls.md](native-session-controls.md). The single-owner coordinator/core runtime is implemented in [native-core-runtime.md](native-core-runtime.md), using [ordered lifecycle events](native-core-events.md). Authenticated selection IPC is implemented in [native-selection-transactions.md](native-selection-transactions.md), with additive [transfer controls](native-dbus-controls.md) and [bounded state pages/invalidation](native-dbus-state.md). A registered daemon and native UI remain pending. Historical stage descriptions below must be read with these checkpoints.
 
@@ -13,6 +14,11 @@ manual executable, shared launch guard, read-only existing settings and hidden
 visibility recovery. Manager1 now has fifteen methods, including startup warnings.
 The daemon is not installed/activated, and GTK/settings/Dolphin remain pending;
 the old desktop remains the current UI and cannot attach to the native process.
+
+[Native retention and ordered receipts](native-retention.md) now implement the
+approved 64-record safely closed current-run history and additive Operations1.
+The future client must automatically reconcile and acknowledge these receipts.
+History is not persisted and this does not establish Google feature parity.
 
 ## Authoritative correction
 

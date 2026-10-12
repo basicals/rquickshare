@@ -34,6 +34,7 @@ pub enum Error {
     UnknownEndpoint,
     WrongOwner,
     ReplayConflict,
+    RequestExpired,
     StaleConsent,
     StaleControl,
     Unsynchronized,
@@ -216,6 +217,11 @@ struct Transfer {
     resource: Option<Arc<OpenedSelection>>,
     endpoint: Option<String>,
     answer: Option<(u64, bool)>,
+    source: Weak<OpenedSelection>,
+    owner_closed: bool,
+    released: bool,
+    control_receipt: bool,
+    terminal_revision: Option<u64>,
 }
 
 pub struct Coordinator {
@@ -225,6 +231,7 @@ pub struct Coordinator {
     lifecycle: Lifecycle,
     synchronized: bool,
     clients: BTreeMap<ClientId, BTreeMap<String, Replay>>,
+    operations: BTreeMap<ClientId, operations::Ledger>,
     selections: BTreeMap<SelectionId, Selection>,
     reservations: BTreeMap<SelectionId, Reservation>,
     uploads: BTreeMap<UploadId, uploads::Upload>,
@@ -294,6 +301,7 @@ impl Coordinator {
             lifecycle: Lifecycle::Running,
             synchronized: true,
             clients: BTreeMap::new(),
+            operations: BTreeMap::new(),
             selections: BTreeMap::new(),
             reservations: BTreeMap::new(),
             uploads: BTreeMap::new(),
@@ -365,6 +373,8 @@ impl Coordinator {
         }
         let client = ClientId(self.epoch, self.advance()?);
         self.clients.insert(client, BTreeMap::new());
+        self.operations
+            .insert(client, operations::Ledger::default());
         Ok(client)
     }
 
@@ -373,6 +383,7 @@ impl Coordinator {
         if self.clients.contains_key(&client) {
             self.advance()?;
             self.clients.remove(&client);
+            self.operations.remove(&client);
             self.selections.retain(|_, entry| entry.owner != client);
             self.uploads.retain(|_, entry| entry.owner != client);
         }
@@ -486,6 +497,19 @@ impl Coordinator {
                 Err(Error::ReplayConflict)
             };
         }
+        self.enqueue_selection(client, selection, endpoint, Some(request))
+    }
+
+    pub(super) fn enqueue_selection(
+        &mut self,
+        client: ClientId,
+        selection: SelectionId,
+        endpoint: &str,
+        request: Option<&str>,
+    ) -> Result<TransferId, Error> {
+        self.running()?;
+        self.client(client)?;
+        identifier(endpoint, 256)?;
         self.synchronized()?;
         let pending = self
             .selections
@@ -499,7 +523,8 @@ impl Coordinator {
         }
         if self.queue.len() >= self.limits.queued_sends
             || self.transfers.len() >= self.limits.transfers
-            || self.clients[&client].len() >= self.limits.replay_records_per_client
+            || (request.is_some()
+                && self.clients[&client].len() >= self.limits.replay_records_per_client)
         {
             return Err(Error::Capacity);
         }
@@ -519,21 +544,28 @@ impl Coordinator {
                     consent_revision: None,
                     pending_control: None,
                 },
+                source: Arc::downgrade(&pending.resource),
+                owner_closed: true,
+                released: true,
+                control_receipt: false,
+                terminal_revision: None,
                 resource: Some(pending.resource),
                 endpoint: Some(endpoint.to_owned()),
                 answer: None,
             },
         );
         self.queue.push_back(id);
-        if let Some(ledger) = self.clients.get_mut(&client) {
-            ledger.insert(
-                request.to_owned(),
-                Replay {
-                    selection,
-                    endpoint: endpoint.to_owned(),
-                    transfer: id,
-                },
-            );
+        if let Some(request) = request {
+            if let Some(ledger) = self.clients.get_mut(&client) {
+                ledger.insert(
+                    request.to_owned(),
+                    Replay {
+                        selection,
+                        endpoint: endpoint.to_owned(),
+                        transfer: id,
+                    },
+                );
+            }
         }
         Ok(id)
     }
@@ -553,6 +585,8 @@ impl Coordinator {
             transfer.resource = None;
             transfer.endpoint = None;
             transfer.view.phase = Phase::Active;
+            transfer.owner_closed = false;
+            transfer.released = false;
         }
         Ok(Some(SendDispatch {
             transfer: id,
@@ -581,6 +615,11 @@ impl Coordinator {
                 resource: None,
                 endpoint: None,
                 answer: None,
+                source: Weak::new(),
+                owner_closed: false,
+                released: true,
+                control_receipt: false,
+                terminal_revision: None,
             },
         );
         Ok(id)
@@ -614,6 +653,7 @@ impl Coordinator {
                 transfer.answer = None;
             }
             if phase.is_terminal() {
+                transfer.terminal_revision = Some(revision);
                 transfer.resource = None;
                 transfer.endpoint = None;
                 self.queue.retain(|queued| *queued != id);
@@ -699,6 +739,7 @@ impl Coordinator {
             transfer.view.consent_revision = None;
             if transfer.view.phase == Phase::Queued {
                 transfer.view.phase = Phase::Cancelled;
+                transfer.terminal_revision = Some(revision);
                 transfer.resource = None;
                 transfer.endpoint = None;
                 self.queue.retain(|queued| *queued != id);
@@ -736,6 +777,7 @@ impl Coordinator {
             transfer.view.consent_revision = None;
             if transfer.view.phase == Phase::Queued {
                 transfer.view.phase = Phase::Cancelled;
+                transfer.terminal_revision = Some(revision);
                 transfer.resource = None;
                 transfer.endpoint = None;
             } else if !transfer.view.phase.is_terminal() {
@@ -783,3 +825,7 @@ pub mod uploads;
 
 pub mod bus;
 pub mod process;
+
+pub mod operations;
+
+mod retention;

@@ -1,5 +1,33 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: bounded current-run history and ordered operations implemented
+
+The user selected retention option 1. Plan/contract frozen before code in
+`52b5347`; [native-retention.md](native-retention.md) records the additive seven
+Operations1 methods, 128 connection-owned receipts and cumulative acknowledgement
+watermark. Expired requests never execute again. Typed upload origins preserve
+legacy Manager1 behavior and prevent bypassing sequenced commit/abort receipts.
+Closed ordered upload metadata is reclaimed after acknowledgement; active selections
+and queued/active payloads survive it. Legacy replay references remain pinned.
+
+The serial runtime now records owner closure, identified outbound release and late
+control receipts before retiring oldest eligible history beyond 64. Terminal state
+alone cannot trigger retirement; missing/lost observations remain pinned. Shared
+revision changes invalidate new reads without changing immutable captured pages.
+No persisted journal, file deletion, higher FD/session limits or user cleanup step.
+The future native client still must perform reconciliation/acknowledgement itself.
+
+19 new tests; core inventory is now 448 unit/export plus 8 integration = 456.
+The full run passed, followed only by the 164 affected service tests after final
+compatibility refinements. Core and desktop strict Clippy, both Rust format checks,
+XML contract parsing and diff checks passed. Exact observations/category counts
+are in the implementation SSOT. No unchanged frontend checks or ten-run gate;
+no physical peers, installed services or user settings were changed. Terminal closed.
+
+Next: native client with automatic receipt acknowledgement and GTK tray/settings/
+notifications, Dolphin, packaging and physical Google compatibility. The older
+awaiting-retention-choice review below is historical and superseded.
+
 ## 2026-10-12: continuous-service retention review prepared
 
 [native-retention-review.md](native-retention-review.md) analyzes the retained

@@ -126,6 +126,7 @@ impl Harness {
 }
 
 mod controls;
+mod operations;
 mod state;
 
 #[tokio::test]
@@ -822,6 +823,7 @@ fn given_internal_errors_when_mapped_then_wire_names_match_the_frozen_allowlist(
         Error::UnknownEndpoint,
         Error::WrongOwner,
         Error::ReplayConflict,
+        Error::RequestExpired,
         Error::StaleConsent,
         Error::StaleControl,
         Error::Unsynchronized,

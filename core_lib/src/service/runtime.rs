@@ -18,7 +18,7 @@ const DISCOVERY_EVENTS: usize = 128;
 const OWNED_DISPATCHES: usize = 32;
 
 type Receipt = Pin<Box<dyn Future<Output = (ControlIntent, Result<(), SessionError>)> + Send>>;
-type Release = Pin<Box<dyn Future<Output = Result<(), ControlLost>> + Send>>;
+type Release = Pin<Box<dyn Future<Output = (TransferId, Result<(), ControlLost>)> + Send>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RuntimeError {
@@ -425,6 +425,7 @@ impl NativeRuntime {
                     binding.transfer,
                     phase(&snapshot.state, &snapshot.direction),
                 )?;
+                self.coordinator.owner_closed(binding.transfer)?;
                 return Ok(());
             }
         };
@@ -496,6 +497,8 @@ impl NativeRuntime {
             };
             let Some(route) = self.routes.get(&dispatch.endpoint) else {
                 self.coordinator.observe(dispatch.transfer, Phase::Failed)?;
+                self.coordinator.owner_closed(dispatch.transfer)?;
+                self.coordinator.source_released(dispatch.transfer)?;
                 return Ok(true);
             };
             self.pending = Some(Pending {
@@ -515,6 +518,8 @@ impl NativeRuntime {
         let mut pending = self.pending.take().ok_or(Error::UnknownTransfer)?;
         let Some(route) = self.routes.get(&pending.endpoint) else {
             self.coordinator.observe(pending.transfer, Phase::Failed)?;
+            self.coordinator.owner_closed(pending.transfer)?;
+            self.coordinator.source_released(pending.transfer)?;
             return Ok(true);
         };
         pending.request.addr = route.addr.to_string();
@@ -530,8 +535,9 @@ impl NativeRuntime {
                         consent: None,
                     },
                 );
-                self.releases
-                    .push(Box::pin(async move { control.wait_released().await }));
+                self.releases.push(Box::pin(async move {
+                    (pending.transfer, control.wait_released().await)
+                }));
                 Ok(true)
             }
             Err(rejected) => {
@@ -573,6 +579,8 @@ impl NativeRuntime {
                     self.pending.take();
                     self.coordinator
                         .observe(intent.transfer, Phase::Cancelled)?;
+                    self.coordinator.owner_closed(intent.transfer)?;
+                    self.coordinator.source_released(intent.transfer)?;
                 } else if let Some(binding) = self
                     .bindings
                     .values()
@@ -602,6 +610,7 @@ impl NativeRuntime {
                 intent.action == ControlAction::Accept,
             ) {
                 Ok(receipt) => {
+                    self.coordinator.control_receipt(intent.transfer, true)?;
                     self.inflight.insert(intent.transfer, intent.revision);
                     self.receipts
                         .push(Box::pin(async move { (intent, receipt.wait().await) }));
@@ -622,6 +631,7 @@ impl NativeRuntime {
         result: Result<(), SessionError>,
     ) -> Result<(), RuntimeError> {
         self.inflight.remove(&intent.transfer);
+        self.coordinator.control_receipt(intent.transfer, false)?;
         // A superseded or already terminal intent cannot clear newer state.
         if self
             .coordinator
@@ -665,21 +675,24 @@ impl NativeRuntime {
         }
         for _ in 0..OWNED_DISPATCHES {
             match self.releases.next().now_or_never().flatten() {
-                Some(Ok(())) => completions = true,
-                Some(Err(_)) => return self.fault(),
+                Some((id, result)) => {
+                    self.release(id, result)?;
+                    completions = true;
+                }
                 None => break,
             }
         }
+        let retired = self.coordinator.maintain_history()?;
         let controls = self.controls()?;
         let dispatch = self.dispatch()?;
-        if events || discovery || completions || controls || dispatch {
+        if events || discovery || completions || controls || dispatch || retired {
             return Ok(());
         }
-        tokio::select! {
+        let result = tokio::select! {
             result = self.events.recv() => match result { Ok(event) => self.observed(event), Err(_) => self.fault() },
             result = self.discovery.recv() => match result { Ok(info) => self.discovered(info), Err(_) => self.fault() },
             Some((intent, result)) = self.receipts.next(), if !self.receipts.is_empty() => self.receipt(intent, result),
-            Some(result) = self.releases.next(), if !self.releases.is_empty() => if result.is_err() { self.fault() } else { Ok(()) },
+            Some((id, result)) = self.releases.next(), if !self.releases.is_empty() => self.release(id, result),
             _ = self.sender.closed(), if !self.core_lost => {
                 self.core_lost = true;
                 self.coordinator.mark_desynchronized()?;
@@ -688,7 +701,22 @@ impl NativeRuntime {
             result = self.sender.ready(), if self.pending.is_some() && self.coordinator.synchronized && self.releases.len() < OWNED_DISPATCHES => {
                 match result { Ok(()) => Ok(()), Err(_) => self.fault() }
             },
+        };
+        result?;
+        self.coordinator.maintain_history()?;
+        Ok(())
+    }
+
+    fn release(
+        &mut self,
+        id: TransferId,
+        result: Result<(), ControlLost>,
+    ) -> Result<(), RuntimeError> {
+        if result.is_err() {
+            return self.fault();
         }
+        self.coordinator.source_released(id)?;
+        Ok(())
     }
 
     /// Always joins the core, including after a lost observation. Failure never means delivery.
@@ -708,6 +736,8 @@ impl NativeRuntime {
                 .coordinator
                 .observe(pending.transfer, Phase::Cancelled)
                 .is_err();
+            failed |= self.coordinator.owner_closed(pending.transfer).is_err();
+            failed |= self.coordinator.source_released(pending.transfer).is_err();
         }
         for binding in self.bindings.values() {
             binding.control.cancel();
@@ -718,11 +748,8 @@ impl NativeRuntime {
         while let Some((intent, result)) = self.receipts.next().await {
             failed |= self.receipt(intent, result).is_err();
         }
-        while let Some(result) = self.releases.next().await {
-            if result.is_err() {
-                self.coordinator.mark_desynchronized()?;
-                failed = true;
-            }
+        while let Some((id, result)) = self.releases.next().await {
+            failed |= self.release(id, result).is_err();
         }
         if failed || !self.coordinator.synchronized {
             return Err(RuntimeError::Unsynchronized);

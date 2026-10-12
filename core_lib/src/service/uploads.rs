@@ -22,9 +22,9 @@ pub struct UploadSnapshot {
 
 pub(super) struct Upload {
     pub(super) owner: ClientId,
-    request: String,
+    pub(super) request: Option<String>,
     next_sequence: u32,
-    state: UploadState,
+    pub(super) state: UploadState,
     files: Vec<OpenedFile>,
     bytes: u64,
 }
@@ -55,15 +55,35 @@ impl Coordinator {
         self.running()?;
         self.client(client)?;
         identifier(request, 128)?;
+        self.begin_upload(client, Some(request))
+    }
+
+    pub(super) fn begin_upload(
+        &mut self,
+        client: ClientId,
+        request: Option<&str>,
+    ) -> Result<UploadId, Error> {
+        self.running()?;
+        self.client(client)?;
         let owned: Vec<_> = self
             .uploads
             .iter()
             .filter(|(_, upload)| upload.owner == client)
             .collect();
-        if let Some((id, _)) = owned.iter().find(|(_, upload)| upload.request == request) {
-            return Ok(**id);
+        if let Some(request) = request {
+            if let Some((id, _)) = owned
+                .iter()
+                .find(|(_, upload)| upload.request.as_deref() == Some(request))
+            {
+                return Ok(**id);
+            }
         }
-        if owned.len() >= RECEIPTS_PER_CLIENT
+        if (request.is_some()
+            && owned
+                .iter()
+                .filter(|(_, upload)| upload.request.is_some())
+                .count()
+                >= RECEIPTS_PER_CLIENT)
             || owned
                 .iter()
                 .filter(|(_, upload)| upload.state == UploadState::Preparing)
@@ -79,7 +99,7 @@ impl Coordinator {
             id,
             Upload {
                 owner: client,
-                request: request.to_owned(),
+                request: request.map(str::to_owned),
                 next_sequence: 0,
                 state: UploadState::Preparing,
                 files: Vec::new(),
@@ -151,6 +171,29 @@ impl Coordinator {
         id: UploadId,
     ) -> Result<SelectionId, Error> {
         self.running()?;
+        self.check_upload_origin(client, id, false)?;
+        self.commit_upload(client, id)
+    }
+
+    pub(super) fn check_upload_origin(
+        &self,
+        client: ClientId,
+        id: UploadId,
+        ordered: bool,
+    ) -> Result<(), Error> {
+        let upload = self.owned_upload(client, id)?;
+        if upload.request.is_none() != ordered {
+            return Err(Error::InvalidState);
+        }
+        Ok(())
+    }
+
+    pub(super) fn commit_upload(
+        &mut self,
+        client: ClientId,
+        id: UploadId,
+    ) -> Result<SelectionId, Error> {
+        self.running()?;
         let upload = self.owned_upload(client, id)?;
         match upload.state {
             UploadState::Committed(selection) => return Ok(selection),
@@ -189,6 +232,14 @@ impl Coordinator {
     }
 
     pub fn abort_selection(&mut self, client: ClientId, id: UploadId) -> Result<(), Error> {
+        self.client(client)?;
+        if self.uploads.contains_key(&id) {
+            self.check_upload_origin(client, id, false)?;
+        }
+        self.abort_upload(client, id)
+    }
+
+    pub(super) fn abort_upload(&mut self, client: ClientId, id: UploadId) -> Result<(), Error> {
         self.client(client)?;
         let Some(upload) = self.uploads.get(&id) else {
             return Ok(());

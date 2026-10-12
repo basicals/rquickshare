@@ -927,3 +927,77 @@ async fn given_abandoned_startup_guard_when_runtime_is_retained_then_shutdown_ca
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_outbound_close_and_release_when_delivered_in_either_order_then_history_waits_for_both(
+) {
+    // Arrange / Act / Assert
+    for release_first in [false, true] {
+        let mut fixture = fixture();
+        let runtime = &mut fixture.runtime;
+        runtime.coordinator.limits.transfers = 2;
+        runtime.discovered(advertisement("peer")).unwrap();
+        let client = runtime.connect().unwrap();
+        let id = send(runtime, client, "send");
+        runtime.dispatch().unwrap();
+        runtime.disconnect(client).unwrap();
+        let OutboundJob {
+            info,
+            completion,
+            mut session,
+            ..
+        } = fixture.receiver.try_recv().unwrap();
+        session.as_mut().unwrap().observe(&State::Finished);
+        runtime.drain_events().unwrap();
+        let other = runtime.coordinator.register_inbound().unwrap();
+        runtime.coordinator.observe(other, Phase::Finished).unwrap();
+        runtime.coordinator.owner_closed(other).unwrap();
+        assert!(!runtime.coordinator.maintain_history().unwrap());
+        drop(info);
+        if release_first {
+            acknowledge_release(completion);
+            let (transfer, result) = runtime.releases.next().await.unwrap();
+            runtime.release(transfer, result).unwrap();
+            assert!(!runtime.coordinator.maintain_history().unwrap());
+            drop(session);
+            runtime.drain_events().unwrap();
+        } else {
+            drop(session);
+            runtime.drain_events().unwrap();
+            assert!(!runtime.coordinator.maintain_history().unwrap());
+            acknowledge_release(completion);
+            let (transfer, result) = runtime.releases.next().await.unwrap();
+            runtime.release(transfer, result).unwrap();
+        }
+        assert!(runtime.coordinator.maintain_history().unwrap());
+        assert!(!runtime.coordinator.transfers.contains_key(&id));
+        assert!(runtime.coordinator.transfers.contains_key(&other));
+    }
+}
+
+#[tokio::test]
+async fn given_terminal_inbound_with_late_consent_receipt_when_closed_then_retirement_waits_for_receipt(
+) {
+    // Arrange
+    let mut fixture = fixture();
+    let runtime = &mut fixture.runtime;
+    runtime.coordinator.limits.transfers = 2;
+    let client = runtime.connect().unwrap();
+    let (mut lease, id, revision) = waiting(runtime, client).await;
+    runtime.respond(client, id, revision, true).unwrap();
+    runtime.controls().unwrap();
+    assert!(runtime.coordinator.transfers[&id].control_receipt);
+    lease.as_mut().unwrap().observe(&State::Cancelled);
+    drop(lease);
+    runtime.drain_events().unwrap();
+    let other = runtime.coordinator.register_inbound().unwrap();
+    runtime.coordinator.observe(other, Phase::Finished).unwrap();
+    runtime.coordinator.owner_closed(other).unwrap();
+    // Act / Assert
+    assert!(!runtime.coordinator.maintain_history().unwrap());
+    let (intent, result) = runtime.receipts.next().await.unwrap();
+    runtime.receipt(intent, result).unwrap();
+    assert!(runtime.coordinator.maintain_history().unwrap());
+    assert!(!runtime.coordinator.transfers.contains_key(&id));
+    assert!(runtime.inflight.is_empty());
+}
