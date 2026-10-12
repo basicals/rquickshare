@@ -31,7 +31,7 @@ fn selection() -> Arc<OpenedSelection> {
 async fn given_full_queue_when_admission_retries_then_rejected_input_is_retained_until_capacity_returns(
 ) {
     // Arrange
-    let (sender, mut receiver) = ManagedSender::channel();
+    let (sender, mut receiver) = ManagedSender::channel().unwrap();
     let mut controls = Vec::new();
     for index in 0..QUEUE_CAPACITY {
         controls.push(sender.try_send(info(&index.to_string())).unwrap());
@@ -64,7 +64,7 @@ async fn given_full_queue_when_admission_retries_then_rejected_input_is_retained
 #[tokio::test]
 async fn given_closed_receiver_when_submitted_then_closure_is_observable_and_input_returns() {
     // Arrange
-    let (sender, mut receiver) = ManagedSender::channel();
+    let (sender, mut receiver) = ManagedSender::channel().unwrap();
     receiver.close();
     // Act
     sender.closed().await;
@@ -80,7 +80,7 @@ async fn given_closed_receiver_when_submitted_then_closure_is_observable_and_inp
 async fn given_accepted_control_when_cancelled_before_receive_then_job_already_observes_cancellation(
 ) {
     // Arrange
-    let (sender, mut receiver) = ManagedSender::channel();
+    let (sender, mut receiver) = ManagedSender::channel().unwrap();
     let control = sender.try_send(info("early")).unwrap();
     // Act
     control.cancel();
@@ -94,7 +94,7 @@ async fn given_accepted_control_when_cancelled_before_receive_then_job_already_o
 #[tokio::test]
 async fn given_service_owned_send_when_control_is_dropped_then_job_is_not_cancelled() {
     // Arrange
-    let (sender, mut receiver) = ManagedSender::channel();
+    let (sender, mut receiver) = ManagedSender::channel().unwrap();
     let control = sender.try_send(info("survives")).unwrap();
     // Act
     drop(control);
@@ -108,7 +108,7 @@ async fn given_service_owned_send_when_control_is_dropped_then_job_is_not_cancel
 #[tokio::test]
 async fn given_owned_payload_when_release_is_acknowledged_then_job_drops_its_reference_first() {
     // Arrange
-    let (sender, mut receiver) = ManagedSender::channel();
+    let (sender, mut receiver) = ManagedSender::channel().unwrap();
     for external_owner in [false, true] {
         let files = selection();
         let weak = Arc::downgrade(&files);
@@ -130,7 +130,7 @@ async fn given_owned_payload_when_release_is_acknowledged_then_job_drops_its_ref
 async fn given_lost_dispatch_owner_when_waiting_then_no_release_or_success_is_invented() {
     // Arrange
     for acknowledged in [false, true] {
-        let (sender, mut receiver) = ManagedSender::channel();
+        let (sender, mut receiver) = ManagedSender::channel().unwrap();
         let control = sender.try_send(info("lost")).unwrap();
         let job = receiver.recv().await.unwrap();
         // Act
@@ -154,7 +154,7 @@ async fn given_lost_dispatch_owner_when_waiting_then_no_release_or_success_is_in
 #[tokio::test]
 async fn given_completed_dispatch_when_cancel_and_wait_repeat_then_release_remains_idempotent() {
     // Arrange
-    let (sender, mut receiver) = ManagedSender::channel();
+    let (sender, mut receiver) = ManagedSender::channel().unwrap();
     let control = sender.try_send(info("repeat")).unwrap();
     let other = control.clone();
     // Act

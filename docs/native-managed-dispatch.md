@@ -68,7 +68,7 @@ Assertions target dropping rejected resources, acknowledging before request rele
 
 ### Continuation boundary
 
-Implementation checkpoint: `2354c1d`. The managed outgoing queue/control seam is ready for the trusted native adapter. Inbound Accept/Reject still travels through the lossy legacy broadcast with no per-session processing acknowledgement; the adapter must not equate broadcast send success with coordinator `acknowledge_control`. [native-session-control-review.md](native-session-control-review.md) records two concrete scopes for the next substantial refactor; the user's choice is pending. No provisional live adapter is activated around this limitation.
+Implementation checkpoint: `2354c1d`. The subsequent approved [common session-control slice](native-session-controls.md) now implements owned inbound consent/receipts and shared TCP/BLE capabilities. The outgoing queue/release contract remains separate from command acceptance. Legacy broadcast send still cannot acknowledge a coordinator control. No provisional live daemon is activated by these foundations.
 
 
 ### Implemented test index

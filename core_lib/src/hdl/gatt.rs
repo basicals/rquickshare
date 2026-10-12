@@ -10,12 +10,13 @@ use bluer::{Adapter, Uuid, UuidExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::{channel, Receiver};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
 use tokio_util::sync::CancellationToken;
 
 use crate::channel::{ChannelDirection, ChannelMessage, TransferType};
 use crate::errors::AppError;
 use crate::hdl::{BwuRouter, InboundRequest, MigratableStream, ReceiverAdvertisingRefresh, State};
+use crate::sessions::{tasks::SessionTasks, SessionHub};
 
 const INNER_NAME: &str = "ReceiverGattServer";
 
@@ -147,6 +148,7 @@ pub struct ReceiverGattServer {
     bwu_router: BwuRouter,
     receiver_advertiser_refresh: tokio::sync::broadcast::Sender<ReceiverAdvertisingRefresh>,
     mdns_refresh_sender: tokio::sync::broadcast::Sender<()>,
+    sessions: Option<SessionHub>,
 }
 
 impl ReceiverGattServer {
@@ -157,6 +159,7 @@ impl ReceiverGattServer {
         bwu_router: BwuRouter,
         receiver_advertiser_refresh: tokio::sync::broadcast::Sender<ReceiverAdvertisingRefresh>,
         mdns_refresh_sender: tokio::sync::broadcast::Sender<()>,
+        sessions: Option<SessionHub>,
     ) -> Result<Self, anyhow::Error> {
         let session = bluer::Session::new().await?;
         let adapter = session.default_adapter().await?;
@@ -170,10 +173,14 @@ impl ReceiverGattServer {
             bwu_router,
             receiver_advertiser_refresh,
             mdns_refresh_sender,
+            sessions,
         })
     }
 
     pub async fn run(&self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
+        if ctk.is_cancelled() {
+            return Ok(());
+        }
         let service_uuid = Uuid::from_u16(QS_GATT_SERVICE);
         let slot0: Uuid = QS_ADV_SLOT0_UUID.parse()?;
         let weave_write: Uuid = QS_WEAVE_TO_PERIPHERAL.parse()?;
@@ -195,6 +202,10 @@ impl ReceiverGattServer {
         let slot_advertiser_refresh_sender = self.receiver_advertiser_refresh.clone();
         let slot_mdns_refresh_sender = self.mdns_refresh_sender.clone();
         let session_refresh_sender = self.receiver_advertiser_refresh.clone();
+        let tasks = SessionTasks::new(&ctk, 33)?;
+        let callback_tasks = tasks.clone();
+        let bridge_slots = Arc::new(Semaphore::new(1));
+        let sessions = self.sessions.clone();
 
         let app = Application {
             services: vec![Service {
@@ -279,23 +290,42 @@ impl ReceiverGattServer {
                                 let channel_sender = channel_sender.clone();
                                 let bwu_router = bwu_router.clone();
                                 let refresh_sender = session_refresh_sender.clone();
+                                let tasks = callback_tasks.clone();
+                                let sessions = sessions.clone();
+                                let bridge = Arc::clone(&bridge_slots).try_acquire_owned();
                                 Box::pin(async move {
+                                    let Ok(bridge) = bridge else {
+                                        return;
+                                    };
                                     debug!("{INNER_NAME}: weave notify subscription started");
-                                    if let Err(error) = weave_session(
-                                        notifier,
-                                        packet_receiver,
-                                        channel_sender,
-                                        bwu_router,
-                                        tcp_port,
-                                    )
-                                    .await
-                                    {
-                                        warn!(
+                                    let worker_tasks = tasks.clone();
+                                    let lifetime = tasks.lifetime();
+                                    let started = tasks.spawn(async move {
+                                        let _bridge = bridge;
+                                        let result = crate::manager::session::until_stopped(
+                                            &lifetime,
+                                            weave_session(
+                                                notifier,
+                                                packet_receiver,
+                                                channel_sender,
+                                                bwu_router,
+                                                tcp_port,
+                                                worker_tasks,
+                                                sessions,
+                                            ),
+                                        )
+                                        .await;
+                                        if let Some(Err(error)) = result {
+                                            warn!(
                                             "{INNER_NAME}: weave session ended with error: {error}"
                                         );
+                                        }
+                                        let _ = refresh_sender
+                                            .send(ReceiverAdvertisingRefresh::Immediate);
+                                    });
+                                    if let Ok(started) = started {
+                                        let _ = started.await;
                                     }
-                                    let _ =
-                                        refresh_sender.send(ReceiverAdvertisingRefresh::Immediate);
                                 })
                             })),
                             ..Default::default()
@@ -312,9 +342,26 @@ impl ReceiverGattServer {
             "{INNER_NAME}: registering GATT 0x{QS_GATT_SERVICE:04X} (slot0 {} bytes)",
             self.advertisement.len()
         );
-        let handle = self.adapter.serve_gatt_application(app).await?;
-        ctk.cancelled().await;
+        let registration_lifetime = tasks.lifetime();
+        let registration = tokio::select! {
+            biased;
+            _ = registration_lifetime.cancelled() => { tasks.stop().await?; return Ok(()); },
+            registration = self.adapter.serve_gatt_application(app) => registration,
+        };
+        let handle = match registration {
+            Ok(handle) => handle,
+            Err(error) => {
+                tasks.stop().await?;
+                return Err(error.into());
+            }
+        };
+        let lifetime = tasks.lifetime();
+        tokio::select! {
+            _ = ctk.cancelled() => {},
+            _ = lifetime.cancelled() => {},
+        }
         drop(handle);
+        tasks.stop().await?;
         info!("{INNER_NAME}: stopped");
         Ok(())
     }
@@ -326,8 +373,15 @@ async fn weave_session(
     sender: Sender<ChannelMessage>,
     bwu_router: BwuRouter,
     tcp_port: u16,
+    tasks: SessionTasks,
+    sessions: Option<SessionHub>,
 ) -> Result<(), anyhow::Error> {
-    let mut receiver_guard = packet_receiver.lock().await;
+    let notification_stopped = notifier.stopped();
+    tokio::pin!(notification_stopped);
+    let mut receiver_guard = tokio::select! {
+        _ = &mut notification_stopped => return Ok(()),
+        receiver = packet_receiver.lock() => receiver,
+    };
     let receiver = receiver_guard
         .as_mut()
         .ok_or_else(|| anyhow!("weave packet receiver is unavailable"))?;
@@ -335,10 +389,10 @@ async fn weave_session(
     info!("{INNER_NAME}: weave notify session opened");
 
     let selected_packet_size = loop {
-        let packet = receiver
-            .recv()
-            .await
-            .ok_or_else(|| anyhow!("weave packet channel closed during handshake"))?;
+        let packet = tokio::select! {
+            _ = &mut notification_stopped => return Ok(()),
+            packet = receiver.recv() => packet.ok_or_else(|| anyhow!("weave packet channel closed during handshake"))?,
+        };
 
         match parse_connection_request(&packet) {
             Ok(selected) => break selected,
@@ -357,42 +411,27 @@ async fn weave_session(
     let (inbound_side, weave_side) = tokio::io::duplex(64 * 1024);
     let (mut weave_read, mut weave_write) = tokio::io::split(weave_side);
     let inbound_sender = sender.clone();
-    let inbound_error_sender = sender.clone();
     let inbound_bwu_router = bwu_router.clone();
-
-    let inbound_task = tokio::spawn(async move {
-        let mut request = InboundRequest::new(
-            MigratableStream::Ble(inbound_side),
-            "ble-weave".to_owned(),
-            inbound_sender,
-        );
-        request.enable_bandwidth_upgrade();
-
-        loop {
-            match request.handle().await {
-                Ok(()) => {
-                    if request.take_bwu_pending() {
-                        if let Err(error) = request
-                            .do_bandwidth_upgrade(&inbound_bwu_router, tcp_port)
-                            .await
-                        {
-                            warn!(
-                                "{INNER_NAME}: Wi-Fi bandwidth upgrade failed; continuing on BLE: {error}"
-                            );
-                        }
-                    }
-                }
-                Err(error) => {
-                    if !matches!(error.downcast_ref(), Some(AppError::NotAnError)) {
-                        debug!("{INNER_NAME}: BLE inbound ended: {error}");
-                        let _ = inbound_error_sender
-                            .send(inbound_disconnected_message("ble-weave", error.to_string()));
-                    }
-                    break;
-                }
-            }
-        }
-    });
+    let mut request = InboundRequest::new(
+        MigratableStream::Ble(inbound_side),
+        "ble-weave".to_owned(),
+        inbound_sender,
+    );
+    let native = sessions.is_some();
+    if let Some(sessions) = sessions {
+        let session = sessions.open(TransferType::Inbound, None, CancellationToken::new())?;
+        request = request.attach_session(session);
+    }
+    request.enable_bandwidth_upgrade();
+    let lifetime = tasks.lifetime();
+    tasks.spawn(run_inbound_worker(
+        request,
+        sender,
+        inbound_bwu_router,
+        tcp_port,
+        lifetime,
+        native,
+    ))?;
 
     let mut reassembly = Vec::new();
     let mut outbound_buffer = Vec::new();
@@ -402,9 +441,6 @@ async fn weave_session(
     // A peer can disappear without sending a final weave control packet. Observe
     // the GATT subscription lifecycle explicitly so the session mutex is released
     // and a later transfer can start without restarting the application.
-    let notification_stopped = notifier.stopped();
-    tokio::pin!(notification_stopped);
-
     let result = loop {
         tokio::select! {
             _ = &mut notification_stopped => {
@@ -537,14 +573,63 @@ async fn weave_session(
         }
     };
 
-    // Dropping a Tokio JoinHandle detaches the task; it does not cancel it.
-    // Before BWU, closing the duplex bridge makes the inbound task exit on EOF.
-    // After a successful BLE -> TCP migration, the same task must stay alive
-    // and finish the transfer on its new TCP transport.
-    drop(inbound_task);
+    // The group owns the worker after this bridge closes, including after BWU.
     info!("{INNER_NAME}: weave session closed");
     result
 }
+
+async fn run_inbound_worker(
+    mut request: InboundRequest<MigratableStream>,
+    sender: Sender<ChannelMessage>,
+    router: BwuRouter,
+    tcp_port: u16,
+    lifetime: CancellationToken,
+    native: bool,
+) {
+    let cancellation = request.cancellation();
+    let result: Option<Result<(), anyhow::Error>> = crate::manager::session::until_either_stops(&lifetime, &cancellation, async {
+        loop {
+            request.handle().await?;
+            if request.take_bwu_pending() {
+                if let Err(error) = request.do_bandwidth_upgrade(&router, tcp_port).await {
+                    warn!("{INNER_NAME}: Wi-Fi bandwidth upgrade failed; retaining current transport: {error}");
+                }
+            }
+        }
+    }).await;
+    let message = match result {
+        None => crate::manager::cancellation_message(
+            &request.state.id,
+            TransferType::Inbound,
+            &request.state.state,
+            request.state.transfer_metadata.clone(),
+        ),
+        Some(Err(error))
+            if error.downcast_ref::<AppError>().is_none()
+                && !crate::sessions::terminal(&request.state.state)
+                && (!native || request.state.state != State::Initial) =>
+        {
+            let mut message = inbound_disconnected_message(
+                &request.state.id,
+                error.to_string().chars().take(512).collect::<String>(),
+            );
+            message.meta = request.state.transfer_metadata.clone();
+            Some(message)
+        }
+        _ => None,
+    };
+    if let Some(message) = message {
+        if let Some(state) = message.state.clone() {
+            request.record_termination(state);
+        }
+        let _ = sender.send(message);
+    } else if lifetime.is_cancelled() || cancellation.is_cancelled() {
+        request.record_termination(State::Cancelled);
+    }
+}
+
+#[cfg(test)]
+mod managed_tests;
 
 #[cfg(test)]
 mod tests {

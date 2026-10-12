@@ -2,7 +2,7 @@
 
 _Recorded: 2026-10-12. Status: tray-panel and descriptor decisions accepted; file/core boundary and offline service coordinator implemented; live service/native shell pending._
 
-Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). Bounded TCP workers and the owned native dispatch/cancellation/startup seam are implemented in [native-transfer-supervision.md](native-transfer-supervision.md) and [native-managed-dispatch.md](native-managed-dispatch.md). Authenticated IPC, live service mapping and native UI remain pending.
+Coordinator implementation and one-run development verification are recorded in [native-service-coordinator.md](native-service-coordinator.md). Bounded TCP workers and the owned native dispatch/cancellation/startup seam are implemented in [native-transfer-supervision.md](native-transfer-supervision.md) and [native-managed-dispatch.md](native-managed-dispatch.md). Common TCP/BLE session capabilities and consent processing receipts are implemented in [native-session-controls.md](native-session-controls.md). Authenticated IPC, live service mapping and native UI remain pending.
 
 ## Authoritative correction
 

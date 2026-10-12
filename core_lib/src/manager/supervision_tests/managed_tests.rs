@@ -2,12 +2,257 @@ use futures::FutureExt;
 
 use super::*;
 use crate::managed::{ControlLost, ManagedSender};
+use crate::sessions::{SessionControl, SessionError};
+
+async fn session_state(control: &mut SessionControl, target: State) {
+    loop {
+        if control.snapshot().state == target {
+            return;
+        }
+        if control.changed().await.is_err() {
+            assert_eq!(control.snapshot().state, target);
+            return;
+        }
+    }
+}
+
+async fn session_closed(control: &mut SessionControl) {
+    while control.changed().await.is_ok() {}
+    assert!(control.is_closed());
+}
+
+fn inbound_control(sender: &ManagedSender) -> SessionControl {
+    sender
+        .sessions()
+        .active()
+        .unwrap()
+        .into_iter()
+        .find(|control| control.snapshot().direction == TransferType::Inbound)
+        .unwrap()
+}
+
+async fn native_consent(accept: bool) {
+    // Arrange
+    let (outgoing, sends) = managed_rig(TcpConnector).await;
+    let (mut incoming, receives) = managed_rig(TcpConnector).await;
+    let sent = sends
+        .try_send(info("native-send", incoming.address))
+        .unwrap();
+    let received = loop {
+        let event = incoming.events.recv().await.unwrap();
+        if event.state == Some(State::WaitingForUserConsent) {
+            break event;
+        }
+    };
+    let mut control = inbound_control(&receives);
+    let snapshot = control.snapshot();
+    assert_eq!(snapshot.event_id, received.id);
+    assert_ne!(snapshot.event_id, "ble-weave");
+    let token = snapshot.consent.unwrap();
+    // Act: matching legacy commands must not control either native session.
+    incoming
+        .control
+        .send(ChannelMessage {
+            id: snapshot.event_id.clone(),
+            direction: ChannelDirection::FrontToLib,
+            action: Some(crate::channel::ChannelAction::CancelTransfer),
+            ..Default::default()
+        })
+        .unwrap();
+    outgoing
+        .control
+        .send(ChannelMessage {
+            id: "native-send".into(),
+            direction: ChannelDirection::FrontToLib,
+            action: Some(crate::channel::ChannelAction::CancelTransfer),
+            ..Default::default()
+        })
+        .unwrap();
+    control
+        .respond(token, 9, accept)
+        .unwrap()
+        .wait()
+        .await
+        .unwrap();
+    sent.wait_released().await.unwrap();
+    session_state(
+        &mut control,
+        if accept {
+            State::Finished
+        } else {
+            State::Rejected
+        },
+    )
+    .await;
+    session_closed(&mut control).await;
+    // Assert
+    assert_eq!(
+        sent.session().snapshot().state,
+        if accept {
+            State::Finished
+        } else {
+            State::Disconnected
+        }
+    );
+    control
+        .respond(token, 9, accept)
+        .unwrap()
+        .wait()
+        .await
+        .unwrap();
+    let (left, right) = tokio::join!(outgoing.stop(), incoming.stop());
+    assert!(!left
+        .iter()
+        .chain(&right)
+        .any(|event| event.state == Some(State::Cancelled)));
+}
+
+#[tokio::test]
+async fn given_two_managed_tcp_sessions_when_native_consent_accepts_then_transfer_finishes_and_legacy_cancel_is_ignored(
+) {
+    scenario(native_consent(true)).await;
+}
+
+#[tokio::test]
+async fn given_two_managed_tcp_sessions_when_native_consent_rejects_then_exact_receipt_and_terminal_rejection_are_preserved(
+) {
+    scenario(native_consent(false)).await;
+}
+
+#[tokio::test]
+async fn given_established_native_inbound_when_owned_control_cancels_then_partial_read_closes_with_fresh_session_identity(
+) {
+    scenario(async {
+        // Arrange
+        let (run, sender) = managed_rig(TcpConnector).await;
+        let mut peer = TcpStream::connect(run.address).await.unwrap();
+        establish_inbound(&mut peer).await;
+        let mut control = inbound_control(&sender);
+        session_state(&mut control, State::SentUkeyServerInit).await;
+        let original = control.snapshot();
+        peer.write_u32(64).await.unwrap();
+        peer.write_all(&[1]).await.unwrap();
+        // Act
+        control.cancel();
+        session_closed(&mut control).await;
+        let mut next_peer = TcpStream::connect(run.address).await.unwrap();
+        establish_inbound(&mut next_peer).await;
+        let mut next = inbound_control(&sender);
+        session_state(&mut next, State::SentUkeyServerInit).await;
+        control.cancel();
+        // Assert
+        assert_eq!(control.snapshot().state, State::Cancelled);
+        assert_ne!(next.snapshot().id, original.id);
+        assert_ne!(next.snapshot().event_id, original.event_id);
+        assert_eq!(next.snapshot().state, State::SentUkeyServerInit);
+        next.cancel();
+        session_closed(&mut next).await;
+        let events = run.stop().await;
+        for id in [original.event_id, next.snapshot().event_id] {
+            assert_eq!(
+                events
+                    .iter()
+                    .filter(|event| event.id == id
+                        && event.rtype == Some(TransferType::Inbound)
+                        && event.state == Some(State::Cancelled))
+                    .count(),
+                1
+            );
+        }
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn given_native_outbound_cancelled_before_dispatch_when_released_then_session_closes_cancelled_without_connecting(
+) {
+    scenario(async {
+        // Arrange
+        let (connector, mut started, _, _) = script(&[("blocked", false)]);
+        let (run, sender) = managed_rig(connector).await;
+        let control = sender.try_send(info("early", "blocked")).unwrap();
+        let mut session = control.session();
+        // Act
+        control.cancel();
+        control.wait_released().await.unwrap();
+        session_closed(&mut session).await;
+        // Assert
+        assert_eq!(session.snapshot().state, State::Cancelled);
+        assert!(started.try_recv().is_err());
+        assert!(sender.sessions().active().unwrap().is_empty());
+        run.stop().await;
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn given_native_connect_failure_when_owner_releases_then_snapshot_records_disconnection_without_success(
+) {
+    scenario(async {
+        // Arrange
+        let (connector, mut started, gates, _) = script(&[("refused", false)]);
+        let (run, sender) = managed_rig(connector).await;
+        let control = sender
+            .try_send(info("stable-request-id", "refused"))
+            .unwrap();
+        started.recv().await.unwrap();
+        // Act
+        gates["refused"].notify_one();
+        control.wait_released().await.unwrap();
+        // Assert
+        assert_eq!(control.session().snapshot().state, State::Disconnected);
+        assert_eq!(control.session().snapshot().event_id, "stable-request-id");
+        assert!(control.session().is_closed());
+        let events = run.stop().await;
+        assert_eq!(
+            events
+                .iter()
+                .filter(|event| event.id == "stable-request-id"
+                    && event.state == Some(State::Disconnected))
+                .count(),
+            1
+        );
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn given_full_native_session_budget_when_inbound_probe_arrives_then_it_closes_without_fabricated_notification(
+) {
+    scenario(async {
+        // Arrange
+        let (run, sender) = managed_rig(TcpConnector).await;
+        let hub = sender.sessions();
+        let leases: Vec<_> = (0..32)
+            .map(|_| {
+                hub.open(TransferType::Inbound, None, CancellationToken::new())
+                    .unwrap()
+            })
+            .collect();
+        assert!(matches!(
+            hub.open(TransferType::Inbound, None, CancellationToken::new()),
+            Err(SessionError::Full)
+        ));
+        // Act
+        let mut probe = TcpStream::connect(run.address).await.unwrap();
+        eof(&mut probe).await;
+        let events = run.stop().await;
+        // Assert
+        assert!(events.is_empty());
+        assert!(leases
+            .iter()
+            .all(|lease| lease.cancellation().is_cancelled()));
+        drop(leases);
+        assert!(hub.active().unwrap().is_empty());
+    })
+    .await;
+}
 
 async fn managed_rig<C: Connector>(connector: C) -> (Running, ManagedSender) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let (accepted, _received) = mpsc::unbounded_channel();
-    let (queue, receiver) = ManagedSender::channel();
+    let (queue, receiver) = ManagedSender::channel().unwrap();
     let (sender, events) = broadcast::channel(128);
     let mut server = TcpServer {
         endpoint_id: *b"MNGD",

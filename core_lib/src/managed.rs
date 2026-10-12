@@ -5,6 +5,8 @@ use std::fmt;
 use tokio::sync::{mpsc, watch};
 use tokio_util::sync::CancellationToken;
 
+use crate::channel::TransferType;
+use crate::sessions::{SessionControl, SessionHub, SessionLease};
 use crate::SendInfo;
 
 const QUEUE_CAPACITY: usize = 10;
@@ -12,12 +14,14 @@ const QUEUE_CAPACITY: usize = 10;
 #[derive(Clone)]
 pub struct ManagedSender {
     sender: mpsc::Sender<OutboundJob>,
+    sessions: SessionHub,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RejectionKind {
     Full,
     Closed,
+    Unavailable,
 }
 
 /// Admission failed: the adapter still owns the unsent input.
@@ -59,9 +63,13 @@ impl std::error::Error for ControlLost {}
 pub struct TransferControl {
     cancellation: CancellationToken,
     released: watch::Receiver<bool>,
+    session: SessionControl,
 }
 
 impl TransferControl {
+    pub fn session(&self) -> SessionControl {
+        self.session.clone()
+    }
     pub fn cancel(&self) {
         self.cancellation.cancel();
     }
@@ -78,22 +86,54 @@ impl TransferControl {
 }
 
 impl ManagedSender {
-    pub(crate) fn channel() -> (Self, OutboundReceiver) {
+    pub(crate) fn channel() -> Result<(Self, OutboundReceiver), crate::sessions::SessionError> {
         let (sender, receiver) = mpsc::channel(QUEUE_CAPACITY);
-        (Self { sender }, OutboundReceiver::Managed(receiver))
+        // RQS creates one fresh run epoch; tests can inject epochs directly into the hub.
+        let epoch = rand::random::<u128>().max(1);
+        let sessions = SessionHub::new(epoch)?;
+        Ok((
+            Self {
+                sender,
+                sessions: sessions.clone(),
+            },
+            OutboundReceiver::Managed { receiver, sessions },
+        ))
+    }
+
+    pub fn sessions(&self) -> SessionHub {
+        self.sessions.clone()
     }
 
     pub fn try_send(&self, info: SendInfo) -> Result<TransferControl, RejectedSend> {
         let cancellation = CancellationToken::new();
+        let session = match self.sessions.open(
+            TransferType::Outbound,
+            Some(info.id.clone()),
+            cancellation.clone(),
+        ) {
+            Ok(session) => session,
+            Err(error) => {
+                return Err(RejectedSend {
+                    kind: match error {
+                        crate::sessions::SessionError::Full => RejectionKind::Full,
+                        crate::sessions::SessionError::Closed => RejectionKind::Closed,
+                        _ => RejectionKind::Unavailable,
+                    },
+                    request: Box::new(info),
+                })
+            }
+        };
         let (completion, released) = watch::channel(false);
         let control = TransferControl {
             cancellation: cancellation.clone(),
             released,
+            session: session.control(),
         };
         let job = OutboundJob {
             info,
             cancellation,
             completion: Some(completion),
+            session: Some(session),
         };
         self.sender.try_send(job).map_err(|error| {
             let (kind, job) = match error {
@@ -132,14 +172,21 @@ pub(crate) struct OutboundJob {
     pub info: SendInfo,
     pub cancellation: CancellationToken,
     pub completion: Option<watch::Sender<bool>>,
+    pub session: Option<SessionLease>,
 }
 
 impl OutboundJob {
     pub fn release(self) {
         let Self {
-            info, completion, ..
+            info,
+            completion,
+            session,
+            ..
         } = self;
         drop(info);
+        if let Some(mut session) = session {
+            session.observe(&crate::State::Cancelled);
+        }
         acknowledge_release(completion);
     }
 }
@@ -156,13 +203,17 @@ impl From<SendInfo> for OutboundJob {
             info,
             cancellation: CancellationToken::new(),
             completion: None,
+            session: None,
         }
     }
 }
 
 pub(crate) enum OutboundReceiver {
     Legacy(mpsc::Receiver<SendInfo>),
-    Managed(mpsc::Receiver<OutboundJob>),
+    Managed {
+        receiver: mpsc::Receiver<OutboundJob>,
+        sessions: SessionHub,
+    },
 }
 
 impl From<mpsc::Receiver<SendInfo>> for OutboundReceiver {
@@ -172,24 +223,30 @@ impl From<mpsc::Receiver<SendInfo>> for OutboundReceiver {
 }
 
 impl OutboundReceiver {
+    pub fn sessions(&self) -> Option<SessionHub> {
+        match self {
+            Self::Legacy(_) => None,
+            Self::Managed { sessions, .. } => Some(sessions.clone()),
+        }
+    }
     pub async fn recv(&mut self) -> Option<OutboundJob> {
         match self {
             Self::Legacy(receiver) => receiver.recv().await.map(Into::into),
-            Self::Managed(receiver) => receiver.recv().await,
+            Self::Managed { receiver, .. } => receiver.recv().await,
         }
     }
 
     pub fn close(&mut self) {
         match self {
             Self::Legacy(receiver) => receiver.close(),
-            Self::Managed(receiver) => receiver.close(),
+            Self::Managed { receiver, .. } => receiver.close(),
         }
     }
 
     pub fn try_recv(&mut self) -> Result<OutboundJob, mpsc::error::TryRecvError> {
         match self {
             Self::Legacy(receiver) => receiver.try_recv().map(Into::into),
-            Self::Managed(receiver) => receiver.try_recv(),
+            Self::Managed { receiver, .. } => receiver.try_recv(),
         }
     }
 }

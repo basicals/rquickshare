@@ -214,7 +214,7 @@ async fn accept_outgoing(listener: &TcpListener) -> TcpStream {
     socket
 }
 
-async fn establish_inbound(socket: &mut TcpStream) {
+pub(crate) async fn establish_inbound(socket: &mut TcpStream) {
     let connection = OfflineFrame {
         version: Some(offline_frame::Version::V1.into()),
         v1: Some(V1Frame {
@@ -688,7 +688,7 @@ async fn given_pre_cancelled_outbound_context_when_started_then_payload_closes_w
     // Arrange
     let (connector, mut started, _, _) = script(&[("blocked", false)]);
     let (sender, mut events) = broadcast::channel(8);
-    let context = SessionContext::new(*b"TEST", sender, Arc::new(connector));
+    let context = SessionContext::new(*b"TEST", sender, Arc::new(connector), None);
     let token = CancellationToken::new();
     token.cancel();
     let (ob, weak) = owned_payload();

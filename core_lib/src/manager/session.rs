@@ -14,10 +14,11 @@ use super::{
 };
 use crate::errors::AppError;
 use crate::hdl::{BwuRouter, InboundRequest, OutboundRequest};
+use crate::sessions::{SessionHub, SessionLease};
 use crate::utils::RemoteDeviceInfo;
 
 /// Cancellation encloses the complete operation, including its initial I/O.
-pub(super) async fn until_stopped<T>(
+pub(crate) async fn until_stopped<T>(
     token: &CancellationToken,
     operation: impl Future<Output = T>,
 ) -> Option<T> {
@@ -50,6 +51,7 @@ pub(super) struct SessionContext<C> {
     endpoint_id: [u8; 4],
     sender: Sender<ChannelMessage>,
     connector: Arc<C>,
+    sessions: Option<SessionHub>,
 }
 
 impl<C> Clone for SessionContext<C> {
@@ -58,6 +60,7 @@ impl<C> Clone for SessionContext<C> {
             endpoint_id: self.endpoint_id,
             sender: self.sender.clone(),
             connector: Arc::clone(&self.connector),
+            sessions: self.sessions.clone(),
         }
     }
 }
@@ -67,11 +70,19 @@ impl<C: Connector> SessionContext<C> {
         endpoint_id: [u8; 4],
         sender: Sender<ChannelMessage>,
         connector: Arc<C>,
+        sessions: Option<SessionHub>,
     ) -> Self {
         Self {
             endpoint_id,
             sender,
             connector,
+            sessions,
+        }
+    }
+
+    pub(super) fn close_sessions(&self) {
+        if let Some(sessions) = &self.sessions {
+            sessions.close();
         }
     }
 
@@ -85,18 +96,25 @@ impl<C: Connector> SessionContext<C> {
 
     #[cfg(test)]
     pub(super) async fn execute_outbound(&self, token: CancellationToken, info: SendInfo) {
-        self.execute_managed(token, CancellationToken::new(), info)
+        self.execute_session(token, CancellationToken::new(), info, None)
             .await;
     }
 
-    pub(super) async fn execute_managed(
+    pub(super) async fn execute_session(
         &self,
         token: CancellationToken,
         cancellation: CancellationToken,
         info: SendInfo,
+        mut session: Option<SessionLease>,
     ) {
         let id = info.id.clone();
-        if let Err(error) = self.connect(&token, &cancellation, info).await {
+        if let Err(error) = self
+            .connect(&token, &cancellation, info, &mut session)
+            .await
+        {
+            if let Some(session) = session.as_mut() {
+                session.observe(&State::Disconnected);
+            }
             error!("TcpServer: outbound worker failed: {error}");
             if let Some(message) = outbound_failure(&id, &State::Initial, None, &error) {
                 let _ = self.sender.send(message);
@@ -109,11 +127,15 @@ impl<C: Connector> SessionContext<C> {
         token: &CancellationToken,
         cancellation: &CancellationToken,
         info: SendInfo,
+        session: &mut Option<SessionLease>,
     ) -> Result<(), anyhow::Error> {
         let Some(socket) =
             until_either_stops(token, cancellation, self.connector.connect(&info.addr)).await
         else {
             self.cancel_queued(&info.id);
+            if let Some(session) = session.as_mut() {
+                session.observe(&State::Cancelled);
+            }
             return Ok(());
         };
         let mut request = OutboundRequest::new(
@@ -127,6 +149,9 @@ impl<C: Connector> SessionContext<C> {
                 name: info.name,
             },
         )?;
+        if let Some(session) = session.take() {
+            request = request.attach_session(session);
+        }
 
         let result: Option<Result<(), anyhow::Error>> =
             until_either_stops(token, cancellation, async {
@@ -154,6 +179,9 @@ impl<C: Connector> SessionContext<C> {
             _ => None,
         };
         if let Some(message) = message {
+            if let Some(state) = message.state.clone() {
+                request.record_termination(state);
+            }
             let _ = self.sender.send(message);
         }
         Ok(())
@@ -194,12 +222,21 @@ impl<C: Connector> SessionContext<C> {
         remote: SocketAddr,
     ) {
         let mut request = InboundRequest::new(socket, remote.to_string(), self.sender.clone());
-        let result: Option<Result<(), anyhow::Error>> = until_stopped(token, async {
-            loop {
-                request.handle().await?;
-            }
-        })
-        .await;
+        if let Some(sessions) = self.sessions.as_ref() {
+            let Ok(session) = sessions.open(TransferType::Inbound, None, CancellationToken::new())
+            else {
+                return;
+            };
+            request = request.attach_session(session);
+        }
+        let cancellation = request.cancellation();
+        let result: Option<Result<(), anyhow::Error>> =
+            until_either_stops(token, &cancellation, async {
+                loop {
+                    request.handle().await?;
+                }
+            })
+            .await;
         let message = match result {
             None => cancellation_message(
                 &request.state.id,
@@ -225,12 +262,17 @@ impl<C: Connector> SessionContext<C> {
             _ => None,
         };
         if let Some(message) = message {
+            if let Some(state) = message.state.clone() {
+                request.record_termination(state);
+            }
             let _ = self.sender.send(message);
+        } else if result_is_cancelled(token, &cancellation) {
+            request.record_termination(State::Cancelled);
         }
     }
 }
 
-async fn until_either_stops<T>(
+pub(crate) async fn until_either_stops<T>(
     service: &CancellationToken,
     request: &CancellationToken,
     operation: impl Future<Output = T>,
@@ -241,4 +283,8 @@ async fn until_either_stops<T>(
         _ = request.cancelled() => None,
         result = operation => Some(result),
     }
+}
+
+fn result_is_cancelled(service: &CancellationToken, request: &CancellationToken) -> bool {
+    service.is_cancelled() || request.is_cancelled()
 }

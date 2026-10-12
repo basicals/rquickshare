@@ -36,6 +36,7 @@ mod manager;
 mod protocol;
 #[cfg(target_os = "linux")]
 pub mod service;
+pub mod sessions;
 mod utils;
 
 pub use hdl::{
@@ -136,7 +137,7 @@ impl RQS {
     pub async fn run_managed(
         &mut self,
     ) -> Result<(managed::ManagedSender, broadcast::Receiver<()>), anyhow::Error> {
-        let (sender, receiver) = managed::ManagedSender::channel();
+        let (sender, receiver) = managed::ManagedSender::channel()?;
         let nearby = self.start(receiver).await?;
         Ok((sender, nearby))
     }
@@ -192,6 +193,8 @@ impl RQS {
         info!("TcpListener on: {}", binded_addr);
 
         let bwu_router = crate::hdl::BwuRouter::new();
+        #[cfg(all(feature = "experimental", target_os = "linux"))]
+        let managed_sessions = receiver.sessions();
 
         // Start TcpServer in own "task". The same listener also accepts
         // Wi-Fi bandwidth-upgrade sockets routed from active BLE sessions.
@@ -211,7 +214,11 @@ impl RQS {
         #[cfg(feature = "experimental")]
         {
             // Don't threat BleListener error as fatal, it's a nice to have.
-            if let Ok(ble) = BleListener::new(self.ble_sender.clone()).await {
+            let initialized =
+                manager::session::until_stopped(ctoken, BleListener::new(self.ble_sender.clone()))
+                    .await
+                    .ok_or_else(|| anyhow!("Core transports stopped during BLE initialization"))?;
+            if let Ok(ble) = initialized {
                 let ctk = ctoken.clone();
                 let foreground_rx = self.foreground_receiver.clone();
                 tracker.spawn(async move {
@@ -249,7 +256,12 @@ impl RQS {
             let visibility_rx = self.visibility_receiver.clone();
             let ctk = ctoken.clone();
             tracker.spawn(async move {
-                let blea = match BleAdvertiser::new(visibility_rx).await {
+                let Some(initialized) =
+                    manager::session::until_stopped(&ctk, BleAdvertiser::new(visibility_rx)).await
+                else {
+                    return;
+                };
+                let blea = match initialized {
                     Ok(advertiser) => advertiser,
                     Err(error) => {
                         error!("Couldn't init BleAdvertiser: {error}");
@@ -269,7 +281,15 @@ impl RQS {
             let receiver_ctk = ctoken.clone();
             let advertiser_refresh_sender = receiver_adv_refresh_sender.clone();
             tracker.spawn(async move {
-                match ReceiverAdvertiser::new(visibility_rx, advertiser_refresh_sender).await {
+                let Some(initialized) = manager::session::until_stopped(
+                    &receiver_ctk,
+                    ReceiverAdvertiser::new(visibility_rx, advertiser_refresh_sender),
+                )
+                .await
+                else {
+                    return;
+                };
+                match initialized {
                     Ok(advertiser) => {
                         if let Err(error) = advertiser.run(receiver_ctk).await {
                             error!("ReceiverAdvertiser stopped with error: {error}");
@@ -284,16 +304,20 @@ impl RQS {
             let gatt_bwu_router = bwu_router.clone();
             let gatt_tcp_port = binded_addr.port();
             tracker.spawn(async move {
-                match ReceiverGattServer::new(
+                let initialized = tokio::select! {
+                    biased;
+                    _ = gatt_ctk.cancelled() => return,
+                    result = ReceiverGattServer::new(
                     receiver_advertisement,
                     gatt_sender,
                     gatt_tcp_port,
                     gatt_bwu_router,
                     receiver_adv_refresh_sender,
                     receiver_mdns_refresh_sender,
-                )
-                .await
-                {
+                    managed_sessions,
+                ) => result,
+                };
+                match initialized {
                     Ok(server) => {
                         if let Err(error) = server.run(gatt_ctk).await {
                             error!("ReceiverGattServer stopped with error: {error}");

@@ -16,7 +16,7 @@ use crate::hdl::{
     peek_client_introduction, BwuClientIntroductionIdentity, BwuRouter, OutboundPayload, State,
 };
 use crate::managed::{acknowledge_release, OutboundJob, OutboundReceiver};
-mod session;
+pub(crate) mod session;
 use session::{Connector, SessionContext, TcpConnector};
 
 const INNER_NAME: &str = "TcpServer";
@@ -124,7 +124,7 @@ fn terminal(state: &State) -> bool {
     )
 }
 
-fn cancellation_message(
+pub(crate) fn cancellation_message(
     id: &str,
     direction: TransferType,
     state: &State,
@@ -232,6 +232,7 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
             self.endpoint_id,
             self.sender.clone(),
             Arc::clone(&self.connector),
+            self.connect_receiver.sessions(),
         )
     }
 
@@ -280,14 +281,14 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
                 Ok(permit) = Arc::clone(&sessions).acquire_owned(),
                     if pending.as_ref().is_some_and(|job| !active_ids.contains(&job.info.id)) => {
                     if let Some(job) = pending.take() {
-                        let OutboundJob { info, cancellation, completion } = job;
+                        let OutboundJob { info, cancellation, completion, session } = job;
                         let id = info.id.clone();
                         active_ids.insert(id.clone());
                         let context = context.clone();
                         let token = lifetime.child_token();
                         workers.spawn(async move {
                             let _permit = permit;
-                            context.execute_managed(token, cancellation, info).await;
+                            context.execute_session(token, cancellation, info, session).await;
                             acknowledge_release(completion);
                             Some(id)
                         });
@@ -324,6 +325,7 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
         // Close admission first; then cancel and join every owned worker.
         self.connect_receiver.close();
         lifetime.cancel();
+        context.close_sessions();
         if let Some(job) = pending.take() {
             context.cancel_queued(&job.info.id);
             job.release();
@@ -348,7 +350,7 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
 }
 
 #[cfg(all(test, target_os = "linux"))]
-mod supervision_tests;
+pub(crate) mod supervision_tests;
 
 #[cfg(test)]
 mod tests {

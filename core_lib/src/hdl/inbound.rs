@@ -26,7 +26,7 @@ use crate::location_nearby_connections::payload_transfer_frame::{
     payload_header, PacketType, PayloadChunk, PayloadHeader,
 };
 use crate::location_nearby_connections::{KeepAliveFrame, OfflineFrame, PayloadTransferFrame};
-use crate::protocol::{checked_payload_buffer_size, SANE_FRAME_LENGTH, SANITY_DURATION};
+use crate::protocol::{checked_payload_buffer_size, SANE_FRAME_LENGTH};
 use crate::securegcm::ukey2_alert::AlertType;
 use crate::securegcm::{
     ukey2_message, DeviceToDeviceMessage, GcmMetadata, Type, Ukey2Alert, Ukey2ClientFinished,
@@ -512,7 +512,8 @@ pub struct InboundRequest<S = TcpStream> {
     socket: S,
     pub state: InnerState,
     sender: Sender<ChannelMessage>,
-    receiver: Receiver<ChannelMessage>,
+    receiver: Option<Receiver<ChannelMessage>>,
+    session: Option<crate::sessions::SessionLease>,
     bandwidth_upgrade_enabled: bool,
     bwu_pending: bool,
     peer_endpoint_id: Option<String>,
@@ -533,7 +534,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 ..Default::default()
             },
             sender,
-            receiver,
+            receiver: Some(receiver),
+            session: None,
             bandwidth_upgrade_enabled: false,
             bwu_pending: false,
             peer_endpoint_id: None,
@@ -542,6 +544,29 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
 
     pub fn enable_bandwidth_upgrade(&mut self) {
         self.bandwidth_upgrade_enabled = true;
+    }
+
+    pub(crate) fn attach_session(mut self, session: crate::sessions::SessionLease) -> Self {
+        self.state.id = session.event_id();
+        self.receiver = None;
+        self.session = Some(session);
+        self
+    }
+
+    pub(crate) fn cancellation(&self) -> tokio_util::sync::CancellationToken {
+        self.session
+            .as_ref()
+            .map(|session| session.cancellation())
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn record_termination(&mut self, state: State) {
+        if !crate::sessions::terminal(&self.state.state) {
+            self.state.state = state;
+            if let Some(session) = self.session.as_mut() {
+                session.observe(&self.state.state);
+            }
+        }
     }
 
     pub fn take_bwu_pending(&mut self) -> bool {
@@ -640,7 +665,13 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         let mut length_buf = [0u8; 4];
 
         tokio::select! {
-            i = self.receiver.recv() => {
+            command = crate::sessions::consent_command(&mut self.session) => {
+                if let Some(command) = command {
+                    let answer = self.session.as_mut().and_then(|session| session.apply(command, &self.state.state));
+                    if let Some(accept) = answer { self.apply_consent(accept).await?; }
+                }
+            },
+            i = crate::sessions::legacy_message(&mut self.receiver) => {
                 match i {
                     Ok(channel_msg) => {
                         if channel_msg.direction == ChannelDirection::LibToFront {
@@ -654,20 +685,10 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         debug!("inbound: got: {:?}", channel_msg);
                         match channel_msg.action {
                             Some(ChannelAction::AcceptTransfer) => {
-                                self.accept_transfer().await?;
+                                self.apply_consent(true).await?;
                             },
                             Some(ChannelAction::RejectTransfer) => {
-                                self.update_state(
-                                    |e| {
-                                        e.state = State::Rejected;
-                                    },
-                                    true,
-                                ).await;
-
-                                self.reject_transfer(Some(
-                                    sharing_nearby::connection_response_frame::Status::Reject
-                                )).await?;
-                                return Err(anyhow!(crate::errors::AppError::NotAnError));
+                                self.apply_consent(false).await?;
                             },
                             Some(ChannelAction::CancelTransfer) => {
                                 self.update_state(
@@ -1703,6 +1724,19 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         Ok(())
     }
 
+    async fn apply_consent(&mut self, accept: bool) -> Result<(), anyhow::Error> {
+        if accept {
+            return self.accept_transfer().await;
+        }
+        self.update_state(|state| state.state = State::Rejected, true)
+            .await;
+        self.reject_transfer(Some(
+            sharing_nearby::connection_response_frame::Status::Reject,
+        ))
+        .await?;
+        Err(anyhow!(crate::errors::AppError::NotAnError))
+    }
+
     async fn reject_transfer(
         &mut self,
         reason: Option<sharing_nearby::connection_response_frame::Status>,
@@ -2022,6 +2056,10 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
     {
         f(&mut self.state);
 
+        if let Some(session) = self.session.as_mut() {
+            session.observe(&self.state.state);
+        }
+
         if !inform {
             return;
         }
@@ -2035,10 +2073,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             meta: self.state.transfer_metadata.clone(),
             ..Default::default()
         });
-        // Add a small sleep timer to allow the Tokio runtime to have
-        // some spare time to process channel's message. Otherwise it
-        // get spammed by new requests. Currently set to 10 micro secs.
-        tokio::time::sleep(SANITY_DURATION).await;
+        tokio::task::yield_now().await;
     }
 }
 
@@ -2850,5 +2885,72 @@ mod security_tests {
             .unwrap()
             .endpoint_id = Some(String::new());
         assert!(validate_client_introduction(&empty_id.encode_to_vec()).is_err());
+    }
+}
+
+#[cfg(all(test, feature = "experimental", target_os = "linux"))]
+mod managed_migration_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn given_managed_ble_request_when_stream_moves_to_tcp_then_session_identity_and_cancellation_survive(
+    ) {
+        tokio::time::timeout(Duration::from_secs(5), async {
+            // Arrange
+            let hub = crate::sessions::SessionHub::new(91).unwrap();
+            let session = hub
+                .open(
+                    crate::channel::TransferType::Inbound,
+                    None,
+                    tokio_util::sync::CancellationToken::new(),
+                )
+                .unwrap();
+            let control = session.control();
+            let before = control.snapshot();
+            let (sender, _events) = tokio::sync::broadcast::channel(16);
+            let (ble, _old_peer) = tokio::io::duplex(4096);
+            let mut request = InboundRequest::new(
+                crate::hdl::MigratableStream::Ble(ble),
+                "old-ble".into(),
+                sender,
+            )
+            .attach_session(session);
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let mut peer = tokio::net::TcpStream::connect(listener.local_addr().unwrap())
+                .await
+                .unwrap();
+            let (tcp, _) = listener.accept().await.unwrap();
+            // Act: the same stream replacement used by do_bandwidth_upgrade, without changing its wire negotiation.
+            request.socket = crate::hdl::MigratableStream::Tcp(tcp);
+            let cancellation = request.cancellation();
+            let worker = tokio::spawn(async move {
+                let result: Option<Result<(), anyhow::Error>> =
+                    crate::manager::session::until_either_stops(
+                        &tokio_util::sync::CancellationToken::new(),
+                        &cancellation,
+                        async {
+                            loop {
+                                request.handle().await?;
+                            }
+                        },
+                    )
+                    .await;
+                assert!(result.is_none());
+                request.record_termination(State::Cancelled);
+                (request.state.id.clone(), request.state.state.clone())
+            });
+            crate::manager::supervision_tests::establish_inbound(&mut peer).await;
+            control.cancel();
+            let (event_id, state) = worker.await.unwrap();
+            // Assert
+            assert_eq!(event_id, before.event_id);
+            assert_eq!(control.snapshot().id, before.id);
+            assert_eq!(state, State::Cancelled);
+            assert_eq!(control.snapshot().state, State::Cancelled);
+            assert!(control.is_closed());
+            assert!(hub.active().unwrap().is_empty());
+        })
+        .await
+        .expect("managed migration deadlocked");
     }
 }

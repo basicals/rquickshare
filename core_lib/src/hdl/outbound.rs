@@ -31,7 +31,7 @@ use crate::location_nearby_connections::payload_transfer_frame::{
     payload_header, PacketType, PayloadChunk, PayloadHeader,
 };
 use crate::location_nearby_connections::{KeepAliveFrame, OfflineFrame, PayloadTransferFrame};
-use crate::protocol::{checked_payload_buffer_size, SANE_FRAME_LENGTH, SANITY_DURATION};
+use crate::protocol::{checked_payload_buffer_size, SANE_FRAME_LENGTH};
 use crate::securegcm::ukey2_alert::AlertType;
 use crate::securegcm::ukey2_client_init::CipherCommitment;
 use crate::securegcm::{
@@ -545,7 +545,8 @@ pub struct OutboundRequest {
     socket: TcpStream,
     pub state: InnerState,
     sender: Sender<ChannelMessage>,
-    receiver: Receiver<ChannelMessage>,
+    receiver: Option<Receiver<ChannelMessage>>,
+    session: Option<crate::sessions::SessionLease>,
     payload: OutboundPayload,
     text_payload_id: Option<i64>,
     cleanup_files: Vec<ManagedEphemeralFile>,
@@ -619,7 +620,8 @@ impl OutboundRequest {
                 ..Default::default()
             },
             sender,
-            receiver,
+            receiver: Some(receiver),
+            session: None,
             payload,
             text_payload_id: None,
             cleanup_files,
@@ -627,8 +629,16 @@ impl OutboundRequest {
     }
 
     fn take_pending_cancel_request(&mut self) -> Result<bool, anyhow::Error> {
+        if let Some(session) = self.session.as_ref() {
+            return Ok(session.cancellation().is_cancelled());
+        }
         loop {
-            match self.receiver.try_recv() {
+            match self
+                .receiver
+                .as_mut()
+                .ok_or_else(|| anyhow!("Missing legacy control receiver"))?
+                .try_recv()
+            {
                 Ok(message) => {
                     if is_cancel_request(&message, &self.state.id) {
                         debug!("outbound: received cancellation while sending");
@@ -651,7 +661,7 @@ impl OutboundRequest {
         let mut length_buf = [0u8; 4];
 
         tokio::select! {
-            i = self.receiver.recv() => {
+            i = crate::sessions::legacy_message(&mut self.receiver) => {
                 match i {
                     Ok(channel_msg) => {
                         if channel_msg.direction == ChannelDirection::LibToFront {
@@ -693,6 +703,22 @@ impl OutboundRequest {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn attach_session(mut self, session: crate::sessions::SessionLease) -> Self {
+        self.state.id = session.event_id();
+        self.receiver = None;
+        self.session = Some(session);
+        self
+    }
+
+    pub(crate) fn record_termination(&mut self, state: State) {
+        if !crate::sessions::terminal(&self.state.state) {
+            self.state.state = state;
+            if let Some(session) = self.session.as_mut() {
+                session.observe(&self.state.state);
+            }
+        }
     }
 
     pub async fn _handle(&mut self, length_buf: [u8; 4]) -> Result<(), anyhow::Error> {
@@ -1866,6 +1892,10 @@ impl OutboundRequest {
     {
         f(&mut self.state);
 
+        if let Some(session) = self.session.as_mut() {
+            session.observe(&self.state.state);
+        }
+
         if !inform {
             return;
         }
@@ -1878,10 +1908,7 @@ impl OutboundRequest {
             meta: self.state.transfer_metadata.clone(),
             ..Default::default()
         });
-        // Add a small sleep timer to allow the Tokio runtime to have
-        // some spare time to process channel's message. Otherwise it
-        // get spammed by new requests. Currently set to 10 micro secs.
-        tokio::time::sleep(SANITY_DURATION).await;
+        tokio::task::yield_now().await;
     }
 }
 
