@@ -1,6 +1,6 @@
 # Native desktop migration and context-menu sender
 
-_2026-10-12. Mode A. Status: concrete proposal for API/security review; no native implementation yet._
+_2026-10-12. Mode A. Status: descriptor input approved; offline file-boundary implementation in progress._
 
 ## Accepted scope and source of truth
 
@@ -54,7 +54,7 @@ Common to both options below:
 | A — same-user local paths first | Thin clients submit selected local file/folder paths; the same-UID daemon validates and opens them using existing core preparation | Preserves current core API and folder behavior; isolates desktop migration from protocol/file-reader refactoring | Same-user callers can request any daemon-readable path; names can change between selection and open; not sufficient as a sandbox boundary |
 | B — descriptor/capability input first (recommended after security review) | Clients open selected regular files and submit handles plus bounded relative-name manifests; folders require a defined enumeration/handle contract | Pins opened objects across rename/replacement and supports a narrower selected-object model | Requires core input/ownership refactor now, directory semantics, descriptor-pressure handling and independent compatibility tests; FDs alone neither authenticate user intent nor freeze file contents |
 
-Revised recommendation: B for the durable service contract. The earlier recommendation of A prioritized migration isolation and reuse, not the strongest file-access boundary. The user challenged that tradeoff and asked for the architecturally cleaner approach; no option has been approved. Keep paths at the desktop ingress adapter and pass acquired resources across the service boundary. Do not first publish a path-opening daemon API that will need replacing.
+Decision: the user approved B for the durable service contract. The earlier recommendation of A prioritized migration isolation and reuse, not the strongest file-access boundary. Keep paths at the desktop ingress adapter and pass acquired resources across the service boundary. Do not first publish a path-opening daemon API that will need replacing.
 
 ### Security review and recommended B contract
 
@@ -62,7 +62,7 @@ Passing paths is not inherently a remotely exploitable vulnerability: the propos
 
 Source inspection found a concrete check/open race in current outbound preparation: `collect_outbound_file_candidates` checks metadata/symlinks, then `prepare_outbound_files` later uses `File::open(path)`. Folder traversal similarly resolves directory names repeatedly. An intervening rename/symlink replacement can change the opened object; checking that the result is a regular file does not establish that it is the originally selected object. This is a source-level finding, not an executed exploit or evidence of a remote attack. Existing non-racing symlink tests do not cover this race. Do not describe the existing file preparation as race-safe.
 
-Recommended invariants for option B, pending approval:
+Accepted invariants for option B:
 
 1. The CLI/file chooser resolves paths only in an ingress adapter. Acquire read-only file handles safely, then validate the acquired object. Never use a check-then-ordinary-open sequence as a security guarantee. Folder acquisition uses a root directory handle and confined descriptor-relative traversal (for example `openat2` resolution restrictions), rejecting symlinks/escapes and special files. Root selection itself still needs a safe acquisition policy; no design can retrospectively prove which object a file manager displayed before invocation.
 2. The service accepts owned read handles and bounded metadata for regular files; file names are display/protocol metadata, not host paths to reopen. Use explicit snapshot/selection types rather than `Vec<String>` in the core adapter. Wire framing and crypto remain unchanged. Original source files never gain delete/cleanup ownership.
@@ -121,9 +121,10 @@ The native migration does not complete Google parity. The full feature/peer inve
 
 - D0 analysis and proposal: complete.
 - User interaction decision: option A accepted; oversized drop zone rejected; context-menu sender requested.
-- Remaining STOP FACTOR: approve option A or B for the file-selection/security boundary and associated service proposal before D1. No native code, desktop registration, settings change or process activation has been performed.
-- Security review: recommendation revised from A to B after inspecting the existing check/open race. The user has asked for an assessment, not selected either option. B's exact bounded folder/handle schema still needs to be recorded and reviewed before publication; the A API table is an alternative only.
-- After approval: record it here first, freeze D1 schema/limits and test inventory, then implement the bounded offline foundation. Document later findings and completed stages in this file.
+- File/security decision: B approved. The A API table is historical only and must not be implemented. No additional approval is needed for the already accepted descriptor-based file-input refactor.
+- The user also authorized immediate fixes to brittle internal workarounds across projects, asking before substantial refactors. The preference is persisted in the global agent guide. It does not authorize unrelated cleanup.
+- The first implementation slice and complete scoped branch/test inventory are recorded in [native-file-input.md](native-file-input.md). This implements the reusable file resource boundary and core entrypoint before publishing D-Bus methods. No desktop registration, settings migration or process activation is part of that slice.
+- Later service wire schemas are not frozen by the historical A table. Record their concrete contracts before service implementation; ask only for new significant decisions outside the accepted design.
 
 ## Primary references checked on 2026-10-12
 
