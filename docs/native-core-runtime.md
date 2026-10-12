@@ -1,6 +1,6 @@
 # Native coordinator/core runtime
 
-Status: R0–R3 complete and verified offline, 2026-10-12. Mode A. Initial plan committed before code in `9a1bcfb`; event/admission foundation implemented in `fb316c2`.
+Status: R0–R3 complete and verified offline, 2026-10-12. Mode A. Initial plan committed before code in `9a1bcfb`; event/admission foundation implemented in `fb316c2`; runtime implemented in `c7674e8`.
 
 ## Scope and rationale
 
@@ -100,3 +100,5 @@ Positive=3, N1=2, N2=3, N3=3, N4=1, N5=3, N6=5, N7=1, N8=0, N9=7, N10=0, N11=0, 
 Use `NativeRuntime::new`, retain it, await `start`, then serialize authenticated commands with `step` in the future service owner. On failure/abandonment await `shutdown` and create a fresh instance; Drop alone cannot certify cleanup. A snapshot/endpoint update must be delivered after step progress in the future bus adapter. Client tokens remain internal capabilities, not caller authentication.
 
 Next: concrete authenticated/versioned D-Bus descriptor transactions and fixtures, daemon/exclusive service-name startup, bounded terminal/replay retention review, settings migration, GTK tray anchoring/notifications and Dolphin ingress. The core runtime is implemented; it is not a registered daemon or a native UI. Event loss permanently pauses new work; restart/recovery and terminal-history eviction remain unreviewed. Acquire the unique bus name before starting transports and exclude the legacy GUI as a competing transport owner. Full Google identity/contact/own-device/QR/transport parity and physical Android/Windows/BlueZ/KDE remain open.
+
+The next public selection API decision is prepared in [native-dbus-selection-review.md](native-dbus-selection-review.md). Implementation is paused at this new contract choice; no earlier session/runtime approval is pending.
