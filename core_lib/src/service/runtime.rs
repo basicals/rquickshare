@@ -201,6 +201,44 @@ impl NativeRuntime {
     ) -> Result<SelectionId, Error> {
         self.coordinator.create_selection(client, selection)
     }
+    pub fn begin_selection(
+        &mut self,
+        client: ClientId,
+        request: &str,
+    ) -> Result<super::UploadId, Error> {
+        self.coordinator.begin_selection(client, request)
+    }
+    pub fn append_files(
+        &mut self,
+        client: ClientId,
+        upload: super::UploadId,
+        sequence: u32,
+        files: Vec<crate::file_source::OpenedFile>,
+    ) -> Result<u32, Error> {
+        self.coordinator
+            .append_files(client, upload, sequence, files)
+    }
+    pub fn get_upload(
+        &self,
+        client: ClientId,
+        upload: super::UploadId,
+    ) -> Result<super::uploads::UploadSnapshot, Error> {
+        self.coordinator.get_upload(client, upload)
+    }
+    pub fn commit_selection(
+        &mut self,
+        client: ClientId,
+        upload: super::UploadId,
+    ) -> Result<SelectionId, Error> {
+        self.coordinator.commit_selection(client, upload)
+    }
+    pub fn abort_selection(
+        &mut self,
+        client: ClientId,
+        upload: super::UploadId,
+    ) -> Result<(), Error> {
+        self.coordinator.abort_selection(client, upload)
+    }
     pub fn discard_selection(
         &mut self,
         client: ClientId,

@@ -4,7 +4,7 @@
 
 ## Milestones and rollback
 
-- [ ] S1: Add owner-bound Begin/Append/Get/Commit/Abort to the coordinator, include preparations in its existing aggregate reservations, and expose the same operations through NativeRuntime. Extract shared manifest validation without changing acquisition behavior. Add focused domain regression checks.
+- [x] S1: Add owner-bound Begin/Append/Get/Commit/Abort to the coordinator, include preparations in its existing aggregate reservations, and expose the same operations through NativeRuntime. Extract shared manifest validation without changing acquisition behavior. Add focused domain regression checks.
 - [ ] S2: Add a Linux-only zbus transport with atomic CLOEXEC FD receipt, fixed ancillary storage, aggregate frame FD limit and header length check before zbus allocates the frame. Add receive-boundary checks.
 - [ ] S3: Implement a serial authenticated selection adapter and retained runtime host, fixed introspection fixture, private-bus integration and cleanup checks. No live session registration, activation files, GTK, Dolphin or account API in this slice.
 - [ ] S4: Run appropriate core checks once, record actual outcomes, update the diary and make reversible conventional commits on dev.
@@ -48,7 +48,7 @@ Private bus: a test-owned foreground dbus-daemon with child kill+wait RAII; exer
 
 ## Verification observations
 
-Not run yet for this slice. Earlier runtime results remain in native-core-runtime.md and are not replaced by plans here.
+S1: `cargo test --manifest-path core_lib/Cargo.toml service::uploads --lib` passed all 13 new domain methods (table-driven boundaries included), 0 failures/ignored, in 0.04 s. A temporary unused adapter accessor warning was removed before commit; it will be added with its actual consumer in S3. The owned command exited; terminal closed. S2/S3/final checks not run yet. Earlier runtime results remain in native-core-runtime.md and are not replaced by plans here.
 
 ## Dependency review
 

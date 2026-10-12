@@ -149,11 +149,16 @@ impl fmt::Debug for OpenedSelection {
 
 impl OpenedSelection {
     pub fn from_files(files: Vec<OpenedFile>, limits: SelectionLimits) -> io::Result<Self> {
-        let mut builder = SelectionBuilder::new(limits)?;
-        for file in files {
-            builder.push(file)?;
+        let total_bytes = validate_files(files.iter(), limits)?;
+        if files.is_empty() {
+            return Err(invalid("Selection contains no regular files"));
         }
-        builder.finish()
+        Ok(Self { files, total_bytes })
+    }
+
+    /// Internal transaction commit: the same validator already checked this manifest.
+    pub(crate) fn from_validated_files(files: Vec<OpenedFile>, total_bytes: u64) -> Self {
+        Self { files, total_bytes }
     }
 
     /// Desktop ingress only. A daemon IPC endpoint must accept handles, not invoke this on caller paths.
@@ -180,10 +185,42 @@ impl OpenedSelection {
     }
 }
 
+/// Validate a candidate manifest without cloning handles or mutating a preparation.
+pub(crate) fn validate_files<'a>(
+    files: impl Iterator<Item = &'a OpenedFile>,
+    limits: SelectionLimits,
+) -> io::Result<u64> {
+    limits.validate()?;
+    let mut names: Vec<&str> = Vec::new();
+    let mut total = 0;
+    for file in files {
+        if file.relative_name.split('/').count() - 1 > limits.max_depth {
+            return Err(invalid("Selection manifest depth budget exceeded"));
+        }
+        if names.len() >= limits.max_files {
+            return Err(invalid("Selection file budget exceeded"));
+        }
+        total = checked_total(total, file.size, limits.max_bytes)?;
+        if names.iter().any(|name| {
+            *name == file.relative_name
+                || name
+                    .strip_prefix(&file.relative_name)
+                    .is_some_and(|suffix| suffix.starts_with('/'))
+                || file
+                    .relative_name
+                    .strip_prefix(name)
+                    .is_some_and(|suffix| suffix.starts_with('/'))
+        }) {
+            return Err(invalid("Duplicate destination name"));
+        }
+        names.push(&file.relative_name);
+    }
+    Ok(total)
+}
+
 struct SelectionBuilder {
     limits: SelectionLimits,
     files: Vec<OpenedFile>,
-    names: HashSet<String>,
     entries: usize,
     total_bytes: u64,
 }
@@ -194,7 +231,6 @@ impl SelectionBuilder {
         Ok(Self {
             limits,
             files: Vec::new(),
-            names: HashSet::new(),
             entries: 0,
             total_bytes: 0,
         })
@@ -209,27 +245,8 @@ impl SelectionBuilder {
     }
 
     fn push(&mut self, file: OpenedFile) -> io::Result<()> {
-        if file.relative_name.split('/').count() - 1 > self.limits.max_depth {
-            return Err(invalid("Selection manifest depth budget exceeded"));
-        }
-        if self.files.len() >= self.limits.max_files {
-            return Err(invalid("Selection file budget exceeded"));
-        }
-        let total = checked_total(self.total_bytes, file.size, self.limits.max_bytes)?;
-        if self.names.iter().any(|name| {
-            name == &file.relative_name
-                || name
-                    .strip_prefix(&file.relative_name)
-                    .is_some_and(|suffix| suffix.starts_with('/'))
-                || file
-                    .relative_name
-                    .strip_prefix(name)
-                    .is_some_and(|suffix| suffix.starts_with('/'))
-        }) {
-            return Err(invalid("Duplicate destination name"));
-        }
-        self.names.insert(file.relative_name.clone());
-        self.total_bytes = total;
+        self.total_bytes =
+            validate_files(self.files.iter().chain(std::iter::once(&file)), self.limits)?;
         self.files.push(file);
         Ok(())
     }

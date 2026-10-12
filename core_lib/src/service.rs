@@ -19,12 +19,15 @@ macro_rules! token {
 token!(ClientId);
 token!(SelectionId);
 token!(TransferId);
+token!(UploadId);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
     InvalidInput,
     Capacity,
     UnknownClient,
+    UnknownUpload,
+    InvalidState,
     UnknownSelection,
     UnknownTransfer,
     UnknownEndpoint,
@@ -223,6 +226,7 @@ pub struct Coordinator {
     clients: BTreeMap<ClientId, BTreeMap<String, Replay>>,
     selections: BTreeMap<SelectionId, Selection>,
     reservations: BTreeMap<SelectionId, Reservation>,
+    uploads: BTreeMap<UploadId, uploads::Upload>,
     endpoints: BTreeSet<String>,
     transfers: BTreeMap<TransferId, Transfer>,
     queue: VecDeque<TransferId>,
@@ -291,6 +295,7 @@ impl Coordinator {
             clients: BTreeMap::new(),
             selections: BTreeMap::new(),
             reservations: BTreeMap::new(),
+            uploads: BTreeMap::new(),
             endpoints: BTreeSet::new(),
             transfers: BTreeMap::new(),
             queue: VecDeque::new(),
@@ -344,7 +349,7 @@ impl Coordinator {
         // Admission checked every sum before insertion; stale entries remain charged.
         self.reservations
             .values()
-            .fold(ResourceUsage::default(), |mut usage, reservation| {
+            .fold(self.upload_usage(), |mut usage, reservation| {
                 usage.selections += 1;
                 usage.reserved_handles += reservation.handles;
                 usage.selected_bytes += reservation.bytes;
@@ -368,6 +373,7 @@ impl Coordinator {
             self.advance()?;
             self.clients.remove(&client);
             self.selections.retain(|_, entry| entry.owner != client);
+            self.uploads.retain(|_, entry| entry.owner != client);
         }
         self.collect_released();
         Ok(())
@@ -723,6 +729,7 @@ impl Coordinator {
         let revision = self.advance()?;
         self.lifecycle = Lifecycle::Draining;
         self.selections.clear();
+        self.uploads.clear();
         self.queue.clear();
         for (id, transfer) in &mut self.transfers {
             transfer.view.consent_revision = None;
@@ -770,3 +777,5 @@ impl Coordinator {
 mod tests;
 
 pub mod runtime;
+
+pub mod uploads;
