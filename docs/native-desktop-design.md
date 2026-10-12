@@ -129,6 +129,8 @@ The native migration does not complete Google parity. The full feature/peer inve
 
 ## Primary references checked on 2026-10-12
 
+The next offline coordinator stage is specified in [native-service-coordinator.md](native-service-coordinator.md). Development checks run once under the user's latest instruction; historical ten-run results remain observations, and repeated final stability gates remain separate.
+
 - [KDE Dolphin service menus](https://develop.kde.org/docs/apps/dolphin/service-menus/): registration, local protocol filtering and context actions.
 - [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry/latest-single/): separate URI arguments and executable field-code rules.
 - [D-Bus specification](https://dbus.freedesktop.org/doc/dbus-specification.html): caller credentials, user-bus activation and Unix descriptor transport.

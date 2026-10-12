@@ -29,7 +29,7 @@ Use a Linux-only `core_lib::file_source` module with safe rustix wrappers (no ap
 1. F0: record approval, module/type contracts, inventory and limits; persist general maintenance preference. Documentation commit.
 2. F1: implement Linux resource acquisition and validation, deterministic filesystem tests, bounded positioned reads. Commit independently.
 3. F2: integrate owned-selection payload into outbound metadata/transfer handling. Reuse a bounded positioned-read helper in the existing sender to fix growth/truncation/offset behavior; zero-byte reads before the advertised end currently make no progress. Preserve crypto/framing, originals and text/ephemeral paths. Commit separately.
-4. F3: run format/Clippy, full existing suites plus new tests ten consecutive times; update CI so resource tests run with core tests, record results/mutations/remaining work. Commit handoff docs.
+4. F3 (historical completed plan): run format/Clippy, full existing suites plus new tests ten consecutive times; update CI so resource tests run with core tests, record results/mutations/remaining work. Commit handoff docs. The subsequent user instruction requires one appropriate development run; ten repetitions apply only to an applicable final stability gate. Preserve the measured results below rather than repeating them.
 
 Risks: Linux kernel support for openat2 (fail closed on unsupported/restricted calls), symlinked ingress paths intentionally rejected, source contents remain mutable, selection resource budgets require future service-wide accounting, and actual Google peer behavior still requires hardware. No settings/wire migration. Roll back integration then resource commits; existing Tauri remains usable. Do not delete the old app until native parity checks pass.
 
