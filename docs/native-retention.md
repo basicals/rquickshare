@@ -146,3 +146,11 @@ installed activation or ten-run stability/coverage-percentage claim. The existin
 bluer future-incompatibility notice remains. Next product stage: a native client
 which automatically reconciles/acknowledges receipts, then GTK tray/settings/
 notifications, Dolphin and package/device interoperability validation.
+
+## Completed checkpoint
+
+Implementation committed as `8b0a4f7` on dev after the documented checks. No push,
+master promotion or user-session installation. The ledger, runtime barriers,
+wire fixture and regression cases can be rolled back as one integrated change;
+`52b5347` preserves the approved plan. Remaining product work is explicitly listed
+above and in product-direction.md. Terminal closed.

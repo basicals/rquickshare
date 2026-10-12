@@ -3,7 +3,7 @@
 ## 2026-10-12: bounded current-run history and ordered operations implemented
 
 The user selected retention option 1. Plan/contract frozen before code in
-`52b5347`; [native-retention.md](native-retention.md) records the additive seven
+`52b5347`, implemented in `8b0a4f7`; [native-retention.md](native-retention.md) records the additive seven
 Operations1 methods, 128 connection-owned receipts and cumulative acknowledgement
 watermark. Expired requests never execute again. Typed upload origins preserve
 legacy Manager1 behavior and prevent bypassing sequenced commit/abort receipts.
