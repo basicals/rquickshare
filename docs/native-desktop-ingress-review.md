@@ -1,6 +1,13 @@
 # Native desktop context-menu ingress ownership review
 
-2026-10-12. Mode A. Decision pending; no implementation/registration.
+2026-10-12 review; 2026-10-13 decision. Mode A. Option 1 selected.
+
+The user delegated selection to architectural quality and explicitly requires
+recommendations to prioritize quality over implementation volume or speed.
+Select option 1 because it preserves a single preparation/operation owner without
+adding daemon authority-transfer transitions. Implementation SSOT:
+[native-desktop-ingress.md](native-desktop-ingress.md). Pending-choice language
+below records the review history, not the current authorization state.
 
 ## Concrete current state
 
