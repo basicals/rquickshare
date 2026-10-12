@@ -129,6 +129,8 @@ The tool was installed under the task's scratch directory, not added as a projec
 
 ## Handoff and continuation
 
+**Product correction after this slice:** the user reconfirmed native tray/notification-area redesign, migration away from Tauri using NativePair's architecture, and full Google Quick Share parity. [product-direction.md](product-direction.md) now governs the next product work. The technical backlog below remains useful but is not the product's complete scope or implementation priority. This log records the completed maintenance slice only.
+
 - Work is committed locally on `dev`; no push, remote workflow dispatch, PR, package publication or `master` promotion was performed. Local offline checks validate commands, not execution of a newly published Actions run.
 - Reproduce suite commands from `BUILD.md`; the complete ten-run sequence is the `Run complete suite ten consecutive times` step in `.github/workflows/mode-b.yml`. `CARGO_TARGET_DIR` may point both Rust commands at one scratch cache without changing their separate tracked dependency locks.
 - Reproduce coverage using the commands in `.github/workflows/coverage.yml` and the final Mode B coverage job. Install `cargo-llvm-cov --locked` and the stable `llvm-tools-preview` component when absent. Python line coverage can use standard-library `trace`; its percentage is not branch coverage.

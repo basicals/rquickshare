@@ -6,6 +6,8 @@ This document is the working log for the `morozhenko-apps/rquickshare` maintenan
 
 The 2026-10-12 offline continuation, recovered diary references, implementation plan and validation results are recorded in [offline-maintenance.md](offline-maintenance.md). Dated hardware evidence remains in [mode-b-inventory.md](mode-b-inventory.md).
 
+The subsequent user correction establishes the native tray/notification-area redesign, Tauri migration following NativePair and full Google parity as the target. See [product-direction.md](product-direction.md); maintenance completion does not complete that goal.
+
 ## Current CI policy
 
 - The repository has exactly two long-lived branches: `dev` and `master`.

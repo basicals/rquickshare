@@ -2,7 +2,7 @@
 
 _Last updated: 2026-10-12_
 
-The maintained fork is no longer scoped to "make upstream rQuickShare work again". The product goal is a first-class Linux Quick Share client that implements the useful protocol surface available to Android/Windows peers, while clearly separating open/local protocol work from Google-account or Apple-specific interoperability that requires additional reverse engineering.
+The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, pending UX choice, initial compatibility matrix and migration stages.
 
 ## Product principles
 
@@ -10,7 +10,8 @@ The maintained fork is no longer scoped to "make upstream rQuickShare work again
 - Keep transport/protocol state machine changes covered by regression tests and Mode B.
 - Prefer local/offline behavior. Google sign-in must never be required for ordinary nearby file/text sharing.
 - Do not fake Google Account semantics: local trusted devices are a separate feature from Google's Contacts/Your devices identity.
-- Keep OS-bound behavior (BlueZ, mDNS, Tauri desktop lifecycle) behind explicit seams so it can be smoke-tested and later unit-tested.
+- Keep OS-bound behavior (BlueZ, mDNS, native desktop lifecycle) behind explicit seams. Tauri is the current implementation and a migration baseline, not the target product shell.
+- Account-backed identity, compatible QR and platform-specific Google capabilities remain in the parity target; unknown feasibility must be recorded rather than silently reclassified as optional.
 - New functionality is developed directly on `dev`. `master` remains release-only; long-lived feature branches are not used.
 
 ## Capability matrix
@@ -118,14 +119,16 @@ The maintained fork is no longer scoped to "make upstream rQuickShare work again
     - Wi-Fi credential outbound support including SAE.
     - Sensitive-content flags and safer UI.
 
-### Phase 3 — interoperability research
+### Phase 3 — required interoperability and parity work
 
 13. **Quick Share QR compatibility**
+    - Required for the parity goal; separate nearby Google QR from Google's service-backed cross-platform QR.
     - Modern proto contains QR handshake data, but Google's public Android QR flow also uses a Quick Share web page.
     - Reverse engineer the interoperable handshake before claiming compatibility.
     - A local-only QR fallback may be added separately and must be labeled as such.
 
 14. **Google Account identity**
+    - Required for Contacts / Your devices / account-backed auto-accept parity; a local trust feature is supplemental.
     - Research public certificates, account visibility and contact verification.
     - True Contacts / Your devices interoperability likely depends on Google identity/backend services.
     - Do not substitute a local trust list and call it Google account support.
@@ -133,7 +136,7 @@ The maintained fork is no longer scoped to "make upstream rQuickShare work again
 15. **AirDrop interoperability**
     - Android Quick Share on selected devices can interoperate with AirDrop.
     - Linux support is a separate protocol/transport project (Apple discovery/AWDL/AirDrop), not a normal Quick Share frame extension.
-    - Research independently after Android/Linux Quick Share is feature-complete.
+    - Research as a separate transport/dependency workstream within the platform-specific parity matrix. No full-parity claim while applicable Apple paths remain unverified.
 
 ### Phase 4 — polish and distribution
 
@@ -171,7 +174,7 @@ A prospective local Ubuntu + physical Pixel/ADB hardware automation harness is s
 
 ## Current implementation order
 
-The first three steps have implementations. Current offline maintenance is tracked in [offline-maintenance.md](offline-maintenance.md); the next product feature remains custom device naming after the documented discovery/notification blockers are characterized.
+The 2026-10-12 user correction supersedes the previous custom-name-first order. Next: confirm the tray/notification UX, design the native service boundary and migration, then deliver the native shell and parity gaps in separable stages. The authoritative order and rollback points are in [product-direction.md](product-direction.md). The list below preserves the protocol feature dependencies; its first three steps already have implementations. Completed offline infrastructure is tracked in [offline-maintenance.md](offline-maintenance.md).
 
 1. Modern protocol model.
 2. Clipboard/text outbound.
