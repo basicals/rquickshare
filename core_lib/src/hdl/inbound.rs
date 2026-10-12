@@ -739,7 +739,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 debug!("Handling State::Initial frame");
                 let frame = location_nearby_connections::OfflineFrame::decode(&*frame_data)?;
                 let rdi = self.process_connection_request(&frame)?;
-                info!("RemoteDeviceInfo: {:?}", &rdi);
+                info!("Remote device introduction received");
 
                 // Advance current state
                 self.update_state(
@@ -1522,9 +1522,10 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 total_bytes,
             } = prepare_inbound_files(&introduction.file_metadata, &existing_payload_ids)?;
 
-            for ((payload_id, info), file_name) in prepared_files.into_iter().zip(files_name.iter())
+            for ((payload_id, info), _file_name) in
+                prepared_files.into_iter().zip(files_name.iter())
             {
-                info!("Prepared inbound file {file_name} -> {:?}", info.file_url);
+                debug!("Inbound file destination prepared");
                 self.state.transferred_files.insert(payload_id, info);
             }
 
@@ -1544,7 +1545,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 ..Default::default()
             };
 
-            info!("Asking for user consent: {:?}", metadata);
+            info!("Requesting user consent for incoming transfer");
             self.update_state(
                 |e| {
                     e.transfer_metadata = Some(metadata);
@@ -1571,7 +1572,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         ..Default::default()
                     };
 
-                    info!("Asking for user consent: {:?}", metadata);
+                    info!("Requesting user consent for incoming transfer");
                     self.update_state(
                         |e| {
                             e.text_payload = Some(TextPayloadInfo::Url(meta.payload_id()));
@@ -1594,7 +1595,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         ..Default::default()
                     };
 
-                    info!("Asking for user consent: {:?}", metadata);
+                    info!("Requesting user consent for incoming transfer");
                     self.update_state(
                         |e| {
                             e.text_payload = Some(TextPayloadInfo::Text(meta.payload_id()));
@@ -1837,7 +1838,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         )
         .await;
 
-        info!("Pin code: {:?}", self.state.pin_code);
+        debug!("Pairing verification code prepared");
 
         Ok(())
     }

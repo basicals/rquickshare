@@ -1673,7 +1673,7 @@ impl OutboundRequest {
         )
         .await;
 
-        info!("Pin code: {:?}", self.state.pin_code);
+        debug!("Pairing verification code prepared");
 
         Ok(())
     }
