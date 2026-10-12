@@ -1,5 +1,21 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: native executable startup analysis
+
+[native-daemon-startup-review.md](native-daemon-startup-review.md) records the next
+executable plan and the existing outstanding visibility error decision. The old
+runner uses Visible defaults without desktop settings; an invalid stored unsigned
+visibility reaches a panic, while getter failures default to Visible. The daemon
+must preserve the old AppData store without writes/resets. Recommended option 1
+rejects invalid saved visibility before network startup; option 2 starts hidden
+with an explicit degraded-state warning. User confirmation is required for this
+privacy/product policy under AGENTS sections 3/3.1 and the existing diary.
+
+Analysis also confirms the legacy UI does not claim the native bus name; an
+independent shared launch guard is needed for the already accepted single-owner
+invariant. No production code, user settings, process/service or package was
+changed. No unchanged suite was rerun; this is not executable validation.
+
 ## 2026-10-12: bounded native state reads and invalidations implemented
 
 The user selected stable snapshot pages (option 1). Plan/contract committed before
