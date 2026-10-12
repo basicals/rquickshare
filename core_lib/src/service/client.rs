@@ -36,6 +36,7 @@ impl fmt::Display for ClientError {
 impl std::error::Error for ClientError {}
 
 pub mod controller;
+pub mod desktop;
 pub mod state;
 mod watch;
 
@@ -801,7 +802,11 @@ impl NativeClient {
         {
             let hook = self.hook.take().unwrap();
             hook.reached.notify_one();
-            std::future::pending::<()>().await;
+            if let Some(release) = hook.release {
+                release.notified().await;
+            } else {
+                std::future::pending::<()>().await;
+            }
         }
     }
 }
@@ -811,6 +816,7 @@ struct ReplyHook {
     method: &'static str,
     after: bool,
     reached: std::sync::Arc<tokio::sync::Notify>,
+    release: Option<std::sync::Arc<tokio::sync::Notify>>,
 }
 
 #[cfg(test)]

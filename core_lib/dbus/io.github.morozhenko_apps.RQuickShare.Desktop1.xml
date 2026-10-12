@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<node name="/io/github/morozhenko_apps/RQuickShare/Desktop">
+  <interface name="io.github.morozhenko_apps.RQuickShare.Desktop1">
+    <method name="Begin"><arg name="token" type="t" direction="out"/></method>
+    <method name="AppendFiles"><arg name="token" type="t" direction="in"/><arg name="sequence" type="u" direction="in"/><arg name="entries" type="a(hs)" direction="in"/><arg name="next_sequence" type="u" direction="out"/></method>
+    <method name="Commit"><arg name="token" type="t" direction="in"/><arg name="status" type="s" direction="out"/></method>
+    <method name="Abort"><arg name="token" type="t" direction="in"/><arg name="status" type="s" direction="out"/></method>
+    <method name="Show"/>
+  </interface>
+</node>

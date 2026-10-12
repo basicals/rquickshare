@@ -13,7 +13,7 @@ or making the core depend on GTK test sources. Native desktop supplies presentat
 safe local acquisition and process startup only. No daemon adoption API.
 
 Milestones / rollback:
-1. [ ] Shared preparation gate, native manifest validation, owned desktop import
+1. [x] Shared preparation gate, native manifest validation, owned desktop import
    server/client with bounded framing, authentication, replay and disconnect.
    Roll back this SDK addition before its GUI consumer; daemon API is unchanged.
 2. [ ] CLI local path/file-URI parser and event-driven GUI cold start; chooser and
@@ -111,3 +111,61 @@ N10 fixed errors/redacted Debug/no input logging; tests use nonprivate fixtures.
 N8 no locale/time rules, physical scaling still external; N11 no monetization.
 Do not mock controller/domain logic; reuse actual core private harness. No Mode B
 exhaustive coverage/ten-run claim. Preserve previous 511 inventory/observations.
+
+## Implementation review / remaining binding checks
+
+The shared SDK protocol and controller manifest validation are implemented. The
+preparation gate serializes ownership and watch publication under one short mutex;
+separate atomic stores could publish a stale idle state during permit replacement.
+Begin verifies sender liveness after admission as well as credentials before it:
+the disconnect stream may have already consumed an owner loss before admission.
+Abort waits for the existing committed result, never exposes internal preparing.
+
+Initial SDK run: six passed, one assertion failed because a 17-FD message is
+correctly rejected by predecode transport (connection closed), before method
+validation. The offending sender now uses its own fixture connection; the test
+asserts Transport and unchanged admitted sources. That affected method passed.
+An additional exact 64KiB / limit+1 / 256-file / prefix-collision method passed.
+Strict all-feature/all-target core Clippy passed. A release barrier for the existing
+test-only reply hook now permits observing successful worker completion after CLI
+disconnect as well as joined shutdown; its affected checks still need execution.
+
+Native bindings compile and nine native methods passed once on the isolated broker
+and Xvfb (two new CLI methods plus seven existing). This proves parser/startup
+failure and widget/source bindings, not a physical Dolphin/compositor invocation.
+The missing-GUI child uses no arguments, inherits no file handles, and is reaped
+on its failure path. Strengthen fixture teardown with an RAII broker owner before
+the final scoped lint; no live-user registration is part of verification.
+
+Before package assets: finish explicit daemon/tray readiness before publishing
+Desktop ownership. Otherwise a cold CLI could prepare successfully while required
+tray registration is still failing. A losing concurrent panel closes its own tray
+connection and SDK ledger. Keep immutable selection ownership and no automatic send.
+
+Dolphin assets will be package-owned under share/kio/servicemenus, for local files
+and directories only, 1..256 roots, invoking `rquickshare send -- %U` directly.
+No shell wrapper, embedded path substitutions, self-copy to user config, or live
+installation. Package binary/menu together; the legacy Tauri binary is not a CLI
+consumer. Use a standard themed send icon until packaging integrates the existing
+app icon. Validate metadata statically; real Dolphin discovery remains a hardware
+acceptance gate. Source: https://develop.kde.org/docs/apps/dolphin/service-menus/
+
+### M1 completion / SDK verification
+
+2026-10-13: eight new desktop methods implemented; the final affected client-layer
+run passed **43/43** in 5.28s, including desktop, controller, state/watch and ordered
+SDK methods affected by the test-only cancellation seam. Successful preparation
+after committed CLI disconnect and interrupted joined shutdown both use the real
+coordinator. Original files remain intact; no automatic transfer is created.
+Final core all-feature/all-target Clippy with `-D warnings` passed in 3.49s.
+The existing bluer future-incompatibility notice remains unchanged. Format passed.
+All command sessions exited normally (terminal closed). No repeat/stability gate
+or complete-product acceptance is claimed. Core test inventory is now 504
+unit/export + 8 integration; this is not a fresh complete 512-test run.
+
+New SDK methods by primary purpose: Positive 1; N2 limits 2; N4 replay/cancellation
+1; N5 admitted worker lifetime 1; N7 owner/capability/UID checks 2; N9 abort/close 1.
+Tables also exercise N1 malformed names and N3/N6 connection/owner loss. N10
+redacted diagnostics and N12 retained originals/handles are assertions within those
+methods. N8/N11 remain inapplicable for the reasons above. No percentages or
+exhaustive branch-coverage claim; native CLI/widget checks are reported separately.

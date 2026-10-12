@@ -39,6 +39,7 @@ pub(super) fn hook(client: &mut NativeClient, method: &'static str, after: bool)
         method,
         after,
         reached: reached.clone(),
+        release: None,
     });
     reached
 }

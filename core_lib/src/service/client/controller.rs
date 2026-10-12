@@ -84,6 +84,9 @@ impl PanelHandle {
         Ok(Completion(receiver))
     }
     pub fn choose(&self, selection: OpenedSelection) -> Result<Completion> {
+        if !super::desktop::valid_selection(&selection) {
+            return Err(ClientError::InvalidInput.into());
+        }
         self.submit(Action::Choose(selection))
     }
     pub fn send(&self, selection: Selection, endpoint: String) -> Result<Completion> {
