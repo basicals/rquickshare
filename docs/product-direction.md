@@ -1,6 +1,6 @@
 # Product direction: native desktop and Google Quick Share parity
 
-_Recorded: 2026-10-12. Status: tray-panel interaction accepted; service contract review pending._
+_Recorded: 2026-10-12. Status: tray-panel and descriptor decisions accepted; file/core boundary implemented; service/native shell pending._
 
 ## Authoritative correction
 
@@ -47,7 +47,9 @@ The user selected option A on 2026-10-12 and explicitly rejected the current ove
 
 Decision: A, because the parity target needs a durable device chooser and transfer controls as well as notifications. Option B is retained above only as decision history. A dominant empty drop zone is not part of the accepted design. Drag-and-drop may remain a secondary input on the compact panel. Settings are a secondary surface.
 
-The concrete service, file-selection trust boundary and migration proposal is in [native-desktop-design.md](native-desktop-design.md). It requires the significant API/security decision described there before service implementation. The selected interaction itself no longer requires an A/B question.
+The concrete service, file-selection trust boundary and migration proposal is in [native-desktop-design.md](native-desktop-design.md). The selected interaction and descriptor boundary no longer require an A/B question. Record the concrete wire contract before publishing the service API; ask only about new significant decisions outside the accepted design.
+
+The user subsequently approved descriptor/capability input. The reusable Linux acquisition/owned-file core route is implemented and validated in [native-file-input.md](native-file-input.md); the old path-opening D-Bus proposal must not be implemented. The daemon/coordinator and GTK4 shell remain pending.
 
 GTK4 removed cross-backend global positioning APIs; a generic GtkWindow cannot be assumed to provide a tray-anchored panel. Validate supported compositor/desktop integration first. Source: [GTK4 migration guide](https://docs.gtk.org/gtk4/migrating-3to4.html). The current host does not expose `gtk4` through pkg-config; dependencies are not installed by this documentation pass.
 
@@ -91,4 +93,4 @@ Additional protocol capabilities already in the roadmap (previews, resume/hash i
 5. **P4 — close Google parity gaps in vertical slices.** Each feature receives protocol research, branch/negative/interaction inventory, deterministic tests and real Google peer acceptance. Account/QR/Apple/service dependencies are release blockers for claiming full parity, not optional tasks silently dropped from the goal. Keep transport and UI changes separable.
 6. **P5 — release acceptance.** Complete core/service/native-client tests, ten consecutive stability runs, package/install checks and the physical compatibility matrix on the final implementation. Publish only capabilities with evidence; promote `master` only under the existing release policy.
 
-These milestones are not time estimates. Exact native service/API/UI implementation has not started in this documentation pass. The user has answered the material UX choice. Stop before service implementation until the concrete API/security proposal is approved; do not use the completed Tauri maintenance checks as native-shell verification.
+These milestones are not time estimates. The user has answered the material UX and descriptor choices; the offline file/core implementation has started the migration. The daemon/API/UI are still pending. Continue within the approved direction, documenting concrete contracts before implementation and asking only for new significant decisions. Do not use the completed Tauri maintenance checks as native-shell verification.

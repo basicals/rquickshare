@@ -1,6 +1,6 @@
 # Native desktop migration and context-menu sender
 
-_2026-10-12. Mode A. Status: descriptor input approved; offline file-boundary implementation in progress._
+_2026-10-12. Mode A. Status: descriptor input approved; offline file/core boundary implemented and validated._
 
 ## Accepted scope and source of truth
 
@@ -47,7 +47,7 @@ Common to both options below:
 - Closing clients does not stop the daemon. Explicit stop is separate from Hide and requires transfer-aware handling before the native UI exposes it. Service shutdown must invoke and await core shutdown.
 - No persisted active-transfer recovery, Google identity, automatic trust, visibility-default change or destructive settings migration is included in the first service slice.
 
-### Decision needed: outbound file-selection contract
+### Accepted outbound file-selection contract
 
 | Option | Description | Pros | Cons / risks |
 |---|---|---|---|
@@ -56,7 +56,7 @@ Common to both options below:
 
 Decision: the user approved B for the durable service contract. The earlier recommendation of A prioritized migration isolation and reuse, not the strongest file-access boundary. Keep paths at the desktop ingress adapter and pass acquired resources across the service boundary. Do not first publish a path-opening daemon API that will need replacing.
 
-### Security review and recommended B contract
+### Security review and accepted B contract
 
 Passing paths is not inherently a remotely exploitable vulnerability: the proposed daemon is unprivileged, same-user and has no network control endpoint. However, its file-opening API would become a confused-deputy risk if a less privileged/sandboxed caller could use it to read files that caller cannot access. Same UID does not prove user intent or identical sandbox permissions. Broad local control methods remain a separate authorization concern even with FD input.
 
@@ -124,6 +124,7 @@ The native migration does not complete Google parity. The full feature/peer inve
 - File/security decision: B approved. The A API table is historical only and must not be implemented. No additional approval is needed for the already accepted descriptor-based file-input refactor.
 - The user also authorized immediate fixes to brittle internal workarounds across projects, asking before substantial refactors. The preference is persisted in the global agent guide. It does not authorize unrelated cleanup.
 - The first implementation slice and complete scoped branch/test inventory are recorded in [native-file-input.md](native-file-input.md). This implements the reusable file resource boundary and core entrypoint before publishing D-Bus methods. No desktop registration, settings migration or process activation is part of that slice.
+- That slice is complete in implementation commit `c8d537e`: 62 new methods, all 258 automated checks passing ten times, and 18 assertion-killed copied-source mutants. This is the file-boundary portion of D1/D2; the daemon/coordinator, D-Bus endpoint and native UI are not implemented yet.
 - Later service wire schemas are not frozen by the historical A table. Record their concrete contracts before service implementation; ask only for new significant decisions outside the accepted design.
 
 ## Primary references checked on 2026-10-12
