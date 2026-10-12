@@ -74,6 +74,9 @@
     <method name="EndSnapshot">
       <arg name="snapshot_id" type="s" direction="in"/>
     </method>
+    <method name="GetStartupWarnings">
+      <arg name="warnings" type="as" direction="out"/>
+    </method>
     <signal name="StateChanged">
       <arg name="epoch" type="s"/>
       <arg name="revision" type="t"/>

@@ -6,6 +6,10 @@ use tokio::sync::broadcast;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    #[cfg(target_os = "linux")]
+    let _owner = rqs_lib::service::process::LaunchGuard::acquire(
+        &rqs_lib::service::process::runtime_directory()?,
+    )?;
     // Define log level
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var(

@@ -56,6 +56,7 @@ pub struct SelectionBus {
     clients: BTreeMap<String, ClientId>,
     state: state::StateCache,
     notified: BTreeMap<ClientId, u64>,
+    visibility_recovered: bool,
     uid: u32,
 }
 
@@ -67,20 +68,37 @@ impl SelectionBus {
     }
 
     async fn connect_with_uid(stream: UnixStream, uid: u32) -> Result<Self, BusError> {
-        let connection = zbus::connection::Builder::socket(transport::BoundedSocket(stream))
-            .max_queued(INBOX)
-            .build()
-            .await
-            .map_err(|_| BusError::Transport)?;
+        Self::connect_inner(stream, uid, CancellationToken::new())
+            .await?
+            .ok_or(BusError::Transport)
+    }
+
+    pub async fn connect_stoppable(
+        stream: UnixStream,
+        stop: CancellationToken,
+    ) -> Result<Option<Self>, BusError> {
+        Self::connect_inner(stream, rustix::process::geteuid().as_raw(), stop).await
+    }
+
+    async fn connect_inner(
+        stream: UnixStream,
+        uid: u32,
+        stop: CancellationToken,
+    ) -> Result<Option<Self>, BusError> {
+        let connection = tokio::select! {
+            biased;
+            _ = stop.cancelled() => return Ok(None),
+            result = zbus::connection::Builder::socket(transport::BoundedSocket(stream)).max_queued(INBOX).build() => result.map_err(|_| BusError::Transport)?,
+        };
         let mut messages = MessageStream::from(&connection);
         let (sender, inbox) = mpsc::channel(INBOX);
         let failed = CancellationToken::new();
         let closed = CancellationToken::new();
         let fail = failed.clone();
-        let stop = closed.clone();
+        let pump_stop = closed.clone();
         let pump = tokio::spawn(async move {
             loop {
-                let item = tokio::select! { _ = stop.cancelled() => break, item = messages.next() => item };
+                let item = tokio::select! { _ = pump_stop.cancelled() => break, item = messages.next() => item };
                 match item {
                     Some(Ok(message)) => {
                         if matches!(
@@ -108,9 +126,10 @@ impl SelectionBus {
             clients: BTreeMap::new(),
             state: state::StateCache::default(),
             notified: BTreeMap::new(),
+            visibility_recovered: false,
             uid,
         };
-        let initialized = async {
+        let initialization = async {
             let rule = zbus::MatchRule::builder()
                 .msg_type(MessageType::Signal)
                 .sender("org.freedesktop.DBus")?
@@ -140,13 +159,28 @@ impl SelectionBus {
                 return Err(zbus::Error::NameTaken);
             }
             Ok::<_, zbus::Error>(())
-        }
-        .await;
+        };
+        let initialized = tokio::select! {
+            biased;
+            _ = stop.cancelled() => None,
+            result = initialization => Some(result),
+        };
+        let Some(initialized) = initialized else {
+            bus.close_connection().await;
+            return Ok(None);
+        };
         if initialized.is_err() || bus.failed.is_cancelled() {
             bus.close_connection().await;
             return Err(BusError::Transport);
         }
-        Ok(bus)
+        Ok(Some(bus))
+    }
+
+    pub(super) fn set_visibility_recovered(&mut self, value: bool) {
+        self.visibility_recovered = value;
+    }
+    pub(super) async fn close_unstarted(&mut self) {
+        self.close_connection().await;
     }
 
     /// Claims the name in connect() before starting any core transports. The
@@ -446,6 +480,17 @@ impl SelectionBus {
                 .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
                 .await;
         };
+        if member == "GetStartupWarnings" {
+            if !message.data().fds().is_empty() || message.body().deserialize::<()>().is_err() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            let warnings: Vec<&str> = if self.visibility_recovered {
+                vec!["visibility_recovered"]
+            } else {
+                vec![]
+            };
+            return self.state_reply(&header, &warnings).await;
+        }
         if [
             "BeginSnapshot",
             "GetEndpointPage",

@@ -37,6 +37,7 @@ mod protocol;
 #[cfg(target_os = "linux")]
 pub mod service;
 pub mod sessions;
+pub mod settings;
 mod utils;
 
 pub use hdl::{

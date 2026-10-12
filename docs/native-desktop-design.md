@@ -158,3 +158,11 @@ user-selected immutable bounded read pages and directed StateChanged hints. Ther
 are now fourteen methods plus one signal. Executable activation, terminal/replay
 retention and the native chooser still remain; historical JSON/path API proposals
 above are not the current wire contract.
+
+The next [native startup](native-daemon-startup.md) checkpoint adds the Linux
+executable, shared native/legacy/developer launch guard, prior settings read and
+user-selected Hidden recovery. The old GUI presents explicit visibility repair;
+the native headless process exposes GetStartupWarnings. There are fifteen methods
+plus StateChanged. Installed activation, retention, native GTK/settings, Dolphin
+and physical interoperability remain pending; the legacy GUI cannot attach to
+the new daemon while its owner guard is held.

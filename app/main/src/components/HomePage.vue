@@ -4,6 +4,7 @@
 		<SettingsModal :vm="vm" @close="settingsOpen = false" />
 
 		<Heading :vm="vm" :open-url="openUrl" @open-settings="settingsOpen = true" />
+		<VisibilityRecovery :vm="vm" />
 
 		<div class="flex-1 flex flex-row gap-4 px-5 pb-5 min-h-0">
 			<SideMenu :vm="vm" @invert-visibility="invertVisibility(vm)" @clear-sending="clearSending(vm)" />
@@ -172,6 +173,7 @@ import Heading from '../composables/Heading.vue';
 import SideMenu from '../composables/SideMenu.vue';
 import ContentStatus from '../composables/ContentStatus.vue';
 import ItemSide from '../composables/ItemSide.vue';
+import VisibilityRecovery from '../composables/VisibilityRecovery.vue';
 
 export default {
 	name: "HomePage",
@@ -182,7 +184,8 @@ export default {
 		Heading,
 		SideMenu,
 		ContentStatus,
-		ItemSide
+		ItemSide,
+		VisibilityRecovery
 	},
 
 	async setup() {
@@ -225,7 +228,8 @@ export default {
 			autostart: ref<boolean>(true),
 			realclose: ref<boolean>(false),
 			startminimized: ref<boolean>(false),
-			visibility: ref<Visibility>('Visible'),
+			visibility: ref<Visibility>('Invisible'),
+			visibilityRecovered: ref(false),
 			downloadPath: ref<string | undefined>(),
 
 			hostname: ref<string>(),
@@ -244,7 +248,8 @@ export default {
 			await this.getVisibility(this);
 
 			if (!await this.store.has(autostartKey)) {
-				await this.setAutoStart(this, false);
+				if (!this.visibilityRecovered) await this.setAutoStart(this, false);
+				else this.autostart = false;
 			} else {
 				await this.applyAutoStart(this);
 			}

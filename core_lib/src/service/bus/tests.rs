@@ -127,6 +127,70 @@ impl Harness {
 
 mod controls;
 mod state;
+
+#[tokio::test]
+async fn given_startup_recovery_when_warning_is_read_then_fixed_wire_code_is_persistent_and_authenticated(
+) {
+    scenario(async {
+        // Arrange
+        let private = PrivateBus::new();
+        let mut bus = SelectionBus::connect(private.socket().await).await.unwrap();
+        bus.set_visibility_recovered(true);
+        let host = Harness::start(bus);
+        let client = private.client().await;
+        // Act / Assert
+        for _ in 0..2 {
+            let warnings: Vec<String> = call(&client, "GetStartupWarnings", &())
+                .await
+                .unwrap()
+                .body()
+                .deserialize()
+                .unwrap();
+            assert_eq!(warnings, vec!["visibility_recovered"]);
+        }
+        rejected(
+            call(&client, "GetStartupWarnings", &1u32).await,
+            "InvalidInput",
+        );
+        assert_eq!(host.finish().await.1, Ok(()));
+        let host = Harness::start(SelectionBus::connect(private.socket().await).await.unwrap());
+        let warnings: Vec<String> = call(&client, "GetStartupWarnings", &())
+            .await
+            .unwrap()
+            .body()
+            .deserialize()
+            .unwrap();
+        assert!(warnings.is_empty());
+        assert_eq!(host.finish().await.1, Ok(()));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn given_waiting_bus_authentication_when_stop_arrives_then_owned_socket_closes_without_a_pump(
+) {
+    scenario(async {
+        // Arrange
+        use tokio::io::AsyncReadExt;
+        let (stream, mut peer) = UnixStream::pair().unwrap();
+        let stop = CancellationToken::new();
+        let connecting = SelectionBus::connect_stoppable(stream, stop.clone());
+        tokio::pin!(connecting);
+        // Act: handshake bytes are an event-driven startup fence.
+        let mut bytes = [0; 64];
+        tokio::select! {
+            result = &mut connecting => panic!("Unexpected early connect: {}", result.is_ok()),
+            bytes = peer.read(&mut bytes) => assert!(bytes.unwrap() > 0),
+        }
+        stop.cancel();
+        // Assert
+        assert!(connecting.await.unwrap().is_none());
+        let mut remaining = Vec::new();
+        peer.read_to_end(&mut remaining).await.unwrap();
+        assert!(remaining.len() < 64 * 1024);
+    })
+    .await;
+}
 impl Drop for Harness {
     fn drop(&mut self) {
         self.stop.cancel();

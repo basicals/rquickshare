@@ -38,6 +38,36 @@ Packaging remains a separate manual Actions gate. A package build does not certi
 
 ## Automated checks
 
+### Native Linux daemon (development)
+
+The native executable is additive; the current packaged desktop remains Tauri.
+Build/check settings without connecting to D-Bus or starting transports:
+
+```bash
+cargo +stable build --manifest-path core_lib/Cargo.toml --bin rquickshare-daemon --locked
+core_lib/target/debug/rquickshare-daemon --check
+```
+
+The existing Linux AppData settings are read at
+`$XDG_DATA_HOME/dev.mandre.rquickshare/.settings.json` (usual fallback
+`~/.local/share/dev.mandre.rquickshare/.settings.json`). `--settings PATH` is a
+development override; `--help` lists arguments. Normal manual launch uses the
+user session's local Unix D-Bus address and must not run alongside the old desktop
+or developer runner. SIGINT/SIGTERM request joined shutdown. A private user-owned
+runtime directory is required; do not run with sudo or register a system-bus service.
+
+Invalid visibility starts hidden and exposes GetStartupWarnings; the existing UI
+now offers explicit in-app recovery when used independently. The native GTK/settings
+client is still pending. Whole-file corruption/read errors do not reset settings.
+No activation/autostart/package files are installed by a build. Continuous production
+use is still gated on terminal/replay retention, native client and device checks.
+Contracts and actual verification: [native startup](docs/native-daemon-startup.md).
+
+The default `cargo run` remains the legacy `core_bin` developer runner; select the
+native executable explicitly. Linux owner guards cover updated executables, not
+arbitrarily old external builds. Core tests use test-owned dbus-daemon brokers and
+process fixtures; install dbus-daemon for these tests, as CI declares.
+
 From `core_lib`:
 
 ```bash

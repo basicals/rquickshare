@@ -1,5 +1,34 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-12: native executable and hidden visibility recovery implemented
+
+The user selected option 2 and rejected manual JSON repair. Plan committed before
+code in `823cf68`; [native-daemon-startup.md](native-daemon-startup.md) records
+shared bounded read-only settings, effective Hidden recovery with a durable warning,
+explicit legacy UI choices/save and persistence-before-core ordering. Failed save
+retains the warning/live mode and restores the cached field; automatic retries are
+disabled. Whole-file corruption still fails without resetting settings. Complete
+atomic settings migration/repair remains a separate gate.
+
+The native Linux executable reads prior settings, supports validation-only check,
+local Unix session addresses, fresh epochs, a shared exclusive owner guard and
+SIGINT/SIGTERM-driven joined cleanup. Updated Tauri/developer/native launchers share
+the guard. Manager1 now has 15 methods including fixed GetStartupWarnings. No native
+GTK client, installed activation/autostart, retention policy or peer claim was added.
+
+25 new checks. Actual complete/affected results, one corrected private-directory
+fixture assumption, compilation repairs and primary category counts are in the
+startup SSOT: current inventory 437 core, 10 desktop, 46 frontend. All affected
+checks and final strict Clippy/format/diff passed. No final one-call complete-suite
+or ten-run stability claim. Real owned process tests prove signals during waiting
+authentication and cleanup after an occupied-port startup failure; no live BlueZ/
+mDNS success or graphical/device behavior was tested. No user config/service was
+changed and no push/promotion occurred. Terminal closed.
+
+Next: continuous-service retention review, native client/GTK notifications/settings,
+Dolphin, package and physical Google compatibility. The previous privacy choice
+below is answered and superseded by this checkpoint.
+
 ## 2026-10-12: native executable startup analysis
 
 [native-daemon-startup-review.md](native-daemon-startup-review.md) records the next

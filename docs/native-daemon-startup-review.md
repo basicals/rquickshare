@@ -4,6 +4,10 @@
 path instead of manual JSON editing. Implementation SSOT: native-daemon-startup.md.
 Previous state API work is complete in `7f41750`.
 
+The selected implementation is now complete and verified offline; see the SSOT's
+actual results and remaining native-client/settings/retention gates. This review's
+recommendation of option 1 is decision history, superseded by the user's option 2.
+
 ## Source evidence
 
 - `core_lib/src/bin.rs` is a legacy developer runner, not a native daemon. It
