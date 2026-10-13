@@ -567,12 +567,15 @@ fn given_detail_header_and_consent_readiness_boundaries_when_decoded_then_malfor
     for device in ["unknown", "phone", "tablet", "laptop"] {
         let mut row = header.clone();
         row.3 = device.into();
-        assert!(decode_details(row).is_ok());
+        assert!(decode_details(row, crate::sessions::details::PayloadKind::Files).is_ok());
     }
     for count in [1, 255, 256, 257] {
         let mut row = header.clone();
         row.7 = count;
-        assert_eq!(decode_details(row).is_ok(), count <= 256);
+        assert_eq!(
+            decode_details(row, crate::sessions::details::PayloadKind::Files).is_ok(),
+            count <= 256
+        );
     }
     for field in 0..12 {
         let mut row = header.clone();
@@ -591,7 +594,10 @@ fn given_detail_header_and_consent_readiness_boundaries_when_decoded_then_malfor
             _ => row.4 = "１２３４".into(),
         }
         assert!(
-            matches!(decode_details(row), Err(ClientError::Protocol)),
+            matches!(
+                decode_details(row, crate::sessions::details::PayloadKind::Files),
+                Err(ClientError::Protocol)
+            ),
             "{field}"
         );
     }
@@ -606,15 +612,17 @@ fn given_detail_header_and_consent_readiness_boundaries_when_decoded_then_malfor
             0,
             0,
         );
-        assert!(decode_details(row).is_ok());
+        assert!(decode_details(row, crate::sessions::details::PayloadKind::Files).is_ok());
     }
-    let (mut details, _) = decode_details(header.clone()).unwrap();
+    let (mut details, _) =
+        decode_details(header.clone(), crate::sessions::details::PayloadKind::Files).unwrap();
     details.files = vec![FileDetail {
         name: "item".into(),
         size: 3,
     }]
     .into();
     let mut transfer = TransferView {
+        content_revision: None,
         transfer: Transfer {
             id: header.0,
             connection: "test".into(),

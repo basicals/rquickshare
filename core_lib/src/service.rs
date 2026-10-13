@@ -684,6 +684,7 @@ impl Coordinator {
             || transfer.view.details.status != crate::sessions::details::DetailsStatus::Ready
             || transfer.view.details.kind != received.kind()
             || transfer.view.details.total_bytes != received.text().len() as u64
+            || transfer.view.details.transferred_bytes != transfer.view.details.total_bytes
             || transfer.terminal_revision.is_none()
         {
             return Err(Error::InvalidState);

@@ -56,6 +56,7 @@ pub(super) type FileRow = (String, u64);
 pub(super) type NoticeRow = (String, String, u64, u64);
 
 struct Capture {
+    text: Vec<super::text::MetadataRow>,
     notices: Vec<NoticeRow>,
     charge: usize,
     details: Vec<(String, Arc<TransferDetails>)>,
@@ -178,6 +179,23 @@ impl StateCache {
             .iter()
             .map(|view| (token(view.id.0, view.id.1), view.details.clone()))
             .collect();
+        let text = snapshot
+            .transfers
+            .iter()
+            .map(|view| {
+                let resource = &coordinator.transfers[&view.id];
+                (
+                    token(view.id.0, view.id.1),
+                    view.details.kind.wire(),
+                    resource.received_text.is_some(),
+                    if resource.received_text.is_some() {
+                        resource.terminal_revision.unwrap_or(0)
+                    } else {
+                        0
+                    },
+                )
+            })
+            .collect();
         let transfers: Vec<_> = snapshot
             .transfers
             .into_iter()
@@ -222,6 +240,7 @@ impl StateCache {
             })
             .collect();
         let capture = Capture {
+            text,
             notices,
             charge,
             details,
@@ -233,6 +252,12 @@ impl StateCache {
         // Fixed reservation includes record storage, owned buffers and conservative map overhead.
         let bytes = size_of::<Capture>()
             + 1024
+            + capture.text.capacity() * size_of::<super::text::MetadataRow>()
+            + capture
+                .text
+                .iter()
+                .map(|row| row.0.capacity())
+                .sum::<usize>()
             + capture.notices.capacity() * size_of::<NoticeRow>()
             + capture
                 .notices
@@ -278,6 +303,14 @@ impl StateCache {
             return Err(Error::WrongOwner);
         }
         Ok(capture.1)
+    }
+    pub(super) fn text_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<super::text::MetadataRow>), Error> {
+        page(&self.get(client, id)?.text, offset)
     }
     pub(super) fn notice_count(&self, client: ClientId, id: &str) -> Result<u32, Error> {
         Ok(self.get(client, id)?.notices.len() as u32)

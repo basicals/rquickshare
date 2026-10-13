@@ -163,6 +163,30 @@
       <arg name="notices" type="a(sstt)" direction="in"/>
     </method>
   </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Text1">
+    <method name="GetMetadataPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="metadata" type="a(ssbt)" direction="out"/>
+    </method>
+    <method name="BeginRead">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="content_revision" type="t" direction="in"/>
+      <arg name="reader_id" type="s" direction="out"/>
+      <arg name="kind" type="s" direction="out"/>
+      <arg name="byte_count" type="u" direction="out"/>
+    </method>
+    <method name="GetChunk">
+      <arg name="reader_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="bytes" type="ay" direction="out"/>
+    </method>
+    <method name="EndRead">
+      <arg name="reader_id" type="s" direction="in"/>
+    </method>
+  </interface>
   <interface name="org.freedesktop.DBus.Introspectable">
     <method name="Introspect">
       <arg name="xml_data" type="s" direction="out"/>

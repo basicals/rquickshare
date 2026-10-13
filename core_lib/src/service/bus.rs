@@ -23,6 +23,7 @@ use super::{ClientId, Coordinator, Error, SelectionId, TransferId, UploadId};
 use crate::file_source::OpenedFile;
 
 mod state;
+pub mod text;
 pub(super) mod transport;
 
 pub const SERVICE: &str = "io.github.morozhenko_apps.RQuickShare";
@@ -64,6 +65,7 @@ pub struct SelectionBus {
     closed: CancellationToken,
     clients: BTreeMap<String, ClientId>,
     state: state::StateCache,
+    text: text::TextCache,
     notified: BTreeMap<ClientId, u64>,
     visibility_recovered: bool,
     uid: u32,
@@ -139,6 +141,7 @@ impl SelectionBus {
             closed,
             clients: BTreeMap::new(),
             state: state::StateCache::default(),
+            text: text::TextCache::default(),
             notified: BTreeMap::new(),
             visibility_recovered: false,
             uid,
@@ -344,6 +347,7 @@ impl SelectionBus {
     fn disconnect_clients(&mut self, coordinator: &mut Coordinator) -> Result<(), BusError> {
         let mut result = Ok(());
         self.state.clear();
+        self.text = text::TextCache::default();
         self.notified.clear();
         for (_, client) in std::mem::take(&mut self.clients) {
             if let Err(error) = coordinator.disconnect(client) {
@@ -458,6 +462,7 @@ impl SelectionBus {
     ) -> Result<(), BusError> {
         if let Some(client) = self.clients.remove(sender) {
             self.state.disconnect(client);
+            self.text.disconnect(client);
             self.notified.remove(&client);
             coordinator
                 .disconnect(client)
@@ -671,6 +676,67 @@ impl SelectionBus {
                 .reply(&header, &INTROSPECTION)
                 .await
                 .map_err(|_| BusError::Transport);
+        }
+        if interface == Some(text::INTERFACE) {
+            if !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            let body = message.body();
+            let result = match member {
+                Some("GetMetadataPage") => {
+                    let args = body
+                        .deserialize::<(&str, u32)>()
+                        .map_err(|_| Error::InvalidInput);
+                    match args.and_then(|(id, offset)| {
+                        token_parts(id, coordinator.epoch)?;
+                        self.state.text_page(client, id, offset)
+                    }) {
+                        Ok(page) => return self.state_reply(&header, &page).await,
+                        Err(error) => Err(error),
+                    }
+                }
+                Some("BeginRead") => {
+                    let args = body
+                        .deserialize::<(&str, u64)>()
+                        .map_err(|_| Error::InvalidInput);
+                    match args.and_then(|(id, revision)| {
+                        let (epoch, sequence) = token_parts(id, coordinator.epoch)?;
+                        self.text
+                            .begin(coordinator, client, TransferId(epoch, sequence), revision)
+                    }) {
+                        Ok(reader) => return self.state_reply(&header, &reader).await,
+                        Err(error) => Err(error),
+                    }
+                }
+                Some("GetChunk") => {
+                    let args = body
+                        .deserialize::<(&str, u32)>()
+                        .map_err(|_| Error::InvalidInput);
+                    match args.and_then(|(id, offset)| {
+                        token_parts(id, coordinator.epoch)?;
+                        self.text.chunk(client, id, offset)
+                    }) {
+                        Ok(chunk) => return self.state_reply(&header, &chunk).await,
+                        Err(error) => Err(error),
+                    }
+                }
+                Some("EndRead") => body
+                    .deserialize::<&str>()
+                    .map_err(|_| Error::InvalidInput)
+                    .and_then(|id| {
+                        token_parts(id, coordinator.epoch)?;
+                        self.text.end(client, id)
+                    }),
+                _ => {
+                    return self
+                        .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                        .await
+                }
+            };
+            return match result {
+                Ok(()) => self.state_reply(&header, &()).await,
+                Err(error) => self.domain_error(&header, error).await,
+            };
         }
         if interface == Some(NOTIFICATIONS_INTERFACE) {
             let body = message.body();

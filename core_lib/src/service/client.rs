@@ -41,6 +41,7 @@ pub mod desktop;
 pub mod notices;
 pub mod settings;
 pub mod state;
+pub mod text;
 mod watch;
 
 type Result<T> = std::result::Result<T, ClientError>;
@@ -151,6 +152,7 @@ pub struct NativeClient {
     last_view: Option<state::StateView>,
     view_incomplete: bool,
     pending_settings: Option<settings::SettingsEdit>,
+    pending_text: Option<text::PendingText>,
     settings_seen: u64,
     #[cfg(test)]
     hook: Option<ReplyHook>,
@@ -262,6 +264,7 @@ impl NativeClient {
             last_view: None,
             view_incomplete: true,
             pending_settings: None,
+            pending_text: None,
             settings_seen: 0,
             #[cfg(test)]
             hook: None,
@@ -784,6 +787,7 @@ impl NativeClient {
     }
     pub async fn close(mut self) -> Result<()> {
         self.pending = None;
+        self.pending_text = None;
         let mut failed = false;
         if let Some(watcher) = self.watcher.as_mut() {
             watcher.stop.cancel();

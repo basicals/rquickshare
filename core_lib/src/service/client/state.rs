@@ -37,6 +37,7 @@ impl fmt::Debug for Endpoint {
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransferView {
+    pub content_revision: Option<u64>,
     pub transfer: Transfer,
     pub direction: Direction,
     pub phase: Phase,
@@ -129,7 +130,10 @@ fn sorted<'a>(ids: impl IntoIterator<Item = &'a str>) -> Result<()> {
     Ok(())
 }
 
-fn decode_details(row: DetailRow) -> Result<(TransferDetails, u32)> {
+fn decode_details(
+    row: DetailRow,
+    kind: crate::sessions::details::PayloadKind,
+) -> Result<(TransferDetails, u32)> {
     let status = match row.1.as_str() {
         "unavailable" => DetailsStatus::Unavailable,
         "ready" => DetailsStatus::Ready,
@@ -149,7 +153,9 @@ fn decode_details(row: DetailRow) -> Result<(TransferDetails, u32)> {
         || row.4.len() > 4
         || !row.4.bytes().all(|b| b.is_ascii_digit())
         || row.6 > row.5
-        || (status == DetailsStatus::Ready && (row.2.is_empty() || row.7 == 0))
+        || (status == DetailsStatus::Ready
+            && (row.2.is_empty()
+                || (kind == crate::sessions::details::PayloadKind::Files && row.7 == 0)))
         || (status != DetailsStatus::Ready
             && (!row.2.is_empty()
                 || device != DeviceKind::Unknown
@@ -162,7 +168,7 @@ fn decode_details(row: DetailRow) -> Result<(TransferDetails, u32)> {
     }
     Ok((
         TransferDetails {
-            kind: crate::sessions::details::PayloadKind::Files,
+            kind,
             status,
             sender: row.2,
             device,
@@ -236,6 +242,7 @@ impl NativeClient {
             }
         }
         Ok(TransferView {
+            content_revision: None,
             transfer: Transfer {
                 id: row.0,
                 connection: self.identity.clone(),
@@ -352,11 +359,33 @@ impl NativeClient {
         let headers: Vec<DetailRow> = self
             .pages("GetTransferDetailsPage", &metadata.0, metadata.10)
             .await?;
-        for (transfer, header) in view.transfers.iter_mut().zip(headers) {
+        let text_rows: Vec<super::text::MetadataRow> = self
+            .pages_for_on(
+                bus::text::INTERFACE,
+                "GetMetadataPage",
+                &metadata.0,
+                metadata.10,
+                None,
+            )
+            .await?;
+        for ((transfer, header), text) in view.transfers.iter_mut().zip(headers).zip(text_rows) {
             if transfer.transfer.id() != header.0 || header.7 > 256 {
                 return Err(ClientError::Protocol);
             }
-            let mut details = decode_details(header)?;
+            if text.0 != transfer.transfer.id() {
+                return Err(ClientError::Protocol);
+            }
+            let mut details = decode_details(header, super::text::kind(&text.1)?)?;
+            transfer.content_revision = optional_revision(text.2, text.3, view.revision)?;
+            if text.2
+                && (transfer.direction != Direction::Inbound
+                    || transfer.phase != Phase::Finished
+                    || details.0.kind == crate::sessions::details::PayloadKind::Files
+                    || details.0.status != DetailsStatus::Ready
+                    || details.0.transferred_bytes != details.0.total_bytes)
+            {
+                return Err(ClientError::Protocol);
+            }
             let rows: Vec<(String, u64)> = self
                 .pages_for(
                     "GetFilePage",

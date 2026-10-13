@@ -35,9 +35,11 @@ pub struct PanelState {
     pub disconnected: bool,
     pub settings: Option<super::settings::SettingsView>,
     pub settings_pending: bool,
+    pub text_pending: bool,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ActionResult {
+    Text(super::text::TextRead),
     Settings(super::settings::SettingsView),
     Selection(Selection),
     Transfer(Transfer),
@@ -54,6 +56,7 @@ impl Completion {
 }
 
 enum Action {
+    ReadText(Transfer, u64),
     SettingsRestart,
     SettingsSave(super::settings::SettingsEdit),
     SettingsReload,
@@ -78,6 +81,12 @@ pub struct PanelHandle {
     state: watch::Receiver<PanelState>,
 }
 impl PanelHandle {
+    pub fn read_text(&self, transfer: Transfer, revision: u64) -> Result<Completion> {
+        if revision == 0 {
+            return Err(ClientError::InvalidInput.into());
+        }
+        self.submit(Action::ReadText(transfer, revision))
+    }
     pub fn restart_service(&self) -> Result<Completion> {
         self.submit(Action::SettingsRestart)
     }
@@ -234,6 +243,7 @@ impl Worker {
             state.busy = busy;
             state.pending = self.client.has_pending() || self.preparation.is_some();
             state.settings_pending = self.client.has_pending_settings();
+            state.text_pending = self.client.has_pending_text();
             state.disconnected |= error.is_some_and(fatal);
         });
     }
@@ -321,8 +331,21 @@ impl Worker {
                 _ => return Err(ClientError::PendingOperation),
             }
         }
+        if self.client.has_pending_text()
+            && !matches!(action, Action::ReadText(..) | Action::Recover)
+        {
+            return Err(ClientError::PendingOperation);
+        }
         self.refresh().await?;
         match action {
+            Action::ReadText(transfer, revision) => self
+                .client
+                .read_received_text(&transfer, revision)
+                .await
+                .map(ActionResult::Text),
+            Action::Recover if self.client.has_pending_text() => {
+                self.client.retry_text().await.map(ActionResult::Text)
+            }
             Action::SettingsRestart => self
                 .client
                 .restart_service()
@@ -456,6 +479,7 @@ impl Worker {
             state.disconnected = true;
             state.busy = false;
             state.pending = false;
+            state.text_pending = false;
         });
         result
     }

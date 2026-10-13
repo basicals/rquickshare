@@ -17,7 +17,7 @@ URL opening, reveal and permanent payload history are separate later capabilitie
 1. [x] R1: allowlisted payload kind plus declared size for native text consent;
    validate actual byte header/body and UTF-8/NUL; carry a separate redacted immutable
    completed resource through live-session observations and retain it in the daemon.
-2. [ ] R2: typed Text1 captured metadata and explicit bounded read capability,
+2. [x] R2: typed Text1 captured metadata and explicit bounded read capability,
    same-UID/epoch/ownership/FD checks, checked chunk/read lifecycle in the SDK and
    existing controller. Keep content out of ordinary snapshots/signals/diagnostics.
 3. [ ] R3: safe sender/PIN text request card; completed text has explicit Review
@@ -161,3 +161,32 @@ was corrected, without weakening completion assertions. Metadata table covers
 N4, N7, N10 (overlapping categories, not separate tests). No user clipboard/peer
 used. All owned terminal sessions completed/closed; no watcher remains.
 R2/R3 not yet activated: native SDK still assumes file metadata until Text1 lands.
+
+## Actual R2 verification and handoff
+
+Text1 XML, captured kind/availability, read cache, checked SDK ledger and controller
+are active. Capture base reservation includes fixed metadata row storage; content
+never enters StateView/PanelState. Total reader budget remains 32 even if a custom
+coordinator raises its client budget. SDK read/retry and EndRead replay are bounded.
+
+Stable all-target check passed (14.40s). Initial expanded library run: 539 passed,
+1 failed because reader-capacity fixture hit the separate 32-client budget first.
+Fixture now explicitly raises only client budget to 64; assertions still enforce
+32 readers. Affected text filter: 22 methods passed (0.90s). Final tests invocation
+selected library and integration targets: 543 library/export methods passed (12.70s),
+8 binary integration methods passed (0.00s/0.03s); build 13.04s. Strict all-target
+Clippy passed (18.66s). Nightly format applied. Seven new R2 methods cover reader
+boundaries/history/replay/resource redaction, captured availability, actual UID
+rejection, real wire reads/interruptions, foreign/epoch/FD rejection and controller
+result privacy (Positive,N1,N2,N3,N4,N5,N6,N7,N9,N10 overlap). No ten-run claim.
+All owned terminal sessions completed/closed. Existing bluer future-incompatibility
+warning remains; no physical peer or user's clipboard accessed.
+
+R3 internal implementation seam: one owned Review component receives an immutable
+text resource plus a fresh GTK-thread permission callback. Production callback
+checks current known unlock, epoch/transfer/revision/kind/size and panel availability.
+Tests inject external lock/resource observations and use only the isolated display's
+clipboard. Disable TextView's built-in copy action so it cannot bypass the guarded
+Copy button. An admitted read may finish in the owned controller after GUI dismissal;
+a presentation token rejects late private results after lock/close/epoch change.
+No source/settings action is cancelled as a side effect of text dismissal.
