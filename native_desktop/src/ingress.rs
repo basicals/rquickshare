@@ -2,7 +2,10 @@
 
 use rqs_lib::{
     file_source::{OpenedSelection, SelectionLimits},
-    service::client::controller::PanelHandle,
+    service::client::{
+        controller::PanelHandle,
+        desktop::{PreparationGate, PreparationPermit},
+    },
 };
 use std::{path::PathBuf, sync::Mutex};
 use tokio::{runtime::Handle, sync::watch, task::JoinHandle};
@@ -15,6 +18,7 @@ pub struct IngressState {
 pub struct Ingress {
     task: Mutex<Option<JoinHandle<()>>>,
     state: watch::Sender<IngressState>,
+    pub gate: PreparationGate,
 }
 impl Ingress {
     pub fn new() -> Self {
@@ -22,16 +26,20 @@ impl Ingress {
         Self {
             task: Mutex::new(None),
             state,
+            gate: PreparationGate::new(),
         }
     }
     pub fn subscribe(&self) -> watch::Receiver<IngressState> {
         self.state.subscribe()
     }
-    pub fn start(&self, runtime: &Handle, paths: Vec<PathBuf>, controller: PanelHandle) -> bool {
+    pub fn start(
+        &self,
+        runtime: &Handle,
+        paths: Vec<PathBuf>,
+        controller: PanelHandle,
+        permit: PreparationPermit,
+    ) {
         let mut task = self.task.lock().expect("ingress ownership");
-        if task.as_ref().is_some_and(|task| !task.is_finished()) {
-            return false;
-        }
         self.state.send_replace(IngressState {
             busy: true,
             failed: false,
@@ -57,10 +65,11 @@ impl Ingress {
                 busy: false,
                 failed,
             });
+            drop(permit);
         }));
-        true
     }
     pub async fn close(&self) {
+        self.gate.close();
         let task = self.task.lock().expect("ingress ownership").take();
         if let Some(task) = task {
             let _ = task.await;

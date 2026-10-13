@@ -1,3 +1,4 @@
+mod cli;
 mod ingress;
 mod panel;
 mod placement;
@@ -5,7 +6,7 @@ mod tray;
 
 use gtk::{gio, glib, prelude::*};
 use rqs_lib::service::{
-    client::{controller::PanelController, NativeClient},
+    client::{controller::PanelController, desktop::DesktopServer, NativeClient},
     process::BusAddress,
 };
 use std::{
@@ -72,7 +73,22 @@ fn main() {
     }
 }
 fn run() -> Result<(), &'static str> {
-    let options = Options::parse(std::env::args_os().skip(1))?;
+    let args = std::env::args_os().skip(1).collect::<Vec<_>>();
+    if args.first().is_some_and(|arg| arg == "send") {
+        let paths = cli::paths(args.into_iter().skip(1))?;
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .map_err(|_| "Cannot create native runtime")?;
+        let address = session_address()?;
+        let executable =
+            std::env::current_exe().map_err(|_| "Cannot locate native panel executable")?;
+        runtime.block_on(cli::send(paths, &address, &executable))?;
+        println!("Files prepared. Choose a recipient in the panel to send.");
+        return Ok(());
+    }
+    let options = Options::parse(args)?;
     gtk::init().map_err(|_| "GTK display is unavailable")?;
     if !options.preview && !gtk4_layer_shell::is_supported() {
         return Err(
@@ -85,22 +101,33 @@ fn run() -> Result<(), &'static str> {
         .build()
         .map_err(|_| "Cannot create native runtime")?;
     let ingress = Arc::new(ingress::Ingress::new());
-    let (controller, tray) = if options.preview {
-        (None, None)
+    let (controller, tray, desktop) = if options.preview {
+        (None, None, None)
     } else {
-        let directory = std::env::var_os("XDG_RUNTIME_DIR")
-            .map(PathBuf::from)
-            .ok_or("Missing session runtime directory")?;
-        let address = BusAddress::session(&directory).map_err(|_| "Invalid session bus address")?;
-        let connected=runtime.block_on(async {
-            let stream=address.connect().await.map_err(|_|"Session bus unavailable")?;
-            let client=NativeClient::connect(stream).await.map_err(|_|"Native daemon unavailable or incompatible. Start the uninstalled development daemon explicitly.")?;
-            match tray::Tray::connect(&address).await {
-                Ok(tray)=>Ok((PanelController::spawn(client),tray)),
-                Err(_)=>{let _=client.close().await;Err("KDE tray watcher unavailable or changed")}
+        let address = session_address()?;
+        let connected = runtime.block_on(async {
+            let stream = address.connect().await.map_err(|_| "Session bus unavailable")?;
+            let client = NativeClient::connect(stream).await.map_err(|_| "Native daemon unavailable or incompatible. Start the uninstalled development daemon explicitly.")?;
+            let controller = PanelController::spawn(client);
+            let mut updates = controller.handle().subscribe();
+            if updates.wait_for(|state| state.view.is_some() || state.disconnected).await.is_err() || updates.borrow().disconnected {
+                let _ = controller.close().await;
+                return Err("Cannot obtain complete native service state");
+            }
+            let tray = match tray::Tray::connect(&address).await {
+                Ok(tray) => tray,
+                Err(_) => {let _ = controller.close().await;return Err("KDE tray watcher unavailable or changed");}
+            };
+            let desktop = match address.connect().await {
+                Ok(stream) => DesktopServer::connect(stream, controller.handle(), ingress.gate.clone()).await,
+                Err(_) => {let _ = controller.close().await;let _ = tray.close().await;return Err("Session bus unavailable");}
+            };
+            match desktop {
+                Ok(desktop) => Ok((controller, tray, desktop)),
+                Err(_) => {let _ = controller.close().await;let _ = tray.close().await;Err("Another panel owns the desktop service or registration failed")}
             }
         })?;
-        (Some(connected.0), Some(connected.1))
+        (Some(connected.0), Some(connected.1), Some(connected.2))
     };
     let application = gtk::Application::new(
         Some("io.github.morozhenko_apps.RQuickShare.Native"),
@@ -108,6 +135,7 @@ fn run() -> Result<(), &'static str> {
     );
     let handle = controller.as_ref().map(PanelController::handle);
     let tray_updates = tray.as_ref().map(|tray| tray.updates.clone());
+    let desktop_handle = desktop.as_ref().map(DesktopServer::handle);
     let stop = CancellationToken::new();
     let stop_ui = stop.clone();
     let retained: Rc<RefCell<Option<Rc<panel::Panel>>>> = Rc::new(RefCell::new(None));
@@ -163,6 +191,42 @@ fn run() -> Result<(), &'static str> {
             }
             panel.window.present();
         } else {
+            if let Some(desktop) = &desktop_handle {
+                panel.bind_desktop(desktop.clone());
+                let weak = Rc::downgrade(&panel);
+                let application = application.clone();
+                let failure = failure_ui.clone();
+                tasks_ui.borrow_mut().push(follow(
+                    desktop.subscribe(),
+                    stop_ui.clone(),
+                    move |state| {
+                        if state.closed {
+                            failure
+                                .set(Some("Desktop service connection lost. Restart the panel."));
+                            application.quit();
+                            return;
+                        }
+                        if let Some(panel) = weak.upgrade() {
+                            if !panel.desktop_update(state) {
+                                failure.set(Some(
+                                    "Cannot place recipient panel on an available monitor",
+                                ));
+                                application.quit();
+                            }
+                        }
+                    },
+                ));
+            }
+            let weak = Rc::downgrade(&panel);
+            tasks_ui.borrow_mut().push(follow(
+                ingress_ui.gate.subscribe(),
+                stop_ui.clone(),
+                move |_| {
+                    if let Some(panel) = weak.upgrade() {
+                        panel.render();
+                    }
+                },
+            ));
             if let Some(handle) = &handle {
                 let weak = Rc::downgrade(&panel);
                 tasks_ui.borrow_mut().push(follow(
@@ -223,6 +287,9 @@ fn run() -> Result<(), &'static str> {
         if let Some(controller) = controller {
             let _ = controller.close().await;
         }
+        if let Some(desktop) = desktop {
+            let _ = desktop.close().await;
+        }
         ingress.close().await;
         if let Some(tray) = tray {
             let _ = tray.close().await;
@@ -235,6 +302,13 @@ fn run() -> Result<(), &'static str> {
         return Err("GTK application failed");
     }
     Ok(())
+}
+
+fn session_address() -> Result<BusAddress, &'static str> {
+    let directory = std::env::var_os("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .ok_or("Missing session runtime directory")?;
+    BusAddress::session(&directory).map_err(|_| "Invalid session bus address")
 }
 
 #[cfg(test)]

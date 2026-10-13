@@ -12,7 +12,7 @@ path = "src/main.rs"
 gtk = { package = "gtk4", version = "=0.11.3", features = ["v4_12"] }
 gtk4-layer-shell = "=0.8.0"
 rqs_lib = { path = "../core_lib", default-features = false }
-tokio = { version = "1.43", features = ["rt-multi-thread", "sync", "net"] }
+tokio = { version = "1.43", features = ["rt-multi-thread", "sync", "net", "process", "macros"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 zbus = { version = "=5.19.0", default-features = false, features = ["tokio"] }
 futures = "0.3"

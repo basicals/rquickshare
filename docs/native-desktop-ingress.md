@@ -16,10 +16,10 @@ Milestones / rollback:
 1. [x] Shared preparation gate, native manifest validation, owned desktop import
    server/client with bounded framing, authentication, replay and disconnect.
    Roll back this SDK addition before its GUI consumer; daemon API is unchanged.
-2. [ ] CLI local path/file-URI parser and event-driven GUI cold start; chooser and
+2. [x] CLI local path/file-URI parser and event-driven GUI cold start; chooser and
    CLI share the gate; present the existing recipient flow. No paths in GUI/daemon
    IPC, invocation never sends. Roll back native bindings independently.
-3. [ ] Scoped real private-broker / parser / lifecycle checks, strict affected
+3. [x] Scoped real private-broker / parser / lifecycle checks, strict affected
    lint/build/format once; record actual observations, commit on dev.
 4. [ ] Add package-owned Dolphin assets only after the actual CLI/recipient flow
    works. No live install. Notifications/settings/full parity remain separate gates.
@@ -169,3 +169,34 @@ Tables also exercise N1 malformed names and N3/N6 connection/owner loss. N10
 redacted diagnostics and N12 retained originals/handles are assertions within those
 methods. N8/N11 remain inapplicable for the reasons above. No percentages or
 exhaustive branch-coverage claim; native CLI/widget checks are reported separately.
+
+### M2/M3 completion / native verification
+
+CLI acquisition, local/file-URI grammar, GUI cold start, shared dialog/staging gate,
+recipient presentation, external staging abort and owned shutdown are implemented.
+Two new CLI methods plus seven previous native methods passed (9/9, 0.18s) under
+an isolated non-activating broker and Xvfb. The affected startup method was then
+strengthened with RAII broker teardown and existing-owner/no-launch coverage and
+passed once (1/1, 0.01s). Strict native all-target Clippy passed (2.03s); nine known
+core dependency warnings in the no-experimental build remain, with no native
+warning allowance. Initial compile failures (watch borrow lifetimes, typed bus
+name conversion and optional owner access) were corrected before passing checks.
+Ten new methods overall (eight SDK, two CLI), within the preregistered range.
+Native additions by primary purpose: N1 grammar 1, N3 startup failure 1; each also
+covers count/byte boundaries, local-only input or teardown as stated above.
+Current combined core/native inventory: 521 tests, not a full 521-test execution.
+No user bus, Bluetooth, daemon process, package installer or real Dolphin was run.
+Final executable build/negative CLI smoke and static asset checks remain below.
+
+### Next desktop lifecycle gate
+
+Dolphin source metadata alone is insufficient for product completion. CLI errors
+currently use fixed stderr messages; a nonterminal file-manager launch needs a
+visible native error route. Before release, integrate this with the daemon-owned
+notification lifecycle required by product-direction.md, rather than introducing
+an unrelated dialog executable or a terminal window. The existing accepted
+architecture puts background notifications in the daemon so closing GTK cannot
+hide incoming consent. Notification expiry must not imply decline/accept, and
+stale actions must be scoped to exact transfer/consent round. This needs its own
+concrete wire/UX review before implementation; no notification behavior is added
+by the descriptor ingress stage.

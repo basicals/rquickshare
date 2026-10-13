@@ -8,6 +8,7 @@ use gtk::{gio, glib, prelude::*};
 use gtk4_layer_shell::{Edge as LayerEdge, LayerShell};
 use rqs_lib::service::client::{
     controller::{Completion, ControllerError, PanelHandle, PanelState},
+    desktop::{DesktopHandle, DesktopState, PreparationPermit},
     state::{DetailsStatus, TransferDetails},
 };
 use rqs_lib::service::{Direction, Lifecycle, Phase};
@@ -19,6 +20,9 @@ struct Model {
     state: PanelState,
     ingress: IngressState,
     dialog: Option<gio::Cancellable>,
+    dialog_permit: Option<PreparationPermit>,
+    desktop: DesktopState,
+    last_hint: Option<(i32, i32)>,
     waiting: bool,
     closing: bool,
     notice: Option<&'static str>,
@@ -32,6 +36,7 @@ pub struct Panel {
     runtime: Handle,
     ingress: Arc<Ingress>,
     completion: RefCell<Option<glib::JoinHandle<()>>>,
+    desktop: RefCell<Option<DesktopHandle>>,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -158,6 +163,7 @@ impl Panel {
             runtime,
             ingress,
             completion: RefCell::new(None),
+            desktop: RefCell::new(None),
         });
         panel.window.connect_close_request(|window| {
             window.set_visible(false);
@@ -188,6 +194,12 @@ impl Panel {
             let weak = Rc::downgrade(&panel);
             panel.button(id).connect_clicked(move |_| {
                 if let Some(panel) = weak.upgrade() {
+                    if id == "abort" && panel.model.borrow().desktop.staging {
+                        if let Some(desktop) = panel.desktop.borrow().as_ref() {
+                            desktop.abort_staging();
+                        }
+                        return;
+                    }
                     if let Some(handle) = &panel.handle {
                         let action = || match id {
                             "recover" => handle.recover(),
@@ -238,6 +250,44 @@ impl Panel {
         self.model.borrow_mut().state = state;
         self.render();
     }
+    pub fn bind_desktop(&self, desktop: DesktopHandle) {
+        self.desktop.replace(Some(desktop));
+    }
+    pub fn desktop_update(self: &Rc<Self>, state: DesktopState) -> bool {
+        let present = state.show_revision != self.model.borrow().desktop.show_revision;
+        self.model.borrow_mut().desktop = state;
+        self.render();
+        !present || self.present_recipient()
+    }
+    fn present_recipient(&self) -> bool {
+        self.pages.set_visible_child_name("nearby");
+        let hint = self.model.borrow().last_hint;
+        if let Some(hint) = hint {
+            if self.show_at(hint) {
+                return true;
+            }
+        }
+        let monitors = gtk::prelude::WidgetExt::display(&self.window).monitors();
+        let Some(monitor) = monitors.item(0).and_downcast::<gtk::gdk::Monitor>() else {
+            return false;
+        };
+        let geometry = monitor.geometry();
+        let Some(x) = geometry
+            .x()
+            .checked_add(geometry.width())
+            .and_then(|x| x.checked_sub(1))
+        else {
+            return false;
+        };
+        let Some(y) = geometry
+            .y()
+            .checked_add(geometry.height())
+            .and_then(|y| y.checked_sub(1))
+        else {
+            return false;
+        };
+        self.show_at((x, y))
+    }
     pub fn ingress_update(self: &Rc<Self>, state: IngressState) {
         self.model.borrow_mut().ingress = state;
         self.render();
@@ -252,6 +302,7 @@ impl Panel {
         }
         let mut model = self.model.borrow_mut();
         model.closing = true;
+        model.dialog_permit.take();
         if let Some(dialog) = model.dialog.take() {
             dialog.cancel();
         }
@@ -267,6 +318,7 @@ impl Panel {
                 || model.state.disconnected
                 || model.dialog.is_some()
                 || model.ingress.busy
+                || *self.ingress.gate.subscribe().borrow()
             {
                 return;
             }
@@ -301,7 +353,11 @@ impl Panel {
             let mut model = self.model.borrow_mut();
             if !controls_ready(
                 &model.state,
-                model.waiting || model.ingress.busy || model.dialog.is_some() || model.closing,
+                model.waiting
+                    || model.ingress.busy
+                    || model.dialog.is_some()
+                    || model.closing
+                    || *self.ingress.gate.subscribe().borrow(),
             ) || model
                 .state
                 .view
@@ -310,6 +366,10 @@ impl Panel {
             {
                 return;
             }
+            let Some(permit) = self.ingress.gate.try_acquire() else {
+                return;
+            };
+            model.dialog_permit = Some(permit);
             model.dialog = Some(gio::Cancellable::new());
             model.notice = None;
         }
@@ -320,14 +380,15 @@ impl Panel {
         let selected = move |files: Result<Vec<gio::File>, glib::Error>| {
             if let Some(panel) = weak.upgrade() {
                 panel.model.borrow_mut().dialog = None;
+                let permit = panel.model.borrow_mut().dialog_permit.take();
                 if panel.model.borrow().closing {
                     return;
                 }
                 if let Ok(files) = files {
                     let paths: Option<Vec<_>> = files.iter().map(gio::File::path).collect();
-                    match (paths, panel.handle.clone()) {
-                        (Some(paths), Some(handle)) if !paths.is_empty() => {
-                            panel.ingress.start(&panel.runtime, paths, handle);
+                    match (paths, panel.handle.clone(), permit) {
+                        (Some(paths), Some(handle), Some(permit)) if !paths.is_empty() => {
+                            panel.ingress.start(&panel.runtime, paths, handle, permit);
                         }
                         _ => panel.notice("Only local files and folders can be selected."),
                     }
@@ -379,7 +440,11 @@ impl Panel {
         let ready = !preview
             && controls_ready(
                 &model.state,
-                model.waiting || model.ingress.busy || model.dialog.is_some() || model.closing,
+                model.waiting
+                    || model.ingress.busy
+                    || model.dialog.is_some()
+                    || model.closing
+                    || *self.ingress.gate.subscribe().borrow(),
             );
         let selection = model
             .state
@@ -390,14 +455,15 @@ impl Panel {
         self.button("files").set_sensitive(ready && !selected);
         self.button("folder").set_sensitive(ready && !selected);
         self.button("discard").set_sensitive(ready && selected);
-        self.box_widget("recovery")
-            .set_visible(model.state.pending && !model.state.disconnected);
+        self.box_widget("recovery").set_visible(
+            (model.state.pending || model.desktop.staging) && !model.state.disconnected,
+        );
         for id in ["recover", "abort"] {
             self.button(id).set_sensitive(
                 !preview
                     && !model.waiting
                     && !model.state.busy
-                    && model.state.pending
+                    && (model.state.pending || (id == "abort" && model.desktop.staging))
                     && !model.state.disconnected,
             );
         }
@@ -421,7 +487,7 @@ impl Panel {
                 "Waiting"
             },
         );
-        self.text("status",if preview {"Preview only · service actions disabled"} else if let Some(notice)=model.notice {notice} else if model.ingress.busy {"Preparing files…"} else if model.ingress.failed {"Preparation failed. Review service state or select accessible files."} else if model.state.view.as_ref().is_some_and(|view|!view.warnings.is_empty()) {"Visibility was recovered as hidden. Review service settings before enabling discovery."} else {error_message(model.state.error)});
+        self.text("status",if preview {"Preview only · service actions disabled"} else if let Some(notice)=model.notice {notice} else if model.desktop.staging {"Receiving files from the local sender. Abort to release this preparation."} else if model.ingress.busy || *self.ingress.gate.subscribe().borrow() {"Preparing files…"} else if model.ingress.failed {"Preparation failed. Review service state or select accessible files."} else if model.state.view.as_ref().is_some_and(|view|!view.warnings.is_empty()) {"Visibility was recovered as hidden. Review service settings before enabling discovery."} else {error_message(model.state.error)});
         for id in ["nearby", "incoming", "transfers"] {
             clear(&self.box_widget(id));
         }
@@ -579,6 +645,7 @@ impl Panel {
                 self.window.set_anchor(edge, true);
                 self.window.set_margin(edge, margin);
             }
+            self.model.borrow_mut().last_hint = Some(point);
             self.window.present();
             return true;
         }
