@@ -31,6 +31,63 @@ pub(crate) fn fixture() -> Fixture {
     }
 }
 
+#[tokio::test]
+async fn given_preparation_active_lease_or_unproven_state_when_restarting_then_busy_owner_keeps_admission_and_idle_owner_closes_it(
+) {
+    for case in ["selection", "upload", "lease", "unsynchronized", "idle"] {
+        // Arrange
+        let mut f = fixture();
+        let client = f.runtime.connect().unwrap();
+        let mut held = None;
+        match case {
+            "selection" => {
+                f.runtime.create_selection(client, selection()).unwrap();
+            }
+            "upload" => {
+                f.runtime.begin_selection(client, "prepared").unwrap();
+            }
+            "lease" => {
+                held = Some(
+                    f.runtime
+                        .sender
+                        .sessions()
+                        .open(
+                            crate::channel::TransferType::Inbound,
+                            None,
+                            CancellationToken::new(),
+                        )
+                        .unwrap(),
+                );
+            }
+            "unsynchronized" => f.runtime.coordinator.synchronized = false,
+            _ => (),
+        }
+        // Act / Assert
+        assert_eq!(f.runtime.restart_if_idle(), case == "idle", "{case}");
+        let next = f.runtime.sender.sessions().open(
+            crate::channel::TransferType::Inbound,
+            None,
+            CancellationToken::new(),
+        );
+        if case == "idle" {
+            assert!(matches!(next, Err(SessionError::Closed)));
+        } else {
+            assert!(next.is_ok());
+        }
+        drop(next);
+        drop(held);
+        let _ = f.runtime.shutdown().await;
+    }
+    let mut recovery = NativeRuntime::configuration_only(123, Limits::default()).unwrap();
+    assert!(recovery.is_configuration_only());
+    assert!(!recovery.started);
+    assert!(recovery.startup.is_none());
+    assert!(recovery.core.tracker.is_none());
+    assert_eq!(recovery.coordinator.lifecycle, Lifecycle::Stopped);
+    assert!(recovery.restart_if_idle());
+    recovery.shutdown().await.unwrap();
+}
+
 #[test]
 fn given_existing_discovery_when_name_or_route_changes_then_shared_revision_changes_only_for_effective_updates(
 ) {

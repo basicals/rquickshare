@@ -375,6 +375,10 @@ impl Coordinator {
 
     pub fn connect(&mut self) -> Result<ClientId, Error> {
         self.running()?;
+        self.connect_observer()
+    }
+    /// Configuration-only hosts admit observers; individual mutations still check Running.
+    pub(super) fn connect_observer(&mut self) -> Result<ClientId, Error> {
         if self.clients.len() >= self.limits.clients {
             return Err(Error::Capacity);
         }
@@ -383,6 +387,20 @@ impl Coordinator {
         self.operations
             .insert(client, operations::Ledger::default());
         Ok(client)
+    }
+    fn idle_for_restart(&mut self) -> Result<bool, Error> {
+        self.refresh_resources()?;
+        Ok(self.synchronized
+            && self.selections.is_empty()
+            && self.uploads.is_empty()
+            && self.reservations.is_empty()
+            && self.queue.is_empty()
+            && self.transfers.values().all(|transfer| {
+                transfer.view.phase.is_terminal()
+                    && transfer.owner_closed
+                    && transfer.released
+                    && transfer.view.pending_control.is_none()
+            }))
     }
 
     pub fn disconnect(&mut self, client: ClientId) -> Result<(), Error> {

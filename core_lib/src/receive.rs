@@ -89,8 +89,7 @@ impl Directory {
                     rustix::fs::Mode::empty(),
                 )?)),
             };
-            let display =
-                std::fs::canonicalize(format!("/proc/self/fd/{}", authority.as_raw_fd()))?;
+            let display = std::fs::read_link(format!("/proc/self/fd/{}", authority.as_raw_fd()))?;
             Ok(Root { display, authority })
         }
         #[cfg(not(target_os = "linux"))]

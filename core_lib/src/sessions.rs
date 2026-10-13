@@ -279,6 +279,16 @@ impl SessionHub {
             }
         }
     }
+    /// Atomically prove idle and close admission without cancelling any live lease.
+    pub(crate) fn close_if_idle(&self) -> Result<bool, SessionError> {
+        let mut state = self.0.lock().map_err(|_| SessionError::OwnerLost)?;
+        if !state.sessions.is_empty() {
+            return Ok(false);
+        }
+        state.open = false;
+        state.membership.send_replace(());
+        Ok(true)
+    }
 
     pub(crate) fn open(
         &self,

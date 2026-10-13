@@ -111,6 +111,13 @@ async fn given_live_owner_when_saved_then_policy_adoption_port_restart_and_recov
         assert_eq!(applied.applied_live_revision, 2);
         assert_eq!(applied.directory_display, selected.to_string_lossy());
         assert!(!format!("{applied:?}").contains(selected.to_str().unwrap()));
+        let upload = client.begin_selection().await.unwrap();
+        assert_eq!(
+            client.restart_service().await,
+            Err(ClientError::Rejected(Error::Busy))
+        );
+        client.abort_selection(&upload).await.unwrap();
+        client.restart_service().await.unwrap();
         client.close().await.unwrap();
         server.finish().await;
     })
@@ -278,6 +285,7 @@ async fn given_blocked_disk_and_disconnected_requester_when_owner_stops_then_ser
         let mut observer = NativeClient::connect(private.socket().await).await.unwrap();
         assert_eq!(observer.read_state().await.unwrap().epoch, 123);
         assert_eq!(observer.read_settings().await.unwrap().revision, 0);
+        assert_eq!(observer.restart_service().await, Err(ClientError::Rejected(Error::Busy)));
         server.stop.cancel();
         let mut task = server.task;
         assert!(futures::poll!(&mut task).is_pending());

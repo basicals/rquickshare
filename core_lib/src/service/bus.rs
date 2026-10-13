@@ -69,6 +69,9 @@ pub struct SelectionBus {
     uid: u32,
     wakeup: Option<super::wakeup::Wakeup>,
     settings: Option<super::settings_service::SettingsOwner>,
+    configuration_only: bool,
+    pending_restart: Option<Message>,
+    restart_requested: bool,
 }
 
 impl SelectionBus {
@@ -140,6 +143,9 @@ impl SelectionBus {
             visibility_recovered: false,
             uid,
             settings: None,
+            configuration_only: false,
+            pending_restart: None,
+            restart_requested: false,
             wakeup: None,
         };
         let initialization = async {
@@ -213,6 +219,14 @@ impl SelectionBus {
         ));
         Ok(())
     }
+    pub(super) fn mark_settings_unapplied(&self) {
+        if let Some(settings) = &self.settings {
+            settings.mark_unapplied();
+        }
+    }
+    pub(super) fn restart_requested(&self) -> bool {
+        self.restart_requested
+    }
     pub(super) async fn close_unstarted(&mut self) {
         self.close_connection().await;
     }
@@ -225,6 +239,17 @@ impl SelectionBus {
         stop: CancellationToken,
     ) -> Result<(), BusError> {
         let outcome = self.run_inner(runtime, stop).await;
+        let shutdown = runtime.shutdown().await.map_err(BusError::Runtime);
+        let disconnected = self.disconnect_clients(runtime.selection_coordinator());
+        self.close_connection().await;
+        outcome.and(shutdown).and(disconnected)
+    }
+    pub(super) async fn run_prepared(
+        &mut self,
+        runtime: &mut NativeRuntime,
+        stop: CancellationToken,
+    ) -> Result<(), BusError> {
+        let outcome = self.run_started(runtime, stop).await;
         let shutdown = runtime.shutdown().await.map_err(BusError::Runtime);
         let disconnected = self.disconnect_clients(runtime.selection_coordinator());
         self.close_connection().await;
@@ -243,10 +268,12 @@ impl SelectionBus {
             return Ok(());
         }
         let failure = self.failed.clone();
-        tokio::select! {
-            _ = stop.cancelled() => return Ok(()),
-            _ = failure.cancelled() => return Err(BusError::Transport),
-            result = runtime.start() => result.map_err(BusError::Runtime)?,
+        if !runtime.is_configuration_only() {
+            tokio::select! {
+                _ = stop.cancelled() => return Ok(()),
+                _ = failure.cancelled() => return Err(BusError::Transport),
+                result = runtime.start() => result.map_err(BusError::Runtime)?,
+            }
         }
         self.run_started(runtime, stop).await
     }
@@ -257,11 +284,12 @@ impl SelectionBus {
         stop: CancellationToken,
     ) -> Result<(), BusError> {
         let failure = self.failed.clone();
+        self.configuration_only = runtime.is_configuration_only();
         loop {
             tokio::select! {
                 _ = stop.cancelled() => return Ok(()),
                 _ = failure.cancelled() => return Err(BusError::Transport),
-                result = runtime.step() => result.map_err(BusError::Runtime)?,
+                result = runtime.step(), if !self.configuration_only => result.map_err(BusError::Runtime)?,
                 request = async {
                     match &mut self.settings {
                         Some(settings) => settings.apply.recv().await,
@@ -283,6 +311,18 @@ impl SelectionBus {
                         result = self.dispatch(coordinator, endpoints, message) => result?,
                     }
                 }
+            }
+            if let Some(message) = self.pending_restart.take() {
+                let ready = self.settings.as_ref().is_some_and(|settings| {
+                    let view = settings.view();
+                    settings.idle() && view.configured && matches!(view.error, 0 | 4)
+                });
+                if ready && runtime.restart_if_idle() {
+                    self.restart_requested = true;
+                    self.state_reply(&message.header(), &()).await?;
+                    return Ok(());
+                }
+                self.domain_error(&message.header(), Error::Busy).await?;
             }
             tokio::select! {
                 _ = stop.cancelled() => return Ok(()),
@@ -371,9 +411,12 @@ impl SelectionBus {
             return Err(AuthenticationError::Denied);
         }
         let rule = owner_rule(sender).map_err(|_| AuthenticationError::Denied)?;
-        let client = coordinator
-            .connect()
-            .map_err(AuthenticationError::Coordinator)?;
+        let client = if self.configuration_only {
+            coordinator.connect_observer()
+        } else {
+            coordinator.connect()
+        }
+        .map_err(AuthenticationError::Coordinator)?;
         // Track ownership before any cancellable broker wait. Host cleanup can
         // now release this client even if AddMatch or NameHasOwner is abandoned.
         self.clients.insert(sender.to_owned(), client);
@@ -524,6 +567,25 @@ impl SelectionBus {
             use super::settings_service::{Command, SaveIntent, SettingsView};
             let invalid = || Error::InvalidInput;
             match member {
+                Some("Restart") => {
+                    let epoch = message
+                        .body()
+                        .deserialize::<String>()
+                        .map_err(|_| invalid());
+                    if !message.data().fds().is_empty()
+                        || epoch.as_deref() != Ok(format!("{:032x}", coordinator.epoch).as_str())
+                    {
+                        return self.domain_error(&header, invalid()).await;
+                    }
+                    if self.settings.is_none() {
+                        return self.domain_error(&header, Error::NotRunning).await;
+                    }
+                    if self.pending_restart.is_some() {
+                        return self.domain_error(&header, Error::Busy).await;
+                    }
+                    self.pending_restart = Some(message.clone());
+                    return Ok(());
+                }
                 Some("Read") => {
                     if !message.data().fds().is_empty()
                         || message.body().deserialize::<()>().is_err()

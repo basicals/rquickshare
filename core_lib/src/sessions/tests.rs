@@ -1,5 +1,26 @@
 use super::*;
 
+#[test]
+fn given_idle_or_live_session_when_restart_closes_admission_then_no_live_lease_is_cancelled_or_new_lease_admitted_after_cutoff(
+) {
+    // Arrange
+    let hub = hub();
+    let first = lease(&hub);
+    let control = first.control();
+    // Act / Assert
+    assert_eq!(hub.close_if_idle(), Ok(false));
+    assert!(!control.is_closed());
+    let second = lease(&hub); // A rejected cutoff did not close admission.
+    drop(first);
+    drop(second);
+    assert_eq!(hub.close_if_idle(), Ok(true));
+    assert!(matches!(
+        hub.open(TransferType::Inbound, None, CancellationToken::new()),
+        Err(SessionError::Closed)
+    ));
+    assert_eq!(hub.close_if_idle(), Ok(true));
+}
+
 fn hub() -> SessionHub {
     SessionHub::new(17).unwrap()
 }

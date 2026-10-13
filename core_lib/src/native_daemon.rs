@@ -22,14 +22,24 @@ async fn run() -> Result<(), rqs_lib::service::process::ProcessError> {
     }
     // Register both signals before any potentially waiting startup operation.
     let mut signals = ShutdownSignals::new()?;
-    let settings = read_settings(&match args.settings {
-        Some(path) => path,
-        None => settings_path()?,
-    })?;
-    if settings.visibility_recovered {
+    let legacy_override = args
+        .settings
+        .as_ref()
+        .map(|path| read_settings(path))
+        .transpose()?;
+    if legacy_override
+        .as_ref()
+        .is_some_and(|settings| settings.visibility_recovered)
+    {
         eprintln!("Saved visibility is invalid; receiving starts hidden. Choose a visibility setting in the application.");
     }
     if args.check {
+        if legacy_override.is_none() {
+            let (directory, legacy) = native_settings_paths()?;
+            check_native_settings(&rqs_lib::service::native_settings::Store::new(
+                directory, legacy,
+            ))?;
+        }
         println!("Settings checked; no service started.");
         return Ok(());
     }
@@ -37,7 +47,15 @@ async fn run() -> Result<(), rqs_lib::service::process::ProcessError> {
     let _owner = LaunchGuard::acquire(&directory)?;
     let address = BusAddress::session(&directory)?;
     let stop = CancellationToken::new();
-    let server = serve(settings, address, stop.clone());
+    let server = async {
+        match legacy_override {
+            Some(settings) => serve(settings, address, stop.clone()).await,
+            None => {
+                let (directory, legacy) = native_settings_paths()?;
+                serve_native_settings(directory, legacy, address, stop.clone()).await
+            }
+        }
+    };
     tokio::pin!(server);
     tokio::select! {
         result = &mut server => result,

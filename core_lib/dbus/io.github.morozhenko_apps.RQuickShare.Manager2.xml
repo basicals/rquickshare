@@ -1,5 +1,8 @@
 <node>
   <interface name="io.github.morozhenko_apps.RQuickShare.Settings1">
+    <method name="Restart">
+      <arg name="epoch" type="s" direction="in"/>
+    </method>
     <method name="Read">
       <arg name="settings" type="(sbybtsyiysbtbbys)" direction="out"/>
     </method>

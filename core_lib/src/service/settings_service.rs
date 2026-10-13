@@ -1,5 +1,6 @@
 //! Bounded settings writer and typed Settings1 projection, separate from transfers.
 use std::fs::File;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
@@ -206,6 +207,7 @@ pub(super) struct SettingsOwner {
     view: Arc<Mutex<SettingsView>>,
     stop: CancellationToken,
     task: Option<JoinHandle<()>>,
+    outstanding: Arc<AtomicUsize>,
 }
 impl SettingsOwner {
     pub fn spawn(
@@ -248,6 +250,7 @@ impl SettingsOwner {
         let (commands, requests) = mpsc::channel(8);
         let (apply_sender, apply) = mpsc::channel(1);
         let stop = CancellationToken::new();
+        let outstanding = Arc::new(AtomicUsize::new(0));
         let task = tokio::spawn(
             Writer {
                 store: Some(store),
@@ -258,6 +261,7 @@ impl SettingsOwner {
                 active_directory,
                 connection,
                 stop: stop.clone(),
+                outstanding: outstanding.clone(),
             }
             .run(),
         );
@@ -267,6 +271,7 @@ impl SettingsOwner {
             view,
             stop,
             task: Some(task),
+            outstanding,
         }
     }
     pub fn view(&self) -> SettingsView {
@@ -276,14 +281,27 @@ impl SettingsOwner {
             .clone()
     }
     pub fn submit(&self, command: Command) -> Result<(), super::Error> {
-        self.commands
-            .as_ref()
-            .ok_or(super::Error::NotRunning)?
-            .try_send(command)
-            .map_err(|error| match error {
+        let commands = self.commands.as_ref().ok_or(super::Error::NotRunning)?;
+        self.outstanding.fetch_add(1, Ordering::SeqCst);
+        commands.try_send(command).map_err(|error| {
+            self.outstanding.fetch_sub(1, Ordering::SeqCst);
+            match error {
                 mpsc::error::TrySendError::Full(_) => super::Error::Busy,
                 mpsc::error::TrySendError::Closed(_) => super::Error::NotRunning,
-            })
+            }
+        })
+    }
+    pub fn idle(&self) -> bool {
+        self.outstanding.load(Ordering::SeqCst) == 0
+    }
+    pub fn mark_unapplied(&self) {
+        let mut view = self
+            .view
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner());
+        if view.configured {
+            view.error = 4;
+        }
     }
     pub async fn close(mut self) {
         self.commands.take();
@@ -309,6 +327,7 @@ struct Writer<I> {
     active_directory: Option<super::native_settings::DirectoryRecord>,
     connection: Connection,
     stop: CancellationToken,
+    outstanding: Arc<AtomicUsize>,
 }
 impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
     fn view(&self) -> SettingsView {
@@ -446,6 +465,7 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
                     Err(error)
                 }
             };
+            self.outstanding.fetch_sub(1, Ordering::SeqCst);
             if self.stop.is_cancelled() {
                 continue;
             }

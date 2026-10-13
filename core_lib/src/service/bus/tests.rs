@@ -14,6 +14,9 @@ pub(crate) struct PrivateBus {
     address: String,
 }
 impl PrivateBus {
+    pub(crate) fn address_for_test(&self) -> String {
+        self.address.clone()
+    }
     pub(crate) fn new() -> Self {
         let directory = tempfile::tempdir().unwrap();
         let address = format!("unix:path={}", directory.path().join("bus").display());

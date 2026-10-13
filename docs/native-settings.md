@@ -21,7 +21,7 @@ separate RQS owners. Fix the authority boundary before adding mutable settings.
    and scoped fault inventory, then implement the injected single-writer store.
 3. [x] S3: freeze Settings1 XML, bounded read/edit/receipt contracts, idempotency,
    caller/FD validation and nonblocking owned writer/apply lifecycle before API code.
-4. [ ] S4: integrate native startup/settings owner and saved/configured/applied/
+4. [x] S4: integrate native startup/settings owner and saved/configured/applied/
    restart-required state. Unusable storage must remain explicit, never silent defaults.
    Freeze configuration-only recovery/controlled idle restart details before code.
 5. [ ] S5: secondary GTK settings editor with explicit save/import/recovery, actual
@@ -279,3 +279,27 @@ fake external channels and actual runtime/coordinator/session logic, not radio
 hardware. Installed activation, live settings migration and physical radios remain
 separate acceptance gates. Rollback: consumers/API then process activation; original
 Tauri settings and read-only developer override are preserved.
+
+S4 implementation review also identified two receive-capability integration details:
+use the kernel /proc FD readlink for display instead of resolving that display path
+again, and represent a non-UTF8 receive destination lossily in transfer metadata
+only. Descriptor-relative planning/creation retains original bytes and authority.
+This prevents misleading re-resolution and failure of a valid non-UTF8 chosen root;
+it changes no peer framing or file-name sanitization. Extend the existing actual
+inbound table to cover a non-UTF8 root; run that affected check once after this fix.
+
+S4 observations: normal native startup now activates the store/writer; override
+startup remains read-only. Corrupt config and failed transport initialization retain
+an editable configuration-only service. A private-broker scenario actually repaired
+corrupt JSON, requested restart, observed a different owner/epoch, and verified an
+occupied TCP port returns to configuration-only before radio tasks start. No peer
+traffic or user configuration was used. Four new methods primarily cover N6 (2),
+N5 (2); they also cover Positive/N4/N7/N9/N12.
+
+Actual checks: 8 process methods, 5 affected settings-broker methods, the new
+runtime idle-guard method, new session cutoff method and strengthened inbound
+non-UTF8-root table passed. Strict core all-target Clippy (7.12s) and nightly fmt
+passed. The test's initially incorrect TransferType import was fixed before execution.
+Existing bluer future-incompatibility notice remains. Prepared upload and blocked
+writer reject Restart in actual bus tests; invalid source blocks transfer admission.
+Every private broker/task/fixture and command exited. Terminal closed.

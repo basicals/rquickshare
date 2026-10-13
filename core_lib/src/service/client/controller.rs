@@ -54,6 +54,7 @@ impl Completion {
 }
 
 enum Action {
+    SettingsRestart,
     SettingsSave(super::settings::SettingsEdit),
     SettingsReload,
     SettingsRetry,
@@ -77,6 +78,9 @@ pub struct PanelHandle {
     state: watch::Receiver<PanelState>,
 }
 impl PanelHandle {
+    pub fn restart_service(&self) -> Result<Completion> {
+        self.submit(Action::SettingsRestart)
+    }
     pub fn save_settings(&self, edit: super::settings::SettingsEdit) -> Result<Completion> {
         self.submit(Action::SettingsSave(edit))
     }
@@ -319,6 +323,11 @@ impl Worker {
         }
         self.refresh().await?;
         match action {
+            Action::SettingsRestart => self
+                .client
+                .restart_service()
+                .await
+                .map(|()| ActionResult::Completed),
             Action::SettingsSave(edit) => self
                 .client
                 .save_settings(edit)

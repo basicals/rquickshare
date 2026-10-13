@@ -1549,13 +1549,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
 
             let metadata = TransferMetadata {
                 id: self.state.id.clone(),
-                destination: Some(
-                    root.display()
-                        .to_path_buf()
-                        .into_os_string()
-                        .into_string()
-                        .map_err(|_| anyhow!("failed to convert PathBuf to String"))?,
-                ),
+                destination: Some(root.display().to_string_lossy().into_owned()),
                 source: self.state.remote_device_info.clone(),
                 files: Some(files_name),
                 pin_code: self.state.pin_code.clone(),
@@ -2409,10 +2403,15 @@ mod security_tests {
     async fn given_admitted_file_request_when_policy_or_root_name_changes_then_accept_uses_original_directory_authority(
     ) {
         use std::os::unix::fs::symlink;
-        for rename in [false, true] {
+        for (rename, non_utf8) in [(false, false), (true, false), (false, true)] {
             // Arrange
             let base = tempfile::tempdir().unwrap();
-            let selected = base.path().join("selected");
+            use std::os::unix::ffi::OsStringExt;
+            let selected = base.path().join(if non_utf8 {
+                std::ffi::OsString::from_vec(vec![b's', 0xff])
+            } else {
+                "selected".into()
+            });
             let other = base.path().join("other");
             let moved = base.path().join("moved");
             std::fs::create_dir(&selected).unwrap();
@@ -2445,7 +2444,7 @@ mod security_tests {
                     .unwrap()
                     .destination
                     .as_deref(),
-                selected.to_str()
+                Some(selected.to_string_lossy().as_ref())
             );
             assert_eq!(
                 request

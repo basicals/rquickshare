@@ -11,6 +11,14 @@ pub struct SettingsEdit {
     pub directory: Option<File>,
 }
 impl NativeClient {
+    pub async fn restart_service(&mut self) -> Result<()> {
+        let epoch = format!("{:032x}", self.epoch);
+        self.wire(SETTINGS, "Restart", &epoch)
+            .await?
+            .body()
+            .deserialize::<()>()
+            .map_err(|_| ClientError::Protocol)
+    }
     fn checked_settings(&self, reply: Message) -> Result<SettingsView> {
         if !reply.data().fds().is_empty() {
             return Err(ClientError::Protocol);

@@ -11,6 +11,186 @@ fn private_directory() -> tempfile::TempDir {
 use super::*;
 
 #[test]
+fn given_native_settings_check_when_missing_corrupt_or_directory_identity_changes_then_check_is_read_only_and_never_defaults_corruption(
+) {
+    use crate::service::native_settings::{CardMode, DirectoryIntent, Edit, Store, StoreError};
+    // Arrange
+    let root = private_directory();
+    let directory = root.path().join("native");
+    let legacy = root.path().join("legacy");
+    let store = Store::new(directory.clone(), legacy);
+    // Act / Assert
+    check_native_settings(&store).unwrap();
+    assert!(!directory.exists());
+    let selected = root.path().join("selected");
+    std::fs::create_dir(&selected).unwrap();
+    let initial = store.load().unwrap();
+    store
+        .save(Edit {
+            base: initial.base,
+            request: "00000000000000000000000000000001".into(),
+            visibility: 1,
+            port: Some(0),
+            card_mode: CardMode::Compact,
+            directory: DirectoryIntent::Replace(File::open(&selected).unwrap()),
+            recover: false,
+        })
+        .unwrap();
+    check_native_settings(&store).unwrap();
+    let bytes = std::fs::read(directory.join("native-settings.json")).unwrap();
+    std::fs::rename(&selected, root.path().join("moved")).unwrap();
+    std::fs::create_dir(&selected).unwrap();
+    assert_eq!(
+        check_native_settings(&store),
+        Err(ProcessError::NativeSettings(StoreError::Directory))
+    );
+    assert_eq!(
+        std::fs::read(directory.join("native-settings.json")).unwrap(),
+        bytes
+    );
+    std::fs::write(directory.join("native-settings.json"), b"{").unwrap();
+    assert_eq!(
+        check_native_settings(&store),
+        Err(ProcessError::NativeSettings(StoreError::RecoveryRequired))
+    );
+    assert_eq!(
+        std::fs::read(directory.join("native-settings.json")).unwrap(),
+        b"{"
+    );
+}
+
+#[tokio::test]
+async fn given_corrupt_native_config_when_repaired_and_explicitly_restarted_then_fresh_owner_serves_truthful_recovery_without_radio_start(
+) {
+    use futures::StreamExt;
+
+    use crate::service::bus::{tests::PrivateBus, SERVICE};
+    use crate::service::client::{
+        settings::{SaveIntent, SettingsEdit},
+        ClientError, NativeClient,
+    };
+    use crate::service::native_settings::Store;
+    use crate::service::{Error, Lifecycle};
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        // Arrange: reserve the configured TCP port to fail before any radio tasks.
+        let occupied = std::net::TcpListener::bind((std::net::Ipv4Addr::UNSPECIFIED, 0)).unwrap();
+        let private = PrivateBus::new();
+        let root = private_directory();
+        let directory = root.path().join("native");
+        let legacy = root.path().join("legacy");
+        std::fs::create_dir(&directory).unwrap();
+        std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700)).unwrap();
+        std::fs::write(directory.join("native-settings.json"), b"{").unwrap();
+        std::fs::set_permissions(
+            directory.join("native-settings.json"),
+            std::fs::Permissions::from_mode(0o600),
+        )
+        .unwrap();
+        let observer = private.client().await;
+        let rule = zbus::MatchRule::builder()
+            .msg_type(zbus::message::Type::Signal)
+            .sender("org.freedesktop.DBus")
+            .unwrap()
+            .path("/org/freedesktop/DBus")
+            .unwrap()
+            .interface("org.freedesktop.DBus")
+            .unwrap()
+            .member("NameOwnerChanged")
+            .unwrap()
+            .arg(0, SERVICE)
+            .unwrap()
+            .build();
+        let mut owners = zbus::MessageStream::for_match_rule(rule, &observer, Some(8))
+            .await
+            .unwrap();
+        let stop = CancellationToken::new();
+        let end = stop.clone();
+        let address = BusAddress::parse(&private.address_for_test()).unwrap();
+        let task = tokio::spawn(serve_native_settings(
+            directory.clone(),
+            legacy.clone(),
+            address,
+            end,
+        ));
+        let first = owners.next().await.unwrap().unwrap();
+        let (_, _, old): (String, String, String) = first.body().deserialize().unwrap();
+        assert!(!old.is_empty());
+        let mut client = NativeClient::connect(private.socket().await).await.unwrap();
+        let before = client.read_settings().await.unwrap();
+        assert!(!before.configured);
+        assert_eq!(before.error, 2);
+        assert!(!before.running);
+        assert_eq!(
+            client.read_state().await.unwrap().lifecycle,
+            Lifecycle::Stopped
+        );
+        assert!(matches!(
+            client.begin_selection().await,
+            Err(ClientError::Rejected(Error::NotRunning))
+        ));
+        // Act: explicit recovery does not implicitly start transports.
+        let intent = SaveIntent {
+            epoch: before.epoch.clone(),
+            revision: before.revision,
+            token: before.token.clone(),
+            request: "00000000000000000000000000000001".into(),
+            visibility: 1,
+            port: occupied.local_addr().unwrap().port().into(),
+            card_mode: 0,
+            directory: 1,
+            recover: true,
+        };
+        let saved = client
+            .save_settings(SettingsEdit {
+                intent,
+                directory: None,
+            })
+            .await
+            .unwrap();
+        assert!(saved.configured);
+        assert!(!saved.running);
+        assert!(saved.restart_required);
+        assert_eq!(saved.applied_live_revision, 0);
+        client.restart_service().await.unwrap();
+        let new = loop {
+            let message = owners.next().await.unwrap().unwrap();
+            let (_, _, new): (String, String, String) = message.body().deserialize().unwrap();
+            if !new.is_empty() && new != old {
+                break new;
+            }
+        };
+        // Assert: the new generation reports bind failure, with settings still editable.
+        assert_ne!(new, old);
+        let mut next = NativeClient::connect(private.socket().await).await.unwrap();
+        let after = next.read_settings().await.unwrap();
+        assert_ne!(after.epoch, before.epoch);
+        assert_eq!(after.revision, 1);
+        assert!(after.configured);
+        assert!(!after.running);
+        assert_eq!(after.error, 4);
+        assert_eq!(
+            next.read_state().await.unwrap().lifecycle,
+            Lifecycle::Stopped
+        );
+        assert!(matches!(
+            client.read_settings().await,
+            Err(ClientError::DaemonChanged)
+        ));
+        next.close().await.unwrap();
+        client.close().await.unwrap();
+        stop.cancel();
+        task.await.unwrap().unwrap();
+        observer.close().await.unwrap();
+        assert_eq!(
+            Store::new(directory, legacy).load().unwrap().base.revision,
+            1
+        );
+    })
+    .await
+    .expect("recovery owner must join");
+}
+
+#[test]
 fn given_daemon_arguments_when_parsed_then_only_explicit_check_help_and_settings_are_accepted() {
     // Arrange / Act / Assert
     let args =

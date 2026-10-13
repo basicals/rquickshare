@@ -27,6 +27,7 @@ pub enum ProcessError {
     Random,
     Signal,
     Settings(SettingsError),
+    NativeSettings(super::native_settings::StoreError),
     Bus(BusError),
 }
 impl fmt::Display for ProcessError {
@@ -73,6 +74,160 @@ pub fn settings_path() -> Result<PathBuf, ProcessError> {
         .data_dir()
         .join(LEGACY_IDENTIFIER)
         .join(".settings.json"))
+}
+pub fn native_settings_paths() -> Result<(PathBuf, PathBuf), ProcessError> {
+    let dirs = directories::BaseDirs::new().ok_or(ProcessError::Paths)?;
+    Ok((
+        dirs.config_dir()
+            .join("io.github.morozhenko_apps.RQuickShare"),
+        settings_path()?,
+    ))
+}
+
+pub fn check_native_settings(store: &super::native_settings::Store) -> Result<(), ProcessError> {
+    let snapshot = store.load().map_err(ProcessError::NativeSettings)?;
+    let values = snapshot.values.ok_or(ProcessError::NativeSettings(
+        super::native_settings::StoreError::RecoveryRequired,
+    ))?;
+    if let Some(directory) = values.directory {
+        directory.open().map_err(ProcessError::NativeSettings)?;
+    }
+    Ok(())
+}
+
+/// The caller retains LaunchGuard across every joined generation.
+pub async fn serve_native_settings(
+    directory: PathBuf,
+    legacy: PathBuf,
+    address: BusAddress,
+    stop: CancellationToken,
+) -> Result<(), ProcessError> {
+    use super::native_settings::{Store, StoreError};
+    loop {
+        if stop.is_cancelled() {
+            return Ok(());
+        }
+        let epoch = fresh_epoch()?;
+        let stream = tokio::select! { biased; _ = stop.cancelled() => return Ok(()), result = address.connect() => result? };
+        let Some(mut bus) = SelectionBus::connect_stoppable(stream, stop.clone())
+            .await
+            .map_err(ProcessError::Bus)?
+        else {
+            return Ok(());
+        };
+        let store = Store::new(directory.clone(), legacy.clone());
+        // Join this owned operation even when stop arrives during disk IO.
+        let loaded = tokio::task::spawn_blocking(move || {
+            let snapshot = store.load();
+            let prepared = snapshot
+                .as_ref()
+                .map_err(|error| *error)
+                .and_then(|snapshot| {
+                    let values = snapshot
+                        .values
+                        .as_ref()
+                        .ok_or(StoreError::RecoveryRequired)?;
+                    let settings = values.startup()?;
+                    let root = values
+                        .directory
+                        .as_ref()
+                        .map(|record| record.open().and_then(crate::receive::Directory::adopt))
+                        .transpose()?;
+                    Ok((settings, root))
+                });
+            (store, snapshot, prepared)
+        })
+        .await;
+        let (store, initial, prepared) = match loaded {
+            Ok(loaded) => loaded,
+            Err(_) => {
+                bus.close_unstarted().await;
+                return Err(ProcessError::NativeSettings(StoreError::Read));
+            }
+        };
+        if stop.is_cancelled() {
+            bus.close_unstarted().await;
+            return Ok(());
+        }
+        let recovered = initial
+            .as_ref()
+            .is_ok_and(|snapshot| snapshot.visibility_recovered);
+        let port = prepared
+            .as_ref()
+            .map(|(settings, _)| settings.port.map_or(-1, |port| port as i32))
+            .unwrap_or(-1);
+        let runtime = match prepared {
+            Ok((settings, root)) => {
+                let core = RQS::new(settings.visibility, settings.port, settings.download_path);
+                core.receive_policy.set_directory(root);
+                core.set_foreground(false);
+                NativeRuntime::new(epoch, Limits::default(), core)
+                    .map_err(|rejected| ProcessError::Bus(BusError::Runtime(rejected.error)))
+            }
+            Err(_) => NativeRuntime::configuration_only(epoch, Limits::default())
+                .map_err(|error| ProcessError::Bus(BusError::Runtime(error))),
+        };
+        let mut runtime = match runtime {
+            Ok(runtime) => runtime,
+            Err(error) => {
+                bus.close_unstarted().await;
+                return Err(error);
+            }
+        };
+        if !runtime.is_configuration_only() {
+            let started = tokio::select! { biased; _ = stop.cancelled() => None, result = runtime.start() => Some(result) };
+            match started {
+                Some(Ok(())) => (),
+                failed => {
+                    let _ = runtime.shutdown().await;
+                    if failed.is_none() {
+                        bus.close_unstarted().await;
+                        return Ok(());
+                    }
+                    runtime = match NativeRuntime::configuration_only(epoch, Limits::default()) {
+                        Ok(runtime) => runtime,
+                        Err(error) => {
+                            bus.close_unstarted().await;
+                            return Err(ProcessError::Bus(BusError::Runtime(error)));
+                        }
+                    };
+                }
+            }
+        }
+        let running = !runtime.is_configuration_only();
+        bus.set_visibility_recovered(recovered);
+        bus.set_settings(store, initial, epoch, running, port)
+            .map_err(ProcessError::Bus)?;
+        if !running {
+            bus.mark_settings_unapplied();
+        }
+        if running {
+            let wakeup = tokio::select! { biased; _ = stop.cancelled() => None, result = async {
+                let stream = address.connect().await?;
+                super::wakeup::Wakeup::connect(stream).await.map_err(|_| ProcessError::Bus(BusError::Transport))
+            } => Some(result) };
+            match wakeup {
+                Some(Ok(wakeup)) => bus.set_wakeup(wakeup),
+                failed => {
+                    let _ = runtime.shutdown().await;
+                    bus.close_unstarted().await;
+                    return match failed {
+                        Some(Err(error)) => Err(error),
+                        _ => Ok(()),
+                    };
+                }
+            }
+        }
+        let outcome = bus
+            .run_prepared(&mut runtime, stop.clone())
+            .await
+            .map_err(ProcessError::Bus);
+        let restart = bus.restart_requested();
+        outcome?;
+        if !restart || stop.is_cancelled() {
+            return Ok(());
+        }
+    }
 }
 
 pub fn runtime_directory() -> Result<PathBuf, ProcessError> {

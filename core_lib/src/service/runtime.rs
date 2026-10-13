@@ -102,9 +102,36 @@ pub struct NativeRuntime {
     core_lost: bool,
     startup: Option<Startup>,
     started: bool,
+    configuration_only: bool,
 }
 
 impl NativeRuntime {
+    pub(super) fn configuration_only(epoch: u128, limits: Limits) -> Result<Self, RuntimeError> {
+        let core = RQS::new(crate::Visibility::Invisible, None, None);
+        let mut runtime = Self::new(epoch, limits, core).map_err(|rejected| rejected.error)?;
+        runtime.startup.take();
+        runtime.coordinator.begin_shutdown()?;
+        runtime.coordinator.finish_shutdown()?;
+        runtime.configuration_only = true;
+        Ok(runtime)
+    }
+    pub(super) fn is_configuration_only(&self) -> bool {
+        self.configuration_only
+    }
+    pub(super) fn restart_if_idle(&mut self) -> bool {
+        if self.drain_events().is_err()
+            || self.coordinator.idle_for_restart() != Ok(true)
+            || self.pending.is_some()
+            || !self.receipts.is_empty()
+            || !self.inflight.is_empty()
+            || !self.deferred.is_empty()
+            || !self.releases.is_empty()
+            || !self.bindings.is_empty()
+        {
+            return false;
+        }
+        self.sender.sessions().close_if_idle() == Ok(true)
+    }
     pub(super) fn apply_live_settings(
         &mut self,
         values: &super::native_settings::Values,
@@ -206,6 +233,7 @@ impl NativeRuntime {
             core_lost: false,
             startup: None,
             started: true,
+            configuration_only: false,
         }
     }
 
@@ -750,6 +778,11 @@ impl NativeRuntime {
 
     /// Always joins the core, including after a lost observation. Failure never means delivery.
     pub async fn shutdown(&mut self) -> Result<(), RuntimeError> {
+        if self.configuration_only {
+            self.sender.sessions().close();
+            self.core.stop().await;
+            return Ok(());
+        }
         self.startup.take();
         // Close native admission before adopting buffered opens. No new session can
         // appear after this cutoff, even while transport shutdown yields.
