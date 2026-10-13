@@ -165,3 +165,55 @@ Clippy passed, then passed its affected rerun after that addition; nightly forma
 passed. Eight methods primarily cover Positive (1), N4 (1), N6 (1), N7 (2), N2 (1),
 N12 (1), N5 (1), with secondary categories from the inventory. Private fixtures
 only; no user settings read/migration. All commands exited. Terminal closed.
+
+## S3 frozen service/client contract before code
+
+Settings1 shares the existing authenticated service/path/unique owner and epoch.
+Read returns one bounded typed SettingsView from memory: epoch, availability,
+source, configured-values validity, revision/token, visibility, port (-1 means
+unset), compact/full, directory display, recovered warning, applied live revision,
+running/restart-required and finite error category. No raw JSON/path setter is
+exposed. Missing settings ownership in read-only developer/old fixtures returns
+unavailable. A valid configured directory display is <=12288 UTF-8 bytes; it is
+never authority or a diagnostic. Native record bytes stay daemon-private.
+
+Save takes a typed intent (epoch, expected revision/token, request ID, visibility,
+port, card mode, directory intent, explicit recovery) and an FD array of exactly
+one for Replace, zero otherwise. Actual received FD count must match. Existing
+same-UID sender authentication, object checks and 64-KiB/16-FD transport bounds
+apply before decoding/admission. Validate finite enums/scalars/token/epoch and
+duplicate the owned FD CLOEXEC. No arbitrary executable/config/directory path.
+Read and Reload take no FDs; Reload explicitly refreshes the source/CAS view and
+does not apply external edits. Save returns a typed acknowledged view; errors use
+finite Settings error names, never source/OS diagnostics.
+
+One owned async writer task admits at most eight commands, performs one blocking
+store operation at a time in a joined blocking task, and sends one owner-side apply
+request. Serial transfer dispatch never awaits filesystem IO or the writer's apply
+ack. An admitted save survives caller disappearance. Shutdown closes admission,
+joins admitted disk work, cancels apply/reply waits and joins the writer before
+closing its connection. A saved-but-unapplied revision remains explicit. A write
+with indeterminate durability invalidates the cached success claim until exact
+retry; Reload only observes, it does not claim fsync succeeded.
+
+Live apply changes only future receive admissions and visibility policy, then
+clears recovery warning. Retain preserves the currently pinned capability; Replace
+uses the acquired FD; Default returns to default policy. Port is never live-swapped.
+Applied live revision is distinct from restart-required (saved port vs running
+port); it proves owner policy adoption, not peer advertisement visibility. A
+configuration-only owner may save but cannot claim live apply. SettingsChanged
+carries only epoch/revision; clients fetch the complete typed view.
+
+SDK keeps a settings intent and its FD across an uncertain response. An exact
+retry uses the same ID/base; it cannot silently replace an intervening edit. This
+ledger is separate from selected-source operations. GTK controller serializes
+settings reads/save/retry alongside existing actions; cancellation of a completion
+wait never cancels its admitted work. Reconnect never replays transfers or saves.
+
+S3 inventory: private-broker integration checks for read/unavailable, actual UID/
+epoch/object/type/FD rejection (N1/N2/N7), real save/apply/port status and warnings
+(Positive/N6), exact retry/changed intent/source conflict (N4/N5), slow IO with
+continued serial dispatch, caller disconnect and joined shutdown (N3/N5/N9/N12).
+Use explicit barriers/events, real store and owner logic. Do not mock save/CAS or
+sleep. Existing source/consent suites remain the regression boundary. No network
+peer, locale or billing protocol changes (N8/N11 not applicable).
