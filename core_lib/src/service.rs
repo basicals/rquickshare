@@ -218,6 +218,7 @@ struct Replay {
 }
 
 struct Transfer {
+    received_text: Option<Arc<crate::sessions::text::ReceivedText>>,
     view: TransferSnapshot,
     resource: Option<Arc<OpenedSelection>>,
     endpoint: Option<String>,
@@ -563,6 +564,7 @@ impl Coordinator {
         self.transfers.insert(
             id,
             Transfer {
+                received_text: None,
                 view: TransferSnapshot {
                     id,
                     direction: Direction::Outbound,
@@ -632,6 +634,7 @@ impl Coordinator {
         self.transfers.insert(
             id,
             Transfer {
+                received_text: None,
                 view: TransferSnapshot {
                     id,
                     direction: Direction::Inbound,
@@ -666,6 +669,38 @@ impl Coordinator {
             details.pin.clear();
         }
         self.observe_details(id, phase, Arc::new(details))
+    }
+    pub(crate) fn retain_received_text(
+        &mut self,
+        id: TransferId,
+        received: Option<Arc<crate::sessions::text::ReceivedText>>,
+    ) -> Result<(), Error> {
+        let Some(received) = received else {
+            return Ok(());
+        };
+        let transfer = self.transfers.get(&id).ok_or(Error::UnknownTransfer)?;
+        if transfer.view.direction != Direction::Inbound
+            || transfer.view.phase != Phase::Finished
+            || transfer.view.details.status != crate::sessions::details::DetailsStatus::Ready
+            || transfer.view.details.kind != received.kind()
+            || transfer.view.details.total_bytes != received.text().len() as u64
+            || transfer.terminal_revision.is_none()
+        {
+            return Err(Error::InvalidState);
+        }
+        if let Some(existing) = &transfer.received_text {
+            return if existing == &received {
+                Ok(())
+            } else {
+                Err(Error::ReplayConflict)
+            };
+        }
+        self.advance()?;
+        self.transfers
+            .get_mut(&id)
+            .ok_or(Error::UnknownTransfer)?
+            .received_text = Some(received);
+        Ok(())
     }
 
     pub(crate) fn observe_details(

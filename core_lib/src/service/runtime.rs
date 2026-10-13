@@ -481,6 +481,8 @@ impl NativeRuntime {
                     phase(&snapshot.state, &snapshot.direction),
                     snapshot.details,
                 )?;
+                self.coordinator
+                    .retain_received_text(binding.transfer, snapshot.received_text)?;
                 self.coordinator.owner_closed(binding.transfer)?;
                 return Ok(());
             }
@@ -502,6 +504,8 @@ impl NativeRuntime {
         if observed.is_err() {
             return self.fault();
         }
+        self.coordinator
+            .retain_received_text(binding.transfer, snapshot.received_text)?;
         if snapshot.direction == crate::channel::TransferType::Inbound
             && snapshot.state == State::WaitingForUserConsent
             && snapshot.consent.is_none()

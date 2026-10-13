@@ -783,3 +783,64 @@ fn given_previous_prepared_round_when_state_only_observation_enters_new_consent_
     assert!(current.details.pin.is_empty());
     assert!(current.details.files.is_empty());
 }
+
+#[tokio::test]
+async fn given_text_completion_when_consent_type_length_or_encoding_differs_then_no_resource_is_retained(
+) {
+    // Arrange / Act / Assert
+    use crate::hdl::{info::TransferMetadata, InnerState, TextPayloadInfo, TextPayloadType};
+    for (accept, body, final_type, ack, expected) in [
+        (Some(true), "abc", TextPayloadType::Text, 3, true),
+        (Some(false), "abc", TextPayloadType::Text, 3, false),
+        (None, "abc", TextPayloadType::Text, 3, false),
+        (Some(true), "ab", TextPayloadType::Text, 3, false),
+        (Some(true), "a\0c", TextPayloadType::Text, 3, false),
+        (Some(true), "abc", TextPayloadType::Url, 3, false),
+        (Some(true), "abc", TextPayloadType::Text, 2, false),
+    ] {
+        let hub = hub();
+        let mut owner = lease(&hub);
+        let mut actual = InnerState {
+            state: State::WaitingForUserConsent,
+            pin_code: Some("0123".into()),
+            remote_device_info: Some(crate::utils::RemoteDeviceInfo {
+                name: "phone".into(),
+                device_type: crate::utils::DeviceType::Phone,
+            }),
+            text_payload: Some(TextPayloadInfo::Text(1)),
+            transfer_metadata: Some(TransferMetadata {
+                total_bytes: 3,
+                text_type: Some(TextPayloadType::Text),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        owner.observe_state(&actual);
+        owner.observe_state(&actual);
+        let control = owner.control();
+        assert_eq!(control.snapshot().details.kind, details::PayloadKind::Text);
+        if let Some(accept) = accept {
+            let receipt = control
+                .respond(control.snapshot().consent.unwrap(), 7, accept)
+                .unwrap();
+            let command = owner.mailbox.recv().await.unwrap();
+            assert_eq!(
+                owner.apply(command, &State::WaitingForUserConsent),
+                Some(accept)
+            );
+            receipt.wait().await.unwrap();
+        }
+        actual.state = State::Finished;
+        let metadata = actual.transfer_metadata.as_mut().unwrap();
+        metadata.text_payload = Some(body.into());
+        metadata.text_type = Some(final_type);
+        metadata.ack_bytes = ack;
+        owner.observe_state(&actual);
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.received_text.is_some(), expected);
+        assert!(!format!("{snapshot:?}").contains(body));
+        if expected {
+            assert_eq!(snapshot.received_text.unwrap().text(), body);
+        }
+    }
+}

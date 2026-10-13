@@ -11,6 +11,7 @@ use crate::channel::{ChannelMessage, TransferType};
 use crate::State;
 
 pub mod details;
+pub mod text;
 use details::TransferDetails;
 
 const SESSION_LIMIT: usize = 32;
@@ -64,6 +65,7 @@ pub struct SessionSnapshot {
     pub state: State,
     pub consent: Option<ConsentToken>,
     pub details: Arc<TransferDetails>,
+    pub(crate) received_text: Option<Arc<text::ReceivedText>>,
 }
 
 impl fmt::Debug for SessionSnapshot {
@@ -320,6 +322,7 @@ impl SessionHub {
             state: State::Initial,
             consent: None,
             details: Arc::default(),
+            received_text: None,
         };
         let (status, receiver) = watch::channel(Status {
             snapshot,
@@ -396,7 +399,19 @@ impl SessionLease {
             details.pin.clear();
             if let Some(metadata) = &actual.transfer_metadata {
                 details.transferred_bytes = metadata.ack_bytes;
-                if metadata.total_bytes != details.total_bytes || !details.valid(false) {
+                let matching_kind = match details.kind {
+                    details::PayloadKind::Files => true,
+                    details::PayloadKind::Text => {
+                        metadata.text_type == Some(crate::hdl::TextPayloadType::Text)
+                    }
+                    details::PayloadKind::Url => {
+                        metadata.text_type == Some(crate::hdl::TextPayloadType::Url)
+                    }
+                };
+                if metadata.total_bytes != details.total_bytes
+                    || !matching_kind
+                    || !details.valid(false)
+                {
                     details = TransferDetails::unsupported();
                 }
             } else {
@@ -406,7 +421,28 @@ impl SessionLease {
         } else {
             TransferDetails::from_state(actual)
         };
-        self.observe_details(&actual.state, details);
+        let received_text = if actual.state == State::Finished
+            && previous.direction == TransferType::Inbound
+            && self
+                .status
+                .borrow()
+                .decision
+                .is_some_and(|decision| decision.accept)
+            && details.status == details::DetailsStatus::Ready
+            && details.kind != details::PayloadKind::Files
+            && details.transferred_bytes == details.total_bytes
+        {
+            actual
+                .transfer_metadata
+                .as_ref()
+                .and_then(|metadata| metadata.text_payload.clone())
+                .and_then(|body| (body.len() as u64 == details.total_bytes).then_some(body))
+                .and_then(|body| text::ReceivedText::new(details.kind, body))
+                .map(Arc::new)
+        } else {
+            None
+        };
+        self.observe_resource(&actual.state, details, received_text);
     }
 
     pub fn observe(&mut self, actual: &State) {
@@ -423,6 +459,14 @@ impl SessionLease {
     }
 
     pub fn observe_details(&mut self, actual: &State, details: TransferDetails) {
+        self.observe_resource(actual, details, None);
+    }
+    fn observe_resource(
+        &mut self,
+        actual: &State,
+        details: TransferDetails,
+        received_text: Option<Arc<text::ReceivedText>>,
+    ) {
         let mut status = self.status.borrow().clone();
         if terminal(&status.snapshot.state) {
             return;
@@ -456,10 +500,13 @@ impl SessionLease {
             details
         };
         let details_changed = *status.snapshot.details != details;
+        let text_changed = status.snapshot.received_text != received_text;
+        status.snapshot.received_text = received_text;
         if details_changed {
             status.snapshot.details = Arc::new(details);
         }
         if details_changed
+            || text_changed
             || status.snapshot.state != *actual
             || status.snapshot.consent != self.status.borrow().snapshot.consent
         {

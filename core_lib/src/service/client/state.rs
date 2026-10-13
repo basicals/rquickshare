@@ -162,6 +162,7 @@ fn decode_details(row: DetailRow) -> Result<(TransferDetails, u32)> {
     }
     Ok((
         TransferDetails {
+            kind: crate::sessions::details::PayloadKind::Files,
             status,
             sender: row.2,
             device,

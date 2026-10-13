@@ -12,6 +12,23 @@ pub const NAME_LIMIT: usize = 1024;
 pub const MANIFEST_BYTES: usize = 64 * 1024;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum PayloadKind {
+    #[default]
+    Files,
+    Text,
+    Url,
+}
+impl PayloadKind {
+    pub fn wire(self) -> &'static str {
+        match self {
+            Self::Files => "files",
+            Self::Text => "text",
+            Self::Url => "url",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum DetailsStatus {
     #[default]
     Unavailable,
@@ -40,6 +57,7 @@ impl fmt::Debug for FileDetail {
 }
 #[derive(Clone, Default, Eq, PartialEq)]
 pub struct TransferDetails {
+    pub kind: PayloadKind,
     pub status: DetailsStatus,
     pub sender: String,
     pub device: DeviceKind,
@@ -80,17 +98,23 @@ impl TransferDetails {
                 && self.pin.is_empty()
                 && self.total_bytes == 0
                 && self.transferred_bytes == 0
-                && self.files.is_empty();
+                && self.files.is_empty()
+                && self.kind == PayloadKind::Files;
         }
         if self.sender.is_empty()
             || self.sender.len() > 256
             || self.sender.chars().any(char::is_control)
             || (waiting && (self.pin.len() != 4 || !self.pin.bytes().all(|b| b.is_ascii_digit())))
             || (!waiting && !self.pin.is_empty())
-            || self.files.is_empty()
             || self.files.len() > FILE_LIMIT
             || self.transferred_bytes > self.total_bytes
         {
+            return false;
+        }
+        if self.kind != PayloadKind::Files {
+            return self.files.is_empty() && self.total_bytes <= super::text::MAX_TEXT_BYTES as u64;
+        }
+        if self.files.is_empty() {
             return false;
         }
         let mut bytes = 0usize;
@@ -111,7 +135,8 @@ impl TransferDetails {
         bytes <= MANIFEST_BYTES && total == self.total_bytes
     }
     pub(crate) fn same_description(&self, other: &Self) -> bool {
-        self.sender == other.sender
+        self.kind == other.kind
+            && self.sender == other.sender
             && self.device == other.device
             && self.pin == other.pin
             && self.files == other.files
@@ -132,6 +157,49 @@ impl TransferDetails {
         let Some(metadata) = &state.transfer_metadata else {
             return Self::default();
         };
+        let text = match (&state.text_payload, &metadata.text_type) {
+            (
+                Some(crate::hdl::TextPayloadInfo::Text(_)),
+                Some(crate::hdl::TextPayloadType::Text),
+            ) => Some(PayloadKind::Text),
+            (Some(crate::hdl::TextPayloadInfo::Url(_)), Some(crate::hdl::TextPayloadType::Url)) => {
+                Some(PayloadKind::Url)
+            }
+            _ => None,
+        };
+        if let Some(kind) = text {
+            let waiting = state.state == State::WaitingForUserConsent;
+            let Some(sender) = &state.remote_device_info else {
+                return Self::unsupported();
+            };
+            let result = Self {
+                kind,
+                status: DetailsStatus::Ready,
+                sender: sender.name.clone(),
+                device: match sender.device_type {
+                    DeviceType::Unknown => DeviceKind::Unknown,
+                    DeviceType::Phone => DeviceKind::Phone,
+                    DeviceType::Tablet => DeviceKind::Tablet,
+                    DeviceType::Laptop => DeviceKind::Laptop,
+                },
+                pin: if waiting {
+                    state.pin_code.clone().unwrap_or_default()
+                } else {
+                    String::new()
+                },
+                total_bytes: metadata.total_bytes,
+                transferred_bytes: metadata.ack_bytes,
+                files: Arc::default(),
+            };
+            return if state.transferred_files.is_empty()
+                && metadata.files.is_none()
+                && result.valid(waiting)
+            {
+                result
+            } else {
+                Self::unsupported()
+            };
+        }
         if state.transferred_files.is_empty() {
             return if metadata.files.is_some()
                 && state.text_payload.is_none()
@@ -197,6 +265,7 @@ impl TransferDetails {
         }
         files.sort_unstable_by(|a, b| (&a.name, a.size).cmp(&(&b.name, b.size)));
         let result = Self {
+            kind: PayloadKind::Files,
             status: DetailsStatus::Ready,
             sender: sender.name.clone(),
             device: match sender.device_type {

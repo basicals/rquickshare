@@ -1146,6 +1146,28 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         let payload_id = header.id();
 
                         let declared_size = checked_payload_buffer_size(header.total_size())?;
+                        if self.session.is_some()
+                            && self.state.text_payload.as_ref().is_some_and(|text| {
+                                text.get_i64_value() == payload_id
+                                    && !matches!(text, TextPayloadInfo::Wifi { .. })
+                            })
+                        {
+                            let metadata = self
+                                .state
+                                .transfer_metadata
+                                .as_ref()
+                                .ok_or_else(|| anyhow!("Missing text metadata"))?;
+                            if header.id.is_none()
+                                || header.total_size.is_none()
+                                || self.state.state != State::ReceivingFiles
+                                || declared_size as u64 != metadata.total_bytes
+                                || declared_size > crate::sessions::text::MAX_TEXT_BYTES
+                            {
+                                return Err(anyhow!(
+                                    "Native text payload does not match accepted metadata"
+                                ));
+                            }
+                        }
 
                         self.state
                             .payload_buffers
@@ -1202,6 +1224,20 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                                 });
 
                             if let Some(text_payload) = matching_text_payload {
+                                if self.session.is_some()
+                                    && !matches!(text_payload, TextPayloadInfo::Wifi { .. })
+                                {
+                                    if buffer.len() != declared_size {
+                                        return Err(anyhow!("Native text payload is incomplete"));
+                                    }
+                                    let body = std::str::from_utf8(&buffer)
+                                        .map_err(|_| anyhow!("Native text encoding is invalid"))?;
+                                    if body.contains('\0') {
+                                        return Err(anyhow!(
+                                            "Native text contains unsupported NUL"
+                                        ));
+                                    }
+                                }
                                 info!("Transfer finished");
 
                                 match text_payload {
@@ -1212,6 +1248,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                                                 if let Some(tmd) = e.transfer_metadata.as_mut() {
                                                     tmd.text_payload = Some(payload);
                                                     tmd.text_type = Some(TextPayloadType::Url);
+                                                    tmd.ack_bytes = buffer.len() as u64;
                                                 }
                                             },
                                             false,
@@ -1225,6 +1262,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                                                 if let Some(tmd) = e.transfer_metadata.as_mut() {
                                                     tmd.text_payload = Some(payload);
                                                     tmd.text_type = Some(TextPayloadType::Text);
+                                                    tmd.ack_bytes = buffer.len() as u64;
                                                 }
                                             },
                                             false,
@@ -1493,6 +1531,29 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             .introduction
             .as_ref()
             .ok_or_else(|| anyhow!("Missing required fields"))?;
+        if self.session.is_some() && !introduction.text_metadata.is_empty() {
+            let meta = introduction
+                .text_metadata
+                .first()
+                .ok_or_else(|| anyhow!("Missing text attachment"))?;
+            if introduction.text_metadata.len() != 1
+                || !introduction.file_metadata.is_empty()
+                || !introduction.wifi_credentials_metadata.is_empty()
+                || meta.payload_id.is_none()
+                || meta.size.is_none_or(|size| {
+                    size < 0 || size as u64 > crate::sessions::text::MAX_TEXT_BYTES as u64
+                })
+                || !matches!(
+                    meta.r#type(),
+                    text_metadata::Type::Text
+                        | text_metadata::Type::Url
+                        | text_metadata::Type::Address
+                        | text_metadata::Type::PhoneNumber
+                )
+            {
+                return Err(anyhow!("Unsupported native text attachment"));
+            }
+        }
 
         // No need to inform the channel here, we'll do it anyway with files info
         self.update_state(
@@ -1582,6 +1643,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         files: None,
                         pin_code: self.state.pin_code.clone(),
                         text_description: meta.text_title.clone(),
+                        text_type: Some(TextPayloadType::Url),
+                        total_bytes: meta.size().max(0) as u64,
                         ..Default::default()
                     };
 
@@ -1605,6 +1668,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         files: None,
                         pin_code: self.state.pin_code.clone(),
                         text_description: meta.text_title.clone(),
+                        text_type: Some(TextPayloadType::Text),
+                        total_bytes: meta.size().max(0) as u64,
                         ..Default::default()
                     };
 
@@ -2801,6 +2866,146 @@ mod security_tests {
             .is_err());
         assert!(negative.state.transferred_files.is_empty());
         assert!(negative.state.transfer_metadata.is_none());
+    }
+
+    #[tokio::test]
+    async fn given_managed_text_chunks_when_consent_size_offsets_or_body_are_invalid_then_completion_is_rejected_before_ack(
+    ) {
+        // Arrange / Act / Assert
+        for (receiving, declared, offset, body, expected) in [
+            (false, Some(3), 0, b"abc".as_slice(), false),
+            (true, None, 0, b"abc".as_slice(), false),
+            (true, Some(4), 0, b"abc".as_slice(), false),
+            (true, Some(3), 1, b"abc".as_slice(), false),
+            (true, Some(3), 0, b"ab".as_slice(), false),
+            (true, Some(3), 0, b"abcd".as_slice(), false),
+            (true, Some(3), 0, b"a\0c".as_slice(), false),
+            (true, Some(3), 0, &[255, 255, 255], false),
+            (true, Some(3), 0, b"abc".as_slice(), true),
+        ] {
+            let mut request = test_request();
+            let (socket, _peer) = tokio::io::duplex(4096);
+            request.socket = socket;
+            request.state.encrypt_key = Some(vec![0; 32]);
+            request.state.send_hmac_key = Some(vec![0; 32]);
+            let hub = crate::sessions::SessionHub::new(42).unwrap();
+            request.session = Some(
+                hub.open(
+                    crate::channel::TransferType::Inbound,
+                    None,
+                    tokio_util::sync::CancellationToken::new(),
+                )
+                .unwrap(),
+            );
+            request.state.state = if receiving {
+                State::ReceivingFiles
+            } else {
+                State::WaitingForUserConsent
+            };
+            request.state.text_payload = Some(TextPayloadInfo::Text(1));
+            request.state.transfer_metadata = Some(TransferMetadata {
+                total_bytes: 3,
+                text_type: Some(TextPayloadType::Text),
+                ..Default::default()
+            });
+            let frame = OfflineFrame {
+                v1: Some(location_nearby_connections::V1Frame {
+                    r#type: Some(
+                        location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into(),
+                    ),
+                    payload_transfer: Some(PayloadTransferFrame {
+                        packet_type: Some(PacketType::Data.into()),
+                        payload_header: Some(PayloadHeader {
+                            id: Some(1),
+                            r#type: Some(payload_header::PayloadType::Bytes.into()),
+                            total_size: declared,
+                            ..Default::default()
+                        }),
+                        payload_chunk: Some(PayloadChunk {
+                            offset: Some(offset),
+                            flags: Some(1),
+                            body: Some(body.to_vec()),
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            };
+            let result = request.process_offline_frame(frame).await;
+            assert!(result.is_err()); // Successful completion returns the protocol stop marker.
+            assert_eq!(request.state.state == State::Finished, expected);
+            assert_eq!(
+                request
+                    .state
+                    .transfer_metadata
+                    .as_ref()
+                    .unwrap()
+                    .text_payload
+                    .is_some(),
+                expected
+            );
+            if expected {
+                let error = result.unwrap_err();
+                assert!(error.is::<crate::errors::AppError>(), "{error:?}");
+            }
+            assert!(request.state.payload_buffers.is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn given_managed_text_introduction_when_metadata_is_invalid_then_no_consent_is_exposed() {
+        // Arrange / Act / Assert
+        for (size, id, ty, count, mixed, expected) in [
+            (Some(0), Some(1), Some(1), 1, false, true),
+            (Some(131072), Some(1), Some(1), 1, false, true),
+            (Some(131073), Some(1), Some(1), 1, false, false),
+            (Some(-1), Some(1), Some(1), 1, false, false),
+            (None, Some(1), Some(1), 1, false, false),
+            (Some(1), None, Some(1), 1, false, false),
+            (Some(1), Some(1), None, 1, false, false),
+            (Some(1), Some(1), Some(999), 1, false, false),
+            (Some(1), Some(1), Some(1), 2, false, false),
+            (Some(1), Some(1), Some(1), 1, true, false),
+        ] {
+            let mut request = test_request();
+            let hub = crate::sessions::SessionHub::new(42).unwrap();
+            request.session = Some(
+                hub.open(
+                    crate::channel::TransferType::Inbound,
+                    None,
+                    tokio_util::sync::CancellationToken::new(),
+                )
+                .unwrap(),
+            );
+            request.state.remote_device_info = Some(RemoteDeviceInfo {
+                name: "phone".into(),
+                device_type: crate::utils::DeviceType::Phone,
+            });
+            request.state.pin_code = Some("0123".into());
+            let text = sharing_nearby::TextMetadata {
+                payload_id: id,
+                size,
+                r#type: ty,
+                ..Default::default()
+            };
+            let frame = introduction_frame(
+                if mixed {
+                    vec![file_metadata("mixed", 2, 1)]
+                } else {
+                    vec![]
+                },
+                vec![text; count],
+                vec![],
+            );
+            assert_eq!(request.process_introduction(&frame).await.is_ok(), expected);
+            let snapshot = request.session.as_ref().unwrap().control().snapshot();
+            assert_eq!(
+                snapshot.details.status == crate::sessions::details::DetailsStatus::Ready,
+                expected
+            );
+            assert!(snapshot.received_text.is_none());
+        }
     }
 
     #[tokio::test]

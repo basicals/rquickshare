@@ -14,7 +14,7 @@ Preserve file consent/source/session authority and payload privacy while adding
 explicit received text review/copy. Outgoing clipboard/text/image, Wi-Fi actions,
 URL opening, reveal and permanent payload history are separate later capabilities.
 
-1. [ ] R1: allowlisted payload kind plus declared size for native text consent;
+1. [x] R1: allowlisted payload kind plus declared size for native text consent;
    validate actual byte header/body and UTF-8/NUL; carry a separate redacted immutable
    completed resource through live-session observations and retain it in the daemon.
 2. [ ] R2: typed Text1 captured metadata and explicit bounded read capability,
@@ -127,3 +127,37 @@ late/body substitution, unbounded allocation, clipboard side effects without cli
 private diagnostics and stale-capability acceptance. N8/N11/N12 not applicable:
 no locale/time/billing/new persistent storage. No whole-product exhaustive coverage
 or ten-run development claim; track actual method counts/results at each milestone.
+
+## R1 implementation clarification before correction
+
+Completion must also match the prepared Text/URL type and acknowledged byte count.
+A managed text header must explicitly carry ID and total size; its final chunk must
+complete exactly the declared length (including zero). This prevents defaulted
+protobuf fields and a truncated final body from being acknowledged as successful.
+Terminal resource Debug never contains the body.
+
+## R2 lifecycle clarification before implementation
+
+EndRead replays success for the caller's exact last released reader ID. Keep one
+bounded tombstone per client, removed on disconnect. This permits recovery after
+a lost close reply; foreign, epoch-stale and other unknown IDs still fail. Offsets
+are chunk-aligned except offset equal to the length, which returns an empty final
+chunk. Metadata adds only fixed-size records within the existing capture base
+reservation and never pins bodies. The SDK holds one bounded read ledger, separate
+from source/settings actions, and re-reads the same immutable resource on retry.
+Closing review drops its own text reference; an explicitly copied GTK provider
+continues to own clipboard content until replaced or GUI exit. Lock/close never
+silently clears the user's clipboard.
+
+## Actual R1 verification
+
+Core stable all-target check passed (20.58s); terminal closed. After R1 validation
+changes: core library suite passed 535 methods (50.66s build +16.03s execution).
+Added chunk table subsequently passed 1 method/9 variants (22.69s build +0.01s).
+Its first run exposed missing encryption keys in the duplex fixture; the fixture
+was corrected, without weakening completion assertions. Metadata table covers
+8 size/kind variants and 10 actual introduction variants; session table covers
+7 consent/type/length/NUL/ack interactions. Four new methods: Positive, N1, N2,
+N4, N7, N10 (overlapping categories, not separate tests). No user clipboard/peer
+used. All owned terminal sessions completed/closed; no watcher remains.
+R2/R3 not yet activated: native SDK still assumes file metadata until Text1 lands.

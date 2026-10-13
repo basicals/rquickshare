@@ -230,3 +230,48 @@ fn given_unprepared_or_nonfile_payload_when_projected_then_readiness_is_truthful
         );
     }
 }
+
+#[test]
+fn given_text_metadata_boundaries_when_projected_then_consent_is_bounded_and_payload_free() {
+    // Arrange / Act / Assert
+    for (payload, ty, kind) in [
+        (
+            crate::hdl::TextPayloadInfo::Text(1),
+            crate::hdl::TextPayloadType::Text,
+            PayloadKind::Text,
+        ),
+        (
+            crate::hdl::TextPayloadInfo::Url(1),
+            crate::hdl::TextPayloadType::Url,
+            PayloadKind::Url,
+        ),
+    ] {
+        for size in [0, 1, 131072, 131073] {
+            let mut state = prepared();
+            state.transferred_files.clear();
+            state.text_payload = Some(payload.clone());
+            let metadata = state.transfer_metadata.as_mut().unwrap();
+            metadata.files = None;
+            metadata.text_type = Some(ty.clone());
+            metadata.total_bytes = size;
+            metadata.text_payload = Some("private-body".into());
+            let details = TransferDetails::from_state(&state);
+            assert_eq!(details.status == DetailsStatus::Ready, size <= 131072);
+            assert!(details.files.is_empty());
+            assert!(!format!("{details:?}").contains("private-body"));
+            if size <= 131072 {
+                assert_eq!(details.kind, kind);
+                assert_eq!(details.total_bytes, size);
+                assert!(details.valid(true));
+                let mut changed = details.clone();
+                changed.kind = PayloadKind::Files;
+                assert!(!details.same_description(&changed));
+            }
+            state.transfer_metadata.as_mut().unwrap().files = Some(vec!["mixed".into()]);
+            assert_eq!(
+                TransferDetails::from_state(&state),
+                TransferDetails::unsupported()
+            );
+        }
+    }
+}
