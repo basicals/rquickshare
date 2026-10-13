@@ -45,7 +45,7 @@ pub(super) fn parse_port(value: &str) -> Result<i32, ()> {
     if value.is_empty() {
         return Ok(-1);
     }
-    if value.len() > 5 || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+    if !value.bytes().all(|byte| byte.is_ascii_digit()) {
         return Err(());
     }
     value.parse::<u16>().map(i32::from).map_err(|_| ())
@@ -112,7 +112,6 @@ impl Editor {
                 "Visible for one minute",
             ]),
             port: gtk::Entry::builder()
-                .max_length(5)
                 .placeholder_text("Automatic")
                 .input_purpose(gtk::InputPurpose::Digits)
                 .build(),
@@ -599,6 +598,9 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
         }
         assert!(success.get());
     }
+    editor.port.set_text("655350");
+    assert_eq!(editor.port.text(), "655350");
+    assert_eq!(parse_port(editor.port.text().as_str()), Err(()));
     let mut view = SettingsView::unavailable(1);
     view.available = true;
     view.token = "a".repeat(64);
@@ -679,6 +681,8 @@ mod tests {
             (" ", -1),
             ("0", 0),
             ("00000", 0),
+            ("000001", 1),
+            ("0065535", 65535),
             ("1", 1),
             ("65535", 65535),
             (" 42 ", 42),
