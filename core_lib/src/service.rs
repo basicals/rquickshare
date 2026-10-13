@@ -883,3 +883,5 @@ pub mod operations;
 mod retention;
 
 pub mod client;
+
+mod wakeup;

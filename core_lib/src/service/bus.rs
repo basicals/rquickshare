@@ -67,6 +67,7 @@ pub struct SelectionBus {
     notified: BTreeMap<ClientId, u64>,
     visibility_recovered: bool,
     uid: u32,
+    wakeup: Option<super::wakeup::Wakeup>,
 }
 
 impl SelectionBus {
@@ -137,6 +138,7 @@ impl SelectionBus {
             notified: BTreeMap::new(),
             visibility_recovered: false,
             uid,
+            wakeup: None,
         };
         let initialization = async {
             let rule = zbus::MatchRule::builder()
@@ -183,6 +185,10 @@ impl SelectionBus {
             return Err(BusError::Transport);
         }
         Ok(Some(bus))
+    }
+
+    pub(super) fn set_wakeup(&mut self, wakeup: super::wakeup::Wakeup) {
+        self.wakeup = Some(wakeup);
     }
 
     pub(super) fn set_visibility_recovered(&mut self, value: bool) {
@@ -271,6 +277,9 @@ impl SelectionBus {
             return;
         }
         self.closed.cancel();
+        if let Some(wakeup) = self.wakeup.take() {
+            wakeup.close().await;
+        }
         let _ = (&mut self.pump).await;
         self.inbox.close();
         while self.inbox.try_recv().is_ok() {}
@@ -734,6 +743,16 @@ impl SelectionBus {
     }
 
     async fn publish_changes(&mut self, coordinator: &Coordinator) -> Result<(), BusError> {
+        if let Some(wakeup) = &self.wakeup {
+            if let Some(revision) = coordinator
+                .pending_notices()
+                .iter()
+                .map(|notice| notice.revision)
+                .max()
+            {
+                wakeup.notify(revision);
+            }
+        }
         let connection = self.connection.as_ref().ok_or(BusError::Transport)?;
         for (sender, client) in &self.clients {
             if self.notified.get(client) == Some(&coordinator.revision) {

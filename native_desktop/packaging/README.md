@@ -6,10 +6,11 @@ Package the native `rquickshare` executable and these files in the same package:
 | Source | Package destination | Mode |
 |---|---|---|
 | `../target/release/rquickshare` | `/usr/bin/rquickshare` | 0755 |
+| `share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service` | `/usr/share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service` | 0644 |
 | `share/kio/servicemenus/io.github.morozhenko_apps.RQuickShare.Send.desktop` | `/usr/share/kio/servicemenus/io.github.morozhenko_apps.RQuickShare.Send.desktop` | 0644 |
 
 The package manager owns installation/removal. Uninstall removes its executable
-and service menu together. No first-run copy into user configuration, standalone
+and D-Bus activation/service menu assets together. No first-run copy into user configuration, standalone
 menu installer, shell wrapper, or persistent user-config cleanup is needed.
 A package must resolve the existing Tauri executable's conflicting path before
 release; do not install this asset beside the legacy `rquickshare` binary, which
@@ -29,3 +30,11 @@ private-broker tests do not establish installed-product or Google peer acceptanc
 
 Contract and measured checks: [native-desktop-ingress.md](../../docs/native-desktop-ingress.md).
 KDE reference: https://develop.kde.org/docs/apps/dolphin/service-menus/
+
+Daemon-owned notification wake calls standard StartServiceByName for the constant
+Desktop service. The activation asset launches only the fixed native binary,
+without paths or shell arguments; transfer state is read from the daemon after
+startup. Missing activation assets retain pending notices for manual GUI startup.
+New event generations can wake again; the same generation never respawns on Quit
+or activation failure. This is not daemon autostart. No files are installed during
+build/tests, and installed desktop activation remains an acceptance gate.

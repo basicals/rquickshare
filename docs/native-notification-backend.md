@@ -73,7 +73,7 @@ is included in the accepted proposal, without broad settings migration.
    SDK/controller bindings, scoped checks. Rollback consumers before additive API.
 2. [x] N2: canonical GTK presentation/dismissal and stable keyed widget updates.
    Rollback GTK bindings without altering transfers/source selection.
-3. [ ] N3: owned daemon activation worker and source-only package assets.
+3. [x] N3: owned daemon activation worker and source-only package assets.
    Rollback activation before removing its package assets.
 4. [ ] N4: explicit degraded backend, fixed-code visible CLI errors and reconnect;
    retain no-silent-source-replay and owned shutdown.
@@ -153,3 +153,67 @@ required Debug for the event identity; deriving it preserved strict equality rat
 than weakening the assertion. The new pure method and extended GTK smoke pass;
 no physical keyboard focus claim. Native inventory is now 14 methods. All owned
 command/display/private broker sessions exited. Terminal closed.
+
+
+### N3 concrete activation adapter before verification
+
+Standard source checked: https://dbus.freedesktop.org/doc/dbus-specification.html#bus-messages-start-service-by-name
+StartServiceByName(s,u) returns 1 for started and 2 for already running. The daemon
+uses a dedicated bounded bus connection and one coalescing worker. publish_changes
+only submits the greatest pending event revision; revisions never decrement, so
+same-event errors or GTK Quit cannot trigger a respawn loop. No transfer runtime
+waits for activation. Worker cancellation drops a blocked request and joins/closes
+its connection; startup cancellation also cleans the reserved service name.
+
+The scoped external adapter seam permits deterministic failed/blocked activation
+barriers. One new method checks the actual private broker missing/already-owned
+service replies plus coalescing/repeated generations/cancellation with a bounded
+provider fixture. It does not replace or mock coordinator/notice policy. Source
+asset points to /usr/bin/rquickshare and is packaged/removed with the native binary.
+No live session activation or installation is performed.
+
+
+The first N3 test found an actual adapter defect: the private reference broker
+returns ServiceUnknown without an activation file even when the name is owned.
+The adapter now checks the fixed name's current same-UID owner first; an existing
+GUI needs no activation file. Missing owner uses StartServiceByName. The assertion
+that an existing GUI is usable is retained. The original test helper's private
+module access also failed compilation; a local bounded scenario deadline replaces
+that helper dependency. No assertions are weakened and no production timeout is
+introduced. These observations remain recorded rather than replacing the failure
+with a claimed initial pass.
+
+## N4 concrete lifecycle/error contract before implementation
+
+Add Desktop1.ShowError(code s)->empty with finite codes invalid_selection, busy,
+recovery, backend_unavailable and panel_unavailable. Same actual-sender/UID checks
+apply; unknown code is InvalidInput. DesktopState carries the last fixed code and
+an error revision, separate from recipient-show revision; no paths or arbitrary
+text cross this route. Error display never acquires, sends, answers or cancels.
+A server may exist without a transfer controller: it can display fixed errors,
+while Begin/import fails Unavailable before acquiring a preparation permit.
+
+GTK startup failure to connect the daemon enters an explicit unavailable backend
+state, distinct from inert preview. Tray/privacy/error ingress still work. Provide
+an explicit Reconnect action and state that unsent preparation is released and
+files must be chosen again. Reconnect joins/closes the complete previous client/
+GUI ingress lifecycle before creating a fresh client in the same process; no new
+OS dialog process or mutable cross-generation controller is needed. Display mode
+is retained during this explicit reconnect. It never starts the daemon or replays
+source data/uncertain sends. Acquiring/staging files disables reconnect until that
+owned work finishes or is explicitly aborted. Accepted daemon transfers survive.
+
+CLI failure prints its existing fixed stderr message and sends one finite error
+code to the same GUI service, starting the fixed same executable only if absent.
+This does not retry acquisition/import/send. If the graphical platform/session is
+itself unavailable, presentation can fail explicitly; no system-popup fallback.
+Scoped checks: one real private-broker absent-backend/error/invalid-code/import-
+rejection scenario, one CLI finite-code/startup scenario, plus the existing GTK
+smoke for unavailable versus preview and explicit reconnect intent. Core/SDK are
+real; only desktop/broker/activation providers are fixture-owned. No live install.
+
+
+N3 affected method passed once after the ownership check correction (0.01s),
+including actual private-broker replies and deterministic failure/coalescing/
+cancellation. All owned broker/command processes exited. Terminal closed. The
+activation source asset is not installed and real startup remains a package gate.

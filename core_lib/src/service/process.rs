@@ -278,6 +278,25 @@ pub async fn serve(
         bus.close_unstarted().await;
         return Ok(());
     }
+    let wakeup = tokio::select! {
+        biased;
+        _ = stop.cancelled() => None,
+        result = async {
+            let stream = address.connect().await?;
+            super::wakeup::Wakeup::connect(stream).await.map_err(|_| ProcessError::Bus(BusError::Transport))
+        } => Some(result),
+    };
+    match wakeup {
+        Some(Ok(wakeup)) => bus.set_wakeup(wakeup),
+        Some(Err(error)) => {
+            bus.close_unstarted().await;
+            return Err(error);
+        }
+        None => {
+            bus.close_unstarted().await;
+            return Ok(());
+        }
+    }
     let core = RQS::new(settings.visibility, settings.port, settings.download_path);
     core.set_foreground(false);
     let mut runtime = match NativeRuntime::new(epoch, Limits::default(), core) {

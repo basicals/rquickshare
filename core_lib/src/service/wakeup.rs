@@ -1,0 +1,182 @@
+//! One owned coalescing activation worker; transport never waits for GTK startup.
+use tokio::{net::UnixStream, sync::watch, task::JoinHandle};
+use tokio_util::sync::CancellationToken;
+use zbus::Connection;
+
+use super::{bus, client::desktop};
+
+#[async_trait::async_trait]
+trait Activator: Send + 'static {
+    async fn activate(&mut self) -> bool;
+    async fn close(self);
+}
+struct BusActivator(Connection);
+#[async_trait::async_trait]
+impl Activator for BusActivator {
+    async fn activate(&mut self) -> bool {
+        let Ok(broker) = zbus::fdo::DBusProxy::new(&self.0).await else {
+            return false;
+        };
+        match broker
+            .get_name_owner(desktop::SERVICE.try_into().expect("fixed service name"))
+            .await
+        {
+            Ok(owner) => {
+                return broker.get_connection_unix_user(owner.into()).await.ok()
+                    == Some(rustix::process::geteuid().as_raw())
+            }
+            Err(zbus::fdo::Error::NameHasNoOwner(_)) => (),
+            Err(_) => return false,
+        }
+        let reply = self
+            .0
+            .call_method(
+                Some("org.freedesktop.DBus"),
+                "/org/freedesktop/DBus",
+                Some("org.freedesktop.DBus"),
+                "StartServiceByName",
+                &(desktop::SERVICE, 0u32),
+            )
+            .await;
+        reply.ok().is_some_and(|reply| {
+            reply
+                .header()
+                .sender()
+                .is_some_and(|sender| sender.as_str() == "org.freedesktop.DBus")
+                && matches!(reply.body().deserialize::<u32>(), Ok(1 | 2))
+        })
+    }
+    async fn close(self) {
+        let _ = self.0.close().await;
+    }
+}
+pub(super) struct Wakeup {
+    generation: watch::Sender<u64>,
+    stop: CancellationToken,
+    task: Option<JoinHandle<()>>,
+}
+impl Wakeup {
+    pub(super) async fn connect(stream: UnixStream) -> zbus::Result<Self> {
+        Ok(Self::spawn(BusActivator(
+            bus::connection_builder(stream).build().await?,
+        )))
+    }
+    fn spawn<A: Activator>(mut activator: A) -> Self {
+        let (generation, mut updates) = watch::channel(0u64);
+        let stop = CancellationToken::new();
+        let cancelled = stop.clone();
+        let task = tokio::spawn(async move {
+            loop {
+                tokio::select! { biased;
+                    _ = cancelled.cancelled() => break,
+                    changed = updates.changed() => if changed.is_err() { break; },
+                }
+                updates.borrow_and_update();
+                tokio::select! { biased;
+                    _ = cancelled.cancelled() => break,
+                    _ = activator.activate() => (),
+                }
+            }
+            activator.close().await;
+        });
+        Self {
+            generation,
+            stop,
+            task: Some(task),
+        }
+    }
+    pub(super) fn notify(&self, revision: u64) {
+        self.generation.send_if_modified(|current| {
+            if revision <= *current {
+                false
+            } else {
+                *current = revision;
+                true
+            }
+        });
+    }
+    pub(super) async fn close(mut self) {
+        self.stop.cancel();
+        if let Some(task) = self.task.take() {
+            let _ = task.await;
+        }
+    }
+}
+impl Drop for Wakeup {
+    fn drop(&mut self) {
+        self.stop.cancel();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    };
+
+    use tokio::sync::{mpsc, Semaphore};
+
+    use super::*;
+    struct Provider {
+        called: mpsc::Sender<()>,
+        release: Arc<Semaphore>,
+        closed: Arc<AtomicBool>,
+    }
+    #[async_trait::async_trait]
+    impl Activator for Provider {
+        async fn activate(&mut self) -> bool {
+            self.called.send(()).await.unwrap();
+            self.release.acquire().await.unwrap().forget();
+            false
+        }
+        async fn close(self) {
+            self.closed.store(true, Ordering::SeqCst);
+        }
+    }
+    #[tokio::test]
+    async fn given_failed_or_blocked_activation_when_generations_coalesce_then_same_notice_never_respawns_and_shutdown_joins(
+    ) {
+        tokio::time::timeout(std::time::Duration::from_secs(30), async {
+            // Arrange: actual standard broker replies for missing/already-owned service.
+            let private = crate::service::bus::tests::PrivateBus::new();
+            let mut real = BusActivator(
+                bus::connection_builder(private.socket().await)
+                    .build()
+                    .await
+                    .unwrap(),
+            );
+            assert!(!real.activate().await);
+            let gui = private.client().await;
+            gui.request_name(desktop::SERVICE).await.unwrap();
+            assert!(real.activate().await);
+            real.close().await;
+            gui.close().await.unwrap();
+            // Arrange: deterministic external provider barriers, not domain mocks.
+            let (called, mut calls) = mpsc::channel(2);
+            let release = Arc::new(Semaphore::new(0));
+            let closed = Arc::new(AtomicBool::new(false));
+            let wake = Wakeup::spawn(Provider {
+                called,
+                release: release.clone(),
+                closed: closed.clone(),
+            });
+            // Act / Assert
+            wake.notify(1);
+            calls.recv().await.unwrap();
+            wake.notify(1);
+            wake.notify(0);
+            wake.notify(2);
+            wake.notify(3);
+            release.add_permits(1);
+            calls.recv().await.unwrap();
+            assert_eq!(*wake.generation.borrow(), 3);
+            assert!(calls.try_recv().is_err());
+            wake.close().await;
+            assert!(closed.load(Ordering::SeqCst));
+            assert_eq!(calls.recv().await, None);
+        })
+        .await
+        .expect("Owned wake fixture must finish");
+    }
+}
