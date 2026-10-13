@@ -233,6 +233,7 @@ impl Shared {
         let state = controller.subscribe().borrow().clone();
         if state.busy
             || state.pending
+            || state.text_pending
             || state.disconnected
             || !state.view.as_ref().is_some_and(|view| {
                 view.synchronized

@@ -9,7 +9,7 @@ use crate::service::{
     Coordinator, Limits,
 };
 
-async fn fixture(body: &str, ty: PayloadKind) -> (PrivateBus, Harness, NativeClient) {
+pub(crate) async fn fixture(body: &str, ty: PayloadKind) -> (PrivateBus, Harness, NativeClient) {
     let bus = PrivateBus::new();
     let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
     completed(&mut coordinator, ty, body);

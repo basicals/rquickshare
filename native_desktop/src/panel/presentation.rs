@@ -10,6 +10,7 @@ impl Panel {
         model.automatic_focus = None;
     }
     pub(super) fn hide(self: &Rc<Self>) {
+        self.close_text_review();
         let dismissed = self.policy.borrow_mut().dismiss();
         let notices = self
             .model
@@ -64,6 +65,10 @@ impl Panel {
             model.safety = safety;
             model.safety_active = true;
         }
+        if !safety.manual_allowed() {
+            self.close_text_review();
+        }
+        self.refresh_text_review();
         self.render();
         self.apply_presentation();
     }
@@ -78,6 +83,11 @@ impl Panel {
                 Surface {
                     visible: self.window.is_visible()
                         || self
+                            .text_review
+                            .borrow()
+                            .as_ref()
+                            .is_some_and(|review| review.visible())
+                        || self
                             .settings
                             .borrow()
                             .as_ref()
@@ -87,6 +97,7 @@ impl Panel {
                         || model.waiting
                         || model.ingress.busy
                         || model.state.pending
+                        || model.state.text_pending
                         || *self.ingress.gate.subscribe().borrow(),
                     healthy: !model.state.disconnected
                         && model.state.view.as_ref().is_some_and(|view| {

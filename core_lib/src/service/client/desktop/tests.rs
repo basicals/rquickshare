@@ -702,3 +702,54 @@ async fn given_no_transfer_backend_when_fixed_errors_are_presented_then_import_i
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_uncertain_text_read_when_desktop_preparation_is_requested_then_read_recovery_preserves_single_action_ownership(
+) {
+    scenario(async {
+        // Arrange: real SDK ledger after an interrupted external reply.
+        use crate::service::client::{
+            controller::ActionResult,
+            tests::{hook, interrupted as interrupt_read},
+        };
+        use crate::sessions::details::PayloadKind;
+        let (bus, host, mut client) =
+            crate::service::client::text::tests::fixture("private-body", PayloadKind::Text).await;
+        let row = client.read_state().await.unwrap().transfers.remove(0);
+        let reached = hook(&mut client, "BeginRead", true);
+        interrupt_read(
+            client.read_received_text(&row.transfer, row.content_revision.unwrap()),
+            reached,
+        )
+        .await;
+        let controller = PanelController::spawn(client);
+        ready(&controller).await;
+        assert!(controller.handle().subscribe().borrow().text_pending);
+        let server = DesktopServer::connect(
+            bus.socket().await,
+            controller.handle(),
+            PreparationGate::new(),
+        )
+        .await
+        .unwrap();
+        let mut cli = DesktopClient::connect(bus.socket().await).await.unwrap();
+        // Act / Assert
+        assert_eq!(
+            cli.wire("Begin", &()).await.unwrap_err(),
+            DesktopError::Busy
+        );
+        assert!(!server.handle().subscribe().borrow().staging);
+        let ActionResult::Text(read) = controller.handle().recover().unwrap().wait().await.unwrap()
+        else {
+            panic!("Missing recovered text")
+        };
+        assert_eq!(read.body.text(), "private-body");
+        assert!(!controller.handle().subscribe().borrow().text_pending);
+        assert!(begin(&mut cli).await > 0);
+        cli.close().await.unwrap();
+        server.close().await.unwrap();
+        controller.close().await.unwrap();
+        assert_eq!(host.finish().await.1, Ok(()));
+    })
+    .await;
+}

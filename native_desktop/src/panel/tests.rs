@@ -26,15 +26,17 @@ fn given_complete_view_and_busy_flags_when_controls_are_projected_then_only_sync
     // Act / Assert
     assert!(controls_ready(&state, false));
     assert!(!controls_ready(&state, true));
-    for flag in 0..3 {
+    for flag in 0..4 {
         state.busy = flag == 0;
         state.pending = flag == 1;
         state.disconnected = flag == 2;
+        state.text_pending = flag == 3;
         assert!(!controls_ready(&state, false));
     }
     state.busy = false;
     state.pending = false;
     state.disconnected = false;
+    state.text_pending = false;
     for lifecycle in [Lifecycle::Draining, Lifecycle::Stopped] {
         Arc::make_mut(state.view.as_mut().unwrap()).lifecycle = lifecycle;
         assert!(!controls_ready(&state, false));
@@ -134,6 +136,37 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
             .into(),
         ..Default::default()
     };
+    for kind in [
+        rqs_lib::sessions::details::PayloadKind::Text,
+        rqs_lib::sessions::details::PayloadKind::Url,
+    ] {
+        let text_details = TransferDetails {
+            kind,
+            status: DetailsStatus::Ready,
+            sender: "phone".into(),
+            pin: "0123".into(),
+            total_bytes: 3,
+            ..Default::default()
+        };
+        for full in [false, true] {
+            let row = details_card_mode(&text_details, full);
+            let texts = labels(&row)
+                .iter()
+                .map(|label| label.text().to_string())
+                .collect::<Vec<_>>()
+                .join(" ");
+            assert!(
+                texts.contains(if kind == rqs_lib::sessions::details::PayloadKind::Url {
+                    "Link · 3 bytes"
+                } else {
+                    "Text · 3 bytes"
+                })
+            );
+            assert!(texts.contains("Code: 0123"));
+            assert!(!texts.contains("files") && !texts.contains("Review all files"));
+            assert!(labels(&row).iter().all(|label| !label.uses_markup()));
+        }
+    }
     let row = details_card(&details);
     assert!(labels(&row)
         .iter()
@@ -202,6 +235,12 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(*panel.settings.borrow().as_ref().unwrap(), settings);
     assert!(settings.is_visible());
     tray::verify_tray_projection(&panel);
+    text::tests::verify_review_smoke(&panel, &application);
+    panel.safety_update(crate::desktop_guard::SafetyState {
+        locked: Some(false),
+        inhibited: Some(false),
+        closed: false,
+    });
     assert_eq!(
         panel.pages.visible_child_name().as_deref(),
         Some("incoming")

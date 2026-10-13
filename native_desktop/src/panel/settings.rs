@@ -370,6 +370,7 @@ impl Editor {
             && !model.waiting
             && !model.state.busy
             && !model.state.pending
+            && !model.state.text_pending
             && !model.ingress.busy
             && !*panel.ingress.gate.subscribe().borrow();
         let base = self.base.borrow();

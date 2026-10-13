@@ -20,7 +20,7 @@ URL opening, reveal and permanent payload history are separate later capabilitie
 2. [x] R2: typed Text1 captured metadata and explicit bounded read capability,
    same-UID/epoch/ownership/FD checks, checked chunk/read lifecycle in the SDK and
    existing controller. Keep content out of ordinary snapshots/signals/diagnostics.
-3. [ ] R3: safe sender/PIN text request card; completed text has explicit Review
+3. [x] R3: safe sender/PIN text request card; completed text has explicit Review
    and Copy in a secondary plain-text window. Copy only after fresh lock/epoch/read
    checks. No automatic copy/URL launch, clipboard read, shell or file creation.
 4. [ ] R4: actual affected checks once, fixes, documentation, reversible commits,
@@ -190,3 +190,64 @@ clipboard. Disable TextView's built-in copy action so it cannot bypass the guard
 Copy button. An admitted read may finish in the owned controller after GUI dismissal;
 a presentation token rejects late private results after lock/close/epoch change.
 No source/settings action is cancelled as a side effect of text dismissal.
+
+## R3 widget correction before code
+
+Use a nonselectable plain GtkLabel inside a scroller instead of TextView. TextView
+owns built-in clipboard actions and selection clipboard behavior; suppressing a
+keyboard signal alone would not cover every context-menu/accessibility path. A
+nonselectable label has no copy/selection provider, keeps markup disabled and
+preserves the same review/read/copy flow. The explicit Copy button copies the full
+immutable body. Text is limited to 128KiB before layout. This is an internal widget
+choice, not a new receive/clipboard policy or URL action. Reference APIs:
+https://docs.gtk.org/gtk4/signal.TextView.copy-clipboard.html and
+https://docs.gtk.org/gtk4/method.TextBuffer.remove_selection_clipboard.html.
+Keep copy authority in a fresh injected callback, test actual GTK clipboard ownership
+on the isolated display, and independently test all key/gate mismatch branches.
+
+R3 first isolated GTK run exposed an actual unintended PRIMARY clipboard change:
+the shared label helper makes labels selectable, and focus selected the generic
+review heading on presentation. The body was already nonselectable. Correct the
+new review heading as well; retain assertions for BOTH clipboard/PRIMARY preservation
+through open/update/lock/epoch failures and explicit Copy. Do not weaken the test.
+
+R3 clipboard acknowledgement uses GdkClipboard.set_content with an immutable string
+provider and its checked boolean receipt, rather than the void set_text convenience
+API. A closed display or provider rejection yields a fixed failure message and no
+success claim/retry. The provider contains a copy of the approved body; review close
+only drops its own references and does not revoke that explicit copy.
+
+R3 ownership integration review: propagate text_pending into existing GTK settings
+and descriptor-ingress admission readiness. Otherwise the CLI could acquire a new
+preparation while an uncertain read owns the serialized controller, only to fail
+later. Keep source-recovery classification separate: text_pending never pretends a
+source upload was admitted. Add one actual interrupted-read/desktop Begin/recovery
+fixture and extend the existing pure panel readiness table before closing the slice.
+
+## Actual R3 verification
+
+Native all-target check passed (11.20s). First native suite: 20 methods passed,
+1 GTK method failed on the actual PRIMARY heading-focus defect (20.39s build,
+0.53s execution). Heading fix affected GTK method passed (5.19s build,0.43s).
+After checked clipboard provider receipt: affected GTK method passed (6.09s build,
+0.45s); strict native Clippy/build passed (3.68s/5.28s). Earlier lint/build before
+that change: 5.94s/18.32s. No unchanged ten-run/repeated-suite claim.
+
+Final single-action admission fixture initially failed compilation because its
+shared test-only text fixture module was private; expose it only under cfg(test),
+with no production API. Corrected actual read/CLI/recovery method passed (0.18s);
+strict core all-target Clippy passed (7.32s). Extended native pure readiness table
+passed (0.00s,7.62s build). Final affected strict native lint/build passed
+(4.70s/7.31s). Production changes since the preceding suite are limited to the
+checked GTK provider/heading and pending-read readiness, verified by these checks.
+All owned terminals completed/closed; private broker/display fixtures joined.
+
+One new native pure method covers epoch/identity/revision/direction/phase/kind/size
+and unknown/locked/closed desktop inputs. The existing single GTK smoke now covers
+Text/URL Full/Compact consent labels, literal untrusted markup/link body, BOTH
+clipboard/PRIMARY preservation on open/update/stale/locked/not-ready clicks, actual
+Copy button result and actual panel-lock destruction/body release without clearing
+explicitly copied text. One new core integration method covers uncertain-read CLI
+admission and exact recovery (N4,N5,N7,N9,N10). No user clipboard or physical peers.
+GTK provider refusal/closed-display code handles failure honestly; physical Wayland
+provider failure/persistence behavior remains acceptance, not a simulated success.

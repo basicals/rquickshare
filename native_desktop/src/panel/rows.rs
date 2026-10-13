@@ -34,6 +34,8 @@ fn same_description(a: &TransferView, b: &TransferView) -> bool {
         && a.direction == b.direction
         && a.phase == b.phase
         && a.consent_revision == b.consent_revision
+        && a.content_revision == b.content_revision
+        && a.details.kind == b.details.kind
         && a.details.status == b.details.status
         && a.details.sender == b.details.sender
         && a.details.device == b.details.device
@@ -110,6 +112,7 @@ impl Panel {
         }
         let root = rows.entries[&key].root.clone();
         for (name, enabled) in [
+            ("review-text", ready && transfer.content_revision.is_some()),
             (
                 "accept",
                 ready && transfer.pending_control.is_none() && transfer.can_accept(),
@@ -135,7 +138,11 @@ impl Panel {
                 transfer.details.transferred_bytes,
                 transfer.details.total_bytes,
                 if transfer.direction == Direction::Inbound {
-                    "written"
+                    if transfer.details.kind == rqs_lib::sessions::details::PayloadKind::Files {
+                        "written"
+                    } else {
+                        "received"
+                    }
                 } else {
                     "sent"
                 }

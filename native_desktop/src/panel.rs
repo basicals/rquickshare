@@ -24,6 +24,7 @@ mod menu;
 mod presentation;
 mod rows;
 mod settings;
+mod text;
 mod tray;
 
 #[derive(Default)]
@@ -64,6 +65,8 @@ pub struct Panel {
     settings: RefCell<Option<gtk::Window>>,
     appearance: RefCell<Option<gtk::DropDown>>,
     settings_owner: RefCell<Option<Rc<settings::Editor>>>,
+    text_review: RefCell<Option<Rc<text::Review>>>,
+    text_generation: RefCell<Rc<()>>,
     rows: RefCell<rows::Rows>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
     reconnect: Cell<bool>,
@@ -98,7 +101,7 @@ fn details_card(details: &TransferDetails) -> gtk::Box {
 fn details_card_mode(details: &TransferDetails, full: bool) -> gtk::Box {
     let row = card();
     match details.status {
-        DetailsStatus::Unavailable => row.append(&label("Waiting for sender and file details")),
+        DetailsStatus::Unavailable => row.append(&label("Waiting for sender and payload details")),
         DetailsStatus::Unsupported => row.append(&label(
             "This payload cannot be reviewed safely. Decline or cancel it.",
         )),
@@ -117,6 +120,18 @@ fn details_card_mode(details: &TransferDetails, full: bool) -> gtk::Box {
                 row.append(&label(
                     "Check this code on the sending device before accepting.",
                 ));
+            }
+            if details.kind != rqs_lib::sessions::details::PayloadKind::Files {
+                row.append(&label(&format!(
+                    "{} · {} bytes",
+                    if details.kind == rqs_lib::sessions::details::PayloadKind::Url {
+                        "Link"
+                    } else {
+                        "Text"
+                    },
+                    details.total_bytes
+                )));
+                return row;
             }
             row.append(&label(&format!(
                 "{} {} · {} bytes",
@@ -155,6 +170,7 @@ pub fn controls_ready(state: &PanelState, local_busy: bool) -> bool {
     !local_busy
         && !state.busy
         && !state.pending
+        && !state.text_pending
         && !state.disconnected
         && state
             .view
@@ -243,6 +259,8 @@ impl Panel {
             settings: RefCell::new(None),
             appearance: RefCell::new(None),
             settings_owner: RefCell::new(None),
+            text_review: RefCell::new(None),
+            text_generation: RefCell::new(Rc::new(())),
             rows: RefCell::new(rows::Rows::default()),
             dismissal: RefCell::new(None),
             reconnect: Cell::new(false),
@@ -343,6 +361,17 @@ impl Panel {
             .set_text(text);
     }
     pub fn update(self: &Rc<Self>, state: PanelState) {
+        let previous_epoch = self
+            .model
+            .borrow()
+            .state
+            .view
+            .as_ref()
+            .map(|view| view.epoch);
+        let current_epoch = state.view.as_ref().map(|view| view.epoch);
+        if state.disconnected || previous_epoch != current_epoch {
+            self.close_text_review();
+        }
         let saved = state
             .settings
             .as_ref()
@@ -374,6 +403,7 @@ impl Panel {
         if let Some(editor) = self.settings_owner.borrow().as_ref() {
             editor.refresh();
         }
+        self.refresh_text_review();
         self.render();
         self.apply_presentation();
     }
@@ -455,6 +485,7 @@ impl Panel {
         if self.model.borrow().closing {
             return;
         }
+        self.close_text_review();
         if let Some(task) = self.completion.borrow_mut().take() {
             task.abort();
         }
@@ -507,6 +538,7 @@ impl Panel {
         self.model.borrow_mut().waiting = true;
         self.render();
         let weak = Rc::downgrade(self);
+        let generation = self.text_generation.borrow().clone();
         let task = glib::spawn_future_local(async move {
             let result = completion.wait().await;
             if let Some(panel) = weak.upgrade() {
@@ -514,11 +546,17 @@ impl Panel {
                     let mut model = panel.model.borrow_mut();
                     model.waiting = false;
                     model.notice = result
+                        .as_ref()
                         .err()
                         .map(|_| "Operation did not complete. Review its state before retrying.");
                 }
                 panel.render();
                 panel.apply_presentation();
+                if let Ok(rqs_lib::service::client::controller::ActionResult::Text(read)) = result {
+                    if Rc::ptr_eq(&generation, &panel.text_generation.borrow()) {
+                        panel.show_text_review(read);
+                    }
+                }
             }
         });
         self.completion.replace(Some(task));
@@ -682,7 +720,8 @@ impl Panel {
         self.reconnect_button.set_visible(unavailable);
         self.box_widget("recovery").set_visible(
             unavailable
-                || ((model.state.pending || model.desktop.staging) && !model.state.disconnected),
+                || ((model.state.pending || model.state.text_pending || model.desktop.staging)
+                    && !model.state.disconnected),
         );
         for id in ["recover", "abort"] {
             self.button(id).set_visible(!unavailable);
@@ -692,7 +731,9 @@ impl Panel {
                 !preview
                     && !model.waiting
                     && !model.state.busy
-                    && (model.state.pending || (id == "abort" && model.desktop.staging))
+                    && (model.state.pending
+                        || (id == "recover" && model.state.text_pending)
+                        || (id == "abort" && model.desktop.staging))
                     && !model.state.disconnected,
             );
         }
@@ -853,13 +894,34 @@ impl Panel {
                 transfer.details.transferred_bytes,
                 transfer.details.total_bytes,
                 if transfer.direction == Direction::Inbound {
-                    "written"
+                    if transfer.details.kind == rqs_lib::sessions::details::PayloadKind::Files {
+                        "written"
+                    } else {
+                        "received"
+                    }
                 } else {
                     "sent"
                 }
             ));
             progress.set_widget_name("progress");
             row.append(&progress);
+        }
+        if full && transfer.direction == Direction::Inbound && transfer.phase == Phase::Finished {
+            if let Some(revision) = transfer.content_revision {
+                let review = gtk::Button::with_label("Review text");
+                review.set_widget_name("review-text");
+                review.set_sensitive(ready);
+                let weak = Rc::downgrade(self);
+                let target = transfer.transfer.clone();
+                review.connect_clicked(move |_| {
+                    if let Some(panel) = weak.upgrade() {
+                        if let Some(handle) = &panel.handle {
+                            panel.submit(|| handle.read_text(target.clone(), revision));
+                        }
+                    }
+                });
+                row.append(&review);
+            }
         }
         if !transfer.phase.is_terminal() {
             let cancel = gtk::Button::with_label("Cancel");
