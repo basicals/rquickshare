@@ -1,5 +1,25 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-13: separate tray menu completed
+
+The accepted right-click actions now have a standard DBusMenu at /Menu on the
+owned StatusNotifierItem connection. [native-tray-menu.md](native-tray-menu.md)
+records T1-T3: fixed privacy-free rows, actual same-UID/no-FD validation, bounded
+ordered eight-batch action mailbox, truthful grouped-event failure IDs, mode/enabled
+projection and immediate lock/unlock readiness. GTK's existing checked actions
+remain the sole UI execution owner. Quit closes the panel, never the transfer daemon.
+
+Primary activation opens the card; a direct ContextMenu request opens its existing
+popover. KDE may import the exported menu into its own native renderer. Physical
+Plasma placement/focus/mixed-scale/Wayland behavior remains unverified. All 20 native
+methods passed, followed only by affected checks; final strict native lint/build
+passed. Core/settings checks remain their preceding measured observations.
+
+Settings and separate tray menu source are complete. Next native capabilities are
+clipboard/text/reveal, autostart/updates and installed package equivalence. Physical
+Google parity/account/QR/peer matrices remain open. No live installation or push.
+Prior checkpoints below describe their dated state, including pending-menu entries.
+
 ## 2026-10-13: daemon-owned native settings implemented
 
 User selected 1/A. [native-settings.md](native-settings.md) is the implementation

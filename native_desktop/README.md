@@ -1,5 +1,13 @@
 # Native development shell
 
+The tray now exports a standard DBusMenu with Open, file/folder selection, incoming/
+transfer navigation, Compact/Full, Settings, Reconnect, Hide and Quit. It contains
+fixed labels only. Actions share current GTK readiness and lock safety; no consent,
+implicit Send, saved-setting write or daemon-stop action is exposed. Primary click
+opens the card; direct ContextMenu opens its existing popover. See
+[native-tray-menu.md](../docs/native-tray-menu.md) for protocol/lifecycle and actual
+checks. Physical Plasma menu rendering and placement/focus remain acceptance gates.
+
 Settings now supports explicit Save/import, source conflict recovery, retry,
 visibility, optional port, locally acquired receive-directory FD, and persistent
 Full/Compact. The daemon is sole writer of a private native file; the original

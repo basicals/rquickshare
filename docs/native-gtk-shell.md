@@ -1,5 +1,12 @@
 # Native GTK shell integration
 
+2026-10-13 current follow-up: [native-settings.md](native-settings.md) completes
+daemon-owned persistence/in-app recovery and [native-tray-menu.md](native-tray-menu.md)
+completes separate standard tray actions. Full/Compact is durably saved only through
+explicit Settings Save. Current native inventory is 20 methods; measured checks and
+remaining physical gates are in those SSOTs. Earlier process-only/menu-gap entries
+below remain historical. No installed migration or Tauri retirement is claimed.
+
 Latest implementation checkpoint: 2026-10-13. Custom Full/Compact cards, owned KDE
 privacy monitoring, canonical daemon notices, fixed activation/error ingress and
 joined explicit reconnect are implemented in source. Current SSOT/checks:

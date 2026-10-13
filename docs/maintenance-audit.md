@@ -1,5 +1,26 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-13: standard native tray menu completed
+
+[native-tray-menu.md](native-tray-menu.md) completes the previously accepted
+secondary tray actions. Fixed /Menu DBusMenu export uses no transfer/source/private
+metadata; actual caller UID, FD/cardinality/input bounds and current enabled state
+are checked. Ordered bounded actions go to existing checked GTK handlers, including
+temporary Full/Compact, settings and local Quit. No tray consent/save/daemon-stop
+authority. Group rejection reports every undispatched event ID; no false success.
+Desktop lock disables sensitive actions; unlock immediately recomputes readiness.
+
+All 20 native methods passed (0.55s), with affected-only reruns for later fixes;
+final strict native Clippy/build passed. Two new methods primarily cover N1/N7,
+plus enhanced real watcher and single GTK smoke. The preview adapter no longer
+calls Layer Shell functions on an ordinary Xvfb window. Actual Plasma menu/focus/
+placement remains a physical gate. Existing dependency/feature/DRI3 warnings are
+separate. Private tasks/brokers/displays exited. Terminal closed.
+
+No live installation/registration/configuration changes, push or branch creation.
+Next native gaps: clipboard/text/reveal, autostart/updates and package equivalence;
+real Google exchanges/full parity remain pending. Earlier tray gap entries are historical.
+
 ## 2026-10-13: native settings and receive authority completed
 
 Accepted 1/A is implemented; see [native-settings.md](native-settings.md) for the

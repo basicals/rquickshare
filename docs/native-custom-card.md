@@ -1,5 +1,11 @@
 # Custom native card: full and compact presentation
 
+Current follow-up (2026-10-13): persistent settings are implemented in
+[native-settings.md](native-settings.md); the tray's separate standard DBusMenu and
+checked GTK action bridge are implemented in [native-tray-menu.md](native-tray-menu.md).
+Earlier process-only Appearance and ContextMenu-only observations are historical.
+Physical KDE/Google acceptance remains open.
+
 Latest checkpoint: C1-C3 source and C4 handoff are complete. The user accepted
 background option A/1. [native-notification-backend.md](native-notification-backend.md)
 records the exact implemented notice/activation/error/reconnect contract and actual
