@@ -23,6 +23,7 @@ use tokio::runtime::Handle;
 mod menu;
 mod presentation;
 mod rows;
+mod settings;
 
 #[derive(Default)]
 struct Model {
@@ -43,6 +44,7 @@ struct Model {
     automatic_focus: Option<String>,
     manual_requested: bool,
     preview: bool,
+    saved_mode: Option<u8>,
 }
 pub struct Panel {
     pub window: gtk::Window,
@@ -60,6 +62,7 @@ pub struct Panel {
     context: gtk::PopoverMenu,
     settings: RefCell<Option<gtk::Window>>,
     appearance: RefCell<Option<gtk::DropDown>>,
+    settings_owner: RefCell<Option<Rc<settings::Editor>>>,
     rows: RefCell<rows::Rows>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
     reconnect: Cell<bool>,
@@ -159,6 +162,14 @@ pub fn controls_ready(state: &PanelState, local_busy: bool) -> bool {
 fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'static str {
     use rqs_lib::service::client::ClientError::*;
     match error {
+        Some(Settings(rqs_lib::service::native_settings::StoreError::Indeterminate)) => {
+            "Settings save outcome is uncertain. Open Settings and retry the pending save."
+        }
+        Some(Settings(
+            rqs_lib::service::native_settings::StoreError::Conflict
+            | rqs_lib::service::native_settings::StoreError::ReplayConflict,
+        )) => "Settings changed. Open Settings and reload before saving.",
+        Some(Settings(_)) => "Settings need attention. Open Settings to review the result.",
         Some(DaemonChanged | Transport | Closed) => {
             "Service connection lost. Reconnect starts a fresh client; choose unsent files again."
         }
@@ -229,6 +240,7 @@ impl Panel {
             context: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
             settings: RefCell::new(None),
             appearance: RefCell::new(None),
+            settings_owner: RefCell::new(None),
             rows: RefCell::new(rows::Rows::default()),
             dismissal: RefCell::new(None),
             reconnect: Cell::new(false),
@@ -328,7 +340,37 @@ impl Panel {
             .set_text(text);
     }
     pub fn update(self: &Rc<Self>, state: PanelState) {
-        self.model.borrow_mut().state = state;
+        let saved = state
+            .settings
+            .as_ref()
+            .filter(|view| view.configured)
+            .map(|view| view.card_mode);
+        let changed = {
+            let mut model = self.model.borrow_mut();
+            let changed = saved.is_some() && saved != model.saved_mode;
+            model.saved_mode = saved;
+            model.state = state;
+            changed
+        };
+        if changed
+            && !self
+                .settings_owner
+                .borrow()
+                .as_ref()
+                .is_some_and(|editor| editor.is_dirty())
+        {
+            self.apply_mode(
+                if saved == Some(1) {
+                    Mode::Full
+                } else {
+                    Mode::Compact
+                },
+                false,
+            );
+        }
+        if let Some(editor) = self.settings_owner.borrow().as_ref() {
+            editor.refresh();
+        }
         self.render();
         self.apply_presentation();
     }
@@ -415,6 +457,9 @@ impl Panel {
         }
         if let Some(task) = self.dismissal.borrow_mut().take() {
             task.abort();
+        }
+        if let Some(editor) = self.settings_owner.borrow_mut().take() {
+            editor.close();
         }
         if let Some(settings) = self.settings.borrow_mut().take() {
             settings.destroy();
@@ -701,7 +746,7 @@ impl Panel {
         } else if model.desktop.staging {
             "Receiving files from the local sender. Abort to release this preparation."
         } else if model.ingress.busy || *self.ingress.gate.subscribe().borrow() {
-            "Preparing files…"
+            "Preparing selection…"
         } else if model.ingress.failed {
             "Preparation failed. Review service state or select accessible files."
         } else if model.state.error.is_some() {
@@ -713,6 +758,13 @@ impl Panel {
             .is_some_and(|view| !view.warnings.is_empty())
         {
             "Visibility was recovered as hidden. Review service settings before enabling discovery."
+        } else if model
+            .state
+            .view
+            .as_ref()
+            .is_some_and(|view| view.lifecycle == Lifecycle::Stopped)
+        {
+            "Transfer service is stopped. Open Settings to repair or start it."
         } else if let Some(transfer) = current {
             match transfer.pending_control.map(|(action, _)| action) {
                 Some(rqs_lib::service::ControlAction::Accept) => "Accepting request…",

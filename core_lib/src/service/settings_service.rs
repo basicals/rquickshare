@@ -112,7 +112,8 @@ impl SettingsView {
                 .as_ref()
                 .map(|directory| directory.path().to_string_lossy().into_owned())
                 .unwrap_or_default();
-            self.restart_required = !self.running || self.port != running_port;
+            self.restart_required =
+                !self.running || effective_port(self.port) != effective_port(running_port);
         } else {
             self.restart_required = true;
         }
@@ -120,6 +121,13 @@ impl SettingsView {
         if self.applied_live_revision > self.revision {
             self.applied_live_revision = 0;
         }
+    }
+}
+fn effective_port(port: i32) -> i32 {
+    if port <= 0 {
+        -1
+    } else {
+        port
     }
 }
 
@@ -470,10 +478,11 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
                 continue;
             }
             let header = message.header();
+            let observed = self.view();
             tokio::select! { biased; _ = self.stop.cancelled() => (), _ = async {
+                let _ = self.connection.emit_signal(None::<&str>, super::bus::PATH, INTERFACE, "SettingsChanged", &(observed.epoch, observed.revision)).await;
                 match response {
                     Ok(view) => {
-                        let _ = self.connection.emit_signal(None::<&str>, super::bus::PATH, INTERFACE, "SettingsChanged", &(view.epoch.clone(), view.revision)).await;
                         let _ = self.connection.reply(&header, &(view,)).await;
                     }
                     Err(error) => { let _ = self.connection.reply_error(&header, format!("{ERROR_PREFIX}{error:?}"), &()).await; }

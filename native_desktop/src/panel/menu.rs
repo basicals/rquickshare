@@ -137,7 +137,12 @@ impl Panel {
         });
     }
     pub fn set_mode(self: &Rc<Self>, mode: Mode) {
-        self.mark_manual();
+        self.apply_mode(mode, true);
+    }
+    pub(super) fn apply_mode(self: &Rc<Self>, mode: Mode, manual: bool) {
+        if manual {
+            self.mark_manual();
+        }
         {
             let mut model = self.model.borrow_mut();
             if model.closing || model.mode == mode {
@@ -150,8 +155,9 @@ impl Panel {
             .and_downcast::<gio::SimpleAction>()
             .unwrap()
             .set_state(&mode.name().to_variant());
-        let appearance = self.appearance.borrow().clone();
-        if let Some(appearance) = appearance {
+        if let Some(editor) = self.settings_owner.borrow().as_ref() {
+            editor.sync_mode(mode, manual);
+        } else if let Some(appearance) = self.appearance.borrow().as_ref() {
             appearance.set_selected(u32::from(mode == Mode::Full));
         }
         self.render();
@@ -174,55 +180,6 @@ impl Panel {
             window.present();
             return;
         }
-        let window = gtk::Window::builder()
-            .title("rQuickShare Settings")
-            .transient_for(&self.window)
-            .application(&self.window.application().unwrap())
-            .default_width(360)
-            .resizable(false)
-            .build();
-        let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
-        for side in [
-            gtk::PositionType::Top,
-            gtk::PositionType::Bottom,
-            gtk::PositionType::Left,
-            gtk::PositionType::Right,
-        ] {
-            match side {
-                gtk::PositionType::Top => content.set_margin_top(20),
-                gtk::PositionType::Bottom => content.set_margin_bottom(20),
-                gtk::PositionType::Left => content.set_margin_start(20),
-                gtk::PositionType::Right => content.set_margin_end(20),
-                _ => unreachable!(),
-            }
-        }
-        content.append(&label("Appearance"));
-        content.append(&label("Card display mode"));
-        let appearance = gtk::DropDown::from_strings(&["Compact", "Full"]);
-        appearance.set_selected(u32::from(self.model.borrow().mode == Mode::Full));
-        let weak = Rc::downgrade(self);
-        appearance.connect_selected_notify(move |appearance| {
-            if let Some(panel) = weak.upgrade() {
-                panel.set_mode(if appearance.selected() == 1 {
-                    Mode::Full
-                } else {
-                    Mode::Compact
-                });
-            }
-        });
-        content.append(&appearance);
-        content.append(&label("Display mode is kept while rQuickShare is running."));
-        window.set_child(Some(&content));
-        let weak = Rc::downgrade(self);
-        window.connect_close_request(move |window| {
-            window.set_visible(false);
-            if let Some(panel) = weak.upgrade() {
-                panel.apply_presentation();
-            }
-            glib::Propagation::Stop
-        });
-        self.appearance.replace(Some(appearance));
-        self.settings.replace(Some(window.clone()));
-        window.present();
+        super::settings::Editor::open(self);
     }
 }

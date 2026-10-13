@@ -109,6 +109,18 @@ async fn given_live_owner_when_saved_then_policy_adoption_port_restart_and_recov
             .unwrap();
         assert!(!applied.restart_required);
         assert_eq!(applied.applied_live_revision, 2);
+        let mut automatic = intent(&applied, 3);
+        automatic.port = 0;
+        automatic.directory = 0;
+        let automatic = client
+            .save_settings(SettingsEdit {
+                intent: automatic,
+                directory: None,
+            })
+            .await
+            .unwrap();
+        assert!(!automatic.restart_required);
+        assert_eq!(automatic.applied_live_revision, 3);
         assert_eq!(applied.directory_display, selected.to_string_lossy());
         assert!(!format!("{applied:?}").contains(selected.to_str().unwrap()));
         let upload = client.begin_selection().await.unwrap();

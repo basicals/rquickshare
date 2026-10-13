@@ -313,16 +313,25 @@ impl SelectionBus {
                 }
             }
             if let Some(message) = self.pending_restart.take() {
+                let header = message.header();
                 let ready = self.settings.as_ref().is_some_and(|settings| {
                     let view = settings.view();
                     settings.idle() && view.configured && matches!(view.error, 0 | 4)
                 });
                 if ready && runtime.restart_if_idle() {
                     self.restart_requested = true;
-                    self.state_reply(&message.header(), &()).await?;
+                    tokio::select! { biased;
+                        _ = stop.cancelled() => return Ok(()),
+                        _ = failure.cancelled() => return Err(BusError::Transport),
+                        result = self.state_reply(&header, &()) => result?,
+                    }
                     return Ok(());
                 }
-                self.domain_error(&message.header(), Error::Busy).await?;
+                tokio::select! { biased;
+                    _ = stop.cancelled() => return Ok(()),
+                    _ = failure.cancelled() => return Err(BusError::Transport),
+                    result = self.domain_error(&header, Error::Busy) => result?,
+                }
             }
             tokio::select! {
                 _ = stop.cancelled() => return Ok(()),

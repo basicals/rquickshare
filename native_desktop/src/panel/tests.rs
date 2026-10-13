@@ -173,6 +173,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     let appearance = panel.appearance.borrow().as_ref().unwrap().clone();
     appearance.set_selected(1);
     assert_eq!(panel.model.borrow().mode, Mode::Full);
+    settings::verify_editor_smoke(panel.settings_owner.borrow().as_ref().unwrap());
     assert!(labels(&panel.box_widget("incoming"))
         .iter()
         .any(|label| label.text() == "Code: 4821"));
@@ -254,6 +255,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.model.borrow().closing);
     assert!(panel.settings.borrow().is_none());
     assert!(panel.appearance.borrow().is_none());
+    assert!(panel.settings_owner.borrow().is_none());
     assert!(panel.context.parent().is_none());
     assert!(!settings.is_visible());
     panel.close(); // Explicit Quit and the application cleanup may both close the panel.

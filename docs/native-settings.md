@@ -24,7 +24,7 @@ separate RQS owners. Fix the authority boundary before adding mutable settings.
 4. [x] S4: integrate native startup/settings owner and saved/configured/applied/
    restart-required state. Unusable storage must remain explicit, never silent defaults.
    Freeze configuration-only recovery/controlled idle restart details before code.
-5. [ ] S5: secondary GTK settings editor with explicit save/import/recovery, actual
+5. [x] S5: secondary GTK settings editor with explicit save/import/recovery, actual
    acknowledgements and persistent Full/Compact. No false saved/applied label.
 6. [ ] S6: affected checks once, actual failures/corrections, commits and handoff.
    Physical migration/KDE/Google acceptance remains separate; no ten-run dev loop.
@@ -345,3 +345,40 @@ recovery controls and close/lock lifecycle (Positive/N7/N9), plus actual control
 save/retry state from the private-broker contracts. Run native strict Clippy/build
 and existing isolated Xvfb suite once after code. Compiled inert settings capture
 is a review artifact only; no installed KDE/Wayland/device proof. No ten repetitions.
+
+Final integration review: invalidate Settings1 readers on failed commands that
+change cached error state as well as success; keep Restart reply waits cancellable
+after the atomic idle cutoff. The stopped card and finite settings errors must
+direct the user to Settings rather than disabled send controls or a false rejection
+claim. These are scoped contract corrections; no new policy or workflow is added.
+
+Compiled visual review caught GtkDropDown selecting Visible for an unavailable
+backend despite INVALID_LIST_POSITION. Use an explicit UI-only "Select visibility"
+placeholder, never a wire policy. Disable Save until a real visibility is selected;
+saved wire values stay 0/1/2. Form titles should not take initial text-selection
+focus. Recheck only the affected GTK/form methods and native lint/build after this
+correction; unaffected core checks remain valid.
+
+S5 observations: the secondary editor is implemented with explicit Save, Reload,
+Retry, recovery confirmation, acquired directory FD, temporary appearance and
+guarded service restart/reconnect. Configuration-only state directs the card to
+Settings. Port unset/zero are compared by effective meaning. No GTK callback writes
+configuration or opens a filesystem path; the tracked ingress owner joins acquisition.
+
+Actual verification: the full core command passed (532 unit/export methods and
+8 integration methods); strict all-target core Clippy passed (8.28s). Native's 18
+methods passed in an isolated Xvfb/broker session (0.38s); subsequent checks were
+limited to affected widget/form methods after UI/capture fixes. Final four affected
+panel methods passed (0.74s), native strict all-target no-deps Clippy passed (4.91s),
+native build passed (8.50s). Core/native nightly fmt and diff checks passed.
+The initial restart-header select lifetime compile error was fixed before full
+execution. Native Clippy found a test module preceding production items; it was
+moved to the end without lint suppression. Existing nine core no-default-feature
+warnings, bluer future-incompatibility notice and Xvfb DRI3 warnings remain distinct
+from new lint failures; no physical renderer/radio claim is made.
+
+Three new native methods primarily cover N1 (1), N6 (1), N9 (1); the existing single
+GTK smoke is strengthened instead of adding competing GTK test threads. Compiled
+inert settings capture is 420x620, reviewed after the unavailable-visibility fix;
+no overlaps/clipping of actions, no live settings/backend state. All private fixture
+tasks, brokers, display wrappers and commands exited. Terminal closed.
