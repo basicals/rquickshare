@@ -303,3 +303,45 @@ passed. The test's initially incorrect TransferType import was fixed before exec
 Existing bluer future-incompatibility notice remains. Prepared upload and blocked
 writer reject Restart in actual bus tests; invalid source blocks transfer admission.
 Every private broker/task/fixture and command exited. Terminal closed.
+
+## S5 frozen secondary editor contract before code
+
+Keep the card and its existing Full/Compact menu. Settings opens the existing
+secondary window, extended with Visibility (Visible/Hidden/Visible for one minute,
+matching current core policy), optional port (empty or zero = automatic), receive
+folder display/Choose folder/Use default, and Appearance. Appearance still previews
+immediately; mode/menu/navigation changes are temporary until explicit Save. Apply
+the daemon's saved card preference on first valid view or a changed saved preference,
+without resetting temporary navigation on every progress update or fabricating a
+manual presentation request. No automatic persistence from widget notifications.
+
+The editor retains its immutable loaded base token while editing. Explicit Reload
+saved values discards unsaved fields; Save creates a fresh exact intent and uses
+the loaded base. Conflict requires Reload/review; no silent overwrite. Invalid data
+requires the visible explicit backup-and-replace checkbox. Unreadable data cannot
+be reset. Missing/read-only backend disables persistence and labels appearance
+temporary. Retry pending save reuses the SDK-held identity/FD. No saved success
+before receipt; distinguish saved/applied/restart-required/unapplied/uncertain.
+
+Folder choice uses the local chooser, acquires O_PATH directory authority on the
+existing tracked acquisition owner, and submits the FD only after explicit Save.
+No editable path/URI setter or filesystem IO in GTK callbacks. Keep the capability
+through editing/retry; cancellation releases only local unsaved capability. Existing
+ingress gate prevents overlapping source/directory acquisitions and joins blocking
+IO at shutdown. GTK close cancels its chooser/local completion waits, while already
+admitted daemon saves remain owned by the controller/writer. All secondary controls
+honor the existing lock/safety/disconnected/busy state.
+
+Start/restart is an explicit secondary action; Busy asks the user to finish/discard
+prepared work. Acceptance says restart requested and offers the existing explicit
+Reconnect action; only the next complete view proves successful startup. Port zero
+and unset have equivalent effective startup meaning and must not cause a spurious
+restart-required flag when switching representation. No source/save replay on
+reconnect, installation, autostart or unrelated settings options.
+
+S5 inventory: pure port/form boundaries and fixed status/error mappings (N1/N2/N6),
+existing GTK smoke extended for temporary appearance, missing backend, explicit
+recovery controls and close/lock lifecycle (Positive/N7/N9), plus actual controller
+save/retry state from the private-broker contracts. Run native strict Clippy/build
+and existing isolated Xvfb suite once after code. Compiled inert settings capture
+is a review artifact only; no installed KDE/Wayland/device proof. No ten repetitions.
