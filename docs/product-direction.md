@@ -1,5 +1,16 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-13: clipboard image storage review prepared
+
+Native outgoing text O1-O4 is complete. [native-image-review.md](native-image-review.md)
+compares anonymous sealed memory-backed source(A,recommended) with private disk
+spool(B). A real local kernel primitive probe passed without creating a named file;
+all descriptors closed. Image capture/PNG validation/global memory-backed source
+accounting are not implemented by that probe. Await explicit storage-boundary
+selection before image production code under the user's significant-change rule.
+No live clipboard/config/install or peer operation. All prior text checks remain
+measured observations, not a newly rerun suite. Work stays on dev.
+
 ## 2026-10-13: native outgoing text and bounded clipboard capture implemented
 
 [native-outbound.md](native-outbound.md) completes O1-O4 under selected A: unified

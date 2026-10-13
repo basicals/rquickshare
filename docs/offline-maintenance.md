@@ -158,3 +158,13 @@ records its committed HEAD. No user's clipboard, live settings, install, push or
 physical Google signoff. Outgoing native clipboard/image/text, reveal/open and
 package/account/QR/physical parity remain. Earlier maintenance-only findings above
 are historical; newer native settings/notice scopes have their own accepted policies.
+
+## 2026-10-13 outgoing native text and image review continuation
+
+[native-outbound.md](native-outbound.md) completes unified source, staged text
+preparation/recovery, explicit bounded GTK capture and recipient Send. Actual tests
+and corrected failures remain in that SSOT; binary integration8passed and final
+strict lint/build/format passed. [native-image-review.md](native-image-review.md)
+records the next storage decision and successful isolated sealed/read-only anonymous
+FD primitive probe. No image production code, live clipboard/config or physical
+Google signoff. Substantial image storage boundary awaits selection; text does not.
