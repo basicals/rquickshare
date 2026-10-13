@@ -9,8 +9,48 @@ impl Panel {
         model.automatic = false;
         model.automatic_focus = None;
     }
-    pub(super) fn hide(&self) {
-        self.policy.borrow_mut().dismiss();
+    pub(super) fn hide(self: &Rc<Self>) {
+        let dismissed = self.policy.borrow_mut().dismiss();
+        let notices = self
+            .model
+            .borrow()
+            .state
+            .view
+            .as_ref()
+            .map(|view| {
+                view.notices
+                    .iter()
+                    .filter(|notice| {
+                        dismissed.iter().any(|shown| {
+                            shown.epoch == view.epoch
+                                && shown.id == notice.transfer.id()
+                                && shown.revision == notice.revision
+                        })
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if !notices.is_empty() {
+            if let Some(handle) = &self.handle {
+                match handle.dismiss_notices(notices) {
+                    Ok(completion) => {
+                        if let Some(old) = self.dismissal.borrow_mut().take() {
+                            old.abort();
+                        }
+                        let weak = Rc::downgrade(self);
+                        self.dismissal.replace(Some(gtk::glib::spawn_future_local(async move {
+                            if completion.wait().await.is_err() {
+                                if let Some(panel) = weak.upgrade() { panel.notice("Card dismissal was not confirmed. It may appear again after reconnecting."); }
+                            }
+                        })));
+                    }
+                    Err(_) => self.notice(
+                        "Card dismissal was not queued. Review the panel before reconnecting.",
+                    ),
+                }
+            }
+        }
         let mut model = self.model.borrow_mut();
         model.automatic = false;
         model.automatic_focus = None;
@@ -76,6 +116,11 @@ impl Panel {
                 direction: transfer.direction,
                 phase: transfer.phase,
                 round: transfer.consent_revision,
+                notice_revision: view
+                    .notices
+                    .iter()
+                    .find(|notice| notice.transfer == transfer.transfer)
+                    .map(|notice| notice.revision),
             })
             .collect::<Vec<_>>();
         let effect = self

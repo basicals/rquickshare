@@ -3,21 +3,22 @@ use crate::desktop_guard::SafetyState;
 use rqs_lib::service::{Direction, Phase};
 use std::collections::BTreeMap;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Notice {
     pub epoch: u128,
     pub id: String,
     pub round: Option<u64>,
     pub phase: Phase,
+    pub revision: u64,
 }
 pub struct Row<'a> {
     pub id: &'a str,
     pub direction: Direction,
     pub phase: Phase,
     pub round: Option<u64>,
+    pub notice_revision: Option<u64>,
 }
 struct Record {
-    phase: Phase,
     notice: Option<Notice>,
     dismissed: bool,
 }
@@ -40,11 +41,18 @@ pub struct Surface {
     pub safety: SafetyState,
 }
 impl CardPolicy {
-    pub fn dismiss(&mut self) {
+    pub fn dismiss(&mut self) -> Vec<Notice> {
+        let mut dismissed = Vec::new();
         for record in self.records.values_mut() {
+            if !record.dismissed {
+                if let Some(notice) = &record.notice {
+                    dismissed.push(notice.clone());
+                }
+            }
             record.dismissed = true;
         }
         self.shown = None;
+        dismissed
     }
     pub fn manual(&mut self) {
         self.shown = None;
@@ -64,31 +72,35 @@ impl CardPolicy {
                 row.phase,
                 Phase::Finished | Phase::Failed | Phase::Disconnected
             );
-            let newly_terminal = outcome && old.as_ref().is_some_and(|old| old.phase != row.phase);
-            let prior_terminal = outcome && old.as_ref().is_some_and(|old| old.notice.is_some());
             let keep_progress = !row.phase.is_terminal()
                 && self
                     .shown
                     .as_ref()
                     .is_some_and(|notice| notice.epoch == epoch && notice.id == row.id);
-            let notice =
-                (incoming || newly_terminal || prior_terminal || keep_progress).then(|| Notice {
+            let notice = if (incoming || outcome) && row.notice_revision.is_some() {
+                Some(Notice {
                     epoch,
                     id: row.id.to_owned(),
                     round: if incoming { row.round } else { None },
                     phase: row.phase,
-                });
+                    revision: row.notice_revision.unwrap(),
+                })
+            } else if keep_progress && !incoming {
+                Some(Notice {
+                    epoch,
+                    id: row.id.to_owned(),
+                    round: None,
+                    phase: row.phase,
+                    revision: self.shown.as_ref().unwrap().revision,
+                })
+            } else {
+                None
+            };
             let dismissed = old
                 .as_ref()
                 .is_some_and(|old| old.notice == notice && old.dismissed);
-            self.records.insert(
-                row.id.to_owned(),
-                Record {
-                    phase: row.phase,
-                    notice,
-                    dismissed,
-                },
-            );
+            self.records
+                .insert(row.id.to_owned(), Record { notice, dismissed });
         }
         let hide = surface.visible
             && (!surface.safety.manual_allowed()
@@ -166,7 +178,17 @@ mod tests {
             direction: Direction::Inbound,
             phase,
             round,
+            notice_revision: if phase == Phase::AwaitingConsent {
+                round
+            } else {
+                None
+            },
         }
+    }
+    fn pending_row(id: &str, phase: Phase) -> Row<'_> {
+        let mut row = row(id, phase, None);
+        row.notice_revision = Some(100);
+        row
     }
     fn shown(effect: Effect, id: &str, phase: Phase) -> Notice {
         let Effect::Show(notice) = effect else {
@@ -228,13 +250,13 @@ mod tests {
             Phase::Receiving,
         );
         shown(
-            policy.reconcile(1, &[row("a", Phase::Finished, None)], safe()),
+            policy.reconcile(1, &[pending_row("a", Phase::Finished)], safe()),
             "a",
             Phase::Finished,
         );
         policy.dismiss();
         assert!(matches!(
-            policy.reconcile(1, &[row("a", Phase::Finished, None)], safe()),
+            policy.reconcile(1, &[pending_row("a", Phase::Finished)], safe()),
             Effect::None
         ));
         shown(
@@ -268,7 +290,7 @@ mod tests {
             policy.reconcile(
                 1,
                 &[
-                    row("progress", Phase::Failed, None),
+                    pending_row("progress", Phase::Failed),
                     row("request", Phase::AwaitingConsent, Some(1)),
                 ],
                 safe(),
@@ -323,7 +345,7 @@ mod tests {
             let mut policy = CardPolicy::default();
             policy.reconcile(1, &[row("transfer", Phase::Sending, None)], safe());
             let notice = shown(
-                policy.reconcile(1, &[row("transfer", phase, None)], safe()),
+                policy.reconcile(1, &[pending_row("transfer", phase)], safe()),
                 "transfer",
                 phase,
             );
@@ -333,7 +355,7 @@ mod tests {
             visible.visible = true;
             visible.automatic = true;
             assert!(matches!(
-                policy.reconcile(1, &[row("transfer", phase, None)], visible),
+                policy.reconcile(1, &[pending_row("transfer", phase)], visible),
                 Effect::None
             ));
         }
@@ -407,5 +429,37 @@ mod tests {
         assert!(policy.records.is_empty());
         policy.manual();
         assert!(policy.shown.is_none());
+    }
+    #[test]
+    fn given_authoritative_pending_outcome_when_renderer_starts_then_it_presents_and_daemon_dismissal_retires_it(
+    ) {
+        // Arrange / Act
+        let mut policy = CardPolicy::default();
+        let notice = shown(
+            policy.reconcile(42, &[pending_row("done", Phase::Finished)], safe()),
+            "done",
+            Phase::Finished,
+        );
+        // Assert
+        assert_eq!(notice.revision, 100);
+        let dismissed = policy.dismiss();
+        assert_eq!(dismissed, vec![notice]);
+        assert!(matches!(
+            policy.reconcile(42, &[pending_row("done", Phase::Finished)], safe()),
+            Effect::None
+        ));
+        policy.reconcile(42, &[row("done", Phase::Finished, None)], safe());
+        assert!(policy.records["done"].notice.is_none());
+        let mut fresh = CardPolicy::default();
+        assert!(matches!(
+            fresh.reconcile(42, &[row("done", Phase::Finished, None)], safe()),
+            Effect::None
+        ));
+        let pending = pending_row("failure", Phase::Failed);
+        shown(
+            fresh.reconcile(42, &[pending], safe()),
+            "failure",
+            Phase::Failed,
+        );
     }
 }

@@ -71,7 +71,7 @@ is included in the accepted proposal, without broad settings migration.
 
 1. [x] N1: coordinator record lifecycle, Notifications1 XML/capture/read/dismiss,
    SDK/controller bindings, scoped checks. Rollback consumers before additive API.
-2. [ ] N2: canonical GTK presentation/dismissal and stable keyed widget updates.
+2. [x] N2: canonical GTK presentation/dismissal and stable keyed widget updates.
    Rollback GTK bindings without altering transfers/source selection.
 3. [ ] N3: owned daemon activation worker and source-only package assets.
    Rollback activation before removing its package assets.
@@ -121,3 +121,35 @@ wire method passed once (0.24s). Nightly formatting passed. Existing five core
 no-default-feature warnings are unchanged; final lint and downstream GUI checks
 remain N5. No installed bus/core transport/Google peers were exercised. All owned
 command/private broker sessions exited. Terminal closed.
+
+
+### N2 binding / scoped verification refinement before affected checks
+
+GTK now schedules canonical pending event revisions, including pending outcomes on
+cold start, instead of inferring completion from a previous renderer snapshot.
+Its bounded local dismissal set bridges the exact daemon acknowledgement. One
+controller command can contain at most 256 known identities, serialized into wire
+batches of at most 16; this prevents filling the eight-action queue merely because
+many coalesced known notices are hidden. Already queued exact dismissals remain
+worker-owned if a GUI waiter is replaced/closed; failures are not claimed confirmed.
+This changes neither source recovery nor the ordered transfer mutation ledger.
+
+Keyed transfer/endpoint rows retain their GTK objects for progress/readiness
+changes. Description/round/phase/owner replacement rebuilds the affected row;
+retired keys are removed and other rows stay parented. Stable button names identify
+controls, avoiding text-based matching. The existing single GTK smoke verifies
+actual retained expansion/child identity, reordering and retirement using the same
+layout function. This does not claim physical compositor keyboard focus. One new
+pure policy method covers authoritative pending terminal state on cold start and
+canonical retirement; the prior full safety/round policy table is retained.
+
+First native run passed all 13 methods (0.24s) before adding the final cold-start/
+keyed-layout checks, with one unused old phase field subsequently removed. Final
+N2 affected checks follow. No ten-run loop or real desktop registration.
+
+
+N2 final affected policy/widget checks passed 3/3 (0.25s). The first added assertion
+required Debug for the event identity; deriving it preserved strict equality rather
+than weakening the assertion. The new pure method and extended GTK smoke pass;
+no physical keyboard focus claim. Native inventory is now 14 methods. All owned
+command/display/private broker sessions exited. Terminal closed.

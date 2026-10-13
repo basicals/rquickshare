@@ -18,6 +18,7 @@ use tokio::runtime::Handle;
 
 mod menu;
 mod presentation;
+mod rows;
 
 #[derive(Default)]
 struct Model {
@@ -54,6 +55,8 @@ pub struct Panel {
     context: gtk::PopoverMenu,
     settings: RefCell<Option<gtk::Window>>,
     appearance: RefCell<Option<gtk::DropDown>>,
+    rows: RefCell<rows::Rows>,
+    dismissal: RefCell<Option<glib::JoinHandle<()>>>,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -207,6 +210,8 @@ impl Panel {
             context: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
             settings: RefCell::new(None),
             appearance: RefCell::new(None),
+            rows: RefCell::new(rows::Rows::default()),
+            dismissal: RefCell::new(None),
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -360,6 +365,9 @@ impl Panel {
             return;
         }
         if let Some(task) = self.completion.borrow_mut().take() {
+            task.abort();
+        }
+        if let Some(task) = self.dismissal.borrow_mut().take() {
             task.abort();
         }
         if let Some(settings) = self.settings.borrow_mut().take() {
@@ -647,11 +655,10 @@ impl Panel {
         };
         self.text("status", status);
 
-        for id in ["nearby", "incoming", "transfers", "compact"] {
-            clear(&self.box_widget(id));
-        }
         let Some(view) = &model.state.view else {
+            self.rows.borrow_mut().clear();
             for id in ["nearby", "incoming", "transfers", "compact"] {
+                clear(&self.box_widget(id));
                 self.box_widget(id).append(&label(if preview {
                     "Preview only"
                 } else {
@@ -663,98 +670,7 @@ impl Panel {
             }
             return;
         };
-        for endpoint in &view.endpoints {
-            let row = card();
-            row.append(&label(&endpoint.name));
-            row.append(&label("Nearby advertised device"));
-            let send = gtk::Button::with_label("Send");
-            send.set_sensitive(ready && selected);
-            let weak = Rc::downgrade(self);
-            let endpoint = endpoint.id.clone();
-            let selection = selection.clone();
-            send.connect_clicked(move |_| {
-                if let Some(panel) = weak.upgrade() {
-                    if let (Some(handle), Some(selection)) = (&panel.handle, selection.clone()) {
-                        panel.submit(|| handle.send(selection, endpoint.clone()));
-                    }
-                }
-            });
-            row.append(&send);
-            self.box_widget("nearby").append(&row);
-        }
-        if view.endpoints.is_empty() {
-            self.box_widget("nearby").append(&label(
-                "No nearby devices. Make the receiving device visible.",
-            ));
-        }
-        for transfer in &view.transfers {
-            if transfer.direction == Direction::Inbound && transfer.phase == Phase::AwaitingConsent
-            {
-                self.box_widget("incoming")
-                    .append(&self.incoming_card(transfer, ready, true));
-            }
-            self.box_widget("transfers")
-                .append(&self.transfer_card(transfer, ready, true));
-        }
-        let focused = model.automatic_focus.as_deref().and_then(|id| {
-            view.transfers
-                .iter()
-                .position(|transfer| transfer.transfer.id() == id)
-        });
-        if let Some(index) = focused.or_else(|| {
-            compact_index(
-                view.transfers
-                    .iter()
-                    .map(|transfer| (transfer.direction, transfer.phase)),
-            )
-        }) {
-            let transfer = &view.transfers[index];
-            let incoming = transfer.direction == Direction::Inbound
-                && transfer.phase == Phase::AwaitingConsent;
-            let row = if incoming {
-                self.incoming_card(transfer, ready, false)
-            } else {
-                self.transfer_card(transfer, ready, false)
-            };
-            let details = gtk::Button::with_label(if incoming {
-                "Details and all requests"
-            } else {
-                "All transfers"
-            });
-            details.set_action_name(Some(if incoming {
-                "panel.incoming"
-            } else {
-                "panel.transfers"
-            }));
-            row.append(&details);
-            self.box_widget("compact").append(&row);
-        } else {
-            self.box_widget("compact").append(&label(if selected {
-                "Files prepared · choose a recipient"
-            } else {
-                "Ready to share"
-            }));
-            let send = gtk::Button::with_label(if selected {
-                "Choose recipient"
-            } else {
-                "Send files…"
-            });
-            send.set_action_name(Some(if selected {
-                "panel.nearby"
-            } else {
-                "panel.files"
-            }));
-            self.box_widget("compact").append(&send);
-        }
-        if !view.transfers.iter().any(|transfer| {
-            transfer.direction == Direction::Inbound && transfer.phase == Phase::AwaitingConsent
-        }) {
-            self.box_widget("incoming")
-                .append(&label("No incoming requests"));
-        }
-        if view.transfers.is_empty() {
-            self.box_widget("transfers").append(&label("No transfers"));
-        }
+        self.render_rows(view, selection, ready, current);
     }
     fn incoming_card(
         self: &Rc<Self>,
@@ -766,6 +682,7 @@ impl Panel {
         let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         for (title, accept) in [("Decline", false), ("Accept", true)] {
             let button = gtk::Button::with_label(title);
+            button.set_widget_name(if accept { "accept" } else { "decline" });
             button.set_sensitive(
                 ready
                     && transfer.pending_control.is_none()
@@ -794,9 +711,11 @@ impl Panel {
         full: bool,
     ) -> gtk::Box {
         let row = details_card_mode(&transfer.details, full);
-        row.append(&label(phase_text(transfer.phase)));
+        let phase = label(phase_text(transfer.phase));
+        phase.set_widget_name("phase");
+        row.append(&phase);
         if transfer.details.status == DetailsStatus::Ready {
-            row.append(&label(&format!(
+            let progress = label(&format!(
                 "{} / {} bytes locally {}",
                 transfer.details.transferred_bytes,
                 transfer.details.total_bytes,
@@ -805,10 +724,13 @@ impl Panel {
                 } else {
                     "sent"
                 }
-            )));
+            ));
+            progress.set_widget_name("progress");
+            row.append(&progress);
         }
         if !transfer.phase.is_terminal() {
             let cancel = gtk::Button::with_label("Cancel");
+            cancel.set_widget_name("cancel");
             cancel.set_sensitive(
                 ready
                     && transfer.pending_control.is_none()

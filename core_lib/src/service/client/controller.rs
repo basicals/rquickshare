@@ -85,7 +85,7 @@ impl PanelHandle {
         Ok(Completion(receiver))
     }
     pub fn dismiss_notices(&self, notices: Vec<super::notices::Notice>) -> Result<Completion> {
-        if notices.is_empty() || notices.len() > 16 {
+        if notices.is_empty() || notices.len() > 256 {
             return Err(ClientError::InvalidInput.into());
         }
         self.submit(Action::Dismiss(notices))
@@ -301,7 +301,9 @@ impl Worker {
         self.refresh().await?;
         match action {
             Action::Dismiss(notices) => {
-                self.client.dismiss_notices(&notices).await?;
+                for batch in notices.chunks(16) {
+                    self.client.dismiss_notices(batch).await?;
+                }
                 Ok(ActionResult::Completed)
             }
             Action::Choose(source) => {
