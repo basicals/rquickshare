@@ -291,7 +291,7 @@ pub(super) fn verify_keyed_layout() {
     assert_eq!(container.last_child(), Some(first.clone().upcast()));
     assert!(expanded.is_expanded());
     assert_eq!(expanded.child(), Some(child));
-    arrange(&container, &[first.clone()]);
+    arrange(&container, std::slice::from_ref(&first));
     assert!(second.parent().is_none());
     assert_eq!(container.first_child(), Some(first.upcast()));
 }

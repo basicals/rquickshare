@@ -611,3 +611,94 @@ async fn given_full_manifest_or_invalid_commit_when_admitted_then_budgets_are_at
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_no_transfer_backend_when_fixed_errors_are_presented_then_import_is_rejected_without_source_authority(
+) {
+    scenario(async {
+        // Arrange
+        let private = crate::service::bus::tests::PrivateBus::new();
+        let gate = PreparationGate::new();
+        let server = DesktopServer::connect_optional(private.socket().await, None, gate.clone())
+            .await
+            .unwrap();
+        let handle = server.handle();
+        let mut updates = handle.subscribe();
+        let mut client = DesktopClient::connect(private.socket().await)
+            .await
+            .unwrap();
+        // Act / Assert
+        for (index, code) in [
+            ErrorCode::InvalidSelection,
+            ErrorCode::Busy,
+            ErrorCode::Recovery,
+            ErrorCode::BackendUnavailable,
+            ErrorCode::PanelUnavailable,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            assert_eq!(ErrorCode::parse(code.wire()), Some(code));
+            client.show_error(code).await.unwrap();
+            updates
+                .wait_for(|state| state.error_revision == index as u64 + 1)
+                .await
+                .unwrap();
+            assert_eq!(updates.borrow().error, Some(code));
+            assert_eq!(updates.borrow().show_revision, 0);
+            assert!(!updates.borrow().staging && !*gate.subscribe().borrow());
+            assert!(!code.message().contains("secret-source"));
+        }
+        let before = *updates.borrow();
+        for code in [
+            "",
+            "unknown",
+            "secret-source",
+            "invalid_selection/../",
+            "busy\n",
+        ] {
+            assert_eq!(
+                client.wire("ShowError", &code).await.unwrap_err(),
+                DesktopError::InvalidInput
+            );
+            assert_eq!(*updates.borrow(), before);
+        }
+        let (_file, selection) = opened(["secret-source".into()]);
+        assert_eq!(
+            client.import(selection).await,
+            Err(DesktopError::Unavailable)
+        );
+        assert!(!*gate.subscribe().borrow());
+        assert!(server.handle.shared.inner.lock().unwrap().record.is_none());
+        server.close().await.unwrap();
+        let replacement =
+            DesktopServer::connect_optional(private.socket().await, None, PreparationGate::new())
+                .await
+                .unwrap();
+        assert_eq!(
+            client.show_error(ErrorCode::Busy).await,
+            Err(DesktopError::GuiChanged)
+        );
+        assert_eq!(replacement.handle().subscribe().borrow().error, None);
+        client.close().await.unwrap();
+        replacement.close().await.unwrap();
+        let denied = DesktopServer::connect_optional_with_uid(
+            private.socket().await,
+            None,
+            PreparationGate::new(),
+            rustix::process::geteuid().as_raw() + 1,
+        )
+        .await
+        .unwrap();
+        let mut foreign = DesktopClient::connect(private.socket().await)
+            .await
+            .unwrap();
+        assert_eq!(
+            foreign.show_error(ErrorCode::Busy).await,
+            Err(DesktopError::Denied)
+        );
+        foreign.close().await.unwrap();
+        denied.close().await.unwrap();
+    })
+    .await;
+}

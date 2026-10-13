@@ -6,5 +6,6 @@
     <method name="Commit"><arg name="token" type="t" direction="in"/><arg name="status" type="s" direction="out"/></method>
     <method name="Abort"><arg name="token" type="t" direction="in"/><arg name="status" type="s" direction="out"/></method>
     <method name="Show"/>
+    <method name="ShowError"><arg name="code" type="s" direction="in"/></method>
   </interface>
 </node>

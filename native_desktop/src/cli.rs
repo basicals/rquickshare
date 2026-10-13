@@ -145,20 +145,32 @@ pub async fn ensure_gui(address: &BusAddress, executable: &Path) -> Result<(), &
     closed.map_err(|_| "Cannot close startup connection")
 }
 
-pub async fn send(
-    paths: Vec<PathBuf>,
+#[derive(Debug)]
+pub struct Failure {
+    pub code: desktop::ErrorCode,
+    pub message: &'static str,
+}
+impl Failure {
+    pub fn new(code: desktop::ErrorCode, message: &'static str) -> Self {
+        Self { code, message }
+    }
+}
+fn desktop_failure(error: DesktopError) -> Failure {
+    use desktop::ErrorCode;
+    let code = match error {
+        DesktopError::Busy => ErrorCode::Busy,
+        DesktopError::Recovery => ErrorCode::Recovery,
+        DesktopError::Unavailable => ErrorCode::BackendUnavailable,
+        DesktopError::InvalidInput => ErrorCode::InvalidSelection,
+        _ => ErrorCode::PanelUnavailable,
+    };
+    Failure::new(code, message(error))
+}
+pub async fn show_error(
+    code: desktop::ErrorCode,
     address: &BusAddress,
     executable: &Path,
 ) -> Result<(), &'static str> {
-    let source = tokio::task::spawn_blocking(move || {
-        OpenedSelection::acquire(&paths, SelectionLimits::default())
-    })
-    .await
-    .map_err(|_| "File acquisition failed")?
-    .map_err(|_| "Cannot read the complete selection. Check local access and file limits.")?;
-    if !desktop::valid_selection(&source) {
-        return Err("Selection exceeds the native manifest limits");
-    }
     ensure_gui(address, executable).await?;
     let mut client = DesktopClient::connect(
         address
@@ -168,13 +180,58 @@ pub async fn send(
     )
     .await
     .map_err(message)?;
-    let result = client.import(source).await.map_err(message);
+    let result = client.show_error(code).await.map_err(message);
     let closed = client.close().await.map_err(message);
+    result?;
+    closed
+}
+
+pub async fn send(
+    paths: Vec<PathBuf>,
+    address: &BusAddress,
+    executable: &Path,
+) -> Result<(), Failure> {
+    let source = tokio::task::spawn_blocking(move || {
+        OpenedSelection::acquire(&paths, SelectionLimits::default())
+    })
+    .await
+    .map_err(|_| {
+        Failure::new(
+            desktop::ErrorCode::InvalidSelection,
+            "File acquisition failed",
+        )
+    })?
+    .map_err(|_| {
+        Failure::new(
+            desktop::ErrorCode::InvalidSelection,
+            "Cannot read the complete selection. Check local access and file limits.",
+        )
+    })?;
+    if !desktop::valid_selection(&source) {
+        return Err(Failure::new(
+            desktop::ErrorCode::InvalidSelection,
+            "Selection exceeds the native manifest limits",
+        ));
+    }
+    ensure_gui(address, executable)
+        .await
+        .map_err(|message| Failure::new(desktop::ErrorCode::PanelUnavailable, message))?;
+    let mut client = DesktopClient::connect(address.connect().await.map_err(|_| {
+        Failure::new(
+            desktop::ErrorCode::PanelUnavailable,
+            "Session bus unavailable",
+        )
+    })?)
+    .await
+    .map_err(desktop_failure)?;
+    let result = client.import(source).await.map_err(desktop_failure);
+    let closed = client.close().await.map_err(desktop_failure);
     result?;
     closed
 }
 fn message(error: DesktopError) -> &'static str {
     match error {
+    DesktopError::Unavailable=>"Native daemon unavailable. Start it, then reconnect the panel.",
     DesktopError::Busy=>"The panel already has files or an active preparation. Finish or discard it in the panel.",
     DesktopError::Recovery=>"Preparation needs recovery in the panel. Do not repeat the send.",
     DesktopError::GuiChanged|DesktopError::Transport|DesktopError::Protocol=>"Panel connection changed. Review the panel before retrying; no automatic send was requested.",
@@ -299,5 +356,75 @@ mod tests {
         );
         owner.close().await.unwrap();
         drop(bus);
+    }
+    #[tokio::test]
+    async fn given_unavailable_backend_or_unreadable_source_when_cli_fails_then_fixed_error_is_visible_without_retrying_import(
+    ) {
+        // Arrange
+        let private = crate::test_bus::Broker::new();
+        let gate = desktop::PreparationGate::new();
+        let server = desktop::DesktopServer::connect_optional(
+            private.address.connect().await.unwrap(),
+            None,
+            gate.clone(),
+        )
+        .await
+        .unwrap();
+        let handle = server.handle();
+        let mut updates = handle.subscribe();
+        let source = tempfile::NamedTempFile::new().unwrap();
+        source.as_file().set_len(3).unwrap();
+        // Act / Assert
+        let failure = send(
+            vec![source.path().to_owned()],
+            &private.address,
+            Path::new("/nonexistent/unlaunched-panel"),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(failure.code, desktop::ErrorCode::BackendUnavailable);
+        assert!(!failure.message.contains(source.path().to_str().unwrap()));
+        show_error(
+            failure.code,
+            &private.address,
+            Path::new("/nonexistent/unlaunched-panel"),
+        )
+        .await
+        .unwrap();
+        updates
+            .wait_for(|state| state.error_revision == 1)
+            .await
+            .unwrap();
+        assert_eq!(
+            updates.borrow().error,
+            Some(desktop::ErrorCode::BackendUnavailable)
+        );
+        assert!(!updates.borrow().staging && !*gate.subscribe().borrow());
+        assert!(source.path().exists());
+        let missing = source.path().join("missing-source");
+        let failure = send(
+            vec![missing],
+            &private.address,
+            Path::new("/nonexistent/unlaunched-panel"),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(failure.code, desktop::ErrorCode::InvalidSelection);
+        assert_eq!(updates.borrow().error_revision, 1);
+        for (error, expected) in [
+            (DesktopError::Busy, desktop::ErrorCode::Busy),
+            (DesktopError::Recovery, desktop::ErrorCode::Recovery),
+            (
+                DesktopError::InvalidInput,
+                desktop::ErrorCode::InvalidSelection,
+            ),
+            (
+                DesktopError::GuiChanged,
+                desktop::ErrorCode::PanelUnavailable,
+            ),
+        ] {
+            assert_eq!(desktop_failure(error).code, expected);
+        }
+        server.close().await.unwrap();
     }
 }

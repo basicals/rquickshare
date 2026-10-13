@@ -75,7 +75,7 @@ is included in the accepted proposal, without broad settings migration.
    Rollback GTK bindings without altering transfers/source selection.
 3. [x] N3: owned daemon activation worker and source-only package assets.
    Rollback activation before removing its package assets.
-4. [ ] N4: explicit degraded backend, fixed-code visible CLI errors and reconnect;
+4. [x] N4: explicit degraded backend, fixed-code visible CLI errors and reconnect;
    retain no-silent-source-replay and owned shutdown.
 5. [ ] N5: one affected verification pass, actual observations, current acceptance
    gates, atomic commits and exported handoff. No ten-run development repetitions.
@@ -217,3 +217,50 @@ N3 affected method passed once after the ownership check correction (0.01s),
 including actual private-broker replies and deterministic failure/coalescing/
 cancellation. All owned broker/command processes exited. Terminal closed. The
 activation source asset is not installed and real startup remains a package gate.
+
+
+### N4 implementation checkpoint before final native checks
+
+DesktopServer can serve finite ShowError without a transfer backend, and rejects
+Begin/import Unavailable before acquiring the gate. Its actual private-broker
+method passed 1/1 (0.03s): every code, unknown/malformed codes, no source admission,
+UID denial, old GUI owner replacement and joined shutdown. Eight existing desktop
+ingress methods also passed (0.44s) after the optional-controller binding change.
+An initial enum delimiter typo failed parsing and was corrected before these runs.
+
+CLI failures carry a typed code from their origin; no classification by message
+substring and no raw paths/text in ShowError. GTK distinguishes unavailable mode
+from explicit inert preview. Reconnect is visible in both modes and performs a
+joined same-process lifecycle restart with the selected mode; it cannot implicitly
+replay a source/transfer. Old windows are explicitly destroyed on close. Local
+acquisition/staging disables reconnect. The added CLI fixture checks real source
+acquisition/import failure and fixed-code routing on a private broker with no
+transfer backend; it never launches a GUI or transport. The existing GTK smoke
+now checks unavailable presentation/reconnect readiness/intent as well as preview,
+keyed expansion and safety. Final affected native checks follow.
+
+
+All 15 native methods passed once after N4 implementation (0.20s), including real
+CLI acquisition/error routing and the unavailable/preview/reconnect GTK assertions.
+Review of same-process reconnect also found a display-global CSS provider lifetime:
+the panel now explicitly removes its own provider on close before destroying its
+window. This prevents accumulating providers across repeated reconnects and never
+removes another application's provider. The affected widget check and strict native
+lint follow this owned-resource correction. No unrelated settings cleanup.
+
+
+Strict native lint rejected an unnecessary checked unwrap in canonical policy;
+matching the optional event revision fixes the cause without allowing the lint.
+The final affected policy/widget checks and strict lint are rerun for that change.
+N5 also strengthens the existing real SDK/controller restart scenario from four
+notices to 21, exercising controller dismissal across the wire batch boundary
+(16+4 after the first dismissal). This verifies the N2 internal 256-identity command
+binding rather than assuming a small batch proves chunked behavior.
+
+
+N4 final affected native policy/widget checks passed 3/3 (0.18s); strict native
+all-target Clippy passed (2.29s). Earlier full native 15-method and core desktop
+8+1-method observations remain valid for their affected code. No repeated unchanged
+suite or final stability claim. All owned display/broker/command sessions exited.
+Terminal closed. N5 now checks the strengthened chunk boundary, affected process
+startup and final core lint/build, then refreshes the handoff.

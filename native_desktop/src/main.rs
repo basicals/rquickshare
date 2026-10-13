@@ -36,6 +36,7 @@ fn follow<T: Clone + 'static>(
     })
 }
 
+#[derive(Clone)]
 struct Options {
     preview: bool,
     output: Option<PathBuf>,
@@ -75,29 +76,82 @@ impl Options {
     }
 }
 
+enum RunError {
+    Cli(cli::Failure),
+    Gui(&'static str),
+}
+impl From<&'static str> for RunError {
+    fn from(message: &'static str) -> Self {
+        Self::Gui(message)
+    }
+}
+impl From<cli::Failure> for RunError {
+    fn from(error: cli::Failure) -> Self {
+        Self::Cli(error)
+    }
+}
 fn main() {
-    if let Err(message) = run() {
+    if let Err(error) = run() {
+        let message = match &error {
+            RunError::Cli(error) => error.message,
+            RunError::Gui(message) => message,
+        };
         eprintln!("rQuickShare: {message}");
+        if let RunError::Cli(error) = error {
+            if let (Ok(address), Ok(executable), Ok(runtime)) = (
+                session_address(),
+                std::env::current_exe(),
+                tokio::runtime::Builder::new_multi_thread()
+                    .worker_threads(2)
+                    .enable_all()
+                    .build(),
+            ) {
+                let _ = runtime.block_on(cli::show_error(error.code, &address, &executable));
+            }
+        }
         std::process::exit(1);
     }
 }
-fn run() -> Result<(), &'static str> {
+fn run() -> Result<(), RunError> {
     let args = std::env::args_os().skip(1).collect::<Vec<_>>();
     if args.first().is_some_and(|arg| arg == "send") {
-        let paths = cli::paths(args.into_iter().skip(1))?;
+        use rqs_lib::service::client::desktop::ErrorCode;
+        let paths = cli::paths(args.into_iter().skip(1))
+            .map_err(|message| cli::Failure::new(ErrorCode::InvalidSelection, message))?;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
             .build()
-            .map_err(|_| "Cannot create native runtime")?;
-        let address = session_address()?;
-        let executable =
-            std::env::current_exe().map_err(|_| "Cannot locate native panel executable")?;
+            .map_err(|_| {
+                cli::Failure::new(ErrorCode::PanelUnavailable, "Cannot create native runtime")
+            })?;
+        let address = session_address()
+            .map_err(|message| cli::Failure::new(ErrorCode::PanelUnavailable, message))?;
+        let executable = std::env::current_exe().map_err(|_| {
+            cli::Failure::new(
+                ErrorCode::PanelUnavailable,
+                "Cannot locate native panel executable",
+            )
+        })?;
         runtime.block_on(cli::send(paths, &address, &executable))?;
         println!("Files prepared. Choose a recipient in the panel to send.");
         return Ok(());
     }
-    let options = Options::parse(args)?;
+    let mut options = Options::parse(args)?;
+    loop {
+        let (reconnect, mode) = run_gui(options.clone())?;
+        if !reconnect {
+            return Ok(());
+        }
+        options.mode = mode;
+    }
+}
+async fn close_controller(controller: Option<PanelController>) {
+    if let Some(controller) = controller {
+        let _ = controller.close().await;
+    }
+}
+fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
     gtk::init().map_err(|_| "GTK display is unavailable")?;
     if !options.preview && !gtk4_layer_shell::is_supported() {
         return Err(
@@ -115,33 +169,67 @@ fn run() -> Result<(), &'static str> {
     } else {
         let address = session_address()?;
         let connected = runtime.block_on(async {
-            let stream = address.connect().await.map_err(|_| "Session bus unavailable")?;
-            let client = NativeClient::connect(stream).await.map_err(|_| "Native daemon unavailable or incompatible. Start the uninstalled development daemon explicitly.")?;
-            let controller = PanelController::spawn(client);
-            let mut updates = controller.handle().subscribe();
-            if updates.wait_for(|state| state.view.is_some() || state.disconnected).await.is_err() || updates.borrow().disconnected {
-                let _ = controller.close().await;
-                return Err("Cannot obtain complete native service state");
+            let controller = async {
+                let stream = address.connect().await.ok()?;
+                let client = NativeClient::connect(stream).await.ok()?;
+                let controller = PanelController::spawn(client);
+                let mut updates = controller.handle().subscribe();
+                let complete = updates
+                    .wait_for(|state| state.view.is_some() || state.disconnected)
+                    .await
+                    .is_ok()
+                    && !updates.borrow().disconnected;
+                if complete {
+                    Some(controller)
+                } else {
+                    let _ = controller.close().await;
+                    None
+                }
             }
+            .await;
             let tray = match tray::Tray::connect(&address).await {
                 Ok(tray) => tray,
-                Err(_) => {let _ = controller.close().await;return Err("KDE tray watcher unavailable or changed");}
+                Err(_) => {
+                    close_controller(controller).await;
+                    return Err("KDE tray watcher unavailable or changed");
+                }
             };
-            let guard=match desktop_guard::DesktopGuard::connect(&address).await {
-                Ok(guard)=>guard,
-                Err(_)=>{let _=controller.close().await;let _=tray.close().await;return Err("Cannot observe desktop privacy state");}
+            let guard = match desktop_guard::DesktopGuard::connect(&address).await {
+                Ok(guard) => guard,
+                Err(_) => {
+                    close_controller(controller).await;
+                    let _ = tray.close().await;
+                    return Err("Cannot observe desktop privacy state");
+                }
             };
             let desktop = match address.connect().await {
-                Ok(stream) => DesktopServer::connect(stream, controller.handle(), ingress.gate.clone()).await,
-                Err(_) => {let _ = controller.close().await;guard.close().await;let _ = tray.close().await;return Err("Session bus unavailable");}
+                Ok(stream) => {
+                    DesktopServer::connect_optional(
+                        stream,
+                        controller.as_ref().map(PanelController::handle),
+                        ingress.gate.clone(),
+                    )
+                    .await
+                }
+                Err(_) => {
+                    close_controller(controller).await;
+                    guard.close().await;
+                    let _ = tray.close().await;
+                    return Err("Session bus unavailable");
+                }
             };
             match desktop {
                 Ok(desktop) => Ok((controller, tray, desktop, guard)),
-                Err(_) => {let _ = controller.close().await;guard.close().await;let _ = tray.close().await;Err("Another panel owns the desktop service or registration failed")}
+                Err(_) => {
+                    close_controller(controller).await;
+                    guard.close().await;
+                    let _ = tray.close().await;
+                    Err("Another panel owns the desktop service or registration failed")
+                }
             }
         })?;
         (
-            Some(connected.0),
+            connected.0,
             Some(connected.1),
             Some(connected.2),
             Some(connected.3),
@@ -304,7 +392,11 @@ fn run() -> Result<(), &'static str> {
         *retained_ui.borrow_mut() = Some(panel);
     });
     let exit = application.run_with_args::<&str>(&[]);
+    let mut reconnect = false;
+    let mut mode = card_view::Mode::Compact;
     if let Some(panel) = retained.borrow_mut().take() {
+        reconnect = panel.reconnect_requested();
+        mode = panel.mode();
         panel.close();
     }
     stop.cancel();
@@ -334,7 +426,7 @@ fn run() -> Result<(), &'static str> {
     if exit != glib::ExitCode::SUCCESS {
         return Err("GTK application failed");
     }
-    Ok(())
+    Ok((reconnect, mode))
 }
 
 fn session_address() -> Result<BusAddress, &'static str> {

@@ -30,6 +30,7 @@ impl Panel {
             "recover",
             "abort",
             "settings",
+            "reconnect",
             "hide",
             "quit",
         ] {
@@ -53,6 +54,10 @@ impl Panel {
                     }
                     "discard" | "recover" | "abort" => panel.button(name).emit_clicked(),
                     "settings" => panel.show_settings(),
+                    "reconnect" => {
+                        panel.reconnect.set(true);
+                        application.quit();
+                    }
                     "hide" => panel.hide(),
                     "quit" => {
                         panel.close();
@@ -86,6 +91,7 @@ impl Panel {
         ] {
             preparation.append(Some(title), Some(&format!("panel.{name}")));
         }
+        preparation.append(Some("Reconnect service"), Some("panel.reconnect"));
         menu.append_section(None, &preparation);
         let secondary = gio::Menu::new();
         for (name, title) in [

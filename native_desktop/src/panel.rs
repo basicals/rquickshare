@@ -13,7 +13,11 @@ use rqs_lib::service::client::{
     state::{DetailsStatus, TransferDetails, TransferView},
 };
 use rqs_lib::service::{Direction, Lifecycle, Phase};
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    sync::Arc,
+};
 use tokio::runtime::Handle;
 
 mod menu;
@@ -38,6 +42,7 @@ struct Model {
     automatic: bool,
     automatic_focus: Option<String>,
     manual_requested: bool,
+    preview: bool,
 }
 pub struct Panel {
     pub window: gtk::Window,
@@ -57,6 +62,9 @@ pub struct Panel {
     appearance: RefCell<Option<gtk::DropDown>>,
     rows: RefCell<rows::Rows>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
+    reconnect: Cell<bool>,
+    reconnect_button: gtk::Button,
+    style: gtk::CssProvider,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -152,10 +160,10 @@ fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'stat
     use rqs_lib::service::client::ClientError::*;
     match error {
         Some(DaemonChanged | Transport | Closed) => {
-            "Service connection lost. Restart the panel to reconnect."
+            "Service connection lost. Reconnect starts a fresh client; choose unsent files again."
         }
         Some(Incompatible | Protocol | Exhausted) => {
-            "Service is incompatible or returned invalid state. Restart after updating it."
+            "Service is incompatible or returned invalid state. Update it, then reconnect."
         }
         Some(PendingOperation | AcknowledgementPending) => {
             "Operation needs recovery. Do not repeat the send."
@@ -191,12 +199,23 @@ impl Panel {
             &provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+        let reconnect_button = gtk::Button::with_label("Reconnect service");
+        reconnect_button.set_action_name(Some("panel.reconnect"));
+        builder
+            .object::<gtk::Box>("recovery")
+            .unwrap()
+            .append(&reconnect_button);
         let panel = Rc::new(Self {
             pages: builder.object("pages").expect("pages widget"),
             window,
             builder,
             model: RefCell::new(Model {
                 safety_active: layer,
+                preview: handle.is_none() && !layer,
+                state: PanelState {
+                    disconnected: handle.is_none() && layer,
+                    ..Default::default()
+                },
                 ..Default::default()
             }),
             handle,
@@ -212,6 +231,9 @@ impl Panel {
             appearance: RefCell::new(None),
             rows: RefCell::new(rows::Rows::default()),
             dismissal: RefCell::new(None),
+            reconnect: Cell::new(false),
+            reconnect_button,
+            style: provider,
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -287,6 +309,12 @@ impl Panel {
         panel.render();
         panel
     }
+    pub fn reconnect_requested(&self) -> bool {
+        self.reconnect.get()
+    }
+    pub fn mode(&self) -> Mode {
+        self.model.borrow().mode
+    }
     fn button(&self, id: &str) -> gtk::Button {
         self.builder.object(id).expect("button widget")
     }
@@ -308,10 +336,28 @@ impl Panel {
         self.desktop.replace(Some(desktop));
     }
     pub fn desktop_update(self: &Rc<Self>, state: DesktopState) -> bool {
-        let present = state.show_revision != self.model.borrow().desktop.show_revision;
+        let (present, error) = {
+            let model = self.model.borrow();
+            (
+                state.show_revision != model.desktop.show_revision,
+                (state.error_revision != model.desktop.error_revision)
+                    .then_some(state.error)
+                    .flatten(),
+            )
+        };
         self.model.borrow_mut().desktop = state;
+        if let Some(error) = error {
+            self.mark_manual();
+            let mut model = self.model.borrow_mut();
+            model.notice = Some(error.message());
+            model.manual_requested = true;
+        }
         self.render();
-        !present || self.present_recipient()
+        if error.is_some() {
+            self.present_surface()
+        } else {
+            !present || self.present_recipient()
+        }
     }
     fn present_recipient(self: &Rc<Self>) -> bool {
         self.set_mode(Mode::Full);
@@ -381,7 +427,11 @@ impl Panel {
         if let Some(dialog) = model.dialog.take() {
             dialog.cancel();
         }
-        self.window.set_visible(false);
+        gtk::style_context_remove_provider_for_display(
+            &gtk::prelude::WidgetExt::display(&self.window),
+            &self.style,
+        );
+        self.window.destroy();
     }
     fn submit(self: &Rc<Self>, command: impl FnOnce() -> Result<Completion, ControllerError>) {
         {
@@ -514,7 +564,7 @@ impl Panel {
     }
     pub fn render(self: &Rc<Self>) {
         let model = self.model.borrow();
-        let preview = self.handle.is_none();
+        let preview = model.preview;
         let full = model.mode == Mode::Full;
         self.box_widget("source")
             .set_visible(full && self.pages.visible_child_name().as_deref() == Some("nearby"));
@@ -567,9 +617,27 @@ impl Panel {
                 .unwrap()
                 .set_enabled(enabled);
         }
+        self.actions
+            .lookup_action("reconnect")
+            .and_downcast::<gio::SimpleAction>()
+            .unwrap()
+            .set_enabled(
+                !preview
+                    && (self.handle.is_none() || model.state.disconnected)
+                    && !model.ingress.busy
+                    && model.dialog.is_none()
+                    && !model.desktop.staging
+                    && !*self.ingress.gate.subscribe().borrow(),
+            );
+        let unavailable = !preview && (self.handle.is_none() || model.state.disconnected);
+        self.reconnect_button.set_visible(unavailable);
         self.box_widget("recovery").set_visible(
-            (model.state.pending || model.desktop.staging) && !model.state.disconnected,
+            unavailable
+                || ((model.state.pending || model.desktop.staging) && !model.state.disconnected),
         );
+        for id in ["recover", "abort"] {
+            self.button(id).set_visible(!unavailable);
+        }
         for id in ["recover", "abort"] {
             self.button(id).set_sensitive(
                 !preview
@@ -628,6 +696,8 @@ impl Panel {
             "Preview only · service actions disabled"
         } else if let Some(notice) = model.notice {
             notice
+        } else if self.handle.is_none() {
+            "Transfer service unavailable. Start it, then reconnect."
         } else if model.desktop.staging {
             "Receiving files from the local sender. Abort to release this preparation."
         } else if model.ingress.busy || *self.ingress.gate.subscribe().borrow() {
@@ -664,6 +734,12 @@ impl Panel {
                 } else {
                     "Waiting for complete service state"
                 }));
+            }
+            if !preview {
+                let compact = self.box_widget("compact");
+                clear(&compact);
+                compact.append(&label("Transfer service unavailable"));
+                compact.append(&label("Reconnect starts a fresh client. Unsent preparation is released; choose files again."));
             }
             if let Some(page) = model.preview_page.as_deref() {
                 self.render_preview(page);

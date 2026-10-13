@@ -84,9 +84,50 @@ impl Drop for PreparationPermit {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ErrorCode {
+    InvalidSelection,
+    Busy,
+    Recovery,
+    BackendUnavailable,
+    PanelUnavailable,
+}
+impl ErrorCode {
+    pub fn wire(self) -> &'static str {
+        match self {
+            Self::InvalidSelection => "invalid_selection",
+            Self::Busy => "busy",
+            Self::Recovery => "recovery",
+            Self::BackendUnavailable => "backend_unavailable",
+            Self::PanelUnavailable => "panel_unavailable",
+        }
+    }
+    pub fn parse(value: &str) -> Option<Self> {
+        Some(match value {
+            "invalid_selection" => Self::InvalidSelection,
+            "busy" => Self::Busy,
+            "recovery" => Self::Recovery,
+            "backend_unavailable" => Self::BackendUnavailable,
+            "panel_unavailable" => Self::PanelUnavailable,
+            _ => return None,
+        })
+    }
+    pub fn message(self) -> &'static str {
+        match self {
+        Self::InvalidSelection => "Cannot prepare these files. Check local access and file limits, then choose them again.",
+        Self::Busy => "Files are already prepared or another preparation is active. Finish or discard it in the panel.",
+        Self::Recovery => "Preparation needs recovery. Review the panel before retrying; do not repeat the send.",
+        Self::BackendUnavailable => "The transfer service is unavailable. Start it, then reconnect. Files were not sent.",
+        Self::PanelUnavailable => "The panel connection changed. Review the current state before retrying; no automatic send was requested.",
+    }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct DesktopState {
     pub show_revision: u64,
+    pub error_revision: u64,
+    pub error: Option<ErrorCode>,
     pub staging: bool,
     pub closed: bool,
 }
@@ -133,7 +174,7 @@ struct Inner {
 }
 struct Shared {
     inner: Mutex<Inner>,
-    controller: PanelHandle,
+    controller: Option<PanelHandle>,
     gate: PreparationGate,
     updates: watch::Sender<DesktopState>,
     stop: CancellationToken,
@@ -177,6 +218,10 @@ impl Shared {
         Ok(sender.to_string())
     }
     fn begin(&self, owner: &str) -> fdo::Result<u64> {
+        let controller = self
+            .controller
+            .as_ref()
+            .ok_or_else(|| rejected("Unavailable"))?;
         let mut inner = self.inner.lock().expect("desktop ownership");
         if let Some(record) = &inner.record {
             if record.owner == owner {
@@ -185,7 +230,7 @@ impl Shared {
             self.show();
             return Err(rejected("Busy"));
         }
-        let state = self.controller.subscribe().borrow().clone();
+        let state = controller.subscribe().borrow().clone();
         if state.busy
             || state.pending
             || state.disconnected
@@ -247,6 +292,29 @@ impl Shared {
 struct Endpoint(Arc<Shared>);
 #[zbus::interface(name = "io.github.morozhenko_apps.RQuickShare.Desktop1", spawn = false)]
 impl Endpoint {
+    async fn show_error(
+        &self,
+        code: &str,
+        #[zbus(connection)] connection: &Connection,
+        #[zbus(header)] header: Header<'_>,
+    ) -> fdo::Result<()> {
+        let has_fds = header.unix_fds().unwrap_or(0) != 0;
+        self.0.sender(connection, header).await?;
+        if has_fds {
+            return Err(rejected("InvalidInput"));
+        }
+        let code = ErrorCode::parse(code).ok_or_else(|| rejected("InvalidInput"))?;
+        let mut result = Ok(());
+        self.0.updates.send_modify(|state| {
+            if let Some(revision) = state.error_revision.checked_add(1) {
+                state.error_revision = revision;
+                state.error = Some(code);
+            } else {
+                result = Err(rejected("Closed"));
+            }
+        });
+        result
+    }
     async fn show(
         &self,
         #[zbus(connection)] connection: &Connection,
@@ -382,7 +450,11 @@ impl Endpoint {
                 match source {
                     Ok(source) if valid_selection(&source) => {
                         let status = record.status.clone();
-                        let controller = self.0.controller.clone();
+                        let controller = self
+                            .0
+                            .controller
+                            .clone()
+                            .ok_or_else(|| rejected("Unavailable"))?;
                         let stop = self.0.stop.clone();
                         let previous = inner.worker.take();
                         inner.worker = Some(tokio::spawn(async move {
@@ -478,6 +550,27 @@ impl DesktopServer {
     async fn connect_with_uid(
         stream: UnixStream,
         controller: PanelHandle,
+        gate: PreparationGate,
+        uid: u32,
+    ) -> zbus::Result<Self> {
+        Self::connect_optional_with_uid(stream, Some(controller), gate, uid).await
+    }
+    pub async fn connect_optional(
+        stream: UnixStream,
+        controller: Option<PanelHandle>,
+        gate: PreparationGate,
+    ) -> zbus::Result<Self> {
+        Self::connect_optional_with_uid(
+            stream,
+            controller,
+            gate,
+            rustix::process::geteuid().as_raw(),
+        )
+        .await
+    }
+    async fn connect_optional_with_uid(
+        stream: UnixStream,
+        controller: Option<PanelHandle>,
         gate: PreparationGate,
         uid: u32,
     ) -> zbus::Result<Self> {
@@ -693,6 +786,7 @@ impl DesktopClient {
                 Err(match (name.as_str(), description.as_deref()) {
                     ("org.freedesktop.DBus.Error.AccessDenied", _) => DesktopError::Denied,
                     (_, Some("Busy")) => DesktopError::Busy,
+                    (_, Some("Unavailable")) => DesktopError::Unavailable,
                     (_, Some("Conflict" | "StaleBatch")) => DesktopError::Conflict,
                     (_, Some("InvalidInput")) | ("org.freedesktop.DBus.Error.InvalidArgs", _) => {
                         DesktopError::InvalidInput
@@ -718,6 +812,13 @@ impl DesktopClient {
             hook.reached.notify_one();
             std::future::pending::<()>().await;
         }
+    }
+    pub async fn show_error(&mut self, code: ErrorCode) -> Result<(), DesktopError> {
+        self.wire("ShowError", &code.wire())
+            .await?
+            .body()
+            .deserialize::<()>()
+            .map_err(|_| DesktopError::Protocol)
     }
     pub async fn show(&mut self) -> Result<(), DesktopError> {
         self.wire("Show", &())

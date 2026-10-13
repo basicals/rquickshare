@@ -77,24 +77,22 @@ impl CardPolicy {
                     .shown
                     .as_ref()
                     .is_some_and(|notice| notice.epoch == epoch && notice.id == row.id);
-            let notice = if (incoming || outcome) && row.notice_revision.is_some() {
-                Some(Notice {
+            let notice = match (row.notice_revision, incoming || outcome) {
+                (Some(revision), true) => Some(Notice {
                     epoch,
                     id: row.id.to_owned(),
                     round: if incoming { row.round } else { None },
                     phase: row.phase,
-                    revision: row.notice_revision.unwrap(),
-                })
-            } else if keep_progress && !incoming {
-                Some(Notice {
+                    revision,
+                }),
+                _ if keep_progress && !incoming => self.shown.as_ref().map(|prior| Notice {
                     epoch,
                     id: row.id.to_owned(),
                     round: None,
                     phase: row.phase,
-                    revision: self.shown.as_ref().unwrap().revision,
-                })
-            } else {
-                None
+                    revision: prior.revision,
+                }),
+                _ => None,
             };
             let dismissed = old
                 .as_ref()

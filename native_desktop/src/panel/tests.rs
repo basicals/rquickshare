@@ -227,6 +227,29 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.window.present();
     panel.safety_update(crate::desktop_guard::SafetyState::default());
     assert!(!panel.window.is_visible());
+    // Explicit unavailable backend is distinct from preview and has visible recovery.
+    {
+        let mut model = panel.model.borrow_mut();
+        model.preview = false;
+        model.preview_page = None;
+        model.state.disconnected = true;
+    }
+    panel.render();
+    assert_eq!(
+        panel.builder.object::<gtk::Label>("badge").unwrap().text(),
+        "Disconnected"
+    );
+    assert!(panel.reconnect_button.get_visible());
+    assert!(panel.box_widget("recovery").get_visible());
+    assert!(!panel.button("recover").get_visible() && !panel.button("abort").get_visible());
+    assert!(!panel.button("files").is_sensitive());
+    assert!(panel
+        .actions
+        .lookup_action("reconnect")
+        .unwrap()
+        .is_enabled());
+    panel.actions.activate_action("reconnect", None);
+    assert!(panel.reconnect_requested());
     panel.close();
     assert!(panel.model.borrow().closing);
     assert!(panel.settings.borrow().is_none());
