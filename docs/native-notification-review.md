@@ -1,8 +1,11 @@
 # Native notification lifecycle and consent review
 
-2026-10-13. Mode A. Analysis/review only; awaiting incoming-action UX selection.
-The quality-first recommendation is option 1. No notification production code is
-implemented by this document. Previously accepted daemon ownership remains fixed.
+2026-10-13. Mode A. Decision: user selected a fully custom rQuickShare popup,
+with full and compact modes. This is option 2 from the subsequent presentation
+review, not merely direct actions on a system notification. Secondary controls
+belong in settings and a right-click menu. Implementation SSOT:
+[native-custom-card.md](native-custom-card.md). The alternatives below are retained
+as history; their earlier recommendation/pending choice is superseded.
 
 ## Current implementation and accepted boundary
 
