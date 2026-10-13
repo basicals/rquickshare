@@ -90,10 +90,24 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     // Existing GTK smoke thread; no broker/menu side effects are mocked.
     assert_eq!(panel.tray_projection().enabled & Action::Open.bit(), 0); // Preview inert.
     panel.model.borrow_mut().preview = false;
+    let previous_state = panel.model.borrow().state.clone();
+    panel.model.borrow_mut().state.view =
+        Some(Arc::new(rqs_lib::service::client::state::StateView {
+            epoch: 1,
+            revision: 1,
+            lifecycle: Lifecycle::Running,
+            synchronized: true,
+            resources: rqs_lib::service::ResourceUsage::default(),
+            endpoints: vec![],
+            selections: vec![],
+            transfers: vec![],
+            warnings: vec![],
+            notices: vec![],
+        }));
     panel.render();
     let full = panel.tray_projection();
     assert_ne!(full.enabled & Action::Settings.bit(), 0);
-    assert_eq!(full.enabled & Action::Files.bit(), 0); // No transfer service.
+    assert_ne!(full.enabled & Action::Files.bit(), 0); // Presentation projection; no service handle exists.
     panel.tray_action(Action::Compact);
     assert_eq!(panel.mode(), Mode::Compact);
     panel.tray_action(Action::Full);
@@ -111,9 +125,19 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     assert_eq!(panel.mode(), Mode::Full);
     assert!(!panel.tray_context((1, 1)));
     assert!(!panel.settings.borrow().as_ref().unwrap().is_visible());
-    panel.model.borrow_mut().safety_active = false;
+    panel.safety_update(crate::desktop_guard::SafetyState {
+        locked: Some(false),
+        inhibited: Some(false),
+        closed: false,
+    });
+    assert_ne!(panel.tray_projection().enabled & Action::Files.bit(), 0);
     assert!(panel.tray_context((1, 1)));
     panel.context.popdown();
-    panel.model.borrow_mut().preview = true;
+    {
+        let mut model = panel.model.borrow_mut();
+        model.preview = true;
+        model.safety_active = false;
+        model.state = previous_state;
+    }
     panel.render();
 }
