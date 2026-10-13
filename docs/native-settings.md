@@ -382,3 +382,11 @@ GTK smoke is strengthened instead of adding competing GTK test threads. Compiled
 inert settings capture is 420x620, reviewed after the unavailable-visibility fix;
 no overlaps/clipping of actions, no live settings/backend state. All private fixture
 tasks, brokers, display wrappers and commands exited. Terminal closed.
+
+S6 final review before the last narrow fixes: declare native's direct rustix fs
+feature explicitly instead of relying on the core dependency's feature unification.
+Remove GtkEntry's five-character truncation: an invalid pasted port such as 655350
+must remain invalid, not silently become valid 65535. Keep the real field contents
+and reject via the existing bounded parser; extend the existing GTK smoke to prove
+this invariant. No schema/wire value changes or extra feature scope. Verify only
+affected native checks after these fixes, preserve the passed core results.
