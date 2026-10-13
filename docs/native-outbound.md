@@ -16,7 +16,7 @@ prepared selection ID, explicit recipient Send, quotas and discard/cancel semant
 1. [x] O1: typed immutable PreparedSource (Files/Text), redacted native text;
    coordinator reservations and managed runtime/request retain its exact Arc until
    reader/request release. Preserve existing file input and physical-free fixtures.
-2. [ ] O2: typed staged text preparation wire and selection metadata in immutable
+2. [x] O2: typed staged text preparation wire and selection metadata in immutable
    captures, bounded receipt/replay/domain rules, checked SDK preparation/recovery
    within existing source owner; add actual broker/domain checks.
 3. [ ] O3: explicit native clipboard/text capture, private review and preparation,
@@ -92,6 +92,24 @@ sent/cancelled. Uncertain preparation uses existing Recover/Discard controls.
 
 ## Scoped supporting verification inventory before tests
 
+O3 capture clarification before code: use GdkClipboard.read_async text MIME stream
+and Gio.InputStream.read_bytes_async, <=16KiB chunks and <=128KiB+1 detection,
+rather than the unbounded read_text convenience API. Cancel owned GTK future on
+close/lock/epoch. Editor insert handler rejects insertion that would exceed128KiB
+or introduce NUL before applying it; editing existing bounded text remains possible.
+Keyboard/context paste routes to the SAME bounded explicit read instead of GTK's
+unbounded default paste. There is no image fallback in this text slice. Stream EOF,
+not sleep, terminates capture. Close the owned stream after completion/rejection;
+provider/read failures preserve the editor's existing text and fixed diagnostics.
+References: https://docs.gtk.org/gdk4/method.Clipboard.read_async.html and
+https://docs.gtk.org/gio/method.InputStream.read_bytes_async.html.
+
+Text preparation action checks source occupancy again in the serialized controller
+after fresh state. A stale enabled GTK button cannot replace another preparation.
+An already admitted Prepare continues under the controller if the editor is closed;
+it has no authority to Send. Clear sensitive editor text on close and disable undo
+so GTK does not retain prior buffers. Source summary stays generic/metadata-only.
+
 | Artifact | Invariants / branches | Level / categories |
 |---|---|---|
 | NativeText/PreparedSource | empty/1/max/max+1,NUL,Unicode,files parity,Debug | domain Positive,N1,N2,N10 |
@@ -118,3 +136,27 @@ NativeText boundary method and actual Files/Text request Arc lifetime method pas
 in the initial suite. Existing opened-file request fixtures now exercise NativeSource
 and preserve bytes/descriptor/unlink/cancel checks. Terminal closed. O1 source is
 independently reversible; text ingestion/GUI are not yet exposed.
+
+O2 first compilation identified a missing BeginText arm in the SDK's pre-mutation
+handle validation; fixed explicitly. All-target check then passed(19.25s). First
+service filter247passed/2failed: BeginText was implemented by the executor but
+omitted from the outer operation dispatcher allowlist, yielding Incompatible.
+Add the allowlist entry and rerun the two affected outgoing cases plus real native
+transport integration; preserve assertions and existing finite allowlist.
+
+O2 actual affected results: outgoing broker/controller2passed(2.36s) after allowlist
+fix; strengthened two-real-managers transport method passed(0.39s), including a
+native typed text request and the legacy text path. Strict all-target Clippy caught
+one test bool-assert style issue; equivalent assert fixed, lint passed(20.61s).
+Initial service filter247 other methods passed(19.71s run), including 3 new domain
+tables for append/replay/UTF8/quotas and existing file/SDK/runtime regressions.
+No repeated whole-suite claim. Terminal closed. Text summary only in state; body
+owned by actual source. First all-target SDK compile omission fixed without changing
+contracts. Five new O2 methods + strengthened real transport fixture, not full Mode B.
+
+O3 menu addition before code: Send text is exposed in existing header/context menu
+and standard tray DBusMenu. Preserve IDs1..15, append action ID16 and fixed row
+before request navigation; 16children/17totalnodes. u16 readiness bit15, existing
+16event group/mailbox bounds stay. The action is disabled when source occupied,
+busy, locked/unknown or private editor already holds the preparation gate. No private
+text in menu labels. Keyboard/context paste uses guarded explicit capture.

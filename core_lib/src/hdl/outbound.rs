@@ -1314,9 +1314,15 @@ impl OutboundRequest {
                 let prepared = prepare_outbound_text(text)?;
                 self.text_payload_id = Some(prepared.payload_id);
                 let payload_type = prepared.payload_type.clone();
+                let payload_info = if payload_type == TextPayloadType::Url {
+                    super::TextPayloadInfo::Url(prepared.payload_id)
+                } else {
+                    super::TextPayloadInfo::Text(prepared.payload_id)
+                };
                 let total_bytes = prepared.bytes.len() as u64;
                 self.update_state(
                     |state| {
+                        state.text_payload = Some(payload_info);
                         if let Some(metadata) = state.transfer_metadata.as_mut() {
                             metadata.total_bytes = total_bytes;
                             metadata.text_type = Some(payload_type);

@@ -1069,7 +1069,22 @@ async fn given_two_real_managers_when_text_is_accepted_then_repeated_transfers_f
         let consent = inbound.control.clone();
         for id in ["first-transfer", "second-transfer"] {
             // Act
-            outbound.send(id, inbound.address).await;
+            if id == "second-transfer" {
+                #[cfg(target_os = "linux")]
+                {
+                    let mut request = info(id, inbound.address);
+                    request.ob = OutboundPayload::NativeSource(Arc::new(
+                        crate::prepared_source::PreparedSource::Text(
+                            crate::prepared_source::NativeText::new("payload".into()).unwrap(),
+                        ),
+                    ));
+                    outbound.queue.send(request).await.unwrap();
+                }
+                #[cfg(not(target_os = "linux"))]
+                outbound.send(id, inbound.address).await;
+            } else {
+                outbound.send(id, inbound.address).await;
+            }
             let receive = async {
                 loop {
                     let event = inbound.events.recv().await.unwrap();

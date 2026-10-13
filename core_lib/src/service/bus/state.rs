@@ -55,7 +55,10 @@ pub(super) type DetailRow = (
 pub(super) type FileRow = (String, u64);
 pub(super) type NoticeRow = (String, String, u64, u64);
 
+pub(super) type SourceRow = (String, &'static str, u32, u64);
+
 struct Capture {
+    sources: Vec<SourceRow>,
     text: Vec<super::text::MetadataRow>,
     notices: Vec<NoticeRow>,
     charge: usize,
@@ -169,6 +172,19 @@ impl StateCache {
         }
         // The count guards precede the coordinator's bounded allocations.
         let snapshot = coordinator.snapshot(client)?;
+        let sources = snapshot
+            .selections
+            .iter()
+            .map(|id| {
+                let source = &coordinator.selections[id].resource;
+                (
+                    token(id.0, id.1),
+                    source.kind().wire(),
+                    source.files().len() as u32,
+                    source.total_bytes(),
+                )
+            })
+            .collect();
         let selected: Vec<_> = snapshot
             .selections
             .into_iter()
@@ -240,6 +256,7 @@ impl StateCache {
             })
             .collect();
         let capture = Capture {
+            sources,
             text,
             notices,
             charge,
@@ -252,6 +269,12 @@ impl StateCache {
         // Fixed reservation includes record storage, owned buffers and conservative map overhead.
         let bytes = size_of::<Capture>()
             + 1024
+            + capture.sources.capacity() * size_of::<SourceRow>()
+            + capture
+                .sources
+                .iter()
+                .map(|row| row.0.capacity())
+                .sum::<usize>()
             + capture.text.capacity() * size_of::<super::text::MetadataRow>()
             + capture
                 .text
@@ -303,6 +326,14 @@ impl StateCache {
             return Err(Error::WrongOwner);
         }
         Ok(capture.1)
+    }
+    pub(super) fn source_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<SourceRow>), Error> {
+        page(&self.get(client, id)?.sources, offset)
     }
     pub(super) fn text_page(
         &self,

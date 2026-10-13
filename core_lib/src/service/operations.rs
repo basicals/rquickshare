@@ -9,6 +9,7 @@ pub const RECEIPTS: usize = 128;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Call {
     Begin,
+    BeginText(u32),
     Commit(UploadId),
     Abort(UploadId),
     Send(SelectionId, String),
@@ -39,6 +40,7 @@ impl Call {
     fn kind(&self) -> &'static str {
         match self {
             Self::Begin => "begin_selection",
+            Self::BeginText(_) => "begin_text",
             Self::Commit(_) => "commit_selection",
             Self::Abort(_) => "abort_selection",
             Self::Send(_, _) => "send_selection",
@@ -85,6 +87,9 @@ impl Coordinator {
         self.revision.checked_add(1).ok_or(Error::Exhausted)?;
         let result = match &call {
             Call::Begin => OperationResult::Upload(self.begin_upload(client, None)?),
+            Call::BeginText(count) => {
+                OperationResult::Upload(self.begin_text_upload(client, *count)?)
+            }
             Call::Commit(id) => {
                 self.check_upload_origin(client, *id, true)?;
                 OperationResult::Selection(self.commit_upload(client, *id)?)
@@ -114,6 +119,20 @@ impl Coordinator {
 
     pub fn ordered_begin(&mut self, client: ClientId, sequence: u64) -> Result<UploadId, Error> {
         match self.operation(client, sequence, Call::Begin)?.result {
+            OperationResult::Upload(id) => Ok(id),
+            _ => Err(Error::InvalidState),
+        }
+    }
+    pub fn ordered_begin_text(
+        &mut self,
+        client: ClientId,
+        count: u32,
+        sequence: u64,
+    ) -> Result<UploadId, Error> {
+        match self
+            .operation(client, sequence, Call::BeginText(count))?
+            .result
+        {
             OperationResult::Upload(id) => Ok(id),
             _ => Err(Error::InvalidState),
         }

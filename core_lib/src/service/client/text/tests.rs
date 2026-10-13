@@ -177,3 +177,64 @@ async fn given_controller_read_when_completed_then_private_result_never_enters_w
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_outgoing_text_wire_when_descriptors_kinds_or_retry_bytes_differ_then_staging_is_owner_bound_and_exact(
+) {
+    scenario(async {
+        // Arrange
+        let (bus, host, mut owner) = crate::service::client::tests::fixture().await;
+        let mut other = NativeClient::connect(bus.socket().await).await.unwrap();
+        let upload = owner.begin_text(3).await.unwrap();
+        // Act / Assert
+        assert_eq!(
+            other
+                .wire(
+                    INTERFACE,
+                    "AppendText",
+                    &(upload.id(), 0u32, b"abc".as_slice())
+                )
+                .await
+                .unwrap_err(),
+            ClientError::Rejected(DomainError::WrongOwner)
+        );
+        owner.append_text(&upload, 0, b"abc").await.unwrap();
+        assert_eq!(
+            owner
+                .wire(
+                    INTERFACE,
+                    "AppendText",
+                    &(upload.id(), 0u32, b"abd".as_slice())
+                )
+                .await
+                .unwrap_err(),
+            ClientError::Rejected(DomainError::ReplayConflict)
+        );
+        let file = tempfile::tempfile().unwrap();
+        for (interface, method) in [
+            (OPERATIONS_INTERFACE, "BeginText"),
+            (INTERFACE, "AppendText"),
+            (INTERFACE, "GetSelectionPage"),
+        ] {
+            assert_eq!(
+                owner
+                    .wire(interface, method, &Fd::from(file.as_fd()))
+                    .await
+                    .unwrap_err(),
+                ClientError::Rejected(DomainError::InvalidInput)
+            );
+        }
+        let selected = owner.commit_selection(&upload).await.unwrap();
+        let view = owner.read_state().await.unwrap();
+        assert_eq!(view.sources[0].selection, selected);
+        assert_eq!(view.sources[0].byte_count, 3);
+        assert_eq!(view.sources[0].file_count, 0);
+        owner.discard_selection(&selected).await.unwrap();
+        assert_eq!(view.sources.len(), 1); // Immutable captured projection survives live discard.
+        assert!(owner.read_state().await.unwrap().sources.is_empty());
+        other.close().await.unwrap();
+        owner.close().await.unwrap();
+        assert_eq!(host.finish().await.1, Ok(()));
+    })
+    .await;
+}

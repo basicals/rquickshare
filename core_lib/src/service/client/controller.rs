@@ -9,6 +9,7 @@ use tokio_util::sync::CancellationToken;
 use super::state::{StateView, TransferView};
 use super::{ClientError, NativeClient, OperationValue, Outcome, Selection, Transfer, Upload};
 use crate::file_source::OpenedSelection;
+use crate::prepared_source::{NativeText, PreparedSource};
 use crate::service::{ControlAction, Direction, Phase};
 
 const QUEUE: usize = 8;
@@ -63,6 +64,7 @@ enum Action {
     SettingsRetry,
     Dismiss(Vec<super::notices::Notice>),
     Choose(OpenedSelection),
+    ChooseText(NativeText),
     Send(Selection, String),
     Discard(Selection),
     Respond(Transfer, u64, bool),
@@ -123,6 +125,9 @@ impl PanelHandle {
             return Err(ClientError::InvalidInput.into());
         }
         self.submit(Action::Choose(selection))
+    }
+    pub fn choose_text(&self, text: NativeText) -> Result<Completion> {
+        self.submit(Action::ChooseText(text))
     }
     pub fn send(&self, selection: Selection, endpoint: String) -> Result<Completion> {
         self.submit(Action::Send(selection, endpoint))
@@ -192,7 +197,7 @@ impl Drop for PanelController {
 }
 
 struct Preparation {
-    source: OpenedSelection,
+    source: PreparedSource,
     upload: Option<Upload>,
     next: u32,
 }
@@ -303,9 +308,29 @@ impl Worker {
         loop {
             let preparation = self.preparation.as_mut().ok_or(ClientError::Protocol)?;
             let Some(upload) = preparation.upload.as_ref() else {
-                preparation.upload = Some(self.client.begin_selection().await?);
+                preparation.upload = Some(match &preparation.source {
+                    PreparedSource::Files(_) => self.client.begin_selection().await?,
+                    PreparedSource::Text(text) => {
+                        self.client.begin_text(text.text().len() as u32).await?
+                    }
+                });
                 continue;
             };
+            if let PreparedSource::Text(text) = &preparation.source {
+                let start = preparation.next as usize * crate::service::uploads::TEXT_CHUNK;
+                if start < text.text().len() {
+                    let end = (start + crate::service::uploads::TEXT_CHUNK).min(text.text().len());
+                    preparation.next = self
+                        .client
+                        .append_text(
+                            upload,
+                            preparation.next,
+                            &text.text().as_bytes()[start..end],
+                        )
+                        .await?;
+                    continue;
+                }
+            }
             let start = preparation.next as usize * super::BATCH_FILES;
             if start < preparation.source.files().len() {
                 let end = (start + super::BATCH_FILES).min(preparation.source.files().len());
@@ -372,9 +397,31 @@ impl Worker {
                 }
                 Ok(ActionResult::Completed)
             }
-            Action::Choose(source) => {
+            Action::ChooseText(text) => {
+                if self
+                    .client
+                    .cached_state()
+                    .is_some_and(|view| !view.selections.is_empty())
+                {
+                    return Err(ClientError::Rejected(crate::service::Error::Busy));
+                }
                 self.preparation = Some(Preparation {
-                    source,
+                    source: PreparedSource::Text(text),
+                    upload: None,
+                    next: 0,
+                });
+                self.prepare().await
+            }
+            Action::Choose(source) => {
+                if self
+                    .client
+                    .cached_state()
+                    .is_some_and(|view| !view.selections.is_empty())
+                {
+                    return Err(ClientError::Rejected(crate::service::Error::Busy));
+                }
+                self.preparation = Some(Preparation {
+                    source: PreparedSource::from(source),
                     upload: None,
                     next: 0,
                 });

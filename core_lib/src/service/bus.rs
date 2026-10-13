@@ -695,6 +695,30 @@ impl SelectionBus {
                         Err(error) => Err(error),
                     }
                 }
+                Some("GetSelectionPage") => {
+                    let args = body
+                        .deserialize::<(&str, u32)>()
+                        .map_err(|_| Error::InvalidInput);
+                    match args.and_then(|(id, offset)| {
+                        token_parts(id, coordinator.epoch)?;
+                        self.state.source_page(client, id, offset)
+                    }) {
+                        Ok(page) => return self.state_reply(&header, &page).await,
+                        Err(error) => Err(error),
+                    }
+                }
+                Some("AppendText") => {
+                    let args = body
+                        .deserialize::<(&str, u32, &[u8])>()
+                        .map_err(|_| Error::InvalidInput);
+                    match args.and_then(|(id, sequence, bytes)| {
+                        let id = upload_id(id, coordinator.epoch)?;
+                        coordinator.append_text(client, id, sequence, bytes)
+                    }) {
+                        Ok(next) => return self.state_reply(&header, &next).await,
+                        Err(error) => Err(error),
+                    }
+                }
                 Some("BeginRead") => {
                     let args = body
                         .deserialize::<(&str, u64)>()
@@ -785,6 +809,7 @@ impl SelectionBus {
                     .await;
             };
             if ![
+                "BeginText",
                 "BeginSelection",
                 "CommitSelection",
                 "AbortSelection",
@@ -1303,6 +1328,11 @@ fn execute_operation(
     let body = message.body();
     let invalid = |_| Error::InvalidInput;
     match method {
+        "BeginText" => {
+            let (count, sequence): (u32, u64) = body.deserialize().map_err(invalid)?;
+            let id = coordinator.ordered_begin_text(client, count, sequence)?;
+            Ok(OperationReply::Token(token(id.0, id.1)))
+        }
         "BeginSelection" => {
             let sequence: u64 = body.deserialize().map_err(invalid)?;
             let id = coordinator.ordered_begin(client, sequence)?;

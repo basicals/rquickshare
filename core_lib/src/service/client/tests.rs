@@ -72,6 +72,7 @@ async fn command(client: &mut NativeClient, kind: OperationKind) -> Command {
 fn member(kind: OperationKind) -> &'static str {
     match kind {
         OperationKind::Begin => "BeginSelection",
+        OperationKind::BeginText => "BeginText",
         OperationKind::Commit => "CommitSelection",
         OperationKind::Abort => "AbortSelection",
         OperationKind::Send => "SendSelection",

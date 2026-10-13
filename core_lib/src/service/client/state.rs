@@ -60,7 +60,15 @@ pub enum StartupWarning {
     VisibilityRecovered,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SourceView {
+    pub selection: Selection,
+    pub kind: crate::sessions::details::PayloadKind,
+    pub file_count: u32,
+    pub byte_count: u64,
+}
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StateView {
+    pub sources: Vec<SourceView>,
     pub epoch: u128,
     pub revision: u64,
     pub lifecycle: Lifecycle,
@@ -194,6 +202,7 @@ impl NativeClient {
         }
         canonical(&metadata.0, current)?;
         Ok(StateView {
+            sources: Vec::with_capacity(metadata.9 as usize),
             epoch: current,
             revision: metadata.2,
             lifecycle: lifecycle(&metadata.3)?,
@@ -349,6 +358,34 @@ impl NativeClient {
             });
         }
         sorted(view.selections.iter().map(|v| v.id()))?;
+        let sources: Vec<(String, String, u32, u64)> = self
+            .pages_for_on(
+                bus::text::INTERFACE,
+                "GetSelectionPage",
+                &metadata.0,
+                metadata.9,
+                None,
+            )
+            .await?;
+        for (selection, row) in view.selections.iter().zip(sources) {
+            let kind = super::text::kind(&row.1)?;
+            if selection.id() != row.0
+                || (kind == crate::sessions::details::PayloadKind::Files
+                    && !(1..=256).contains(&row.2))
+                || (kind != crate::sessions::details::PayloadKind::Files
+                    && (row.2 != 0
+                        || row.3 == 0
+                        || row.3 > crate::sessions::text::MAX_TEXT_BYTES as u64))
+            {
+                return Err(ClientError::Protocol);
+            }
+            view.sources.push(SourceView {
+                selection: selection.clone(),
+                kind,
+                file_count: row.2,
+                byte_count: row.3,
+            });
+        }
         let transfers: Vec<TransferRow> = self
             .pages("GetTransferPage", &metadata.0, metadata.10)
             .await?;

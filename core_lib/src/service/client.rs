@@ -72,6 +72,7 @@ handle!(Transfer);
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OperationKind {
     Begin,
+    BeginText,
     Commit,
     Abort,
     Send,
@@ -80,6 +81,7 @@ impl OperationKind {
     fn wire(self) -> &'static str {
         match self {
             Self::Begin => "begin_selection",
+            Self::BeginText => "begin_text",
             Self::Commit => "commit_selection",
             Self::Abort => "abort_selection",
             Self::Send => "send_selection",
@@ -109,6 +111,7 @@ pub enum Outcome {
 #[derive(Clone, Eq, PartialEq)]
 enum Command {
     Begin,
+    BeginText(u32),
     Commit(Upload),
     Abort(Upload),
     Send(Selection, String),
@@ -117,6 +120,7 @@ impl Command {
     fn kind(&self) -> OperationKind {
         match self {
             Self::Begin => OperationKind::Begin,
+            Self::BeginText(_) => OperationKind::BeginText,
             Self::Commit(_) => OperationKind::Commit,
             Self::Abort(_) => OperationKind::Abort,
             Self::Send(_, _) => OperationKind::Send,
@@ -125,6 +129,11 @@ impl Command {
 }
 
 enum Pending {
+    TextAppend {
+        upload: Upload,
+        sequence: u32,
+        bytes: Vec<u8>,
+    },
     Operation {
         command: Command,
         sequence: u64,
@@ -446,7 +455,7 @@ impl NativeClient {
         canonical(&value, self.epoch)?;
         let connection = self.identity.clone();
         Ok(match command {
-            Command::Begin => OperationValue::Upload(Upload {
+            Command::Begin | Command::BeginText(_) => OperationValue::Upload(Upload {
                 id: value,
                 connection,
             }),
@@ -481,6 +490,10 @@ impl NativeClient {
 
     async fn execute(&mut self, command: &Command, sequence: u64) -> Result<Receipt> {
         let reply = match command {
+            Command::BeginText(count) => {
+                self.wire(OPERATIONS_INTERFACE, "BeginText", &(*count, sequence))
+                    .await?
+            }
             Command::Begin => {
                 self.wire(OPERATIONS_INTERFACE, "BeginSelection", &sequence)
                     .await?
@@ -580,7 +593,7 @@ impl NativeClient {
                     return Err(ClientError::InvalidInput);
                 }
             }
-            Command::Begin => (),
+            Command::Begin | Command::BeginText(_) => (),
         }
         let sequence = self.last.checked_add(1).ok_or(ClientError::Exhausted)?;
         self.pending = Some(Pending::Operation {
@@ -602,6 +615,39 @@ impl NativeClient {
     pub async fn begin_selection(&mut self) -> Result<Upload> {
         match self.mutation(Command::Begin).await?.result {
             OperationValue::Upload(id) => Ok(id),
+            _ => Err(ClientError::Protocol),
+        }
+    }
+    pub async fn begin_text(&mut self, byte_count: u32) -> Result<Upload> {
+        if byte_count == 0 || byte_count as usize > crate::sessions::text::MAX_TEXT_BYTES {
+            return Err(ClientError::InvalidInput);
+        }
+        match self.mutation(Command::BeginText(byte_count)).await?.result {
+            OperationValue::Upload(id) => Ok(id),
+            _ => Err(ClientError::Protocol),
+        }
+    }
+    pub async fn append_text(
+        &mut self,
+        upload: &Upload,
+        sequence: u32,
+        bytes: &[u8],
+    ) -> Result<u32> {
+        self.owned(upload.id(), &upload.connection)?;
+        if bytes.is_empty() || bytes.len() > super::uploads::TEXT_CHUNK {
+            return Err(ClientError::InvalidInput);
+        }
+        sequence.checked_add(1).ok_or(ClientError::Exhausted)?;
+        if self.pending.is_some() {
+            return Err(ClientError::PendingOperation);
+        }
+        self.pending = Some(Pending::TextAppend {
+            upload: upload.clone(),
+            sequence,
+            bytes: bytes.to_vec(),
+        });
+        match self.recover_pending().await? {
+            Some(Outcome::Appended { next_sequence, .. }) => Ok(next_sequence),
             _ => Err(ClientError::Protocol),
         }
     }
@@ -719,6 +765,39 @@ impl NativeClient {
     /// Continue on this exact connection, without changing command, epoch or sequence.
     pub async fn recover_pending(&mut self) -> Result<Option<Outcome>> {
         match self.pending.as_ref() {
+            Some(Pending::TextAppend {
+                upload,
+                sequence,
+                bytes,
+            }) => {
+                let upload = upload.clone();
+                let sequence = *sequence;
+                let bytes = bytes.clone();
+                let result = self
+                    .wire(
+                        bus::text::INTERFACE,
+                        "AppendText",
+                        &(upload.id(), sequence, bytes),
+                    )
+                    .await;
+                if matches!(result, Err(ClientError::Rejected(_))) {
+                    self.pending = None;
+                }
+                let next: u32 = result?
+                    .body()
+                    .deserialize()
+                    .map_err(|_| ClientError::Protocol)?;
+                if next != sequence.checked_add(1).ok_or(ClientError::Exhausted)? {
+                    return Err(ClientError::Protocol);
+                }
+                let outcome = Outcome::Appended {
+                    upload,
+                    next_sequence: next,
+                };
+                self.last_outcome = Some(outcome.clone());
+                self.pending = None;
+                Ok(Some(outcome))
+            }
             None => Ok(None),
             Some(Pending::Operation {
                 receipt: Some(_), ..

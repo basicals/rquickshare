@@ -116,6 +116,11 @@
     </signal>
   </interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Operations1">
+    <method name="BeginText">
+      <arg name="byte_count" type="u" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="upload_id" type="s" direction="out"/>
+    </method>
     <method name="BeginSelection">
       <arg name="operation_seq" type="t" direction="in"/>
       <arg name="upload_id" type="s" direction="out"/>
@@ -164,6 +169,18 @@
     </method>
   </interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Text1">
+    <method name="AppendText">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="sequence" type="u" direction="in"/>
+      <arg name="bytes" type="ay" direction="in"/>
+      <arg name="next_sequence" type="u" direction="out"/>
+    </method>
+    <method name="GetSelectionPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="sources" type="a(ssut)" direction="out"/>
+    </method>
     <method name="GetMetadataPage">
       <arg name="snapshot_id" type="s" direction="in"/>
       <arg name="offset" type="u" direction="in"/>

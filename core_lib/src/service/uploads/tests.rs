@@ -481,3 +481,211 @@ fn given_shutdown_when_new_or_staged_mutation_attempted_then_admission_stays_clo
     assert_eq!(service.commit_selection(client, id), Err(Error::NotRunning));
     assert!(service.uploads.is_empty());
 }
+
+#[test]
+fn given_staged_text_when_chunks_retry_or_mutate_then_exact_complete_utf8_commits_once_with_shared_resource_accounting(
+) {
+    // Arrange / Act / Assert
+    for body in [
+        "x".to_owned(),
+        "é".repeat(8193),
+        "a".repeat(crate::sessions::text::MAX_TEXT_BYTES),
+    ] {
+        let mut service = Coordinator::new(123, Limits::default()).unwrap();
+        let client = service.connect().unwrap();
+        let other = service.connect().unwrap();
+        service.set_endpoints(vec!["peer".into()]).unwrap();
+        let upload = service
+            .ordered_begin_text(client, body.len() as u32, 1)
+            .unwrap();
+        assert_eq!(
+            service
+                .ordered_begin_text(client, body.len() as u32, 1)
+                .unwrap(),
+            upload
+        );
+        assert_eq!(
+            service.ordered_begin_text(client, body.len() as u32 + 1, 1),
+            Err(Error::ReplayConflict)
+        );
+        assert_eq!(
+            service.snapshot(client).unwrap().resources.selected_bytes,
+            body.len() as u64
+        );
+        assert_eq!(
+            service.append_text(other, upload, 0, b"x"),
+            Err(Error::WrongOwner)
+        );
+        assert_eq!(
+            service.append_files(client, upload, 0, vec![]),
+            Err(Error::InvalidState)
+        );
+        assert_eq!(
+            service.ordered_commit(client, upload, 2),
+            Err(Error::InvalidInput)
+        );
+        for (sequence, chunk) in body.as_bytes().chunks(TEXT_CHUNK).enumerate() {
+            let seq = sequence as u32;
+            let before = service.revision;
+            assert_eq!(service.append_text(client, upload, seq, chunk), Ok(seq + 1));
+            let accepted = service.revision;
+            assert!(accepted > before);
+            assert_eq!(service.append_text(client, upload, seq, chunk), Ok(seq + 1));
+            assert_eq!(service.revision, accepted);
+            let mut changed = chunk.to_vec();
+            changed[0] ^= 1;
+            assert_eq!(
+                service.append_text(client, upload, seq, &changed),
+                Err(Error::ReplayConflict)
+            );
+        }
+        let selected = service.ordered_commit(client, upload, 2).unwrap();
+        assert_eq!(service.ordered_commit(client, upload, 2).unwrap(), selected);
+        assert_eq!(
+            service.selections[&selected]
+                .resource
+                .text()
+                .unwrap()
+                .text(),
+            body
+        );
+        assert!(service.selections[&selected].resource.files().is_empty());
+        assert_eq!(
+            service.append_text(client, upload, 0, b"x"),
+            Err(Error::InvalidState)
+        );
+        service.acknowledge_operations(client, 2).unwrap();
+        let transfer = service.ordered_send(client, selected, "peer", 3).unwrap();
+        assert_eq!(
+            service.ordered_send(client, selected, "peer", 3).unwrap(),
+            transfer
+        );
+        let dispatched = service.next_send().unwrap().unwrap();
+        assert_eq!(dispatched.selection.text().unwrap().text(), body);
+        service.disconnect(client).unwrap();
+        service.observe(transfer, Phase::Finished).unwrap();
+        service.owner_closed(transfer).unwrap();
+        service.source_released(transfer).unwrap();
+        assert_eq!(
+            service.snapshot(other).unwrap().resources.selected_bytes,
+            body.len() as u64
+        );
+        drop(dispatched);
+        assert_eq!(
+            service.snapshot(other).unwrap().resources,
+            ResourceUsage::default()
+        );
+    }
+}
+#[test]
+fn given_invalid_text_preparation_when_admitted_or_committed_then_no_partial_source_or_unbounded_allocation_is_accepted(
+) {
+    // Arrange / Act / Assert
+    for size in [0, 131073, u32::MAX] {
+        let mut service = Coordinator::new(123, Limits::default()).unwrap();
+        let client = service.connect().unwrap();
+        let revision = service.revision;
+        assert_eq!(
+            service.ordered_begin_text(client, size, 1),
+            Err(Error::InvalidInput)
+        );
+        assert_eq!(service.revision, revision);
+        assert!(service.uploads.is_empty());
+    }
+    for (declared, chunks, valid) in [
+        (1, vec![vec![255]], false),
+        (3, vec![b"a\0c".to_vec()], false),
+        (3, vec![b"ab".to_vec()], false),
+        (2, vec![vec![0xc3], vec![0xa9]], true),
+    ] {
+        let mut service = Coordinator::new(123, Limits::default()).unwrap();
+        let client = service.connect().unwrap();
+        let upload = service.ordered_begin_text(client, declared, 1).unwrap();
+        for (seq, chunk) in chunks.iter().enumerate() {
+            service
+                .append_text(client, upload, seq as u32, chunk)
+                .unwrap();
+        }
+        assert_eq!(service.ordered_commit(client, upload, 2).is_ok(), valid);
+        if !valid {
+            service.ordered_abort(client, upload, 2).unwrap();
+        }
+        service.disconnect(client).unwrap();
+        assert_eq!(service.usage(), ResourceUsage::default());
+    }
+    let mut service = Coordinator::new(123, Limits::default()).unwrap();
+    let client = service.connect().unwrap();
+    let upload = service.ordered_begin_text(client, 1, 1).unwrap();
+    for bytes in [vec![], vec![1; TEXT_CHUNK + 1], vec![1; 2]] {
+        assert_eq!(
+            service.append_text(client, upload, 0, &bytes),
+            Err(Error::InvalidInput)
+        );
+        assert_eq!(service.get_upload(client, upload).unwrap().next_sequence, 0);
+    }
+    assert_eq!(
+        service.append_text(client, upload, 1, b"x"),
+        Err(Error::ReplayConflict)
+    );
+    assert_eq!(
+        service.append_text(client, upload, u32::MAX, b"x"),
+        Err(Error::ReplayConflict)
+    );
+    let files = service.ordered_begin(client, 2).unwrap();
+    assert_eq!(
+        service.append_text(client, files, 0, b"x"),
+        Err(Error::InvalidState)
+    );
+    service.ordered_abort(client, upload, 3).unwrap();
+    assert_eq!(
+        service.append_text(client, upload, 0, b"x"),
+        Err(Error::InvalidState)
+    );
+}
+#[test]
+fn given_global_text_memory_budget_when_reserved_before_body_then_exact_cap_and_release_are_enforced(
+) {
+    // Arrange
+    let mut service = Coordinator::new(
+        123,
+        Limits {
+            selections: 129,
+            ..Limits::default()
+        },
+    )
+    .unwrap();
+    let mut held = Vec::new();
+    // Act / Assert: 32 clients *4 preparations *128KiB =16MiB, even with no body appended.
+    for _ in 0..32 {
+        let client = service.connect().unwrap();
+        for seq in 1..=4 {
+            held.push((
+                client,
+                service.ordered_begin_text(client, 131072, seq).unwrap(),
+            ));
+        }
+    }
+    assert_eq!(
+        service.usage().selected_bytes,
+        crate::prepared_source::TEXT_RESERVATION_BYTES
+    );
+    let (client, upload) = held[0];
+    service.ordered_abort(client, upload, 5).unwrap();
+    assert!(service.ordered_begin_text(client, 131072, 6).is_ok());
+    // Free a selection slot independently while retaining all text reservations.
+    service.limits.selections = 256;
+    service.limits.clients = 33;
+    let extra = service.connect().unwrap();
+    assert_eq!(
+        service.ordered_begin_text(extra, 1, 1),
+        Err(Error::Capacity)
+    );
+    for client in held
+        .into_iter()
+        .map(|(client, _)| client)
+        .collect::<std::collections::BTreeSet<_>>()
+    {
+        service.disconnect(client).unwrap();
+    }
+    assert_eq!(service.usage(), ResourceUsage::default());
+}

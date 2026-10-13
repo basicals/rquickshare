@@ -206,6 +206,7 @@ struct Selection {
 }
 
 struct Reservation {
+    text_bytes: u64,
     resource: Weak<crate::prepared_source::PreparedSource>,
     handles: usize,
     bytes: u64,
@@ -477,6 +478,7 @@ impl Coordinator {
         self.reservations.insert(
             id,
             Reservation {
+                text_bytes: 0,
                 resource: Arc::downgrade(&resource),
                 handles,
                 bytes,

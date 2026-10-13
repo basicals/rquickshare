@@ -458,3 +458,72 @@ async fn given_interrupted_preparation_or_abort_when_abandoned_then_recovery_rel
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_outgoing_text_when_preparation_replies_are_lost_then_exact_capture_recovers_and_send_stays_explicit(
+) {
+    scenario(async {
+        // Arrange / Act / Assert
+        for method in [
+            "BeginText",
+            "AppendText",
+            "CommitSelection",
+            "AcknowledgeThrough",
+        ] {
+            for after in [false, true] {
+                let (_bus, host, mut client) = fixture().await;
+                let reached = hook(&mut client, method, after);
+                let (state, _) = watch::channel(PanelState::default());
+                let mut worker = Worker {
+                    client,
+                    preparation: None,
+                    state,
+                };
+                let body = "private-é".repeat(3000);
+                interrupted(
+                    worker.act(Action::ChooseText(NativeText::new(body.clone()).unwrap())),
+                    reached,
+                )
+                .await;
+                assert!(worker.client.has_pending() && worker.preparation.is_some());
+                let ActionResult::Selection(selection) = worker.act(Action::Recover).await.unwrap()
+                else {
+                    panic!("Missing recovered selection")
+                };
+                assert!(!worker.client.has_pending() && worker.preparation.is_none());
+                let view = worker.client.read_state().await.unwrap();
+                assert_eq!(view.selections, vec![selection.clone()]);
+                assert!(view.transfers.is_empty());
+                assert_eq!(
+                    view.sources[0].kind,
+                    crate::sessions::details::PayloadKind::Text
+                );
+                assert_eq!(view.sources[0].byte_count, body.len() as u64);
+                assert_eq!(view.sources[0].file_count, 0);
+                assert!(!format!("{view:?}").contains("private-é"));
+                assert!(worker
+                    .act(Action::ChooseText(
+                        NativeText::new("replacement".into()).unwrap()
+                    ))
+                    .await
+                    .is_err());
+                let (_file, files) = opened(1);
+                assert!(worker.act(Action::Choose(files)).await.is_err());
+                let ActionResult::Transfer(_) = worker
+                    .act(Action::Send(selection, "peer".into()))
+                    .await
+                    .unwrap()
+                else {
+                    panic!("Missing transfer")
+                };
+                worker.client.close().await.unwrap();
+                let (mut coordinator, result) = host.finish().await;
+                assert_eq!(result, Ok(()));
+                let dispatch = coordinator.next_send().unwrap().unwrap();
+                assert_eq!(dispatch.selection.text().unwrap().text(), body);
+                assert!(coordinator.next_send().unwrap().is_none());
+            }
+        }
+    })
+    .await;
+}
