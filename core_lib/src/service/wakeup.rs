@@ -1,17 +1,17 @@
 //! One owned coalescing activation worker; transport never waits for GTK startup.
+use std::future::Future;
+
 use tokio::{net::UnixStream, sync::watch, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use zbus::Connection;
 
 use super::{bus, client::desktop};
 
-#[async_trait::async_trait]
 trait Activator: Send + 'static {
-    async fn activate(&mut self) -> bool;
-    async fn close(self);
+    fn activate(&mut self) -> impl Future<Output = bool> + Send;
+    fn close(self) -> impl Future<Output = ()> + Send;
 }
 struct BusActivator(Connection);
-#[async_trait::async_trait]
 impl Activator for BusActivator {
     async fn activate(&mut self) -> bool {
         let Ok(broker) = zbus::fdo::DBusProxy::new(&self.0).await else {
@@ -123,7 +123,6 @@ mod tests {
         release: Arc<Semaphore>,
         closed: Arc<AtomicBool>,
     }
-    #[async_trait::async_trait]
     impl Activator for Provider {
         async fn activate(&mut self) -> bool {
             self.called.send(()).await.unwrap();
@@ -178,5 +177,52 @@ mod tests {
         })
         .await
         .expect("Owned wake fixture must finish");
+    }
+    #[tokio::test]
+    async fn given_blocked_activation_when_real_service_reads_and_dismisses_then_bus_progress_and_shutdown_are_independent(
+    ) {
+        tokio::time::timeout(std::time::Duration::from_secs(30), async {
+            // Arrange
+            let private = crate::service::bus::tests::PrivateBus::new();
+            let mut coordinator =
+                crate::service::Coordinator::new(123, crate::service::Limits::default()).unwrap();
+            let id = coordinator.register_inbound().unwrap();
+            coordinator
+                .observe(id, crate::service::Phase::AwaitingConsent)
+                .unwrap();
+            let (called, mut calls) = mpsc::channel(2);
+            let closed = Arc::new(AtomicBool::new(false));
+            let wake = Wakeup::spawn(Provider {
+                called,
+                release: Arc::new(Semaphore::new(0)),
+                closed: closed.clone(),
+            });
+            let mut bus = crate::service::bus::SelectionBus::connect(private.socket().await)
+                .await
+                .unwrap();
+            bus.set_wakeup(wake);
+            let host = crate::service::bus::tests::Harness::with_coordinator(bus, coordinator);
+            // Act: activation remains blocked across actual SDK calls and daemon close.
+            let mut client = crate::service::client::NativeClient::connect(private.socket().await)
+                .await
+                .unwrap();
+            calls.recv().await.unwrap();
+            let view = client.read_state().await.unwrap();
+            assert_eq!(view.notices.len(), 1);
+            client.dismiss_notices(&view.notices).await.unwrap();
+            assert!(client.read_state().await.unwrap().notices.is_empty());
+            client.close().await.unwrap();
+            let (coordinator, result) = host.finish().await;
+            // Assert
+            assert_eq!(result, Ok(()));
+            assert!(closed.load(Ordering::SeqCst));
+            assert_eq!(calls.recv().await, None);
+            assert!(coordinator.pending_notices().is_empty());
+            let transfer = &coordinator.transfers[&id].view;
+            assert_eq!(transfer.phase, crate::service::Phase::AwaitingConsent);
+            assert!(transfer.pending_control.is_none());
+        })
+        .await
+        .expect("Owned blocked activation fixture must finish");
     }
 }

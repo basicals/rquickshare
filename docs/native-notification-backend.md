@@ -264,3 +264,30 @@ all-target Clippy passed (2.29s). Earlier full native 15-method and core desktop
 suite or final stability claim. All owned display/broker/command sessions exited.
 Terminal closed. N5 now checks the strengthened chunk boundary, affected process
 startup and final core lint/build, then refreshes the handoff.
+
+
+N5 actual final core service run passed all 219 methods with default features
+(5.38s), including the 21-notice controller chunk scenario and changed process
+startup. Strict core lint then found double-must-use emitted by the old async-trait
+macro on the new private adapter. The adapter now uses native return-position
+future bounds with explicit Send; no lint allowance or dependency update is added.
+Only the affected wake checks and failed lint are rerun after this implementation
+change, not the completed 219-method suite.
+
+Scoped N5 verification refinement: an additional integration method injects a blocked
+external activation provider into the real SelectionBus/Harness and NativeClient,
+read/dismiss actual canonical notices while activation is blocked, then close the
+bus and verify joined cancellation and unchanged consent. This directly verifies
+that activation cannot block the serial service, complementing the coalescing
+adapter method. Primary N5; secondary N3/N4/N7/N9. No real transport or user bus.
+
+
+Final affected wake methods passed 2/2 (0.04s), including the real serial bus reading
+and dismissing notices while activation is blocked. Its joined shutdown closes the
+provider and leaves consent AwaitingConsent with no control intent. Final strict
+core all-target Clippy passed (8.46s), with the existing bluer future-compatibility
+notice only. No allowances or weakened assertions. The 219-method run plus this
+new integration method cover 220 distinct affected service methods across recorded
+runs; this is not a fresh single 220-method execution. Core inventory is 512 unit/
+export + 8 integration; native inventory 15; combined 535 is an inventory, not a
+whole-suite/coverage claim. Final binary builds/format/assets/captures follow.
