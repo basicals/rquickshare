@@ -17,7 +17,7 @@ separate RQS owners. Fix the authority boundary before adding mutable settings.
    each request snapshots the chosen directory and pins it before file planning.
    Linux creation uses retained directory descriptors after explicit consent.
    Preserve existing file/folder framing, naming/collisions and non-Linux guards.
-2. [ ] S2: freeze native schema/path, transactional private store/backup/recovery
+2. [x] S2: freeze native schema/path, transactional private store/backup/recovery
    and scoped fault inventory, then implement the injected single-writer store.
 3. [ ] S3: freeze Settings1 XML, bounded read/edit/receipt contracts, idempotency,
    caller/FD validation and nonblocking owned writer/apply lifecycle before API code.
@@ -157,3 +157,11 @@ External IO is an injected adapter; parsing, CAS, migration and commit logic are
 real. Assertions must kill missing CAS, lost unknown backup fields, truncation,
 false rollback after rename, and retry fingerprint changes. No network/time/billing
 contract changes (N3/N8/N11 not applicable); abandoned requester ownership is S3.
+
+S2 observations: the injected store is implemented without activating any process
+writer yet. Seven real store methods passed (0.09s); an additional final-CAS method
+passed after adding a source edit during backup (0.00s). Strict core all-target
+Clippy passed, then passed its affected rerun after that addition; nightly format
+passed. Eight methods primarily cover Positive (1), N4 (1), N6 (1), N7 (2), N2 (1),
+N12 (1), N5 (1), with secondary categories from the inventory. Private fixtures
+only; no user settings read/migration. All commands exited. Terminal closed.

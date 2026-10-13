@@ -876,6 +876,7 @@ pub mod runtime;
 pub mod uploads;
 
 pub mod bus;
+pub mod native_settings;
 pub mod process;
 
 pub mod operations;
