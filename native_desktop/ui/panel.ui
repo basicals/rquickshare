@@ -4,20 +4,22 @@
   <object class="GtkWindow" id="panel">
     <property name="title">rQuickShare</property>
     <property name="default-width">420</property>
-    <property name="default-height">497</property>
+    <property name="default-height">1</property>
     <property name="resizable">false</property>
     <property name="decorated">false</property>
-    <child><object class="GtkBox">
+    <child><object class="GtkBox" id="root">
       <property name="orientation">vertical</property><property name="spacing">12</property>
       <property name="margin-top">16</property><property name="margin-bottom">16</property>
       <property name="margin-start">16</property><property name="margin-end">16</property>
-      <child><object class="GtkBox"><property name="spacing">12</property>
+      <child><object class="GtkBox"><property name="spacing">6</property>
         <child><object class="GtkImage"><property name="icon-name">network-wireless-symbolic</property><property name="pixel-size">28</property></object></child>
         <child><object class="GtkLabel"><property name="label">rQuickShare</property><property name="hexpand">true</property><property name="xalign">0</property><style><class name="panel-title"/></style></object></child>
         <child><object class="GtkLabel" id="badge"><property name="label">Connecting</property><style><class name="preview-badge"/></style></object></child>
+        <child><object class="GtkButton" id="mode"><property name="label">Full</property><property name="tooltip-text">Expand the card</property></object></child>
+        <child><object class="GtkMenuButton" id="menu"><property name="icon-name">open-menu-symbolic</property><property name="tooltip-text">Settings and actions</property></object></child>
       </object></child>
       <child><object class="GtkLabel" id="status"><property name="xalign">0</property><property name="wrap">true</property><style><class name="dim-label"/></style></object></child>
-      <child><object class="GtkBox"><property name="spacing">6</property><style><class name="selection-card"/></style>
+      <child><object class="GtkBox" id="source"><property name="spacing">6</property><style><class name="selection-card"/></style>
         <child><object class="GtkLabel" id="selection"><property name="label">Choose files or a folder</property><property name="wrap">true</property><property name="hexpand">true</property><property name="xalign">0</property></object></child>
         <child><object class="GtkButton" id="files"><property name="label">Files</property></object></child>
         <child><object class="GtkButton" id="folder"><property name="label">Folder</property></object></child>
@@ -27,7 +29,8 @@
         <child><object class="GtkButton" id="recover"><property name="label">Recover operation</property></object></child>
         <child><object class="GtkButton" id="abort"><property name="label">Discard preparation</property><property name="tooltip-text">Recovers an admitted operation first. Only unsent preparation is discarded; use Cancel for a transfer.</property></object></child>
       </object></child>
-      <child><object class="GtkStackSwitcher"><property name="stack">pages</property><property name="halign">center</property></object></child>
+      <child><object class="GtkBox" id="compact"><property name="orientation">vertical</property><property name="spacing">8</property></object></child>
+      <child><object class="GtkStackSwitcher" id="tabs"><property name="stack">pages</property><property name="halign">center</property></object></child>
       <child><object class="GtkStack" id="pages"><property name="vexpand">true</property><property name="transition-type">none</property><property name="vhomogeneous">true</property>
         <child><object class="GtkStackPage"><property name="name">nearby</property><property name="title">Nearby</property><property name="child">
           <object class="GtkScrolledWindow"><property name="hscrollbar-policy">never</property><property name="min-content-height">220</property><property name="max-content-height">300</property><property name="propagate-natural-height">false</property><property name="child">
@@ -45,11 +48,7 @@
           </property></object>
         </property></object></child>
       </object></child>
-      <child><object class="GtkSeparator"/></child>
-      <child><object class="GtkBox"><property name="spacing">12</property>
-        <child><object class="GtkLabel"><property name="label">Closing the panel keeps transfers running</property><property name="wrap">true</property><property name="hexpand">true</property><property name="xalign">0</property><style><class name="dim-label"/><class name="footer-note"/></style></object></child>
-        <child><object class="GtkButton" id="quit"><property name="label">Quit</property><property name="tooltip-text">Quit the panel; daemon transfers continue</property></object></child>
-      </object></child>
+
     </object></child>
   </object>
 </interface>

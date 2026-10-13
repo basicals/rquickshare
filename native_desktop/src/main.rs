@@ -1,3 +1,4 @@
+mod card_view;
 mod cli;
 mod ingress;
 mod panel;
@@ -35,6 +36,7 @@ struct Options {
     preview: bool,
     output: Option<PathBuf>,
     page: String,
+    mode: card_view::Mode,
 }
 impl Options {
     fn parse(args: impl IntoIterator<Item = std::ffi::OsString>) -> Result<Self, &'static str> {
@@ -43,17 +45,20 @@ impl Options {
             preview: false,
             output: None,
             page: "nearby".into(),
+            mode: card_view::Mode::Compact,
         };
+        let mut preview_options = false;
         while let Some(arg) = args.next() {
             match arg.to_str() {
                 Some("--preview")=>options.preview=true,
                 Some("--preview-output")=>{options.preview=true;options.output=Some(PathBuf::from(args.next().ok_or("Missing preview output")?));},
-                Some("--preview-page")=>{options.page=args.next().and_then(|arg|arg.into_string().ok()).filter(|page|["nearby","incoming","transfers"].contains(&page.as_str())).ok_or("Invalid preview page")?;},
-                _=>return Err("Usage: rquickshare [--preview [--preview-page nearby|incoming|transfers] [--preview-output PATH]]"),
+                Some("--preview-mode")=>{preview_options=true;options.mode=args.next().and_then(|arg|arg.into_string().ok()).and_then(|value|card_view::Mode::parse(&value)).ok_or("Invalid preview mode")?;},
+                Some("--preview-page")=>{preview_options=true;options.page=args.next().and_then(|arg|arg.into_string().ok()).filter(|page|["nearby","incoming","transfers"].contains(&page.as_str())).ok_or("Invalid preview page")?;},
+                _=>return Err("Usage: rquickshare [--preview [--preview-page nearby|incoming|transfers] [--preview-mode compact|full] [--preview-output PATH]]"),
             }
         }
-        if !options.preview && options.page != "nearby" {
-            return Err("Preview page requires preview mode");
+        if !options.preview && preview_options {
+            return Err("Preview options require preview mode");
         }
         if options
             .output
@@ -161,6 +166,7 @@ fn run() -> Result<(), &'static str> {
             !options.preview,
         );
         if options.preview {
+            panel.set_mode(options.mode);
             panel.preview(&options.page);
             if let Some(output) = options.output.clone() {
                 let application = application.clone();
@@ -323,6 +329,11 @@ mod tests {
             vec!["--preview-output", "relative.png"],
             vec!["--preview-page", "bad"],
             vec!["--preview-page", "incoming"],
+            vec!["--preview-mode"],
+            vec!["--preview-mode", "invalid"],
+            vec!["--preview-mode", "full"],
+            vec!["--preview-mode", "compact"],
+            vec!["--preview-page", "nearby"],
         ] {
             assert!(Options::parse(args.into_iter().map(Into::into)).is_err());
         }
@@ -332,6 +343,8 @@ mod tests {
                 "/tmp/panel.png",
                 "--preview-page",
                 "incoming",
+                "--preview-mode",
+                "full",
             ]
             .into_iter()
             .map(Into::into),
@@ -339,6 +352,7 @@ mod tests {
         .unwrap();
         assert!(options.preview);
         assert_eq!(options.page, "incoming");
+        assert_eq!(options.mode, card_view::Mode::Full);
         assert_eq!(options.output, Some(PathBuf::from("/tmp/panel.png")));
         assert!(!Options::parse([]).unwrap().preview);
     }

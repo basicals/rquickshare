@@ -34,7 +34,7 @@ controls are disabled and it cannot acquire/send/accept. Screenshot completion
 waits for an allocated render node, without sleeps. It does not prove Wayland
 placement. An interactive ordinary window is available only via explicit --preview.
 
-Run the nine scoped methods, including the single GTK test, on an isolated display:
+Run the ten scoped methods, including the single GTK test, on an isolated display:
 
 ```sh
 GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
@@ -62,3 +62,14 @@ Fixed stderr errors describe busy/recovery/startup failures. Desktop notificatio
 routing of those errors remains required before shipping the Dolphin action.
 The public ingress contract and measured SDK checks are in
 [native-desktop-ingress.md](../docs/native-desktop-ingress.md).
+
+Custom card presentation now starts in Compact mode. Full keeps Nearby, Incoming
+and Transfers, with source controls on Nearby. The header menu and right-click
+menu expose secondary actions; Settings contains the implemented Appearance mode
+for this process. No legacy persistent setting is overwritten. Full/Compact share
+checked consent/cancel commands and preserve the prepared source owner.
+
+Use `--preview-mode compact` or `--preview-mode full` with the explicit preview
+options to review both surfaces. Automatic desktop-safety-aware notification
+presentation is a separate in-progress milestone in
+[native-custom-card.md](../docs/native-custom-card.md).

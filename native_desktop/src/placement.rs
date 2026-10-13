@@ -83,41 +83,45 @@ mod tests {
     fn given_each_tray_edge_and_monitor_origin_when_placed_then_logical_panel_stays_inside_target_monitor(
     ) {
         // Arrange / Act / Assert
-        for (origin_x, origin_y) in [(0, 0), (-1920, 0), (1920, -1080), (i32::MIN, i32::MIN)] {
-            let monitor = Rect {
-                x: origin_x,
-                y: origin_y,
-                width: 1920,
-                height: 1080,
-            };
-            for (point, edge) in [
-                ((0, 540), Edge::Left),
-                ((1919, 540), Edge::Right),
-                ((960, 0), Edge::Top),
-                ((960, 1079), Edge::Bottom),
-            ] {
-                let result = place(
-                    monitor,
-                    (origin_x + point.0, origin_y + point.1),
-                    (420, 497),
-                )
-                .unwrap();
-                let left = if result.horizontal == Edge::Left {
-                    result.horizontal_margin
-                } else {
-                    1920 - 420 - result.horizontal_margin
+        for card_height in [170, 219, 336, 497] {
+            for (origin_x, origin_y) in [(0, 0), (-1920, 0), (1920, -1080), (i32::MIN, i32::MIN)] {
+                let monitor = Rect {
+                    x: origin_x,
+                    y: origin_y,
+                    width: 1920,
+                    height: 1080,
                 };
-                let top = if result.vertical == Edge::Top {
-                    result.vertical_margin
-                } else {
-                    1080 - 497 - result.vertical_margin
-                };
-                assert!(left >= 0 && top >= 0 && left + 420 <= 1920 && top + 497 <= 1080);
-                match edge {
-                    Edge::Left => assert_eq!(left, 0),
-                    Edge::Right => assert_eq!(left, 1500),
-                    Edge::Top => assert_eq!(top, 0),
-                    Edge::Bottom => assert_eq!(top, 583),
+                for (point, edge) in [
+                    ((0, 540), Edge::Left),
+                    ((1919, 540), Edge::Right),
+                    ((960, 0), Edge::Top),
+                    ((960, 1079), Edge::Bottom),
+                ] {
+                    let result = place(
+                        monitor,
+                        (origin_x + point.0, origin_y + point.1),
+                        (420, card_height),
+                    )
+                    .unwrap();
+                    let left = if result.horizontal == Edge::Left {
+                        result.horizontal_margin
+                    } else {
+                        1920 - 420 - result.horizontal_margin
+                    };
+                    let top = if result.vertical == Edge::Top {
+                        result.vertical_margin
+                    } else {
+                        1080 - card_height - result.vertical_margin
+                    };
+                    assert!(
+                        left >= 0 && top >= 0 && left + 420 <= 1920 && top + card_height <= 1080
+                    );
+                    match edge {
+                        Edge::Left => assert_eq!(left, 0),
+                        Edge::Right => assert_eq!(left, 1500),
+                        Edge::Top => assert_eq!(top, 0),
+                        Edge::Bottom => assert_eq!(top, 1080 - card_height),
+                    }
                 }
             }
         }

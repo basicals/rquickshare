@@ -78,6 +78,26 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         false,
     );
     // Act / Assert
+    assert_eq!(panel.model.borrow().mode, Mode::Compact);
+    assert!(panel.box_widget("compact").get_visible());
+    assert!(!panel.pages.get_visible());
+    assert!(!panel.box_widget("source").get_visible());
+    let permit = panel.ingress.gate.try_acquire().unwrap();
+    panel
+        .actions
+        .activate_action("mode", Some(&"full".to_variant()));
+    assert_eq!(panel.model.borrow().mode, Mode::Full);
+    assert!(panel.pages.get_visible() && panel.box_widget("source").get_visible());
+    assert!(!panel.box_widget("compact").get_visible());
+    assert!(*panel.ingress.gate.subscribe().borrow());
+    panel
+        .actions
+        .activate_action("mode", Some(&"invalid".to_variant()));
+    assert_eq!(panel.model.borrow().mode, Mode::Full);
+    drop(permit);
+    assert!(!*panel.ingress.gate.subscribe().borrow());
+    panel.actions.activate_action("files", None);
+    assert!(panel.model.borrow().dialog.is_none());
     for name in ["files", "folder", "discard", "recover", "abort"] {
         assert!(!panel.button(name).is_sensitive(), "{name}");
     }
@@ -135,7 +155,49 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     }
     expander.set_expanded(false);
     assert!(expander.child().is_none());
+    panel.set_mode(Mode::Compact);
     panel.preview("incoming");
+    let compact_text = labels(&panel.box_widget("compact"))
+        .iter()
+        .map(|label| label.text().to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(compact_text.contains("Code: 4821"));
+    assert!(compact_text.contains("1 file · 12345 bytes"));
+    assert!(!compact_text.contains("Example.pdf"));
+    panel.actions.activate_action("settings", None);
+    let settings = panel.settings.borrow().as_ref().unwrap().clone();
+    assert!(settings.is_visible());
+    let appearance = panel.appearance.borrow().as_ref().unwrap().clone();
+    appearance.set_selected(1);
+    assert_eq!(panel.model.borrow().mode, Mode::Full);
+    assert!(labels(&panel.box_widget("incoming"))
+        .iter()
+        .any(|label| label.text() == "Code: 4821"));
+    assert_eq!(
+        panel
+            .actions
+            .lookup_action("mode")
+            .unwrap()
+            .state()
+            .unwrap()
+            .str(),
+        Some("full")
+    );
+    panel.set_mode(Mode::Compact);
+    assert_eq!(appearance.selected(), 0);
+    panel.set_mode(Mode::Full);
+    assert!(!panel.box_widget("source").get_visible());
+    panel.pages.set_visible_child_name("nearby");
+    assert!(panel.box_widget("source").get_visible());
+    panel.pages.set_visible_child_name("incoming");
+    assert!(!panel.box_widget("source").get_visible());
+    panel.set_mode(Mode::Compact);
+    settings.close();
+    assert!(!settings.is_visible());
+    panel.actions.activate_action("settings", None);
+    assert_eq!(*panel.settings.borrow().as_ref().unwrap(), settings);
+    assert!(settings.is_visible());
     assert_eq!(
         panel.pages.visible_child_name().as_deref(),
         Some("incoming")
@@ -148,4 +210,9 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.submit(|| panic!("preview must not admit actions"));
     panel.close();
     assert!(panel.model.borrow().closing);
+    assert!(panel.settings.borrow().is_none());
+    assert!(panel.appearance.borrow().is_none());
+    assert!(panel.context.parent().is_none());
+    assert!(!settings.is_visible());
+    panel.close(); // Explicit Quit and the application cleanup may both close the panel.
 }

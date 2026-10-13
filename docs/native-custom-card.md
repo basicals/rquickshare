@@ -23,7 +23,7 @@ Reject/Cancel still use existing checked SDK/controller operations.
 
 ## Plan recorded before implementation / rollback
 
-1. [ ] C1: implement one reusable full/compact GTK surface. Compact is the initial
+1. [x] C1: implement one reusable full/compact GTK surface. Compact is the initial
    primary mode; full retains all existing Nearby/Incoming/Transfers functions.
    Add an accessible header menu, right-click menu and secondary Appearance settings.
    Preserve existing source, consent and recovery contracts. Build/review real
@@ -113,3 +113,104 @@ before those implementations; no exhaustive coverage claim is made for this plan
 Analysis and C1 plan are recorded before production changes. No custom automatic
 popup, desktop safety monitor or notification process activation is implemented
 at this checkpoint. Previous 43 core / 9 native observations remain unchanged.
+
+### C1 observations before final commit
+
+One pure priority/mode method is added; existing widget/parser/placement methods
+are extended. Initial native run: nine passed, one failed because the new widget
+assertion used effective visibility while the parent window was intentionally
+hidden. Corrected to inspect the widget's own visible property; actual display
+is verified by compiled captures. Three affected methods then passed (0.16s).
+After moving menu/settings code into panel/menu.rs and tightening explicit preview
+argument admission, the two affected parser/widget methods passed (0.17s).
+Final source hides source-selection controls outside Nearby and fixes singular
+file wording; the affected widget passed (0.17s). No domain/SDK change or repeat
+stability loop. Native inventory is now 10, combined core/native 522.
+
+Initial captures: compact Nearby 420x170, Incoming 420x336, Transfers 420x219;
+Full 420x497 for each page. Actual incoming images were visually reviewed. Final
+affected captures/build/lint and expanded height placement table are recorded
+after completion below. Preview metadata is synthetic and service controls inert.
+
+## C2 contract and inventory before code
+
+Read-only safety inputs (verified against current KDE primary implementation):
+- org.freedesktop.ScreenSaver, /ScreenSaver, GetActive and ActiveChanged.
+  KDE also registers /org/freedesktop/ScreenSaver, but use one canonical path.
+- org.freedesktop.Notifications, /org/freedesktop/Notifications, Properties.Get
+  for interface org.freedesktop.Notifications / property Inhibited; current Plasma
+  emits PropertiesChanged with that interface/property and the effective value.
+  No Notify/Inhibit/Lock/SetActive call is made by this adapter.
+
+Use two fixed owned monitor connections/tasks with the shared 64KiB/16-FD socket,
+queue eight and cancellation. Subscribe to exact broker owner changes before
+lookup; obtain actual same-UID unique owners; subscribe to their exact signal
+path/interface before reading. Validate reply/signal sender and recheck ownership
+before publishing. Provider absence/failure/loss is Unknown, never false. A valid
+signal triggers a fresh authoritative read rather than installing an old queued
+signal body as current state. No sleep/poll or per-event task. Provider ownership
+events allow a fresh generation to recover; transport failure stays Unknown until
+the presenter restarts. Close joins both tasks and closes their connections.
+This is observation of desktop state, not an atomic screen-lock guarantee; physical
+compositor privacy remains mandatory. The surface stays on the normal Top layer,
+never the session-lock protocol or an above-lock overlay.
+
+Pure presentation policy retains only current bounded transfer records, keyed by
+daemon epoch/ID/consent round or terminal outcome. Initial pending requests may
+present; historical terminal records at initial connection do not create popups.
+New completion/failure/disconnect transitions may present once. Closing/hiding
+dismisses presentation of current known records, never their daemon state; a new
+round/request creates a new notice. Progress cannot repeatedly reopen a dismissed
+card. Prefer pending incoming over completion notices; show one surface, with
+the remaining requests available in Full. Epoch/phase/round retirement invalidates
+old presentation keys. Bounds inherit the validated StateView transfer cap.
+
+Unknown lock or observed locked state hides sensitive surfaces. Automatic display
+also requires known DND-off and a healthy synchronized running service. DND does
+not replace an explicitly opened manual view. Manual tray/CLI interaction and
+local preparation must not be interrupted or navigated by an automatic notice.
+Automatic notices use the selected Compact/Full mode and retain current controls;
+no invented sender/PIN/files or automatic consent. If placement fails, retain the
+request and expose a fixed failure rather than opening an ordinary window.
+
+Expected three new methods: pure lifecycle/queue/dismiss/epoch/guard tables;
+private broker provider initial/read/change/invalidated/owner loss/replacement;
+missing or wrong-UID provider and owned shutdown. External provider fixtures may
+implement their published contract; do not mock the actual policy/controller.
+Extend the existing GTK smoke for guard suppression and pure presentation mapping.
+N1 malformed provider values, N2 bounded records, N3 provider failure, N4 repeated
+events/dismissal, N5 round/owner races, N6 new epochs, N7 sender/UID, N9 hide/close,
+N10 no private logging apply. N8 no timers, N11 no billing, N12 no new storage.
+
+Additional primary source confirmation:
+https://github.com/KDE/kscreenlocker/blob/master/interface.cpp
+https://github.com/KDE/plasma-workspace/blob/master/libnotificationmanager/server_p.h
+https://github.com/KDE/plasma-workspace/blob/master/libnotificationmanager/server_p.cpp
+
+### C1 completed / actual verification
+
+Full and Compact share real incoming/progress card builders and the same checked
+controller commands. Menus and Appearance live in panel/menu.rs; only implemented
+appearance controls are offered. Source buttons are visible on Full Nearby only;
+right-click/header actions retain their original readiness checks. Full manifest
+review remains bounded and plain text. Mode changes retain the shared preparation
+permit; the GTK test verifies this gate preservation, not a new physical prepared-
+selection E2E. CLI explicitly opens Full recipient choice. Close is idempotent and
+owns the settings window/popover teardown. No source, ledger or daemon API change.
+
+Final affected widget passed 1/1 (0.17s); parser/widget after module extraction
+passed 2/2 (0.17s); expanded height/edge/origin placement table passed 1/1. Earlier
+successful unaffected native methods are retained as measured observations, with
+no full-suite repetition after every UI edit. Strict native all-target Clippy
+passed (1.93s), final build passed (2.84s), nightly format/diff passed. Dependency
+no-experimental warnings are unchanged. All final six compiled captures match the
+sizes above; final incoming images were visually checked (source controls hidden
+on Incoming, singular file wording, no dominant drop zone). They are explicit
+synthetic previews with disabled service controls, not KDE placement/privacy proof.
+All owned display/broker/command sessions exited. Terminal closed.
+
+One new method by primary purpose: N5 presentation priority, with N2 phase/count
+and mode parsing tables. Existing widget/parser/placement methods were extended
+for N1/N7/N9/N10 and geometry. No timing, billing or storage introduced (N8/N11/N12).
+C2 safety/policy implementation is the next unfinished step; its contract above
+was frozen before code. Persistent native settings remain a later migration gate.
