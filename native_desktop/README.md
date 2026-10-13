@@ -80,9 +80,9 @@ Normal mode observes the actual KDE screen-lock and effective DND providers usin
 owned read-only session-bus connections. Unknown lock hides sensitive surfaces;
 automatic cards also require known DND-off. Queued manual CLI/tray presentation
 waits for verified unlock. No system notification service is replaced. Card
-hide/dismissal does not answer consent or cancel a transfer. Initial historical
-terminal transfers do not create fresh popups; current incoming requests and newly
-observed completion/failure transitions use one bounded card policy.
+hide/dismissal does not answer consent or cancel a transfer. Only canonical undismissed daemon notices create popups, including pending outcomes
+after GTK restart; ordinary retained history does not. One bounded policy presents
+current events while preserving safety and explicit user actions.
 
 Canonical daemon notices now survive GTK close/restart within the daemon epoch.
 Exact presentation dismissal does not answer consent or dismiss a newer round.

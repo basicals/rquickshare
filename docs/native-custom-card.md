@@ -1,5 +1,10 @@
 # Custom native card: full and compact presentation
 
+Latest checkpoint: C1-C3 source and C4 handoff are complete. The user accepted
+background option A/1. [native-notification-backend.md](native-notification-backend.md)
+records the exact implemented notice/activation/error/reconnect contract and actual
+checks. Earlier pending-C3 observations below are historical, not current blockers.
+
 2026-10-13. Mode A. User selected the fully custom popup presentation and requested
 full/compact modes, a secondary settings menu and right-click actions. This
 supersedes the previous native-notification-review.md system-notification proposal.
@@ -36,15 +41,15 @@ Reject/Cancel still use existing checked SDK/controller operations.
    retained in the daemon and remains manually discoverable. Coalesce views and
    select one current request; close on round/phase/epoch changes. Owned IO tasks.
    Rollback: remove automatic binding before the policy/guard adapters.
-3. [ ] C3: integrate daemon-owned wake/activation and nonterminal fixed CLI errors.
+3. [x] C3: integrate daemon-owned wake/activation and nonterminal fixed CLI errors.
    Freeze concrete activation/error contracts and inventory before their code.
    Use fixed package-owned GUI activation, not a caller-supplied executable/path.
    No duplicate transport owner, implicit Send, arbitrary error text or polling.
    Keep uninstalled development startup explicit; package assets are not installed
    into the live session. Join wake/renderer IO and preserve queued daemon requests.
    Rollback: activation/error bindings before their source assets.
-4. [x] C4 checkpoint for completed C1/C2: record final affected checks once,
-   category counts, current limits and handoff. C3 remains pending independently. Actual KDE DND/lock/monitor/scale/focus, installed package behavior and
+4. [x] C4: record final source checks, category counts, current limits and handoff.
+   C1-C3 source is complete; installed/compositor/Google acceptance remains open. Actual KDE DND/lock/monitor/scale/focus, installed package behavior and
    Google peers remain external acceptance. No false final-parity claim.
 
 No broad settings migration, account/visibility changes, persistent settings schema,

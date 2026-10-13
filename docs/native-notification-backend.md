@@ -77,7 +77,7 @@ is included in the accepted proposal, without broad settings migration.
    Rollback activation before removing its package assets.
 4. [x] N4: explicit degraded backend, fixed-code visible CLI errors and reconnect;
    retain no-silent-source-replay and owned shutdown.
-5. [ ] N5: one affected verification pass, actual observations, current acceptance
+5. [x] N5: one affected verification pass, actual observations, current acceptance
    gates, atomic commits and exported handoff. No ten-run development repetitions.
 
 ## Scoped verification inventory before tests
@@ -291,3 +291,40 @@ new integration method cover 220 distinct affected service methods across record
 runs; this is not a fresh single 220-method execution. Core inventory is 512 unit/
 export + 8 integration; native inventory 15; combined 535 is an inventory, not a
 whole-suite/coverage claim. Final binary builds/format/assets/captures follow.
+
+
+## Final N5 observations / handoff
+
+Both final binaries built without running them: daemon 17.61s; native GTK 8.29s.
+Final nightly core/native format checks, git diff check and Notifications1/ShowError
+XML/fixed activation asset checks passed. Six final compiled inert captures were
+regenerated and the incoming Compact/Full images visually reviewed: Compact
+420x170/336/219 for nearby/incoming/transfers; Full 420x497. No dominant drop zone.
+These are synthetic disabled-control previews, not compositor/lock/focus acceptance.
+All owned command/display/private broker processes exited. Terminal closed.
+
+Ten new scoped methods across N1-N5: N2=1 (immutable page bounds), N3=3 (activation,
+absent backend, CLI failure), N4=1 (exact replay/lifecycle), N5=3 (SDK restart/chunks,
+canonical cold start, activation/bus independence), N7=2 (atomic/wire rejection) by
+primary purpose, with Positive/N1/N6/N9/N10 interactions in their tables. Existing
+GTK smoke is extended rather than multiplying UI tests. The CLI source-failure
+case reuses existing filesystem acquisition; notices introduce no storage schema.
+No new notice time/billing/storage arithmetic: N8/N11/N12 do not apply to registry
+state. No complete Mode B, ten-run stability, mutation-engine or whole-535 coverage
+claim. Detailed failed observations and affected reruns above remain recoverable.
+
+Completed source commits: 55905bd canonical daemon records/API/SDK; 6c39be0 canonical
+GTK policy/keyed rows; 49df758 owned fixed GUI activation/assets; 1c41eb7 degraded
+backend/error/reconnect; 428ddf7 native activation futures and real blocked-bus
+verification; 7563db7 cross-batch controller regression. Roll back GTK/activation
+consumers before daemon notice API/state. Work remains on dev, without push,
+installation, live tray/daemon/settings registration or Tauri retirement.
+
+C3 is now implemented in source. Registry/dismissal survives GTK restart for the
+current daemon epoch, not reboot/daemon restart. Package assets are source-only;
+real installed startup/upgrade/removal, KDE lock/DND/overlap/focus/scale and actual
+Google Android/Windows peers remain acceptance gates. Mode preference is current-
+process only. A separate tray DBusMenu dropdown, durable native settings migration,
+clipboard/reveal/autostart/updates and full Google feature/compatibility parity
+remain outside this completed notification slice. No new significant decision is
+pending inside N1-N5; future settings/package ownership reviews retain AGENTS rules.

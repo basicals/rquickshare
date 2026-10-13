@@ -1,5 +1,29 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-13: daemon-owned custom-card delivery implemented
+
+The user accepted A/option 1, the daemon notice read model. All source milestones
+N1-N5 in [native-notification-backend.md](native-notification-backend.md) are complete:
+epoch-local bounded notices, immutable Notifications1 reads, exact dismissal,
+canonical GTK presentation, keyed rows, fixed package GUI activation, finite CLI
+error codes, unavailable backend and explicit joined reconnect. No implicit Send,
+consent, source replay or system-notification takeover. Dismissal cannot affect a
+newer round. Same-generation failure/Quit does not create a respawn loop.
+
+Actual verification: 219 core service methods passed, then two affected wake methods
+passed after the native-future lint fix/additional blocked-bus integration; 15 native
+methods passed, followed by three affected policy/widget methods. Final strict
+core/native Clippy, both builds, format/diff and XML/activation-asset checks passed.
+Ten new methods by primary purpose: N2=1, N3=3, N4=1, N5=3, N7=2. Combined inventory
+535 is not a fresh whole-suite/coverage claim. Six compiled inert previews were
+regenerated; physical KDE/Google acceptance is not implied.
+
+No install/push/live registration, legacy settings write or Tauri retirement.
+Remaining: installed package startup/upgrade/removal and KDE lock/DND/focus/scale;
+durable native settings, separate tray dropdown, clipboard/reveal/autostart/updates
+and actual Google parity. Registry survives GTK restart only within its daemon epoch.
+Earlier dated checkpoints and pending choices below are historical. Continue on dev.
+
 ## 2026-10-13: custom Full/Compact card and desktop safety implemented
 
 The user selected fully custom rQuickShare cards with Full/Compact modes and

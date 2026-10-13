@@ -6,7 +6,7 @@ read model. The detailed contract and implementation progress are recorded in
 Recommend A for architectural quality. The user-selected fully custom card, Full/
 Compact modes and settings/right-click separation remain fixed in both options.
 
-## Concrete implemented state
+## Pre-implementation state (historical)
 
 C1/C2 in native-custom-card.md implement the actual GTK surface, checked existing
 controls, bounded transient presentation policy and owned read-only KDE safety

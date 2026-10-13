@@ -1,12 +1,11 @@
 # Native GTK shell integration
 
-Latest implementation checkpoint: 2026-10-13. Full/Compact custom presentation,
-header/card context menus and owned read-only KDE lock/DND monitoring are now
-implemented. See [native-custom-card.md](native-custom-card.md) for C1/C2 and actual
-checks. Closed-GUI delivery and backend-unavailable error handling await the
-[new background ownership review](native-notification-backend-review.md).
-The dated shell implementation below is historical, including its former absence
-of menus/notifications and fixed-size preview observations.
+Latest implementation checkpoint: 2026-10-13. Custom Full/Compact cards, owned KDE
+privacy monitoring, canonical daemon notices, fixed activation/error ingress and
+joined explicit reconnect are implemented in source. Current SSOT/checks:
+[native-notification-backend.md](native-notification-backend.md) and
+[native-custom-card.md](native-custom-card.md). Actual installed/KDE/Google acceptance
+remains open. The dated shell implementation below is historical.
 
 2026-10-12. Mode A. Accepted compact GTK4 tray panel, complete Manager2 view and
 bounded controller. Existing preview is docs/prototypes/native-panel.ui/.css.
