@@ -57,7 +57,7 @@ controls are disabled and it cannot acquire/send/accept. Screenshot completion
 waits for an allocated render node, without sleeps. It does not prove Wayland
 placement. An interactive ordinary window is available only via explicit --preview.
 
-Run the fifteen scoped methods, including the single GTK test, on an isolated display:
+Run the scoped native methods, including the single GTK test, on an isolated display:
 
 ```sh
 GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
@@ -116,3 +116,14 @@ retains display mode and never replays unsent preparation or uncertain sends.
 Keyed rows retain expanded manifests through progress updates. The contract and
 actual checks are in [native-notification-backend.md](../docs/native-notification-backend.md).
 No physical DND/lock/focus/monitor or installed-product acceptance is claimed.
+
+Received Text/URL shows advertised sender, verification code and byte count before
+Accept. In Full > Transfers, a retained completed incoming text offers Review text.
+The secondary window displays plain nonselectable text; only Copy replaces this
+clipboard, after fresh unlock/epoch/resource checks and GTK provider acknowledgement.
+Receipt/view/reconnect never copies or opens links. Lock/epoch change closes review;
+closing review preserves an explicit prior copy. Daemon text is bounded and epoch-local,
+not a permanent journal. Read recovery uses Recover operation; pending reads block
+new source/settings mutations. Outgoing native text/clipboard/image and URL opening
+remain separate capabilities. See [native-text.md](../docs/native-text.md) for contracts
+and exact actual observations; no installed Wayland/Google acceptance is implied.

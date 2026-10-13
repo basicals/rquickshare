@@ -1,5 +1,28 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-13: received native text and explicit copy implemented
+
+User selected 1/A. [native-text.md](native-text.md) records R1-R4: bounded native
+Text/URL consent metadata, sender/PIN/size/type validation, private immutable
+Finished resource, captured Text1 availability, authenticated per-client chunked
+read/retry/release, serialized controller and secondary plain review with explicit
+Copy. Receipt/reconnect never changes clipboard or opens URLs. Known unlock and
+current epoch/resource are checked again on Copy; lock/epoch/unavailability closes
+the private surface. GTK acknowledges provider ownership, never persistence.
+
+Actual core suite passed 543 methods +8 binary integrations before the final
+admission fixture; that affected fixture passed separately. Native20 passed/1 failed
+identified unintended PRIMARY focus selection, fixed at its root; affected GTK
+and readiness checks passed afterward. Strict core/native lint and native build
+passed. Scope inventory/checkpoint details are in the SSOT; no ten-run/coverage or
+physical-device claim. Work is committed on dev; no live config/clipboard/install,
+new branch, push or Tauri retirement. Original upstream refs remain.
+
+Next native gaps: outgoing explicit clipboard/text/image selection, reveal/open,
+autostart/updates and installed package equivalence. Received-text support does not
+establish full Google parity: account/QR/peer capability and Android/Windows/KDE
+physical matrices remain open. Earlier dated entries are historical checkpoints.
+
 ## 2026-10-13: separate tray menu completed
 
 The accepted right-click actions now have a standard DBusMenu at /Menu on the

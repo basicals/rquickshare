@@ -146,3 +146,15 @@ Rollback checkpoints: `065858a` records the plan; `c4ad7b7` adds desktop CI/cove
 - Corrupt numeric visibility values currently reach `unreachable!()` through stored settings. A safe replacement needs an explicit visibility/privacy policy decision before implementation.
 - Notification persistence/cleanup and protocol teardown ordering need synchronized hardware evidence and regression contracts before changing behavior.
 - Hardware matrix and release promotion policy remain in the existing Mode B inventory. Do not promote `master` or claim hardware signoff from offline results.
+
+## 2026-10-13 native text handoff
+
+The product continuation now implements received Text/URL with separate explicit
+review and guarded Copy in native source; [native-text.md](native-text.md) is the
+R1-R4 SSOT. Full 543 core methods +8 integrations passed before the last admission
+fixture, which passed separately. Native PRIMARY selection regression was found
+and fixed; affected GTK/readiness and strict lint/build passed. Exact source export
+records its committed HEAD. No user's clipboard, live settings, install, push or
+physical Google signoff. Outgoing native clipboard/image/text, reveal/open and
+package/account/QR/physical parity remain. Earlier maintenance-only findings above
+are historical; newer native settings/notice scopes have their own accepted policies.

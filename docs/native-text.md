@@ -23,7 +23,7 @@ URL opening, reveal and permanent payload history are separate later capabilitie
 3. [x] R3: safe sender/PIN text request card; completed text has explicit Review
    and Copy in a secondary plain-text window. Copy only after fresh lock/epoch/read
    checks. No automatic copy/URL launch, clipboard read, shell or file creation.
-4. [ ] R4: actual affected checks once, fixes, documentation, reversible commits,
+4. [x] R4: actual affected checks once, fixes, documentation, reversible commits,
    clean handoff/export. Physical KDE clipboard and Google peers remain acceptance.
 
 Rollback GUI/read API before consent/resource activation. File framing/legacy
@@ -251,3 +251,37 @@ explicitly copied text. One new core integration method covers uncertain-read CL
 admission and exact recovery (N4,N5,N7,N9,N10). No user clipboard or physical peers.
 GTK provider refusal/closed-display code handles failure honestly; physical Wayland
 provider failure/persistence behavior remains acceptance, not a simulated success.
+
+## R4 completion and recovery map
+
+Source checkpoints: 9d37197 plan; 8f1fd73 consent/bounded core resource; 43e2398
+Text1/cache/SDK/controller; 3e135f4 GTK review/copy and pending-read ingress. Revert
+consumers before API/resource commits. No new branch, live install/registration,
+config mutation, user's clipboard, physical device exchange or push. Native settings,
+source lifetime and legacy file behavior remain in their existing scopes.
+
+New scoped methods: 12 core +1 native =13; primary purposes N1=1,N2=2,N4=1,N5=2,
+N6=1,N7=5,N10=1. Positive/N3/N9 interactions are asserted within those methods and
+the strengthened existing GTK smoke, not separate extra methods. N8/N11/N12 do not
+apply to this no-time/no-billing/no-new-storage slice. Core inventory is now 544,
+with measured full 543 +8 integrations before the final new admission method, then
+affected 1 passed. Native inventory21: measured20 passed +1 failed on PRIMARY,
+then affected GTK and readiness passed after corrections. Do not report a freshly
+rerun whole-product suite, exhaustive coverage or ten-run stability. Commands for
+core local/CI: cargo +stable test --locked --manifest-path core_lib/Cargo.toml;
+native isolated command/dependency setup: native_desktop/README.md and
+native-gtk-shell.md. Strict lint/format commands are recorded in actual sections.
+
+Handoff: dev is committed; product direction, roadmap, native migration overview,
+review status and README point here. Exact committed source ZIP and current SSOT
+copies are exported to the task outputs; exported progress records the archive's
+actual Git HEAD. Prior card/settings images preserve their historical provenance.
+No screenshot/installed Google compatibility claim is invented for this text slice.
+All owned command/fixture processes exited. Terminal closed.
+
+Received Text/URL is complete in native source. Outgoing explicit clipboard/text/
+image selection, reveal/open, autostart/updates/package lifecycle, account/QR and
+actual Google parity remain separate work/decisions in product-direction.md and
+full-feature-roadmap.md. PhoneNumber/Address are plain Text; Wi-Fi/mixed attachment
+acceptance stays fail-closed. Text retention/read budgets do not claim that every
+legacy protocol buffer or persistent clipboard-manager behavior is bounded here.
