@@ -205,9 +205,14 @@ pub(crate) struct TcpServer<L = TcpListener, C = TcpConnector> {
     sender: Sender<ChannelMessage>,
     connect_receiver: OutboundReceiver,
     bwu_router: BwuRouter,
+    receive_policy: crate::receive::ReceivePolicy,
 }
 
 impl TcpServer {
+    pub(crate) fn with_receive_policy(mut self, policy: crate::receive::ReceivePolicy) -> Self {
+        self.receive_policy = policy;
+        self
+    }
     pub fn new(
         endpoint_id: [u8; 4],
         tcp_listener: TcpListener,
@@ -222,6 +227,7 @@ impl TcpServer {
             sender,
             connect_receiver: connect_receiver.into(),
             bwu_router,
+            receive_policy: crate::receive::ReceivePolicy::new(None),
         })
     }
 }
@@ -234,6 +240,7 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
             Arc::clone(&self.connector),
             self.connect_receiver.sessions(),
         )
+        .with_receive_policy(self.receive_policy.clone())
     }
 
     pub async fn run(&mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {

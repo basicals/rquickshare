@@ -149,9 +149,14 @@ pub struct ReceiverGattServer {
     receiver_advertiser_refresh: tokio::sync::broadcast::Sender<ReceiverAdvertisingRefresh>,
     mdns_refresh_sender: tokio::sync::broadcast::Sender<()>,
     sessions: Option<SessionHub>,
+    receive_policy: crate::receive::ReceivePolicy,
 }
 
 impl ReceiverGattServer {
+    pub(crate) fn with_receive_policy(mut self, policy: crate::receive::ReceivePolicy) -> Self {
+        self.receive_policy = policy;
+        self
+    }
     pub async fn new(
         advertisement: Vec<u8>,
         sender: Sender<ChannelMessage>,
@@ -174,6 +179,7 @@ impl ReceiverGattServer {
             receiver_advertiser_refresh,
             mdns_refresh_sender,
             sessions,
+            receive_policy: crate::receive::ReceivePolicy::new(None),
         })
     }
 
@@ -205,7 +211,10 @@ impl ReceiverGattServer {
         let tasks = SessionTasks::new(&ctk, 33)?;
         let callback_tasks = tasks.clone();
         let bridge_slots = Arc::new(Semaphore::new(1));
-        let sessions = self.sessions.clone();
+        let admission = ReceiveAdmission {
+            sessions: self.sessions.clone(),
+            policy: self.receive_policy.clone(),
+        };
 
         let app = Application {
             services: vec![Service {
@@ -291,7 +300,7 @@ impl ReceiverGattServer {
                                 let bwu_router = bwu_router.clone();
                                 let refresh_sender = session_refresh_sender.clone();
                                 let tasks = callback_tasks.clone();
-                                let sessions = sessions.clone();
+                                let admission = admission.clone();
                                 let bridge = Arc::clone(&bridge_slots).try_acquire_owned();
                                 Box::pin(async move {
                                     let Ok(bridge) = bridge else {
@@ -311,7 +320,7 @@ impl ReceiverGattServer {
                                                 bwu_router,
                                                 tcp_port,
                                                 worker_tasks,
-                                                sessions,
+                                                admission,
                                             ),
                                         )
                                         .await;
@@ -367,6 +376,12 @@ impl ReceiverGattServer {
     }
 }
 
+#[derive(Clone)]
+struct ReceiveAdmission {
+    sessions: Option<SessionHub>,
+    policy: crate::receive::ReceivePolicy,
+}
+
 async fn weave_session(
     mut notifier: CharacteristicNotifier,
     packet_receiver: Arc<Mutex<Option<Receiver<Vec<u8>>>>>,
@@ -374,8 +389,9 @@ async fn weave_session(
     bwu_router: BwuRouter,
     tcp_port: u16,
     tasks: SessionTasks,
-    sessions: Option<SessionHub>,
+    admission: ReceiveAdmission,
 ) -> Result<(), anyhow::Error> {
+    let ReceiveAdmission { sessions, policy } = admission;
     let notification_stopped = notifier.stopped();
     tokio::pin!(notification_stopped);
     let mut receiver_guard = tokio::select! {
@@ -416,7 +432,8 @@ async fn weave_session(
         MigratableStream::Ble(inbound_side),
         "ble-weave".to_owned(),
         inbound_sender,
-    );
+    )
+    .with_receive_directory(policy.snapshot());
     let native = sessions.is_some();
     if let Some(sessions) = sessions {
         let session = sessions.open(TransferType::Inbound, None, CancellationToken::new())?;

@@ -4,7 +4,7 @@ extern crate log;
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 use anyhow::anyhow;
 use channel::ChannelMessage;
@@ -12,7 +12,6 @@ use futures::FutureExt;
 use hdl::MDnsDiscovery;
 #[cfg(all(feature = "experimental", target_os = "linux"))]
 use hdl::{receiver_service_data, BleAdvertiser, ReceiverAdvertiser, ReceiverGattServer};
-use once_cell::sync::Lazy;
 use rand::distr::Alphanumeric;
 use rand::Rng;
 use tokio::net::TcpListener;
@@ -63,7 +62,7 @@ pub mod location_nearby_connections {
     include!(concat!(env!("OUT_DIR"), "/location.nearby.connections.rs"));
 }
 
-static CUSTOM_DOWNLOAD: Lazy<RwLock<Option<PathBuf>>> = Lazy::new(|| RwLock::new(None));
+mod receive;
 
 #[derive(Debug)]
 pub struct RQS {
@@ -84,6 +83,7 @@ pub struct RQS {
     foreground_receiver: watch::Receiver<bool>,
 
     port_number: Option<u32>,
+    receive_policy: receive::ReceivePolicy,
 
     pub message_sender: broadcast::Sender<ChannelMessage>,
 }
@@ -100,11 +100,6 @@ impl RQS {
         port_number: Option<u32>,
         download_path: Option<PathBuf>,
     ) -> Self {
-        match CUSTOM_DOWNLOAD.write() {
-            Ok(mut guard) => *guard = download_path,
-            Err(_) => error!("CUSTOM_DOWNLOAD lock is poisoned during initialization"),
-        }
-
         let (message_sender, _) = broadcast::channel(50);
         let (ble_sender, _) = broadcast::channel(5);
 
@@ -123,6 +118,7 @@ impl RQS {
             foreground_sender,
             foreground_receiver,
             port_number,
+            receive_policy: receive::ReceivePolicy::new(download_path),
             message_sender,
         }
     }
@@ -205,7 +201,8 @@ impl RQS {
             self.message_sender.clone(),
             receiver,
             bwu_router.clone(),
-        )?;
+        )?
+        .with_receive_policy(self.receive_policy.clone());
         let ctk = ctoken.clone();
         tracker.spawn(async move {
             let lifetime = ctk.clone();
@@ -304,6 +301,7 @@ impl RQS {
             let gatt_sender = self.message_sender.clone();
             let gatt_bwu_router = bwu_router.clone();
             let gatt_tcp_port = binded_addr.port();
+            let gatt_receive_policy = self.receive_policy.clone();
             tracker.spawn(async move {
                 let initialized = tokio::select! {
                     biased;
@@ -320,6 +318,7 @@ impl RQS {
                 };
                 match initialized {
                     Ok(server) => {
+                        let server = server.with_receive_policy(gatt_receive_policy);
                         if let Err(error) = server.run(gatt_ctk).await {
                             error!("ReceiverGattServer stopped with error: {error}");
                         }
@@ -390,10 +389,7 @@ impl RQS {
     // Setting None here will resume the default settings
     pub fn set_download_path(&self, p: Option<PathBuf>) {
         debug!("Updating download directory policy");
-        match CUSTOM_DOWNLOAD.write() {
-            Ok(mut guard) => *guard = p,
-            Err(_) => error!("CUSTOM_DOWNLOAD lock is poisoned while changing path"),
-        }
+        self.receive_policy.set(p);
     }
 }
 

@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::fs::OpenOptions;
 use std::os::unix::fs::FileExt;
 use std::path::{Component, Path};
 use std::time::{Duration, Instant};
@@ -40,9 +39,8 @@ use crate::sharing_nearby::{
     paired_key_result_frame, text_metadata, wifi_credentials_metadata::SecurityType,
 };
 use crate::utils::{
-    encode_point, gen_ecdsa_keypair, gen_random, get_download_dir, hkdf_extract_expand,
-    normalize_p256_coordinate, stream_read_exact, to_four_digit_string, DeviceType,
-    RemoteDeviceInfo,
+    encode_point, gen_ecdsa_keypair, gen_random, hkdf_extract_expand, normalize_p256_coordinate,
+    stream_read_exact, to_four_digit_string, DeviceType, RemoteDeviceInfo,
 };
 use crate::{location_nearby_connections, sharing_nearby};
 
@@ -275,15 +273,8 @@ fn prepare_inbound_files_at(
     })
 }
 
-fn prepare_inbound_files(
-    files: &[sharing_nearby::FileMetadata],
-    existing_payload_ids: &HashSet<i64>,
-) -> Result<PreparedInboundFiles, anyhow::Error> {
-    let download_dir = get_download_dir();
-    prepare_inbound_files_at(&download_dir, files, existing_payload_ids)
-}
-
-fn materialize_safe_destination_at(
+#[cfg(any(test, not(target_os = "linux")))]
+pub(crate) fn materialize_safe_destination_at(
     download_dir: &Path,
     destination: &Path,
 ) -> Result<std::path::PathBuf, anyhow::Error> {
@@ -339,11 +330,6 @@ fn materialize_safe_destination_at(
     }
 
     Ok(safe_parent.join(file_name))
-}
-
-fn materialize_safe_destination(destination: &Path) -> Result<std::path::PathBuf, anyhow::Error> {
-    let download_dir = get_download_dir();
-    materialize_safe_destination_at(&download_dir, destination)
 }
 
 fn parse_wifi_password_payload(buffer: &[u8]) -> Result<String, anyhow::Error> {
@@ -517,6 +503,8 @@ pub struct InboundRequest<S = TcpStream> {
     bandwidth_upgrade_enabled: bool,
     bwu_pending: bool,
     peer_endpoint_id: Option<String>,
+    receive_directory: crate::receive::Directory,
+    receive_root: Option<crate::receive::Root>,
 }
 
 impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
@@ -539,7 +527,14 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             bandwidth_upgrade_enabled: false,
             bwu_pending: false,
             peer_endpoint_id: None,
+            receive_directory: crate::receive::ReceivePolicy::new(None).snapshot(),
+            receive_root: None,
         }
+    }
+
+    pub(crate) fn with_receive_directory(mut self, directory: crate::receive::Directory) -> Self {
+        self.receive_directory = directory;
+        self
     }
 
     pub fn enable_bandwidth_upgrade(&mut self) {
@@ -1516,11 +1511,34 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 .keys()
                 .copied()
                 .collect::<HashSet<_>>();
+            if self.receive_root.is_none() {
+                self.receive_root = Some(
+                    self.receive_directory
+                        .pin()
+                        .map_err(|_| anyhow!("Receive directory is unavailable"))?,
+                );
+            }
+            let root = self
+                .receive_root
+                .as_ref()
+                .ok_or_else(|| anyhow!("Receive directory is unavailable"))?;
+            let planning = root.planning_path();
             let PreparedInboundFiles {
-                files: prepared_files,
+                files: mut prepared_files,
                 names: files_name,
                 total_bytes,
-            } = prepare_inbound_files(&introduction.file_metadata, &existing_payload_ids)?;
+            } = prepare_inbound_files_at(
+                &planning,
+                &introduction.file_metadata,
+                &existing_payload_ids,
+            )?;
+            for (_, info) in &mut prepared_files {
+                let relative = info
+                    .file_url
+                    .strip_prefix(&planning)
+                    .map_err(|_| anyhow!("Invalid receive destination"))?;
+                info.file_url = root.display().join(relative);
+            }
 
             for ((payload_id, info), _file_name) in
                 prepared_files.into_iter().zip(files_name.iter())
@@ -1532,7 +1550,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             let metadata = TransferMetadata {
                 id: self.state.id.clone(),
                 destination: Some(
-                    get_download_dir()
+                    root.display()
+                        .to_path_buf()
                         .into_os_string()
                         .into_string()
                         .map_err(|_| anyhow!("failed to convert PathBuf to String"))?,
@@ -1684,14 +1703,14 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 .get_mut(&id)
                 .ok_or_else(|| anyhow!("Missing transfer metadata for payload {id}"))?;
 
-            let safe_destination = materialize_safe_destination(&mfi.file_url)?;
-
-            let file = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&safe_destination)?;
-            info!("Created file: {:?}", &safe_destination);
-            mfi.file_url = safe_destination;
+            let root = self
+                .receive_root
+                .as_ref()
+                .ok_or_else(|| anyhow!("Receive directory is unavailable"))?;
+            let file = root
+                .create_file(&mfi.file_url)
+                .map_err(|_| anyhow!("Cannot create received file safely"))?;
+            info!("Created received file in the selected directory");
             mfi.file = Some(file);
         }
 
@@ -2358,10 +2377,98 @@ mod security_tests {
         assert!(send_plain_frame_on(&mut writer, &[]).await.is_err());
     }
 
-    fn test_request() -> InboundRequest<tokio::io::DuplexStream> {
+    struct TestRequest {
+        request: InboundRequest<tokio::io::DuplexStream>,
+        _directory: tempfile::TempDir,
+    }
+    impl std::ops::Deref for TestRequest {
+        type Target = InboundRequest<tokio::io::DuplexStream>;
+        fn deref(&self) -> &Self::Target {
+            &self.request
+        }
+    }
+    impl std::ops::DerefMut for TestRequest {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.request
+        }
+    }
+    fn test_request() -> TestRequest {
+        let directory = tempfile::tempdir().unwrap();
+        let policy = crate::receive::ReceivePolicy::new(Some(directory.path().to_owned()));
         let (socket, _peer) = tokio::io::duplex(4096);
         let (sender, _receiver) = tokio::sync::broadcast::channel(16);
-        InboundRequest::new(socket, "test-transfer".to_owned(), sender)
+        TestRequest {
+            request: InboundRequest::new(socket, "test-transfer".to_owned(), sender)
+                .with_receive_directory(policy.snapshot()),
+            _directory: directory,
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn given_admitted_file_request_when_policy_or_root_name_changes_then_accept_uses_original_directory_authority(
+    ) {
+        use std::os::unix::fs::symlink;
+        for rename in [false, true] {
+            // Arrange
+            let base = tempfile::tempdir().unwrap();
+            let selected = base.path().join("selected");
+            let other = base.path().join("other");
+            let moved = base.path().join("moved");
+            std::fs::create_dir(&selected).unwrap();
+            std::fs::create_dir(&other).unwrap();
+            let policy = crate::receive::ReceivePolicy::new(Some(selected.clone()));
+            let (socket, _peer) = tokio::io::duplex(8192);
+            let (sender, _events) = tokio::sync::broadcast::channel(16);
+            let mut request = InboundRequest::new(socket, "pinned-request".into(), sender)
+                .with_receive_directory(policy.snapshot());
+            request.state.encrypt_key = Some(vec![0; 32]);
+            request.state.send_hmac_key = Some(vec![0; 32]);
+            // Act: even a policy update before Introduction cannot change admission.
+            policy.set(Some(other.clone()));
+            request
+                .process_introduction(&introduction_frame(
+                    vec![file_metadata_with_parent("file.bin", 101, 3, "Trip/nested")],
+                    vec![],
+                    vec![],
+                ))
+                .await
+                .unwrap();
+            // Assert: planning does not create any received files or directories.
+            assert!(std::fs::read_dir(&selected).unwrap().next().is_none());
+            assert!(std::fs::read_dir(&other).unwrap().next().is_none());
+            assert_eq!(
+                request
+                    .state
+                    .transfer_metadata
+                    .as_ref()
+                    .unwrap()
+                    .destination
+                    .as_deref(),
+                selected.to_str()
+            );
+            assert_eq!(
+                request
+                    .state
+                    .transfer_metadata
+                    .as_ref()
+                    .unwrap()
+                    .files
+                    .as_ref()
+                    .unwrap(),
+                &vec!["Trip/nested/file.bin".to_owned()]
+            );
+            if rename {
+                std::fs::rename(&selected, &moved).unwrap();
+                symlink(&other, &selected).unwrap();
+            }
+            request.accept_transfer().await.unwrap();
+            let target = if rename { &moved } else { &selected };
+            assert!(target.join("Trip/nested/file.bin").is_file());
+            assert!(std::fs::read_dir(&other).unwrap().next().is_none());
+            assert!(request.state.transferred_files[&101].file.is_some());
+            assert_eq!(request.state.state, State::ReceivingFiles);
+        }
     }
 
     #[test]

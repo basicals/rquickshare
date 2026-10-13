@@ -13,7 +13,7 @@ client. CUSTOM_DOWNLOAD is process-global and looked up independently during
 Introduction planning and acceptance. That can redirect a transfer or couple
 separate RQS owners. Fix the authority boundary before adding mutable settings.
 
-1. [ ] S1: injected per-RQS receive policy, propagated through TCP and BLE admission;
+1. [x] S1: injected per-RQS receive policy, propagated through TCP and BLE admission;
    each request snapshots the chosen directory and pins it before file planning.
    Linux creation uses retained directory descriptors after explicit consent.
    Preserve existing file/folder framing, naming/collisions and non-Linux guards.
@@ -83,3 +83,17 @@ applicable to real root/open/create failures. No whole-product coverage claim.
 Plan and S1 authority/inventory recorded before production changes. No user settings
 were read/migrated, daemon/tray installed or live peer tests performed. Previous
 notification/settings-review checks remain historical, not new S1 observations.
+
+S1 implemented: no CUSTOM_DOWNLOAD static remains. TCP/BLE admissions snapshot
+the owner-local policy; file Introduction retains a root descriptor through Accept.
+Normal display paths and existing folder protocol remain intact. Real inbound
+fixtures now use owned temporary roots instead of the user's Downloads directory.
+
+Actual S1 checks: 26 inbound, 50 manager, 14 GATT and 2 receive methods passed;
+strict core all-target Clippy and nightly formatting passed. The unused import
+found during development was removed. Existing bluer future-incompatibility notice
+remains. Three new methods primarily cover N5 (2) and N7 (1), with the secondary
+categories above; these are focused Mode A checks, not whole-product coverage.
+All fixture processes exited. Terminal closed. A final fixture lifetime correction
+keeps the non-directory file alive during its negative assertion; its affected
+method is rechecked below, without repeating unaffected suites.

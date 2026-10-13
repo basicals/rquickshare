@@ -171,6 +171,7 @@ async fn rig<C: Connector>(
     let (queue, receiver) = mpsc::channel(10);
     let (sender, events) = broadcast::channel(128);
     let mut server = TcpServer {
+        receive_policy: crate::receive::ReceivePolicy::new(None),
         endpoint_id: *b"TEST",
         tcp_listener: TrackingListener { listener, accepted },
         connector: Arc::new(connector),
@@ -658,6 +659,7 @@ async fn given_pre_cancelled_manager_when_queue_contains_work_then_no_connector_
         let token = CancellationToken::new();
         token.cancel();
         let mut server = TcpServer {
+            receive_policy: crate::receive::ReceivePolicy::new(None),
             endpoint_id: *b"TEST",
             tcp_listener: listener,
             connector: Arc::new(connector),
@@ -882,6 +884,7 @@ async fn given_fatal_accept_failure_when_outbound_is_blocked_then_child_workers_
         let (queue, receiver) = mpsc::channel(10);
         let (sender, mut events) = broadcast::channel(16);
         let mut server = TcpServer {
+            receive_policy: crate::receive::ReceivePolicy::new(None),
             endpoint_id: *b"TEST",
             tcp_listener: FaultListener(Arc::clone(&fault)),
             connector: Arc::new(connector),
@@ -986,6 +989,7 @@ async fn given_invalid_budgets_when_manager_runs_then_network_and_queue_are_unto
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let (sender, _) = broadcast::channel(8);
     let mut server = TcpServer {
+        receive_policy: crate::receive::ReceivePolicy::new(None),
         endpoint_id: *b"TEST",
         tcp_listener: listener,
         connector: Arc::new(connector),

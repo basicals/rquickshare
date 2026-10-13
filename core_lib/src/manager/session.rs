@@ -52,6 +52,7 @@ pub(super) struct SessionContext<C> {
     sender: Sender<ChannelMessage>,
     connector: Arc<C>,
     sessions: Option<SessionHub>,
+    receive_policy: crate::receive::ReceivePolicy,
 }
 
 impl<C> Clone for SessionContext<C> {
@@ -61,6 +62,7 @@ impl<C> Clone for SessionContext<C> {
             sender: self.sender.clone(),
             connector: Arc::clone(&self.connector),
             sessions: self.sessions.clone(),
+            receive_policy: self.receive_policy.clone(),
         }
     }
 }
@@ -77,7 +79,13 @@ impl<C: Connector> SessionContext<C> {
             sender,
             connector,
             sessions,
+            receive_policy: crate::receive::ReceivePolicy::new(None),
         }
+    }
+
+    pub(super) fn with_receive_policy(mut self, policy: crate::receive::ReceivePolicy) -> Self {
+        self.receive_policy = policy;
+        self
     }
 
     pub(super) fn close_sessions(&self) {
@@ -221,7 +229,8 @@ impl<C: Connector> SessionContext<C> {
         socket: TcpStream,
         remote: SocketAddr,
     ) {
-        let mut request = InboundRequest::new(socket, remote.to_string(), self.sender.clone());
+        let mut request = InboundRequest::new(socket, remote.to_string(), self.sender.clone())
+            .with_receive_directory(self.receive_policy.snapshot());
         if let Some(sessions) = self.sessions.as_ref() {
             let Ok(session) = sessions.open(TransferType::Inbound, None, CancellationToken::new())
             else {
