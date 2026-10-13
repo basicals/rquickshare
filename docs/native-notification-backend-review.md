@@ -1,6 +1,8 @@
 # Background custom-card ownership and API review
 
-2026-10-13. Mode A. Review only; awaiting a new public-contract/data-model decision.
+2026-10-13. Mode A. Accepted: the user selected option 1 (A), the daemon notice
+read model. The detailed contract and implementation progress are recorded in
+[native-notification-backend.md](native-notification-backend.md).
 Recommend A for architectural quality. The user-selected fully custom card, Full/
 Compact modes and settings/right-click separation remain fixed in both options.
 
