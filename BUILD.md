@@ -1,10 +1,11 @@
 # Building and checking rQuickShare
 
-The project has two Rust crates and one frontend:
+The project has three Rust crates and one frontend:
 
 - `core_lib`: discovery, protocol, connections and payload transfers.
 - `app/main/src-tauri`: desktop commands, notifications, logging and app lifecycle.
 - `app/main`: Vue frontend and Tauri v2 CLI.
+- `native_desktop`: additive GTK4/Layer Shell tray client; see its [build/check guide](native_desktop/README.md).
 
 ## Linux prerequisites
 
@@ -57,10 +58,14 @@ or developer runner. SIGINT/SIGTERM request joined shutdown. A private user-owne
 runtime directory is required; do not run with sudo or register a system-bus service.
 
 Invalid visibility starts hidden and exposes GetStartupWarnings; the existing UI
-now offers explicit in-app recovery when used independently. The native GTK/settings
-client is still pending. Whole-file corruption/read errors do not reset settings.
+now offers explicit in-app recovery when used independently. Native GTK/card and
+notification clients are implemented in source; persistent native settings/repair
+await the [settings ownership review](docs/native-settings-review.md). Whole-file
+corruption/read errors do not reset settings.
 No activation/autostart/package files are installed by a build. Continuous production
-use is still gated on terminal/replay retention, native client and device checks.
+use is still gated on native settings/migration, installed package lifecycle and
+physical KDE/Google peer acceptance. Implemented notification activation assets
+remain source-only; a build never installs them.
 Contracts and actual verification: [native startup](docs/native-daemon-startup.md).
 
 The default `cargo run` remains the legacy `core_bin` developer runner; select the

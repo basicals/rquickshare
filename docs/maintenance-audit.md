@@ -1,5 +1,24 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-13: native settings ownership review prepared
+
+The next native gap is persistent settings and in-app visibility recovery. GTK
+currently retains only Appearance mode in process; the daemon reads legacy settings
+but offers no native write/reload contract. The accepted recovery UX still forbids
+manual JSON repair. [native-settings-review.md](native-settings-review.md) maps
+actual owners and proposes 1/A (recommended): the existing daemon is the sole writer
+of a versioned native store with typed edits/acknowledgement. Alternative 2/B is an
+independent per-user settings service. This is a new persistence/API decision;
+notification option A did not approve it. Await selection before settings code.
+
+The review also identifies process-global CUSTOM_DOWNLOAD as incompatible with
+owner-local settings and pinned receive authority; its substantial refactor is
+included in the proposal, not silently implemented. The narrow independent privacy
+fix is complete: both download setters now log fixed categories instead of paths.
+Strict core library Clippy (4.61s), core/Tauri format and diff checks passed once.
+No fresh suite/runtime/device claim, user settings access, migration or install.
+Continue on dev. Earlier checkpoints below are historical.
+
 ## 2026-10-13: daemon-owned custom-card delivery implemented
 
 The user accepted A/option 1, the daemon notice read model. All source milestones

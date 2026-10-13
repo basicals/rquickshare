@@ -1,8 +1,15 @@
 # Full Quick Share roadmap
 
-_Last updated: 2026-10-12_
+_Last updated: 2026-10-13_
 
 The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, pending UX choice, initial compatibility matrix and migration stages.
+
+Implemented capability markers below describe existing core/legacy source and
+scoped checks; they do not establish native GTK feature parity or current-package
+physical Google compatibility. Native file/card/notification ownership is now
+implemented; persistent settings await the [ownership review](native-settings-review.md).
+Native text/clipboard/reveal/account/QR/package capabilities still require their
+own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles
 

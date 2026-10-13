@@ -2,7 +2,13 @@
 
 _2026-10-12. Mode A. Status: descriptor input approved; offline file/core boundary implemented and validated._
 
-Current integration checkpoint: the single-owner coordinator/core runtime and ordered native session events are implemented and verified in [native-core-runtime.md](native-core-runtime.md) and [native-core-events.md](native-core-events.md). Earlier pending-adapter descriptions below are historical prerequisites; authenticated D-Bus, activated daemon, native UI and physical Google parity remain open.
+Current integration checkpoint: the native daemon, authenticated immutable reads/
+controls, GTK Full/Compact cards, descriptor-based CLI/Dolphin ingress and canonical
+notifications are implemented in source. See [native-notification-backend.md](native-notification-backend.md).
+Next is [native settings ownership](native-settings-review.md), awaiting a new
+persistence/API decision. Installed migration and physical Google parity remain
+open. The original foundation/design analysis below is historical.
+
 
 ## Accepted scope and source of truth
 
