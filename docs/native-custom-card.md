@@ -43,8 +43,8 @@ Reject/Cancel still use existing checked SDK/controller operations.
    Keep uninstalled development startup explicit; package assets are not installed
    into the live session. Join wake/renderer IO and preserve queued daemon requests.
    Rollback: activation/error bindings before their source assets.
-4. [ ] C4: record final affected checks once, category counts, current limits and
-   handoff. Actual KDE DND/lock/monitor/scale/focus, installed package behavior and
+4. [x] C4 checkpoint for completed C1/C2: record final affected checks once,
+   category counts, current limits and handoff. C3 remains pending independently. Actual KDE DND/lock/monitor/scale/focus, installed package behavior and
    Google peers remain external acceptance. No false final-parity claim.
 
 No broad settings migration, account/visibility changes, persistent settings schema,
@@ -67,7 +67,7 @@ separate approved-review gates. Finish the actual card before expanding that sco
   uses the selected display mode. Switching modes repositions/clamps the existing
   Layer Shell surface using its measured current height, never an ordinary-window
   fallback. Real compositor acceptance remains pending.
-- Header menu and right-click menu expose full/compact, incoming/transfers, source
+- Header menu and right-click menu on the card expose full/compact, incoming/transfers, source
   selection, discard, recovery, hide, settings and panel Quit as appropriate.
   Primary consent, Cancel and recovery remain visible when needed; no essential
   recovery is available only through an undiscoverable context action.
@@ -285,3 +285,24 @@ presentation is useful while GTK runs, but does not yet provide closed-GUI deliv
 or visible backend-unavailable Dolphin errors. Keyed GTK row reconciliation is
 also needed before final expansion/focus acceptance; current rebuild behavior is
 explicitly carried into the reviewed C3 GTK lifecycle work, not claimed fixed.
+
+
+### C4 C1/C2 handoff checkpoint
+
+C1/C2 production commits are 72ca702 and f09671e; verification above is actual,
+including failures/corrections and only affected reruns. Latest checkpoints in
+product-direction.md and maintenance-audit.md supersede old pending-UX summaries.
+C3 is unimplemented and awaits the explicit A/B decision documented in
+[native-notification-backend-review.md](native-notification-backend-review.md).
+After approval, freeze exact signatures, budgets, invariants and scoped verification
+inventory before production code. This handoff closes C4 documentation for C1/C2;
+it does not mark C3 or full-product acceptance complete.
+
+The implemented right-click dropdown belongs to the card, with the same accessible
+header menu. The current tray ContextMenu method opens the panel; it does not
+export a separate DBusMenu tree. Persistent mode settings are also not implemented.
+Current row reconstruction can reset focus/expansion on state updates, as recorded
+in the C3 review. No independent broad cleanup is authorized by this checkpoint.
+
+All owned command/display/broker processes exited; no watcher or server is left
+running. Terminal closed. Work stays on dev; preserve upstream tracking refs.

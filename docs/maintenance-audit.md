@@ -1,5 +1,38 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-13: custom Full/Compact card and desktop safety implemented
+
+The user selected fully custom rQuickShare cards with Full/Compact modes and
+secondary settings/right-click actions. C1/C2 in
+[native-custom-card.md](native-custom-card.md) are implemented in commits
+72ca702 and f09671e. Compact is the initial mode; Full retains recipient choice,
+incoming review and transfers. Header/card right-click menus share checked actions;
+Appearance settings retain the mode for the current GTK process only. Tray
+ContextMenu currently opens the panel; a separate tray dropdown is not implemented.
+
+While GTK runs, bounded presentation policy observes current daemon requests and
+new completion/error transitions. Read-only KDE lock/DND monitors pin same-UID
+owners and reject stale replies. Unknown lock hides sensitive surfaces; automatic
+cards also require known DND-off. Dismissal never answers consent or cancels work.
+
+Observed: all 13 native methods passed once, followed only by checks affected by
+later fixes; final strict native Clippy/build/format/diff passed. Four new methods
+primarily cover N5 (2), N3 (1), N7 (1), with secondary edge/privacy tables. Current
+core/native inventory is 525, not a fresh whole-suite run or coverage measurement.
+Six compiled inert previews show both modes; they do not prove KDE compositor,
+lock/focus/scale behavior or interoperability. No live installation, push, daemon/
+transport/core API change, legacy settings write or Tauri retirement in this slice.
+
+C3 remains pending: closed-GUI delivery, cross-GTK notice recovery/dismissal and
+visible backend-unavailable Dolphin errors. The next significant decision is
+[native-notification-backend-review.md](native-notification-backend-review.md):
+recommend A, a bounded daemon notice read model coherent with captured transfer
+state; B uses a supervised renderer and private acknowledged IPC. No C3 production
+code precedes this new API/data-model/process decision. Keyed GTK row updates are
+also required before final focus/expansion acceptance. Durable settings,
+clipboard/reveal/autostart/updates/packaging and actual Google parity remain open.
+Earlier dated checkpoints below are historical, including their pending choices.
+
 ## 2026-10-13: GUI-owned CLI import and Dolphin source assets
 
 The user delegated ingress ownership selection to architectural quality. Option 1
