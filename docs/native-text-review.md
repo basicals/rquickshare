@@ -1,7 +1,9 @@
 # Native text and clipboard acceptance review
 
 2026-10-13. Mode A. Guide /home/morozhenko/.codex/AGENTS.md sections 3/3.1.
-Settings and separate tray menu source are complete. Review only: no clipboard,
+User selected 1/A: explicit Copy after receipt. Implementation SSOT is
+[native-text.md](native-text.md). Settings and separate tray menu source are complete.
+The analysis below is historical. Review only: no clipboard,
 payload-read API or text consent behavior is implemented in this checkpoint.
 
 ## Current evidence and next significant product boundary
@@ -51,7 +53,7 @@ ownership without unsolicited Send or automatic clipboard capture.
 
 1. [x] Inspect current core text storage/native Unsupported boundary and record
    the clipboard-consent choice plus best-quality recommendation before code.
-2. [ ] Await user choice 1/A or 2/B; no text/clipboard behavior code before selection.
+2. [x] User selected 1/A; freeze implementation before text/clipboard code.
 3. [ ] Freeze domain/API/retention/clipboard semantics and branch inventory in a
    new implementation SSOT, then implement in logical reversible dev stages.
 4. [ ] Run affected focused checks once and record actual results; real Android/
