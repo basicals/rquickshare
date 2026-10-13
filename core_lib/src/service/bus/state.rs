@@ -53,8 +53,10 @@ pub(super) type DetailRow = (
     u32,
 );
 pub(super) type FileRow = (String, u64);
+pub(super) type NoticeRow = (String, String, u64, u64);
 
 struct Capture {
+    notices: Vec<NoticeRow>,
     charge: usize,
     details: Vec<(String, Arc<TransferDetails>)>,
     metadata: Metadata,
@@ -207,7 +209,20 @@ impl StateCache {
             selected.len() as u32,
             transfers.len() as u32,
         );
+        let notices = snapshot
+            .notices
+            .into_iter()
+            .map(|notice| {
+                (
+                    token(notice.transfer.0, notice.transfer.1),
+                    notice.kind.wire().to_owned(),
+                    notice.round,
+                    notice.revision,
+                )
+            })
+            .collect();
         let capture = Capture {
+            notices,
             charge,
             details,
             metadata,
@@ -218,6 +233,12 @@ impl StateCache {
         // Fixed reservation includes record storage, owned buffers and conservative map overhead.
         let bytes = size_of::<Capture>()
             + 1024
+            + capture.notices.capacity() * size_of::<NoticeRow>()
+            + capture
+                .notices
+                .iter()
+                .map(|row| row.0.capacity() + row.1.capacity())
+                .sum::<usize>()
             + capture.metadata.0.capacity()
             + capture.metadata.1.capacity()
             + capture.endpoints.capacity() * size_of::<EndpointRow>()
@@ -257,6 +278,17 @@ impl StateCache {
             return Err(Error::WrongOwner);
         }
         Ok(capture.1)
+    }
+    pub(super) fn notice_count(&self, client: ClientId, id: &str) -> Result<u32, Error> {
+        Ok(self.get(client, id)?.notices.len() as u32)
+    }
+    pub(super) fn notice_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<NoticeRow>), Error> {
+        page(&self.get(client, id)?.notices, offset)
     }
     pub(super) fn endpoint_page(
         &self,

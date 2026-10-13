@@ -614,3 +614,59 @@ fn given_large_retained_manifests_when_global_budget_is_exceeded_then_failed_cap
             <= CACHE_BYTES
     );
 }
+
+#[test]
+fn given_notice_pages_when_live_dismissal_and_owner_changes_then_captured_rows_stay_bounded_and_immutable(
+) {
+    for count in [0, 1, 15, 16, 17, 256] {
+        // Arrange
+        let (mut coordinator, client, mut cache) = setup();
+        for _ in 0..count {
+            let id = coordinator.register_inbound().unwrap();
+            coordinator.observe(id, Phase::AwaitingConsent).unwrap();
+        }
+        let metadata = cache
+            .capture(&mut coordinator, client, std::iter::empty())
+            .unwrap();
+        let notices = coordinator.pending_notices();
+        // Act
+        for batch in notices.chunks(16) {
+            coordinator.dismiss_notices(client, batch).unwrap();
+        }
+        // Assert
+        assert_eq!(
+            cache.notice_count(client, &metadata.0).unwrap() as usize,
+            count
+        );
+        for offset in 0..=count {
+            let (next, rows) = cache
+                .notice_page(client, &metadata.0, offset as u32)
+                .unwrap();
+            assert_eq!(next as usize, (offset + 16).min(count));
+            assert_eq!(rows.len(), (count - offset).min(16));
+            for row in rows {
+                assert_eq!(row.1, "request");
+                assert!(row.2 > 0 && row.2 <= row.3 && row.3 <= metadata.2);
+            }
+        }
+        for offset in [count as u32 + 1, u32::MAX] {
+            assert_eq!(
+                cache.notice_page(client, &metadata.0, offset),
+                Err(Error::InvalidInput)
+            );
+        }
+        let other = coordinator.connect().unwrap();
+        assert_eq!(
+            cache.notice_count(other, &metadata.0),
+            Err(Error::WrongOwner)
+        );
+        let next = cache
+            .capture(&mut coordinator, client, std::iter::empty())
+            .unwrap();
+        assert_eq!(cache.notice_count(client, &next.0), Ok(0));
+        assert_eq!(
+            cache.notice_count(client, &metadata.0),
+            Err(Error::UnknownSnapshot)
+        );
+    }
+}

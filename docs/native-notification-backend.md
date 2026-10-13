@@ -69,7 +69,7 @@ is included in the accepted proposal, without broad settings migration.
 
 ## Milestones / rollback
 
-1. [ ] N1: coordinator record lifecycle, Notifications1 XML/capture/read/dismiss,
+1. [x] N1: coordinator record lifecycle, Notifications1 XML/capture/read/dismiss,
    SDK/controller bindings, scoped checks. Rollback consumers before additive API.
 2. [ ] N2: canonical GTK presentation/dismissal and stable keyed widget updates.
    Rollback GTK bindings without altering transfers/source selection.
@@ -102,3 +102,22 @@ consent mutation. No real peers, session registration, install or transport laun
 Plan/signatures recorded before code. Previous C1/C2 checks are historical evidence;
 none establishes new N1-N4 behavior. Physical KDE startup/focus/lock/monitor/DND,
 installed package upgrade/removal and real Google peer parity remain external gates.
+
+
+### N1 observed checkpoint
+
+Coordinator records eligible events at their actual observation revision, preserves
+exact dismissed tombstones, retires records on cancel/shutdown/history pruning,
+and never mutates consent through presentation dismissal. Notifications1 reads the
+same immutable capture as transfer details. SDK validates bounded complete notice
+pages and the controller serializes exact dismissal. Five new methods cover
+coordinator lifecycle/atomic rejection, immutable page boundaries, real SDK restart/
+controller dismissal and malformed wire batches. No domain subject is mocked.
+
+Initial compilation failed on borrowed data from temporary message bodies; retaining
+the actual body fixed both lifetimes. All 216 affected service methods then passed
+once (6.48s), including the first four new methods. The subsequently added negative
+wire method passed once (0.24s). Nightly formatting passed. Existing five core
+no-default-feature warnings are unchanged; final lint and downstream GUI checks
+remain N5. No installed bus/core transport/Google peers were exercised. All owned
+command/private broker sessions exited. Terminal closed.

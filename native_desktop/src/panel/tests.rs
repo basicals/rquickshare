@@ -19,6 +19,7 @@ fn given_complete_view_and_busy_flags_when_controls_are_projected_then_only_sync
             selections: vec![],
             transfers: vec![],
             warnings: vec![],
+            notices: vec![],
         })),
         ..Default::default()
     };

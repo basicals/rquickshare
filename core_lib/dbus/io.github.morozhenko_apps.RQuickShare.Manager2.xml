@@ -128,6 +128,21 @@
       <arg name="operation_seq" type="t" direction="in"/>
     </method>
   </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Notifications1">
+    <method name="GetNoticeCount">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="count" type="u" direction="out"/>
+    </method>
+    <method name="GetNoticePage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="notices" type="a(sstt)" direction="out"/>
+    </method>
+    <method name="Dismiss">
+      <arg name="notices" type="a(sstt)" direction="in"/>
+    </method>
+  </interface>
   <interface name="org.freedesktop.DBus.Introspectable">
     <method name="Introspect">
       <arg name="xml_data" type="s" direction="out"/>

@@ -28,6 +28,7 @@ pub(super) mod transport;
 pub const SERVICE: &str = "io.github.morozhenko_apps.RQuickShare";
 pub const PATH: &str = "/io/github/morozhenko_apps/RQuickShare";
 pub const OPERATIONS_INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Operations1";
+pub const NOTIFICATIONS_INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Notifications1";
 pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Manager2";
 pub const INTROSPECTION: &str =
     include_str!("../../dbus/io.github.morozhenko_apps.RQuickShare.Manager2.xml");
@@ -478,6 +479,46 @@ impl SelectionBus {
                 .await
                 .map_err(|_| BusError::Transport);
         }
+        if interface == Some(NOTIFICATIONS_INTERFACE) {
+            let body = message.body();
+            if !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            let result = match member {
+                Some("GetNoticeCount") => {
+                    let id = body.deserialize::<&str>().map_err(|_| Error::InvalidInput);
+                    match id.and_then(|id| {
+                        token_parts(id, coordinator.epoch)?;
+                        self.state.notice_count(client, id)
+                    }) {
+                        Ok(count) => return self.state_reply(&header, &count).await,
+                        Err(error) => Err(error),
+                    }
+                }
+                Some("GetNoticePage") => {
+                    let args = body
+                        .deserialize::<(&str, u32)>()
+                        .map_err(|_| Error::InvalidInput);
+                    match args.and_then(|(id, offset)| {
+                        token_parts(id, coordinator.epoch)?;
+                        self.state.notice_page(client, id, offset)
+                    }) {
+                        Ok(page) => return self.state_reply(&header, &page).await,
+                        Err(error) => Err(error),
+                    }
+                }
+                Some("Dismiss") => self.dismiss_message(coordinator, client, &message),
+                _ => {
+                    return self
+                        .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                        .await
+                }
+            };
+            return match result {
+                Ok(()) => self.state_reply(&header, &()).await,
+                Err(error) => self.domain_error(&header, error).await,
+            };
+        }
         if interface == Some(OPERATIONS_INTERFACE) {
             let Some(member) = member else {
                 return self
@@ -583,6 +624,34 @@ impl SelectionBus {
             Err(error) => return self.domain_error(&header, error).await,
         }
         .map_err(|_| BusError::Transport)
+    }
+
+    fn dismiss_message(
+        &self,
+        coordinator: &mut Coordinator,
+        client: ClientId,
+        message: &Message,
+    ) -> Result<(), Error> {
+        let rows: Vec<state::NoticeRow> = message
+            .body()
+            .deserialize()
+            .map_err(|_| Error::InvalidInput)?;
+        if rows.is_empty() || rows.len() > 16 {
+            return Err(Error::InvalidInput);
+        }
+        let notices = rows
+            .into_iter()
+            .map(|(id, kind, round, revision)| {
+                let (epoch, counter) = token_parts(&id, coordinator.epoch)?;
+                Ok(super::notices::Notice {
+                    transfer: TransferId(epoch, counter),
+                    kind: super::notices::NoticeKind::parse(&kind).ok_or(Error::InvalidInput)?,
+                    round,
+                    revision,
+                })
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        coordinator.dismiss_notices(client, &notices)
     }
 
     fn execute_state<'a>(

@@ -58,6 +58,7 @@ impl Coordinator {
             self.advance()?;
             for (_, id) in eligible.into_iter().take(remove) {
                 self.transfers.remove(&id);
+                self.notices.remove(&id);
             }
         }
         Ok(remove > 0)

@@ -16,6 +16,9 @@ macro_rules! token {
     };
 }
 
+pub mod notices;
+use notices::Notice;
+
 token!(ClientId);
 token!(SelectionId);
 token!(TransferId);
@@ -178,6 +181,7 @@ pub struct Snapshot {
     pub resources: ResourceUsage,
     pub selections: Vec<SelectionId>,
     pub transfers: Vec<TransferSnapshot>,
+    pub notices: Vec<Notice>,
 }
 
 /// Submit exactly once; keep the payload alive for the entire reader lifetime.
@@ -239,6 +243,7 @@ pub struct Coordinator {
     endpoints: BTreeSet<String>,
     transfers: BTreeMap<TransferId, Transfer>,
     queue: VecDeque<TransferId>,
+    notices: BTreeMap<TransferId, notices::Record>,
 }
 
 impl fmt::Debug for Coordinator {
@@ -309,6 +314,7 @@ impl Coordinator {
             endpoints: BTreeSet::new(),
             transfers: BTreeMap::new(),
             queue: VecDeque::new(),
+            notices: BTreeMap::new(),
         })
     }
 
@@ -401,6 +407,7 @@ impl Coordinator {
             lifecycle: self.lifecycle,
             synchronized: self.synchronized,
             resources: self.usage(),
+            notices: self.pending_notices(),
             selections: self
                 .selections
                 .iter()
@@ -699,6 +706,7 @@ impl Coordinator {
                 self.queue.retain(|queued| *queued != id);
             }
         }
+        self.notice_event(id);
         self.collect_released();
         Ok(())
     }
@@ -793,6 +801,7 @@ impl Coordinator {
                 });
             }
         }
+        self.notice_event(id);
         self.collect_released();
         Ok(())
     }
@@ -811,6 +820,7 @@ impl Coordinator {
         }
         let revision = self.advance()?;
         self.lifecycle = Lifecycle::Draining;
+        self.notices.clear();
         self.selections.clear();
         self.uploads.clear();
         self.queue.clear();

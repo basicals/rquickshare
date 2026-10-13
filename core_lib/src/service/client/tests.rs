@@ -670,3 +670,171 @@ async fn given_accepted_send_with_failed_ack_when_daemon_disappears_then_recorde
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_daemon_notices_when_gui_clients_restart_or_repeat_dismissal_then_only_exact_pending_events_survive(
+) {
+    scenario(async {
+        // Arrange
+        let private = PrivateBus::new();
+        let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+        for phase in [
+            crate::service::Phase::AwaitingConsent,
+            crate::service::Phase::Finished,
+            crate::service::Phase::Failed,
+            crate::service::Phase::Disconnected,
+        ] {
+            let id = coordinator.register_inbound().unwrap();
+            coordinator.observe(id, phase).unwrap();
+        }
+        let host = Harness::with_coordinator(
+            SelectionBus::connect(private.socket().await).await.unwrap(),
+            coordinator,
+        );
+        let mut client = NativeClient::connect(private.socket().await).await.unwrap();
+        let initial = client.read_state().await.unwrap();
+        assert_eq!(initial.notices.len(), 4);
+        let first = initial.notices[0].clone();
+        // Act / Assert
+        client
+            .dismiss_notices(std::slice::from_ref(&first))
+            .await
+            .unwrap();
+        let dismissed = client.read_state().await.unwrap();
+        assert_eq!(dismissed.notices.len(), 3);
+        assert_eq!(dismissed.transfers, initial.transfers);
+        client
+            .dismiss_notices(std::slice::from_ref(&first))
+            .await
+            .unwrap();
+        assert_eq!(
+            client.read_state().await.unwrap().revision,
+            dismissed.revision
+        );
+        assert_eq!(
+            client.dismiss_notices(&[]).await,
+            Err(ClientError::InvalidInput)
+        );
+        assert_eq!(
+            client.dismiss_notices(&vec![first.clone(); 17]).await,
+            Err(ClientError::InvalidInput)
+        );
+        client.close().await.unwrap();
+        let mut next = NativeClient::connect(private.socket().await).await.unwrap();
+        assert_eq!(next.read_state().await.unwrap().notices.len(), 3);
+        assert_eq!(
+            next.dismiss_notices(&[first]).await,
+            Err(ClientError::ForeignHandle)
+        );
+        let controller = controller::PanelController::spawn(next);
+        let handle = controller.handle();
+        let mut updates = handle.subscribe();
+        updates
+            .wait_for(|state| state.view.is_some())
+            .await
+            .unwrap();
+        let notices = updates.borrow().view.as_ref().unwrap().notices.clone();
+        handle
+            .dismiss_notices(notices)
+            .unwrap()
+            .wait()
+            .await
+            .unwrap();
+        updates
+            .wait_for(|state| {
+                state
+                    .view
+                    .as_ref()
+                    .is_some_and(|view| view.notices.is_empty())
+            })
+            .await
+            .unwrap();
+        controller.close().await.unwrap();
+        let (coordinator, result) = host.finish().await;
+        assert_eq!(result, Ok(()));
+        assert!(coordinator.pending_notices().is_empty());
+        assert_eq!(coordinator.transfers.len(), 4);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn given_untrusted_notice_wire_batches_when_rejected_then_current_notice_and_transfer_remain_unchanged(
+) {
+    scenario(async {
+        // Arrange
+        let private = PrivateBus::new();
+        let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+        let id = coordinator.register_inbound().unwrap();
+        coordinator
+            .observe(id, crate::service::Phase::AwaitingConsent)
+            .unwrap();
+        let host = Harness::with_coordinator(
+            SelectionBus::connect(private.socket().await).await.unwrap(),
+            coordinator,
+        );
+        let mut client = NativeClient::connect(private.socket().await).await.unwrap();
+        let initial = client.read_state().await.unwrap();
+        let notice = &initial.notices[0];
+        let valid = (
+            notice.transfer.id().to_owned(),
+            notice.kind.wire().to_owned(),
+            notice.round,
+            notice.revision,
+        );
+        let mut batches = vec![vec![], vec![valid.clone(); 2], vec![valid.clone(); 17]];
+        for row in [
+            (
+                "not-a-token".into(),
+                "request".into(),
+                notice.round,
+                notice.revision,
+            ),
+            (
+                valid.0.clone(),
+                "unknown".into(),
+                notice.round,
+                notice.revision,
+            ),
+            (valid.0.clone(), "request".into(), 0, notice.revision),
+            (
+                valid.0.clone(),
+                "finished".into(),
+                notice.round,
+                notice.revision,
+            ),
+            (valid.0.clone(), "request".into(), notice.round, 0),
+            (valid.0.clone(), "request".into(), notice.round, u64::MAX),
+        ] {
+            batches.push(vec![valid.clone(), row]);
+        }
+        // Act / Assert
+        for batch in batches {
+            assert_eq!(
+                client
+                    .wire(bus::NOTIFICATIONS_INTERFACE, "Dismiss", &batch)
+                    .await
+                    .unwrap_err(),
+                ClientError::Rejected(DomainError::InvalidInput)
+            );
+            assert_eq!(client.read_state().await.unwrap(), initial);
+        }
+        assert_eq!(
+            client
+                .wire(bus::NOTIFICATIONS_INTERFACE, "Dismiss", &42u32)
+                .await
+                .unwrap_err(),
+            ClientError::Rejected(DomainError::InvalidInput)
+        );
+        assert_eq!(
+            client
+                .wire(bus::NOTIFICATIONS_INTERFACE, "NotAMethod", &())
+                .await
+                .unwrap_err(),
+            ClientError::Incompatible
+        );
+        client.close().await.unwrap();
+        assert_eq!(host.finish().await.1, Ok(()));
+    })
+    .await;
+}

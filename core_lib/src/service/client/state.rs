@@ -69,6 +69,7 @@ pub struct StateView {
     pub selections: Vec<Selection>,
     pub transfers: Vec<TransferView>,
     pub warnings: Vec<StartupWarning>,
+    pub notices: Vec<super::notices::Notice>,
 }
 
 fn lifecycle(value: &str) -> Result<Lifecycle> {
@@ -199,6 +200,7 @@ impl NativeClient {
             selections: Vec::with_capacity(metadata.9 as usize),
             transfers: Vec::with_capacity(metadata.10 as usize),
             warnings: Vec::new(),
+            notices: Vec::new(),
         })
     }
     fn transfer_view(&self, row: TransferRow, revision: u64) -> Result<TransferView> {
@@ -259,14 +261,25 @@ impl NativeClient {
         count: u32,
         transfer: Option<&str>,
     ) -> Result<Vec<T>> {
+        self.pages_for_on(INTERFACE, method, id, count, transfer)
+            .await
+    }
+    pub(super) async fn pages_for_on<T: DeserializeOwned + Type>(
+        &mut self,
+        interface: &'static str,
+        method: &'static str,
+        id: &str,
+        count: u32,
+        transfer: Option<&str>,
+    ) -> Result<Vec<T>> {
         let mut rows = Vec::with_capacity(count as usize);
         let mut offset: u32 = 0;
         loop {
             let reply = if let Some(transfer) = transfer {
-                self.wire(INTERFACE, method, &(id, transfer, offset))
+                self.wire(interface, method, &(id, transfer, offset))
                     .await?
             } else {
-                self.wire(INTERFACE, method, &(id, offset)).await?
+                self.wire(interface, method, &(id, offset)).await?
             };
             let (next, page): (u32, Vec<T>) = reply
                 .body()
@@ -367,6 +380,7 @@ impl NativeClient {
             }
             transfer.details = Arc::new(details.0);
         }
+        self.read_notices(&metadata.0, &mut view).await?;
         let warnings: Vec<String> = self
             .wire(INTERFACE, "GetStartupWarnings", &())
             .await?

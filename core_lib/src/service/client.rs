@@ -37,6 +37,7 @@ impl std::error::Error for ClientError {}
 
 pub mod controller;
 pub mod desktop;
+pub mod notices;
 pub mod state;
 mod watch;
 

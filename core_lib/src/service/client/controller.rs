@@ -51,6 +51,7 @@ impl Completion {
 }
 
 enum Action {
+    Dismiss(Vec<super::notices::Notice>),
     Choose(OpenedSelection),
     Send(Selection, String),
     Discard(Selection),
@@ -82,6 +83,12 @@ impl PanelHandle {
                 mpsc::error::TrySendError::Closed(_) => ControllerError::Closed,
             })?;
         Ok(Completion(receiver))
+    }
+    pub fn dismiss_notices(&self, notices: Vec<super::notices::Notice>) -> Result<Completion> {
+        if notices.is_empty() || notices.len() > 16 {
+            return Err(ClientError::InvalidInput.into());
+        }
+        self.submit(Action::Dismiss(notices))
     }
     pub fn choose(&self, selection: OpenedSelection) -> Result<Completion> {
         if !super::desktop::valid_selection(&selection) {
@@ -293,6 +300,10 @@ impl Worker {
         }
         self.refresh().await?;
         match action {
+            Action::Dismiss(notices) => {
+                self.client.dismiss_notices(&notices).await?;
+                Ok(ActionResult::Completed)
+            }
             Action::Choose(source) => {
                 self.preparation = Some(Preparation {
                     source,
