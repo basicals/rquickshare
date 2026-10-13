@@ -311,7 +311,7 @@ async fn given_queued_files_when_caller_disconnects_then_dispatch_is_fifo_once_a
     assert_eq!(first_job.info.addr, "127.0.0.1:1234");
     assert!(fixture.receiver.try_recv().is_err());
     let weak = match &first_job.info.ob {
-        OutboundPayload::OpenedFiles(files) => Arc::downgrade(files),
+        OutboundPayload::NativeSource(source) => Arc::downgrade(source),
         _ => unreachable!(),
     };
     assert_eq!(
@@ -353,7 +353,7 @@ async fn given_full_queue_when_pending_send_is_cancelled_then_no_duplicate_dispa
     let transfer = send(runtime, client, "pending");
     assert!(!runtime.dispatch().unwrap());
     let weak = match &runtime.pending.as_ref().unwrap().request.ob {
-        OutboundPayload::OpenedFiles(files) => Arc::downgrade(files),
+        OutboundPayload::NativeSource(source) => Arc::downgrade(source),
         _ => unreachable!(),
     };
     // Act

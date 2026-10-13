@@ -537,6 +537,22 @@ pub enum OutboundPayload {
     #[serde(skip)]
     #[ts(skip)]
     OpenedFiles(std::sync::Arc<crate::file_source::OpenedSelection>),
+    /// The outer native source capability survives actual request teardown.
+    #[cfg(target_os = "linux")]
+    #[serde(skip)]
+    #[ts(skip)]
+    NativeSource(std::sync::Arc<crate::prepared_source::PreparedSource>),
+}
+
+impl OutboundPayload {
+    fn text(&self) -> Option<&str> {
+        match self {
+            Self::Text(text) => Some(text),
+            #[cfg(target_os = "linux")]
+            Self::NativeSource(source) => source.text().map(|text| text.text()),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -587,6 +603,23 @@ impl OutboundRequest {
                 (Some(files.clone()), None, cleanup_files)
             }
             OutboundPayload::Text(text) => (None, Some(text.clone()), Vec::new()),
+            #[cfg(target_os = "linux")]
+            OutboundPayload::NativeSource(source) => match source.as_ref() {
+                crate::prepared_source::PreparedSource::Files(files) => (
+                    Some(
+                        files
+                            .files()
+                            .iter()
+                            .map(|file| file.relative_name().to_owned())
+                            .collect(),
+                    ),
+                    None,
+                    Vec::new(),
+                ),
+                crate::prepared_source::PreparedSource::Text(text) => {
+                    (None, Some(text.text().to_owned()), Vec::new())
+                }
+            },
             #[cfg(target_os = "linux")]
             OutboundPayload::OpenedFiles(selection) => (
                 Some(
@@ -1233,6 +1266,13 @@ impl OutboundRequest {
                 Some(prepare_outbound_files(files)?)
             }
             #[cfg(target_os = "linux")]
+            OutboundPayload::NativeSource(source) => match source.as_ref() {
+                crate::prepared_source::PreparedSource::Files(files) => {
+                    Some(prepare_opened_outbound_files(files)?)
+                }
+                crate::prepared_source::PreparedSource::Text(_) => None,
+            },
+            #[cfg(target_os = "linux")]
             OutboundPayload::OpenedFiles(selection) => {
                 Some(prepare_opened_outbound_files(selection)?)
             }
@@ -1267,9 +1307,10 @@ impl OutboundRequest {
                 }
             }
             None => {
-                let OutboundPayload::Text(text) = &self.payload else {
-                    return Err(anyhow!("Missing prepared outbound files"));
-                };
+                let text = self
+                    .payload
+                    .text()
+                    .ok_or_else(|| anyhow!("Missing prepared outbound text"))?;
                 let prepared = prepare_outbound_text(text)?;
                 self.text_payload_id = Some(prepared.payload_id);
                 let payload_type = prepared.payload_type.clone();
@@ -1335,7 +1376,7 @@ impl OutboundRequest {
                 )
                 .await;
 
-                if let OutboundPayload::Text(text) = self.payload.clone() {
+                if let Some(text) = self.payload.text().map(str::to_owned) {
                     if self.take_pending_cancel_request()? {
                         self.update_state(|state| state.state = State::Cancelled, true)
                             .await;
@@ -1939,7 +1980,9 @@ mod security_tests {
                 socket,
                 "native-test".into(),
                 sender,
-                OutboundPayload::OpenedFiles(Arc::new(selected)),
+                OutboundPayload::NativeSource(Arc::new(
+                    crate::prepared_source::PreparedSource::from(selected),
+                )),
                 RemoteDeviceInfo {
                     name: "Test phone".into(),
                     device_type: DeviceType::Phone,
@@ -1951,6 +1994,56 @@ mod security_tests {
             request.state.encrypt_key = Some(vec![0x11; 32]);
             request.state.send_hmac_key = Some(vec![0x22; 32]);
             (request, peer)
+        }
+
+        #[tokio::test]
+        async fn given_native_source_when_actual_request_owns_payload_then_outer_capability_lives_until_request_drop(
+        ) {
+            // Arrange / Act / Assert
+            for text in [false, true] {
+                let file = tempfile::NamedTempFile::new().unwrap();
+                let source = Arc::new(if text {
+                    crate::prepared_source::PreparedSource::Text(
+                        crate::prepared_source::NativeText::new("private-text".into()).unwrap(),
+                    )
+                } else {
+                    crate::prepared_source::PreparedSource::from(selection(file.path(), "file"))
+                });
+                let weak = Arc::downgrade(&source);
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                let _peer = TcpStream::connect(listener.local_addr().unwrap())
+                    .await
+                    .unwrap();
+                let (socket, _) = listener.accept().await.unwrap();
+                let (sender, _) = tokio::sync::broadcast::channel(16);
+                let request = OutboundRequest::new(
+                    [1, 2, 3, 4],
+                    socket,
+                    "source-test".into(),
+                    sender,
+                    OutboundPayload::NativeSource(source),
+                    RemoteDeviceInfo {
+                        name: "phone".into(),
+                        device_type: DeviceType::Phone,
+                    },
+                )
+                .unwrap();
+                assert!(weak.upgrade().is_some());
+                assert!(!format!("{:?}", request.payload).contains("private-text"));
+                assert_eq!(
+                    request
+                        .state
+                        .transfer_metadata
+                        .as_ref()
+                        .unwrap()
+                        .text_payload
+                        .is_some(),
+                    text
+                );
+                drop(request);
+                assert!(weak.upgrade().is_none());
+                assert!(file.path().is_file());
+            }
         }
 
         async fn read_native_frame(socket: &mut TcpStream, sequence: i32) -> OfflineFrame {

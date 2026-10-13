@@ -207,9 +207,11 @@ impl Coordinator {
         // Advance before taking ownership so exhaustion cannot consume a preparation.
         let selection = SelectionId(self.epoch, self.advance()?);
         if let Some(upload) = self.uploads.get_mut(&id) {
-            let resource = Arc::new(OpenedSelection::from_validated_files(
-                std::mem::take(&mut upload.files),
-                upload.bytes,
+            let resource = Arc::new(crate::prepared_source::PreparedSource::from(
+                OpenedSelection::from_validated_files(
+                    std::mem::take(&mut upload.files),
+                    upload.bytes,
+                ),
             ));
             upload.state = UploadState::Committed(selection);
             self.reservations.insert(

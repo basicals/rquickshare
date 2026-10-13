@@ -32,6 +32,8 @@ pub mod file_source;
 mod hdl;
 pub mod managed;
 mod manager;
+#[cfg(target_os = "linux")]
+pub mod prepared_source;
 mod protocol;
 #[cfg(target_os = "linux")]
 pub mod service;

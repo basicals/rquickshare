@@ -572,7 +572,7 @@ impl NativeRuntime {
                     ),
                     name: route.name.clone(),
                     addr: route.addr.to_string(),
-                    ob: OutboundPayload::OpenedFiles(dispatch.selection),
+                    ob: OutboundPayload::NativeSource(dispatch.selection),
                 },
             });
         }

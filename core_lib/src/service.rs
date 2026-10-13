@@ -188,7 +188,7 @@ pub struct Snapshot {
 pub struct SendDispatch {
     pub transfer: TransferId,
     pub endpoint: String,
-    pub selection: Arc<OpenedSelection>,
+    pub selection: Arc<crate::prepared_source::PreparedSource>,
 }
 
 impl fmt::Debug for SendDispatch {
@@ -202,11 +202,11 @@ impl fmt::Debug for SendDispatch {
 
 struct Selection {
     owner: ClientId,
-    resource: Arc<OpenedSelection>,
+    resource: Arc<crate::prepared_source::PreparedSource>,
 }
 
 struct Reservation {
-    resource: Weak<OpenedSelection>,
+    resource: Weak<crate::prepared_source::PreparedSource>,
     handles: usize,
     bytes: u64,
 }
@@ -220,10 +220,10 @@ struct Replay {
 struct Transfer {
     received_text: Option<Arc<crate::sessions::text::ReceivedText>>,
     view: TransferSnapshot,
-    resource: Option<Arc<OpenedSelection>>,
+    resource: Option<Arc<crate::prepared_source::PreparedSource>>,
     endpoint: Option<String>,
     answer: Option<(u64, bool)>,
-    source: Weak<OpenedSelection>,
+    source: Weak<crate::prepared_source::PreparedSource>,
     owner_closed: bool,
     released: bool,
     control_receipt: bool,
@@ -473,7 +473,7 @@ impl Coordinator {
         let bytes = selection.total_bytes();
         reserve_usage(self.usage(), handles, bytes, self.limits)?;
         let id = SelectionId(self.epoch, self.advance()?);
-        let resource = Arc::new(selection);
+        let resource = Arc::new(crate::prepared_source::PreparedSource::from(selection));
         self.reservations.insert(
             id,
             Reservation {

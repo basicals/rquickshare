@@ -13,7 +13,7 @@ queue dispatch. Keep legacy OpenedFiles/Files/Text DTO contracts available; add 
 native-only serde/TS-skipped source variant. Same transport owner, ordered ledger,
 prepared selection ID, explicit recipient Send, quotas and discard/cancel semantics.
 
-1. [ ] O1: typed immutable PreparedSource (Files/Text), redacted native text;
+1. [x] O1: typed immutable PreparedSource (Files/Text), redacted native text;
    coordinator reservations and managed runtime/request retain its exact Arc until
    reader/request release. Preserve existing file input and physical-free fixtures.
 2. [ ] O2: typed staged text preparation wire and selection metadata in immutable
@@ -103,3 +103,18 @@ sent/cancelled. Uncertain preparation uses existing Recover/Discard controls.
 N8/N11/N12 not applicable to no-time/no-billing/no-new-storage text slice. Tests
 must exercise real domain/queue/read ownership, not mocked subject. No Mode B
 exhaustive coverage/ten-run/Google acceptance claim. Record actual results here.
+
+O1 actual first check: all-target compilation passed (16.81s). First library run
+543passed/3failed: two runtime fixtures still asserted the old native payload
+variant; update them to require NativeSource and retain the SAME outer-Weak drop
+assertions. A 2000-operation private-bus fixture exceeded its existing 30s event
+watchdog under full-suite host load (no timeout change). Rerun failed checks only.
+NativeSource text must share legacy Text's existing introduction/response byte path;
+retain the outer capability rather than unwrapping into a bare legacy Text value.
+
+O1 affected results after correction: runtime28passed(0.03s), long client1passed
+(16.05s), outbound34passed(0.73s); strict all-target Clippy passed(19.84s). New
+NativeText boundary method and actual Files/Text request Arc lifetime method passed
+in the initial suite. Existing opened-file request fixtures now exercise NativeSource
+and preserve bytes/descriptor/unlink/cancel checks. Terminal closed. O1 source is
+independently reversible; text ingestion/GUI are not yet exposed.
