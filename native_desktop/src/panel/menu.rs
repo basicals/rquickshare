@@ -26,6 +26,7 @@ impl Panel {
             "transfers",
             "files",
             "folder",
+            "send-text",
             "discard",
             "recover",
             "abort",
@@ -47,6 +48,7 @@ impl Panel {
                         panel.set_mode(Mode::Full);
                         panel.pages.set_visible_child_name(name);
                     }
+                    "send-text" => panel.show_composer(),
                     "files" | "folder" => {
                         panel.set_mode(Mode::Full);
                         panel.pages.set_visible_child_name("nearby");
@@ -77,6 +79,7 @@ impl Panel {
         for (name, title) in [
             ("files", "Send files…"),
             ("folder", "Send a folder…"),
+            ("send-text", "Send text…"),
             ("incoming", "Incoming requests"),
             ("transfers", "Transfers"),
         ] {

@@ -13,7 +13,7 @@ impl Panel {
             && !model.preview
             && ((!self.layer && !model.safety_active) || model.safety.manual_allowed());
         let mut enabled = 0;
-        for id in 1..=11 {
+        for id in (1..=11).chain([16]) {
             let action = Action::from_id(id).expect("fixed tray action");
             let cleanup = matches!(action, Action::Hide | Action::Quit);
             let allowed = !model.closing
@@ -56,7 +56,11 @@ impl Panel {
                 self.model.borrow_mut().manual_requested = true;
                 self.present_surface();
             }
-            Action::Files | Action::Folder | Action::Incoming | Action::Transfers => {
+            Action::Files
+            | Action::Folder
+            | Action::Text
+            | Action::Incoming
+            | Action::Transfers => {
                 self.mark_manual();
                 self.model.borrow_mut().manual_requested = true;
                 if self.present_surface() {
@@ -93,6 +97,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     let previous_state = panel.model.borrow().state.clone();
     panel.model.borrow_mut().state.view =
         Some(Arc::new(rqs_lib::service::client::state::StateView {
+            sources: vec![],
             epoch: 1,
             revision: 1,
             lifecycle: Lifecycle::Running,
@@ -107,6 +112,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     panel.render();
     let full = panel.tray_projection();
     assert_ne!(full.enabled & Action::Settings.bit(), 0);
+    assert_ne!(full.enabled & Action::Text.bit(), 0);
     assert_ne!(full.enabled & Action::Files.bit(), 0); // Presentation projection; no service handle exists.
     panel.tray_action(Action::Compact);
     assert_eq!(panel.mode(), Mode::Compact);
@@ -130,6 +136,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         inhibited: Some(false),
         closed: false,
     });
+    assert_ne!(panel.tray_projection().enabled & Action::Text.bit(), 0);
     assert_ne!(panel.tray_projection().enabled & Action::Files.bit(), 0);
     assert!(panel.tray_context((1, 1)));
     panel.context.popdown();

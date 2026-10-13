@@ -11,6 +11,7 @@ impl Panel {
     }
     pub(super) fn hide(self: &Rc<Self>) {
         self.close_text_review();
+        self.close_composer();
         let dismissed = self.policy.borrow_mut().dismiss();
         let notices = self
             .model
@@ -67,8 +68,10 @@ impl Panel {
         }
         if !safety.manual_allowed() {
             self.close_text_review();
+            self.close_composer();
         }
         self.refresh_text_review();
+        self.refresh_composer();
         self.render();
         self.apply_presentation();
     }
@@ -82,6 +85,11 @@ impl Panel {
                 model.state.clone(),
                 Surface {
                     visible: self.window.is_visible()
+                        || self
+                            .composer
+                            .borrow()
+                            .as_ref()
+                            .is_some_and(|composer| composer.visible())
                         || self
                             .text_review
                             .borrow()

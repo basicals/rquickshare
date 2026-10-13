@@ -20,6 +20,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 
+mod compose;
 mod menu;
 mod presentation;
 mod rows;
@@ -66,6 +67,7 @@ pub struct Panel {
     appearance: RefCell<Option<gtk::DropDown>>,
     settings_owner: RefCell<Option<Rc<settings::Editor>>>,
     text_review: RefCell<Option<Rc<text::Review>>>,
+    composer: RefCell<Option<Rc<compose::Composer>>>,
     text_generation: RefCell<Rc<()>>,
     rows: RefCell<rows::Rows>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
@@ -166,6 +168,26 @@ fn details_card_mode(details: &TransferDetails, full: bool) -> gtk::Box {
     row
 }
 
+fn source_summary(
+    kind: rqs_lib::sessions::details::PayloadKind,
+    file_count: u32,
+    byte_count: u64,
+) -> String {
+    use rqs_lib::sessions::details::PayloadKind;
+    match kind {
+        PayloadKind::Files => format!("{} files prepared · choose a recipient", file_count),
+        PayloadKind::Text | PayloadKind::Url => format!(
+            "{} prepared · {} bytes · choose a recipient",
+            if kind == PayloadKind::Url {
+                "Link"
+            } else {
+                "Text"
+            },
+            byte_count
+        ),
+    }
+}
+
 pub fn controls_ready(state: &PanelState, local_busy: bool) -> bool {
     !local_busy
         && !state.busy
@@ -199,7 +221,7 @@ fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'stat
         }
         Some(Source) => "Cannot read the selected files. Check access and select them again.",
         Some(_) => "The operation was not accepted. Review the current state and try again.",
-        None => "Choose files, then choose a nearby recipient.",
+        None => "Choose files, a folder or text, then choose a nearby recipient.",
     }
 }
 
@@ -260,6 +282,7 @@ impl Panel {
             appearance: RefCell::new(None),
             settings_owner: RefCell::new(None),
             text_review: RefCell::new(None),
+            composer: RefCell::new(None),
             text_generation: RefCell::new(Rc::new(())),
             rows: RefCell::new(rows::Rows::default()),
             dismissal: RefCell::new(None),
@@ -371,6 +394,7 @@ impl Panel {
         let current_epoch = state.view.as_ref().map(|view| view.epoch);
         if state.disconnected || previous_epoch != current_epoch {
             self.close_text_review();
+            self.close_composer();
         }
         let saved = state
             .settings
@@ -404,6 +428,7 @@ impl Panel {
             editor.refresh();
         }
         self.refresh_text_review();
+        self.refresh_composer();
         self.render();
         self.apply_presentation();
     }
@@ -486,6 +511,7 @@ impl Panel {
             return;
         }
         self.close_text_review();
+        self.close_composer();
         if let Some(task) = self.completion.borrow_mut().take() {
             task.abort();
         }
@@ -693,6 +719,7 @@ impl Panel {
         for (name, enabled) in [
             ("files", ready && !selected),
             ("folder", ready && !selected),
+            ("send-text", ready && !selected),
             ("discard", ready && selected),
             ("nearby", !preview),
             ("incoming", !preview),
@@ -744,13 +771,17 @@ impl Panel {
                 .unwrap()
                 .set_enabled(self.button(id).is_sensitive());
         }
+        let summary = model
+            .state
+            .view
+            .as_ref()
+            .and_then(|view| view.sources.first())
+            .map(|source| source_summary(source.kind, source.file_count, source.byte_count));
         self.text(
             "selection",
-            if selected {
-                "Files prepared · choose a recipient"
-            } else {
-                "Choose files or a folder"
-            },
+            summary
+                .as_deref()
+                .unwrap_or("Choose files, a folder or text"),
         );
         self.text(
             "badge",

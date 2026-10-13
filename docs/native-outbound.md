@@ -19,7 +19,7 @@ prepared selection ID, explicit recipient Send, quotas and discard/cancel semant
 2. [x] O2: typed staged text preparation wire and selection metadata in immutable
    captures, bounded receipt/replay/domain rules, checked SDK preparation/recovery
    within existing source owner; add actual broker/domain checks.
-3. [ ] O3: explicit native clipboard/text capture, private review and preparation,
+3. [x] O3: explicit native clipboard/text capture, private review and preparation,
    recipient selection and separate Send, single source gate, lock/epoch cleanup;
    isolated GTK checks, no real clipboard capture during development.
 4. [ ] O4: actual affected checks once, docs, atomic commits and export/handoff.
@@ -160,3 +160,20 @@ before request navigation; 16children/17totalnodes. u16 readiness bit15, existin
 16event group/mailbox bounds stay. The action is disabled when source occupied,
 busy, locked/unknown or private editor already holds the preparation gate. No private
 text in menu labels. Keyboard/context paste uses guarded explicit capture.
+
+O3 first native all-target check passed(12.99s); all22 native methods passed(1.09s,
+24.82s build), strict native Clippy passed(7.67s). Review found the Compact empty-row
+still used the historical "Files prepared" label and keyed only on selection presence.
+Update both Full/Compact source summaries from captured kind/count/bytes and include
+summary in empty-row cache key so replacing one preparation cannot retain stale UI.
+Add pure summary assertions and strengthen actual ID16 enabled/disabled broker event,
+tray readiness and clipboard/PRIMARY preservation assertions before final checks.
+
+O3 final affected results: panel7passed(0.45s), real/pure tray menu2passed(0.06s),
+strict native all-target no-deps lint passed(3.67s), native build passed(15.41s).
+New summary method plus strengthened single GTK smoke prove explicit bounded paste,
+no capture/preparation on open, read-only source capture, failed insertion preserving
+body, cancellation clearing body/gate, literal text and generic source summaries.
+Clipboard/PRIMARY unchanged by editor open/paste, checked only on isolated display.
+Actual ID16 broker enabled/disabled event and lock/unlock tray projection asserted.
+No physical user's clipboard or installed tray registration. Terminal closed.

@@ -8,7 +8,7 @@ pub(super) const PATH: &str = "/Menu";
 #[cfg(test)]
 pub(super) const INTERFACE: &str = "com.canonical.dbusmenu";
 const MAX_PROPERTIES: usize = 16;
-const ROWS: [i32; 15] = [1, 12, 2, 3, 4, 5, 13, 6, 7, 14, 8, 9, 10, 15, 11];
+const ROWS: [i32; 16] = [1, 12, 2, 3, 16, 4, 5, 13, 6, 7, 14, 8, 9, 10, 15, 11];
 pub type Layout = (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>);
 type Properties = Vec<(i32, HashMap<String, OwnedValue>)>;
 
@@ -26,6 +26,7 @@ pub enum Action {
     Reconnect,
     Hide,
     Quit,
+    Text = 16,
 }
 impl Action {
     pub fn from_id(id: i32) -> Option<Self> {
@@ -41,6 +42,7 @@ impl Action {
             9 => Self::Reconnect,
             10 => Self::Hide,
             11 => Self::Quit,
+            16 => Self::Text,
             _ => return None,
         })
     }
@@ -48,6 +50,7 @@ impl Action {
         match self {
             Self::Open => "Open card",
             Self::Files => "Send files…",
+            Self::Text => "Send text…",
             Self::Folder => "Send a folder…",
             Self::Incoming => "Incoming requests",
             Self::Transfers => "Transfers",
@@ -63,6 +66,7 @@ impl Action {
         match self {
             Self::Open | Self::Compact | Self::Full => None,
             Self::Files => Some("files"),
+            Self::Text => Some("send-text"),
             Self::Folder => Some("folder"),
             Self::Incoming => Some("incoming"),
             Self::Transfers => Some("transfers"),
@@ -131,7 +135,7 @@ fn invalid() -> fdo::Error {
     fdo::Error::InvalidArgs("Invalid menu request".into())
 }
 fn known(id: i32) -> bool {
-    (0..=15).contains(&id)
+    (0..=16).contains(&id)
 }
 fn validate_properties(names: &[String]) -> fdo::Result<()> {
     if names.len() > MAX_PROPERTIES
@@ -247,7 +251,7 @@ impl Menu {
         }
         validate_properties(&property_names)?;
         let ids = if ids.is_empty() {
-            (0..=15).collect()
+            (0..=16).collect()
         } else {
             ids
         };

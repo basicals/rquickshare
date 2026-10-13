@@ -225,6 +225,11 @@ impl Panel {
             pages.get_mut("compact").unwrap().push(root);
             used.insert(("compact".into(), transfer.transfer.id().to_owned()));
         }
+        let compact_summary = view
+            .sources
+            .first()
+            .map(|source| source_summary(source.kind, source.file_count, source.byte_count))
+            .unwrap_or_else(|| "Ready to share".into());
         for (page, title) in [
             (
                 "nearby",
@@ -232,17 +237,13 @@ impl Panel {
             ),
             ("incoming", "No incoming requests"),
             ("transfers", "No transfers"),
-            (
-                "compact",
-                if selection.is_some() {
-                    "Files prepared · choose a recipient"
-                } else {
-                    "Ready to share"
-                },
-            ),
+            ("compact", compact_summary.as_str()),
         ] {
             if pages[page].is_empty() {
-                let key = (page.to_owned(), format!("empty:{}", selection.is_some()));
+                let key = (
+                    page.to_owned(),
+                    format!("empty:{}:{title}", selection.is_some()),
+                );
                 let entry = rows.entries.entry(key.clone()).or_insert_with(|| {
                     let root = card();
                     root.append(&label(title));
