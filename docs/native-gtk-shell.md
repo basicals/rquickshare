@@ -183,3 +183,14 @@ All owned verification processes exited. Terminal closed.
 The next context-menu ownership decision is reviewable in
 [native-desktop-ingress-review.md](native-desktop-ingress-review.md). No new ingress
 endpoint or daemon ownership-transfer method is implemented before that choice.
+
+## 2026-10-13 CLI integration checkpoint
+
+Context-menu ownership option 1 is implemented in native-desktop-ingress.md.
+Normal panel presentation can also be requested by CLI import, reusing a validated
+tray hint or the explicit compact Layer Shell initial placement. Chooser dialogs
+reserve the shared preparation gate; CLI staging cannot replace them. Five bounded
+GLib subscriptions (controller, local ingress, shared gate, desktop, tray) and the
+completion waiter are owned and aborted on exit. CLI import/server, source worker,
+controller and tray are joined. Nine native methods now exist and passed across
+the scoped runs recorded in the ingress SSOT. Native notifications remain pending.

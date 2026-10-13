@@ -21,7 +21,7 @@ Milestones / rollback:
    IPC, invocation never sends. Roll back native bindings independently.
 3. [x] Scoped real private-broker / parser / lifecycle checks, strict affected
    lint/build/format once; record actual observations, commit on dev.
-4. [ ] Add package-owned Dolphin assets only after the actual CLI/recipient flow
+4. [x] Add package-owned Dolphin source assets only after the actual CLI/recipient flow
    works. No live install. Notifications/settings/full parity remain separate gates.
 
 ## Frozen Desktop1 contract
@@ -200,3 +200,39 @@ hide incoming consent. Notification expiry must not imply decline/accept, and
 stale actions must be scoped to exact transfer/consent round. This needs its own
 concrete wire/UX review before implementation; no notification behavior is added
 by the descriptor ingress stage.
+
+### M4 static validation review
+
+The initial static check detected source mode 0664 from the host umask; corrected
+it to the package's planned 0644. Generic desktop-file-validate then rejected
+KDE Type=Service application-only keys and the missing general Name. Added Name;
+retain KDE's documented Type=Service instead of changing the contract to satisfy
+an application-only validator. Verify exact remaining diagnostics and KConfig
+parsing below. KDE's current KIO source reads protocol/count/MIME/actions directly;
+it does not check TryExec in service-menu filtering, so remove that ineffective
+hint. Binary/menu co-ownership is the installation guarantee. No claim of automatic
+PATH filtering is made. Primary implementation reference:
+https://github.com/KDE/kio/blob/master/src/widgets/kfileitemactions.cpp
+
+### M4 completion / release distinction
+
+The package-owned service-menu source and destination/removal contract are in
+native_desktop/packaging. Scoped static checks passed for local protocol, MIME,
+1..256 roots, separate Exec arguments, action structure and 0644 mode. Actual
+KDE kreadconfig6 reads Type/protocol/Exec successfully. Generic validator still
+returns exactly two KDE extension errors (MimeType and Actions for Type=Service);
+this is explicitly not reported as a validator pass. No unrelated diagnostics
+were suppressed. Metadata follows KDE's documented service-menu contract.
+
+Final native executable build passed (7.72s). One compiled headless negative smoke
+with DISPLAY/WAYLAND_DISPLAY absent rejected a synthetic remote URI before GTK
+or bus startup: exit 1, no stdout, fixed stderr without the source name. Core and
+native nightly format checks and git diff --check passed. All owned command/fixture
+processes exited (terminal closed). No ten-run repetition, installed menu, actual
+GTK/daemon/CLI end-to-end session or Google-peer claim.
+
+M1-M4 source milestones are complete. Release remains blocked on native visible
+CLI errors/notifications, daemon/package/settings migration and physical acceptance.
+Next review: native-notification-review.md. Source implementation commits:
+0d6270e (SDK import), 9177e70 (native CLI/panel binding). Roll back native consumers
+and package assets before the SDK addition; the daemon ledger API is unchanged.

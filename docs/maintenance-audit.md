@@ -1,5 +1,28 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-13: GUI-owned CLI import and Dolphin source assets
+
+The user delegated ingress ownership selection to architectural quality. Option 1
+is implemented: CLI acquires read-only descriptors; authenticated bounded Desktop1
+imports into the panel's existing SDK connection. Interrupted replies replay the
+same import; committed preparation survives CLI disconnect. Invocation never sends.
+The chooser and CLI share one preparation gate, preserving an existing selection.
+CLI cold start is driven by broker ownership/child exit. No implicit daemon startup.
+
+[native-desktop-ingress.md](native-desktop-ingress.md) records invariants, rollback
+and actual verification: 43 affected core client methods passed; nine native methods
+passed, followed by one affected startup-fixture rerun; strict lint/build/format
+passed. Combined test inventory is 521, not a whole-suite execution. Source-only
+Dolphin metadata has static/KConfig validation and an explicit package lifecycle.
+No live install/registration, push, settings changes or Tauri retirement.
+
+Native notifications and visible nonterminal CLI errors are the next release gate;
+[native-notification-review.md](native-notification-review.md) records the pending
+incoming-action UX choice. Settings, clipboard/reveal/autostart/updates/packaging,
+physical KDE placement and actual Google peer parity remain unfinished. Historical
+checkpoints below describe their dated state, not current authorization.
+
+
 ## 2026-10-12: uninstalled native GTK tray shell implemented
 
 [native-gtk-shell.md](native-gtk-shell.md) records the separate pinned GTK4 crate,

@@ -9,7 +9,15 @@ adding daemon authority-transfer transitions. Implementation SSOT:
 [native-desktop-ingress.md](native-desktop-ingress.md). Pending-choice language
 below records the review history, not the current authorization state.
 
-## Concrete current state
+## 2026-10-13 implementation checkpoint
+
+Option 1 is implemented and verified as recorded in native-desktop-ingress.md.
+CLI local acquisition, Desktop1 FD import, shared gate, recipient presentation and
+package-owned Dolphin source assets exist. Live installation, native notifications
+and visible nonterminal errors remain release gates. The review below preserves
+its earlier analysis; it is not a pending ingress decision.
+
+## Historical state at review
 
 The uninstalled GTK tray shell is implemented in native_desktop and consumes
 PanelController. Its own chooser acquires sources locally and the controller's
