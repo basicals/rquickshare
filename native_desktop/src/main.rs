@@ -164,7 +164,7 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
         .build()
         .map_err(|_| "Cannot create native runtime")?;
     let ingress = Arc::new(ingress::Ingress::new());
-    let (controller, tray, desktop, guard) = if options.preview {
+    let (controller, mut tray, desktop, guard) = if options.preview {
         (None, None, None, None)
     } else {
         let address = session_address()?;
@@ -241,6 +241,10 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
     );
     let handle = controller.as_ref().map(PanelController::handle);
     let tray_updates = tray.as_ref().map(|tray| tray.updates.clone());
+    let tray_menu = tray.as_ref().map(|tray| tray.menu.clone());
+    let tray_commands = Rc::new(RefCell::new(
+        tray.as_mut().and_then(|tray| tray.take_commands()),
+    ));
     let desktop_handle = desktop.as_ref().map(DesktopServer::handle);
     let safety_updates = guard.as_ref().map(|guard| guard.updates.clone());
     let stop = CancellationToken::new();
@@ -267,6 +271,18 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
             ingress_ui.clone(),
             !options.preview,
         );
+        if let Some(menu) = &tray_menu { panel.bind_tray_menu(menu.clone()); }
+        if let Some(mut commands) = tray_commands.borrow_mut().take() {
+            let weak = Rc::downgrade(&panel); let end = stop_ui.clone();
+            tasks_ui.borrow_mut().push(glib::spawn_future_local(async move {
+                'events: loop {
+                    let actions = tokio::select! { biased; _ = end.cancelled() => break, actions = commands.recv() => match actions { Some(actions) => actions, None => break } };
+                    let Some(panel) = weak.upgrade() else { break };
+                    for action in actions { if panel.tray_action(action) { break 'events; } }
+                }
+                commands.close();
+            }));
+        }
         if options.preview {
             panel.set_mode(options.mode);
             panel.preview(&options.page);
@@ -380,7 +396,8 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
                             return;
                         }
                         if let (Some(panel), Some(point)) = (weak.upgrade(), state.activation) {
-                            if !panel.show_at(point) {
+                            let placed = if state.context { panel.tray_context(point) } else { panel.show_at(point) };
+                            if !placed {
                                 eprintln!(
                                     "rQuickShare: Cannot place the card on an available monitor"
                                 );

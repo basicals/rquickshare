@@ -24,7 +24,7 @@ Primary protocol references checked before code:
 1. [x] T1 export fixed DBusMenu layout/properties/event methods and owned bounded
    command queue; StatusNotifierItem.Menu returns /Menu. Freeze/read/event validation,
    dynamic enabled/mode snapshot and revision signalling. Private-broker checks.
-2. [ ] T2 bind GTK action/readiness projection, bridge ordered events to existing
+2. [x] T2 bind GTK action/readiness projection, bridge ordered events to existing
    actions, and direct ContextMenu fallback to the card's existing popover. Preserve
    primary activation, hide/Quit ownership and lock safety; strengthen GTK smoke.
 3. [ ] T3 run affected native checks/lint/build once, record observations, update
@@ -86,3 +86,31 @@ compile error was corrected by exposing the owned signal emitter to its parent.
 GUI consumer fields/methods are intentionally not yet wired and generate temporary
 unused warnings until T2; no suppression added. Existing core no-default feature
 warnings remain. All private brokers/commands exited. Terminal closed.
+
+T2 review fixes before code: production Layer Shell menu projection requires a
+known unlocked safety value even before the first GTK safety callback. Stop the
+ordered action bridge after accepted Quit/Reconnect rather than executing remaining
+queued local UI actions. Existing inert GTK smoke now exercises actual placement;
+guard Layer Shell calls by the panel's existing layer flag so Xvfb review never
+calls compositor APIs on an ordinary preview window. Production geometry/safety
+policy remains unchanged; this removes a concrete unguarded adapter call, not a
+new platform fallback or physical placement claim.
+
+T2 observations: existing checked GTK actions now consume one ordered bounded
+mailbox; menu projection follows current readiness/mode/safety, and direct tray
+ContextMenu opens the existing popover. All 20 native methods passed once (0.55s),
+then only the affected GTK method was rechecked after the Layer Shell preview guard
+(0.52s). Native strict Clippy passed (4.46s), native build passed (11.61s), nightly
+format/diff passed. Compile review found an immutable Ref dropped before row use;
+retain it through rendering and publish another immutable projection. A test-only
+interface constant is cfg(test), with no warning suppression. Existing core feature
+warnings and isolated Xvfb DRI3 messages remain. All commands/brokers/tasks exited.
+Terminal closed. No actual Plasma menu/Wayland focus proof.
+
+T3 final contract review: when atomically rejecting EventGroup, report every ID
+whose event was not dispatched, including valid clicks in the rejected group.
+Reporting only malformed IDs would falsely acknowledge the omitted valid prefix.
+Keep bounded all-or-none admission and standard failed-event IDs; strengthen the
+real wire assertion. Inject expected UID into the menu adapter to exercise actual
+credential denial on a private broker, rather than relying only on a UID helper.
+No new trust boundary, action or UI choice is introduced.

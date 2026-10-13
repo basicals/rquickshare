@@ -24,6 +24,7 @@ mod menu;
 mod presentation;
 mod rows;
 mod settings;
+mod tray;
 
 #[derive(Default)]
 struct Model {
@@ -68,6 +69,7 @@ pub struct Panel {
     reconnect: Cell<bool>,
     reconnect_button: gtk::Button,
     style: gtk::CssProvider,
+    tray_menu: RefCell<Option<crate::tray::menu::Handle>>,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -246,6 +248,7 @@ impl Panel {
             reconnect: Cell::new(false),
             reconnect_button,
             style: provider,
+            tray_menu: RefCell::new(None),
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -608,6 +611,7 @@ impl Panel {
         }
     }
     pub fn render(self: &Rc<Self>) {
+        // Publish after readiness/action updates using an immutable model projection.
         let model = self.model.borrow();
         let preview = model.preview;
         let full = model.mode == Mode::Full;
@@ -776,6 +780,7 @@ impl Panel {
             error_message(None)
         };
         self.text("status", status);
+        self.sync_tray_menu();
 
         let Some(view) = &model.state.view else {
             self.rows.borrow_mut().clear();
@@ -905,31 +910,33 @@ impl Panel {
             ) else {
                 continue;
             };
-            if self.window.monitor().as_ref() != Some(&monitor) {
-                self.window.set_visible(false);
-                self.window.set_monitor(Some(&monitor));
-            }
-            for edge in [
-                LayerEdge::Left,
-                LayerEdge::Right,
-                LayerEdge::Top,
-                LayerEdge::Bottom,
-            ] {
-                self.window.set_anchor(edge, false);
-                self.window.set_margin(edge, 0);
-            }
-            for (edge, margin) in [
-                (placement.horizontal, placement.horizontal_margin),
-                (placement.vertical, placement.vertical_margin),
-            ] {
-                let edge = match edge {
-                    Edge::Left => LayerEdge::Left,
-                    Edge::Right => LayerEdge::Right,
-                    Edge::Top => LayerEdge::Top,
-                    Edge::Bottom => LayerEdge::Bottom,
-                };
-                self.window.set_anchor(edge, true);
-                self.window.set_margin(edge, margin);
+            if self.layer {
+                if self.window.monitor().as_ref() != Some(&monitor) {
+                    self.window.set_visible(false);
+                    self.window.set_monitor(Some(&monitor));
+                }
+                for edge in [
+                    LayerEdge::Left,
+                    LayerEdge::Right,
+                    LayerEdge::Top,
+                    LayerEdge::Bottom,
+                ] {
+                    self.window.set_anchor(edge, false);
+                    self.window.set_margin(edge, 0);
+                }
+                for (edge, margin) in [
+                    (placement.horizontal, placement.horizontal_margin),
+                    (placement.vertical, placement.vertical_margin),
+                ] {
+                    let edge = match edge {
+                        Edge::Left => LayerEdge::Left,
+                        Edge::Right => LayerEdge::Right,
+                        Edge::Top => LayerEdge::Top,
+                        Edge::Bottom => LayerEdge::Bottom,
+                    };
+                    self.window.set_anchor(edge, true);
+                    self.window.set_margin(edge, margin);
+                }
             }
             self.model.borrow_mut().last_hint = Some(point);
             let model = self.model.borrow();

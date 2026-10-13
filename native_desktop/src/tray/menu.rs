@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 use zbus::zvariant::{OwnedValue, Str, Value};
 
 pub(super) const PATH: &str = "/Menu";
+#[cfg(test)]
 pub(super) const INTERFACE: &str = "com.canonical.dbusmenu";
 const MAX_PROPERTIES: usize = 16;
 const ROWS: [i32; 15] = [1, 12, 2, 3, 4, 5, 13, 6, 7, 14, 8, 9, 10, 15, 11];

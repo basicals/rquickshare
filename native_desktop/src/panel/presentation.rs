@@ -65,6 +65,7 @@ impl Panel {
             model.safety_active = true;
         }
         self.apply_presentation();
+        self.sync_tray_menu();
     }
     pub(super) fn apply_presentation(self: &Rc<Self>) {
         let (state, surface, requested, protected) = {

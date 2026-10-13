@@ -201,6 +201,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.actions.activate_action("settings", None);
     assert_eq!(*panel.settings.borrow().as_ref().unwrap(), settings);
     assert!(settings.is_visible());
+    tray::verify_tray_projection(&panel);
     assert_eq!(
         panel.pages.visible_child_name().as_deref(),
         Some("incoming")
