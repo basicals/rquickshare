@@ -1,5 +1,24 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-13: native outgoing text and bounded clipboard capture implemented
+
+[native-outbound.md](native-outbound.md) completes O1-O4 under selected A: unified
+Files/Text source retained through actual request lifetime, one quota/selection/queue,
+chunked typed text preparation, exact ordered recovery and safe metadata summaries.
+Existing files/CLI and text preserve each other's source slot. Source is not Send.
+GTK Send text in header/context/tray opens a private editor; only explicit paste
+reads a bounded UTF-8 stream. Prepare leads to recipient choice; Send is separate.
+Lock/epoch/close cancels capture and clears editor; reconnect never recaptures text.
+
+Checks include actual native+legacy two-manager text transfer, domain byte/quota/
+replay tables, private-broker interrupted Begin/Append/Commit recovery and preserved
+file lifetime checks. Native22 passed before summary addition; affected panel7/menu2
+then passed. Strict lint/build and8 binary integrations passed. Exact failures,
+corrections/counts and source rollback are in SSOT; no whole-product/Google claim.
+Next: clipboard images, received reveal/open, autostart/updates/package lifecycle,
+then outstanding protocol/account/QR and physical Android/Windows/KDE gates.
+Earlier reviews and dated pending-text entries below are historical.
+
 ## 2026-10-13: outgoing native source ownership review prepared
 
 The user requested continuation beyond received text. Core already sends text, but

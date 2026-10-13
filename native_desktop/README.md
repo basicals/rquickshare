@@ -127,3 +127,12 @@ not a permanent journal. Read recovery uses Recover operation; pending reads blo
 new source/settings mutations. Outgoing native text/clipboard/image and URL opening
 remain separate capabilities. See [native-text.md](../docs/native-text.md) for contracts
 and exact actual observations; no installed Wayland/Google acceptance is implied.
+
+Send text… in the header/context/tray menu opens a private editor. Write text or
+explicitly Paste clipboard (1–128 KiB UTF-8, no NUL), review and Prepare text. Then
+choose a Nearby recipient and press Send. Preparation alone never sends. Existing
+prepared files/text must be discarded first. Clipboard capture is bounded, cancellable
+and does not run when opening the panel. Lock/epoch/close clears the private editor.
+Uncertain preparation uses the existing Recover/Discard controls without recapturing
+clipboard. Full/Compact source summaries show generic kind/size. See
+[native-outbound.md](../docs/native-outbound.md). Clipboard images are the next slice.

@@ -22,7 +22,7 @@ prepared selection ID, explicit recipient Send, quotas and discard/cancel semant
 3. [x] O3: explicit native clipboard/text capture, private review and preparation,
    recipient selection and separate Send, single source gate, lock/epoch cleanup;
    isolated GTK checks, no real clipboard capture during development.
-4. [ ] O4: actual affected checks once, docs, atomic commits and export/handoff.
+4. [x] O4: actual affected checks once, docs, atomic commits and export/handoff.
 
 Rollback GUI/SDK before typed wire/ledger, coordinator/runtime before source type.
 No unrelated cleanup, trust/account/QR policy or Tauri retirement. Clipboard image
@@ -177,3 +177,32 @@ body, cancellation clearing body/gate, literal text and generic source summaries
 Clipboard/PRIMARY unchanged by editor open/paste, checked only on isolated display.
 Actual ID16 broker enabled/disabled event and lock/unlock tray projection asserted.
 No physical user's clipboard or installed tray registration. Terminal closed.
+
+## O4 completion / actual verification and recovery
+
+O4 explicit integration targets passed8methods: modern protocol4(0.00s), native
+daemon4(0.05s); both nightly format checks, diff and outgoing XML checks passed.
+Core inventory551 (baseline544 +2O1 +5O2). Observations are initial543passed/3failed
+O1 then affected runtime28/long1/outbound34 passed; O2 service247passed/2failed then
+affected outgoing2/native+legacy transport1 passed. Do not claim551 freshly passed
+in one suite or whole-product Mode B completion. Native inventory23: all22 passed
+before summary addition, then affected panel7/menu2passed. All final strict lint
+and native build passed. No ten-run/physical peer/coverage percentage claim.
+
+New methods9 total: core7 (source bounds/lifetime2, staged text/validation/quota3,
+wire ownership1, recovery controller1), native2 (insert bounds/source summary).
+Primary categories N1=2,N2=3,N4=1,N5=1,N7=1,N10=1; Positive,N3,N6,N9 interactions
+are embedded in actual tables/transport/private-broker/GTK assertions, not extra
+methods. N8/N11/N12 not applicable. Existing single GTK smoke strengthened rather
+than multiplying toolkit tests. All owned terminal/fixture processes exited.
+Terminal closed. No real user's clipboard/config/install/registration/push/branch.
+
+Checkpoints: 53f9fee plan,56c0dd6 unified source,49a409d staged text/SDK,fd4b808 GUI.
+Rollback consumers before wire/coordinator/runtime/source. Local/CI tests use
+core_lib's locked stable command; GTK uses the isolated display command in
+native_desktop/README.md. Earlier exact results remain above, including failures.
+Artifacts/export should record actual committed HEAD and exclude build/private data.
+
+Source text flow is implemented; remaining image capture, received reveal/open,
+autostart/update/package migration and Google Account/QR/parity are separate stages.
+Retain upstream refs and Tauri baseline until installed/physical equivalence gates.

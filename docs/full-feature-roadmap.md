@@ -10,8 +10,9 @@ physical Google compatibility. Native file/card/notification ownership is now
 implemented; daemon-owned persistent settings and in-app recovery are implemented
 in [native-settings.md](native-settings.md), with physical migration acceptance pending.
 Native received Text/URL review and explicit Copy are implemented in
-[native-text.md](native-text.md). Outgoing native clipboard/text/image, reveal,
-account/QR/package capabilities still require their own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
+[native-text.md](native-text.md). Outgoing native text/clipboard capture and shared recipient preparation are implemented
+in [native-outbound.md](native-outbound.md). Native clipboard images, reveal, account/QR/
+package capabilities still require their own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles
 
