@@ -676,6 +676,7 @@ async fn given_daemon_notices_when_gui_clients_restart_or_repeat_dismissal_then_
 ) {
     scenario(async {
         // Arrange
+        const EXTRA_OUTCOMES: usize = 17;
         let private = PrivateBus::new();
         let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
         for phase in [
@@ -683,7 +684,12 @@ async fn given_daemon_notices_when_gui_clients_restart_or_repeat_dismissal_then_
             crate::service::Phase::Finished,
             crate::service::Phase::Failed,
             crate::service::Phase::Disconnected,
-        ] {
+        ]
+        .into_iter()
+        .chain(std::iter::repeat_n(
+            crate::service::Phase::Finished,
+            EXTRA_OUTCOMES,
+        )) {
             let id = coordinator.register_inbound().unwrap();
             coordinator.observe(id, phase).unwrap();
         }
@@ -693,7 +699,7 @@ async fn given_daemon_notices_when_gui_clients_restart_or_repeat_dismissal_then_
         );
         let mut client = NativeClient::connect(private.socket().await).await.unwrap();
         let initial = client.read_state().await.unwrap();
-        assert_eq!(initial.notices.len(), 4);
+        assert_eq!(initial.notices.len(), 4 + EXTRA_OUTCOMES);
         let first = initial.notices[0].clone();
         // Act / Assert
         client
@@ -701,7 +707,7 @@ async fn given_daemon_notices_when_gui_clients_restart_or_repeat_dismissal_then_
             .await
             .unwrap();
         let dismissed = client.read_state().await.unwrap();
-        assert_eq!(dismissed.notices.len(), 3);
+        assert_eq!(dismissed.notices.len(), 3 + EXTRA_OUTCOMES);
         assert_eq!(dismissed.transfers, initial.transfers);
         client
             .dismiss_notices(std::slice::from_ref(&first))
@@ -721,7 +727,10 @@ async fn given_daemon_notices_when_gui_clients_restart_or_repeat_dismissal_then_
         );
         client.close().await.unwrap();
         let mut next = NativeClient::connect(private.socket().await).await.unwrap();
-        assert_eq!(next.read_state().await.unwrap().notices.len(), 3);
+        assert_eq!(
+            next.read_state().await.unwrap().notices.len(),
+            3 + EXTRA_OUTCOMES
+        );
         assert_eq!(
             next.dismiss_notices(&[first]).await,
             Err(ClientError::ForeignHandle)
@@ -753,7 +762,7 @@ async fn given_daemon_notices_when_gui_clients_restart_or_repeat_dismissal_then_
         let (coordinator, result) = host.finish().await;
         assert_eq!(result, Ok(()));
         assert!(coordinator.pending_notices().is_empty());
-        assert_eq!(coordinator.transfers.len(), 4);
+        assert_eq!(coordinator.transfers.len(), 4 + EXTRA_OUTCOMES);
     })
     .await;
 }
