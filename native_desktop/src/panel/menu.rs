@@ -53,7 +53,7 @@ impl Panel {
                     }
                     "discard" | "recover" | "abort" => panel.button(name).emit_clicked(),
                     "settings" => panel.show_settings(),
-                    "hide" => panel.window.set_visible(false),
+                    "hide" => panel.hide(),
                     "quit" => {
                         panel.close();
                         application.quit();
@@ -131,6 +131,7 @@ impl Panel {
         });
     }
     pub fn set_mode(self: &Rc<Self>, mode: Mode) {
+        self.mark_manual();
         {
             let mut model = self.model.borrow_mut();
             if model.closing || model.mode == mode {
@@ -156,6 +157,13 @@ impl Panel {
         }
     }
     fn show_settings(self: &Rc<Self>) {
+        {
+            let model = self.model.borrow();
+            if model.safety_active && !model.safety.manual_allowed() {
+                return;
+            }
+        }
+        self.mark_manual();
         if let Some(window) = self.settings.borrow().as_ref() {
             window.present();
             return;
@@ -199,8 +207,12 @@ impl Panel {
         content.append(&appearance);
         content.append(&label("Display mode is kept while rQuickShare is running."));
         window.set_child(Some(&content));
-        window.connect_close_request(|window| {
+        let weak = Rc::downgrade(self);
+        window.connect_close_request(move |window| {
             window.set_visible(false);
+            if let Some(panel) = weak.upgrade() {
+                panel.apply_presentation();
+            }
             glib::Propagation::Stop
         });
         self.appearance.replace(Some(appearance));

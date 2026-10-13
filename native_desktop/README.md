@@ -34,7 +34,7 @@ controls are disabled and it cannot acquire/send/accept. Screenshot completion
 waits for an allocated render node, without sleeps. It does not prove Wayland
 placement. An interactive ordinary window is available only via explicit --preview.
 
-Run the ten scoped methods, including the single GTK test, on an isolated display:
+Run the thirteen scoped methods, including the single GTK test, on an isolated display:
 
 ```sh
 GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
@@ -71,5 +71,18 @@ checked consent/cancel commands and preserve the prepared source owner.
 
 Use `--preview-mode compact` or `--preview-mode full` with the explicit preview
 options to review both surfaces. Automatic desktop-safety-aware notification
-presentation is a separate in-progress milestone in
+presentation while GTK runs is implemented in
 [native-custom-card.md](../docs/native-custom-card.md).
+
+Normal mode observes the actual KDE screen-lock and effective DND providers using
+owned read-only session-bus connections. Unknown lock hides sensitive surfaces;
+automatic cards also require known DND-off. Queued manual CLI/tray presentation
+waits for verified unlock. No system notification service is replaced. Card
+hide/dismissal does not answer consent or cancel a transfer. Initial historical
+terminal transfers do not create fresh popups; current incoming requests and newly
+observed completion/failure transitions use one bounded card policy.
+
+Closed-GUI background activation, canonical notice dismissal/recovery and visible
+backend-unavailable CLI errors are not implemented yet. The next architecture
+choice is in [native-notification-backend-review.md](../docs/native-notification-backend-review.md).
+No physical DND/lock/focus/monitor or installed-product acceptance is claimed.

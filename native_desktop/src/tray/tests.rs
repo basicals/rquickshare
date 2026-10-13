@@ -1,58 +1,6 @@
 use super::*;
-use std::{
-    io::{BufRead, BufReader},
-    process::{Child, Command, Stdio},
-};
+use crate::test_bus::Broker;
 
-struct Broker {
-    child: Child,
-    _directory: tempfile::TempDir,
-    address: BusAddress,
-}
-impl Broker {
-    fn new() -> Self {
-        let directory = tempfile::tempdir().unwrap();
-        let config = directory.path().join("bus.conf");
-        std::fs::write(
-            &config,
-            include_str!("../../../docs/prototypes/preview-bus.conf"),
-        )
-        .unwrap();
-        let mut child = Command::new("dbus-daemon")
-            .args(["--nofork", "--print-address=1"])
-            .arg(format!("--config-file={}", config.display()))
-            .arg(format!(
-                "--address=unix:path={}",
-                directory.path().join("bus").display()
-            ))
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .unwrap();
-        let mut line = String::new();
-        BufReader::new(child.stdout.take().unwrap())
-            .read_line(&mut line)
-            .unwrap();
-        Self {
-            child,
-            _directory: directory,
-            address: BusAddress::parse(line.trim()).unwrap(),
-        }
-    }
-    async fn connection(&self) -> Connection {
-        zbus::connection::Builder::unix_stream(self.address.connect().await.unwrap())
-            .build()
-            .await
-            .unwrap()
-    }
-}
-impl Drop for Broker {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
-    }
-}
 struct Watcher {
     registered: watch::Sender<Option<String>>,
 }

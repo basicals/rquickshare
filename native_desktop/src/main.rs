@@ -1,8 +1,12 @@
+mod card_policy;
 mod card_view;
 mod cli;
+mod desktop_guard;
 mod ingress;
 mod panel;
 mod placement;
+#[cfg(test)]
+mod test_bus;
 mod tray;
 
 use gtk::{gio, glib, prelude::*};
@@ -106,8 +110,8 @@ fn run() -> Result<(), &'static str> {
         .build()
         .map_err(|_| "Cannot create native runtime")?;
     let ingress = Arc::new(ingress::Ingress::new());
-    let (controller, tray, desktop) = if options.preview {
-        (None, None, None)
+    let (controller, tray, desktop, guard) = if options.preview {
+        (None, None, None, None)
     } else {
         let address = session_address()?;
         let connected = runtime.block_on(async {
@@ -123,16 +127,25 @@ fn run() -> Result<(), &'static str> {
                 Ok(tray) => tray,
                 Err(_) => {let _ = controller.close().await;return Err("KDE tray watcher unavailable or changed");}
             };
+            let guard=match desktop_guard::DesktopGuard::connect(&address).await {
+                Ok(guard)=>guard,
+                Err(_)=>{let _=controller.close().await;let _=tray.close().await;return Err("Cannot observe desktop privacy state");}
+            };
             let desktop = match address.connect().await {
                 Ok(stream) => DesktopServer::connect(stream, controller.handle(), ingress.gate.clone()).await,
-                Err(_) => {let _ = controller.close().await;let _ = tray.close().await;return Err("Session bus unavailable");}
+                Err(_) => {let _ = controller.close().await;guard.close().await;let _ = tray.close().await;return Err("Session bus unavailable");}
             };
             match desktop {
-                Ok(desktop) => Ok((controller, tray, desktop)),
-                Err(_) => {let _ = controller.close().await;let _ = tray.close().await;Err("Another panel owns the desktop service or registration failed")}
+                Ok(desktop) => Ok((controller, tray, desktop, guard)),
+                Err(_) => {let _ = controller.close().await;guard.close().await;let _ = tray.close().await;Err("Another panel owns the desktop service or registration failed")}
             }
         })?;
-        (Some(connected.0), Some(connected.1), Some(connected.2))
+        (
+            Some(connected.0),
+            Some(connected.1),
+            Some(connected.2),
+            Some(connected.3),
+        )
     };
     let application = gtk::Application::new(
         Some("io.github.morozhenko_apps.RQuickShare.Native"),
@@ -141,6 +154,7 @@ fn run() -> Result<(), &'static str> {
     let handle = controller.as_ref().map(PanelController::handle);
     let tray_updates = tray.as_ref().map(|tray| tray.updates.clone());
     let desktop_handle = desktop.as_ref().map(DesktopServer::handle);
+    let safety_updates = guard.as_ref().map(|guard| guard.updates.clone());
     let stop = CancellationToken::new();
     let stop_ui = stop.clone();
     let retained: Rc<RefCell<Option<Rc<panel::Panel>>>> = Rc::new(RefCell::new(None));
@@ -197,6 +211,16 @@ fn run() -> Result<(), &'static str> {
             }
             panel.window.present();
         } else {
+            if let Some(updates) = safety_updates.clone() {
+                let weak = Rc::downgrade(&panel);
+                tasks_ui
+                    .borrow_mut()
+                    .push(follow(updates, stop_ui.clone(), move |state| {
+                        if let Some(panel) = weak.upgrade() {
+                            panel.safety_update(state);
+                        }
+                    }));
+            }
             if let Some(desktop) = &desktop_handle {
                 panel.bind_desktop(desktop.clone());
                 let weak = Rc::downgrade(&panel);
@@ -229,7 +253,7 @@ fn run() -> Result<(), &'static str> {
                 stop_ui.clone(),
                 move |_| {
                     if let Some(panel) = weak.upgrade() {
-                        panel.render();
+                        panel.preparation_update();
                     }
                 },
             ));
@@ -270,7 +294,7 @@ fn run() -> Result<(), &'static str> {
                         if let (Some(panel), Some(point)) = (weak.upgrade(), state.activation) {
                             if !panel.show_at(point) {
                                 eprintln!(
-                                    "rQuickShare: Invalid tray position or monitor too small"
+                                    "rQuickShare: Cannot place the card on an available monitor"
                                 );
                             }
                         }
@@ -297,6 +321,9 @@ fn run() -> Result<(), &'static str> {
             let _ = desktop.close().await;
         }
         ingress.close().await;
+        if let Some(guard) = guard {
+            guard.close().await;
+        }
         if let Some(tray) = tray {
             let _ = tray.close().await;
         }

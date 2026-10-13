@@ -17,6 +17,7 @@ use std::{cell::RefCell, rc::Rc, sync::Arc};
 use tokio::runtime::Handle;
 
 mod menu;
+mod presentation;
 
 #[derive(Default)]
 struct Model {
@@ -31,6 +32,11 @@ struct Model {
     notice: Option<&'static str>,
     mode: Mode,
     preview_page: Option<String>,
+    safety: crate::desktop_guard::SafetyState,
+    safety_active: bool,
+    automatic: bool,
+    automatic_focus: Option<String>,
+    manual_requested: bool,
 }
 pub struct Panel {
     pub window: gtk::Window,
@@ -43,6 +49,7 @@ pub struct Panel {
     ingress: Arc<Ingress>,
     completion: RefCell<Option<glib::JoinHandle<()>>>,
     desktop: RefCell<Option<DesktopHandle>>,
+    policy: RefCell<crate::card_policy::CardPolicy>,
     actions: gio::SimpleActionGroup,
     context: gtk::PopoverMenu,
     settings: RefCell<Option<gtk::Window>>,
@@ -185,20 +192,27 @@ impl Panel {
             pages: builder.object("pages").expect("pages widget"),
             window,
             builder,
-            model: RefCell::new(Model::default()),
+            model: RefCell::new(Model {
+                safety_active: layer,
+                ..Default::default()
+            }),
             handle,
             layer,
             runtime,
             ingress,
             completion: RefCell::new(None),
             desktop: RefCell::new(None),
+            policy: RefCell::new(crate::card_policy::CardPolicy::default()),
             actions: gio::SimpleActionGroup::new(),
             context: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
             settings: RefCell::new(None),
             appearance: RefCell::new(None),
         });
-        panel.window.connect_close_request(|window| {
-            window.set_visible(false);
+        let weak = Rc::downgrade(&panel);
+        panel.window.connect_close_request(move |_| {
+            if let Some(panel) = weak.upgrade() {
+                panel.hide();
+            }
             glib::Propagation::Stop
         });
         let keyboard = gtk::EventControllerKey::new();
@@ -206,7 +220,7 @@ impl Panel {
         keyboard.connect_key_pressed(move |_, key, _, _| {
             if key == gtk::gdk::Key::Escape {
                 if let Some(panel) = weak.upgrade() {
-                    panel.window.set_visible(false);
+                    panel.hide();
                 }
                 glib::Propagation::Stop
             } else {
@@ -283,6 +297,7 @@ impl Panel {
     pub fn update(self: &Rc<Self>, state: PanelState) {
         self.model.borrow_mut().state = state;
         self.render();
+        self.apply_presentation();
     }
     pub fn bind_desktop(&self, desktop: DesktopHandle) {
         self.desktop.replace(Some(desktop));
@@ -296,9 +311,13 @@ impl Panel {
     fn present_recipient(self: &Rc<Self>) -> bool {
         self.set_mode(Mode::Full);
         self.pages.set_visible_child_name("nearby");
+        self.model.borrow_mut().manual_requested = true;
+        self.present_surface()
+    }
+    fn present_surface(&self) -> bool {
         let hint = self.model.borrow().last_hint;
         if let Some(hint) = hint {
-            if self.show_at(hint) {
+            if self.place_at(hint) {
                 return true;
             }
         }
@@ -321,11 +340,16 @@ impl Panel {
         else {
             return false;
         };
-        self.show_at((x, y))
+        self.place_at((x, y))
+    }
+    pub fn preparation_update(self: &Rc<Self>) {
+        self.render();
+        self.apply_presentation();
     }
     pub fn ingress_update(self: &Rc<Self>, state: IngressState) {
         self.model.borrow_mut().ingress = state;
         self.render();
+        self.apply_presentation();
     }
     pub fn notice(&self, text: &'static str) {
         self.model.borrow_mut().notice = Some(text);
@@ -359,6 +383,7 @@ impl Panel {
                 || model.closing
                 || model.state.busy
                 || model.state.disconnected
+                || (model.safety_active && !model.safety.manual_allowed())
                 || model.dialog.is_some()
                 || model.ingress.busy
                 || *self.ingress.gate.subscribe().borrow()
@@ -387,6 +412,7 @@ impl Panel {
                         .map(|_| "Operation did not complete. Review its state before retrying.");
                 }
                 panel.render();
+                panel.apply_presentation();
             }
         });
         self.completion.replace(Some(task));
@@ -397,6 +423,7 @@ impl Panel {
             if !controls_ready(
                 &model.state,
                 model.waiting
+                    || (model.safety_active && !model.safety.manual_allowed())
                     || model.ingress.busy
                     || model.dialog.is_some()
                     || model.closing
@@ -499,9 +526,11 @@ impl Panel {
         self.window
             .set_default_size(420, if full { 497 } else { 1 });
         let ready = !preview
+            && (!model.safety_active || model.safety.manual_allowed())
             && controls_ready(
                 &model.state,
                 model.waiting
+                    || (model.safety_active && !model.safety.manual_allowed())
                     || model.ingress.busy
                     || model.dialog.is_some()
                     || model.closing
@@ -569,7 +598,55 @@ impl Panel {
                 "Waiting"
             },
         );
-        self.text("status",if preview {"Preview only · service actions disabled"} else if let Some(notice)=model.notice {notice} else if model.desktop.staging {"Receiving files from the local sender. Abort to release this preparation."} else if model.ingress.busy || *self.ingress.gate.subscribe().borrow() {"Preparing files…"} else if model.ingress.failed {"Preparation failed. Review service state or select accessible files."} else if model.state.view.as_ref().is_some_and(|view|!view.warnings.is_empty()) {"Visibility was recovered as hidden. Review service settings before enabling discovery."} else {error_message(model.state.error)});
+        let current = model.state.view.as_ref().and_then(|view| {
+            model
+                .automatic_focus
+                .as_deref()
+                .and_then(|id| {
+                    view.transfers
+                        .iter()
+                        .find(|transfer| transfer.transfer.id() == id)
+                })
+                .or_else(|| {
+                    compact_index(
+                        view.transfers
+                            .iter()
+                            .map(|transfer| (transfer.direction, transfer.phase)),
+                    )
+                    .map(|index| &view.transfers[index])
+                })
+        });
+        let status = if preview {
+            "Preview only · service actions disabled"
+        } else if let Some(notice) = model.notice {
+            notice
+        } else if model.desktop.staging {
+            "Receiving files from the local sender. Abort to release this preparation."
+        } else if model.ingress.busy || *self.ingress.gate.subscribe().borrow() {
+            "Preparing files…"
+        } else if model.ingress.failed {
+            "Preparation failed. Review service state or select accessible files."
+        } else if model.state.error.is_some() {
+            error_message(model.state.error)
+        } else if model
+            .state
+            .view
+            .as_ref()
+            .is_some_and(|view| !view.warnings.is_empty())
+        {
+            "Visibility was recovered as hidden. Review service settings before enabling discovery."
+        } else if let Some(transfer) = current {
+            match transfer.pending_control.map(|(action, _)| action) {
+                Some(rqs_lib::service::ControlAction::Accept) => "Accepting request…",
+                Some(rqs_lib::service::ControlAction::Reject) => "Declining request…",
+                Some(rqs_lib::service::ControlAction::Cancel) => "Cancelling transfer…",
+                None => phase_text(transfer.phase),
+            }
+        } else {
+            error_message(None)
+        };
+        self.text("status", status);
+
         for id in ["nearby", "incoming", "transfers", "compact"] {
             clear(&self.box_widget(id));
         }
@@ -619,11 +696,18 @@ impl Panel {
             self.box_widget("transfers")
                 .append(&self.transfer_card(transfer, ready, true));
         }
-        if let Some(index) = compact_index(
+        let focused = model.automatic_focus.as_deref().and_then(|id| {
             view.transfers
                 .iter()
-                .map(|transfer| (transfer.direction, transfer.phase)),
-        ) {
+                .position(|transfer| transfer.transfer.id() == id)
+        });
+        if let Some(index) = focused.or_else(|| {
+            compact_index(
+                view.transfers
+                    .iter()
+                    .map(|transfer| (transfer.direction, transfer.phase)),
+            )
+        }) {
             let transfer = &view.transfers[index];
             let incoming = transfer.direction == Direction::Inbound
                 && transfer.phase == Phase::AwaitingConsent;
@@ -744,6 +828,11 @@ impl Panel {
         row
     }
     pub fn show_at(&self, point: (i32, i32)) -> bool {
+        self.mark_manual();
+        self.model.borrow_mut().manual_requested = true;
+        self.place_at(point)
+    }
+    fn place_at(&self, point: (i32, i32)) -> bool {
         let height = self.window.measure(gtk::Orientation::Vertical, 420).0.max(
             if self.model.borrow().mode == Mode::Full {
                 497
@@ -766,8 +855,10 @@ impl Panel {
             ) else {
                 continue;
             };
-            self.window.set_visible(false);
-            self.window.set_monitor(Some(&monitor));
+            if self.window.monitor().as_ref() != Some(&monitor) {
+                self.window.set_visible(false);
+                self.window.set_monitor(Some(&monitor));
+            }
             for edge in [
                 LayerEdge::Left,
                 LayerEdge::Right,
@@ -791,7 +882,17 @@ impl Panel {
                 self.window.set_margin(edge, margin);
             }
             self.model.borrow_mut().last_hint = Some(point);
-            self.window.present();
+            let model = self.model.borrow();
+            if !model.safety_active
+                || (model.safety.manual_allowed()
+                    && (!model.automatic || model.safety.automatic_allowed()))
+            {
+                if !model.automatic || !self.window.is_visible() {
+                    self.window.present();
+                }
+            } else {
+                self.window.set_visible(false);
+            }
             return true;
         }
         self.notice("Tray position is outside available monitors. Activate the tray icon again.");

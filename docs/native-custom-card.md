@@ -29,7 +29,7 @@ Reject/Cancel still use existing checked SDK/controller operations.
    Preserve existing source, consent and recovery contracts. Build/review real
    compiled previews, supporting focused widget projection checks, then commit.
    Rollback: native presentation changes only; daemon/IPC stays compatible.
-2. [ ] C2: implement a bounded presentation policy and actual desktop safety adapter.
+2. [x] C2: implement a bounded presentation policy and actual desktop safety adapter.
    Subscribe before initial read; observe KDE effective DND and screen lock with
    pinned same-UID owners. Unknown/stale safety state suppresses automatic popups.
    No path/content opening, DND mutation or screen-lock bypass. Current request is
@@ -214,3 +214,74 @@ and mode parsing tables. Existing widget/parser/placement methods were extended
 for N1/N7/N9/N10 and geometry. No timing, billing or storage introduced (N8/N11/N12).
 C2 safety/policy implementation is the next unfinished step; its contract above
 was frozen before code. Persistent native settings remain a later migration gate.
+
+### C2 implementation review before final checks
+
+Two owned read-only provider monitors and the pure bounded policy are implemented.
+The first guard compilation exposed a generated typed-signal wrapper; use its
+actual message for sender validation. Four focused priority/policy/provider methods
+then passed (0.03s). After wiring the GTK presenter and extending privacy/round
+assertions, all 13 native methods passed once (0.19s), including the existing tray
+checks using their extracted shared private-broker fixture. No user bus was touched.
+
+Manual CLI/tray presentation is recorded as an intent while initial lock state is
+unknown/locked; geometry is validated but no sensitive surface is mapped. A later
+verified unlock presents that explicit intent, without polling, rather than treating
+startup observation latency as a fatal GUI failure. DND still suppresses automatic
+cards, not explicit manual review. An open settings surface also prevents automatic
+navigation. Unknown lock hides both card and settings; queued UI actions cannot
+admit transfer commands while the lock observation is unsafe. File dialog source
+acquisition retains its already explicit authority and never sends automatically.
+
+Gate release and completion-waiter release now reevaluate presentation as well as
+rendering. Otherwise a notice suppressed during local preparation could remain
+hidden after the last busy flag cleared, until an unrelated state event arrived.
+Closing/dismissing remains separate from daemon consent/cancellation. Presentation
+records are transient at C2; background GTK activation and cross-renderer notice
+ownership still require the C3 contract. GUI Quit does not yet cause a new renderer
+to start for a background request. This is an unfinished source milestone, not
+installed-product notification completion or physical lock-screen proof.
+
+### C2 completed / final observations and continuation boundary
+
+Final affected native widget/provider/tray fixture checks passed 5/5 (0.17s)
+after busy-release reevaluation and owned broker teardown hardening. The provider
+method was strengthened with a real late-reply race: old unique owner remains
+alive, releases its names, new owner reports locked/DND-on, then the old unlocked
+reply returns. The actual read helper rejects that reply as Unknown; the affected
+method passed 1/1 (0.03s). This tests owner pinning rather than merely an old
+connection closing. No sleeps or weakened assertions.
+
+Source review also removed needless unmap/re-present for an automatic update on
+the same monitor. Actual monitor changes still reconfigure the surface; automatic
+progress updates do not request focus again. Unsafe safety state still unmaps.
+This is source-checked and compiled, not physical keyboard/focus acceptance.
+The status now follows the current transfer/pending core control instead of
+showing the unrelated source-selection instruction on an incoming card. Pending
+Accept/Reject/Cancel is described as in progress, not completed reception.
+
+The last affected widget passed 1/1 (0.16s); final strict native all-target Clippy
+passed (1.62s), build passed (2.48s), format/diff checks passed. Existing nine core
+no-experimental dependency warnings remain unchanged. Production code did not
+change core/daemon APIs, crypto or transport, so unchanged core suites were not
+repeated. Previous compiled preview captures remain valid: C2 observes real desktop
+state only in normal mode; explicit inert preview bypasses it. No new screenshots
+or full-suite/stability loop was needed for those IO/policy changes.
+
+C1/C2 add four methods: N5 presentation priority/lifecycle 2, N3 actual provider
+lifecycle 1, N7 absent/foreign provider 1 by primary purpose. Tables also cover
+N1/N2/N4/N6/N9/N10 as inventoried. Native inventory 13; combined core/native 525,
+not a full-525 execution or measured branch coverage. Privacy of physical lock
+transitions, actual compositor focus/scale/overlap and Google peers remain open.
+All owned sessions and fixture processes exited. Terminal closed.
+
+Next significant choice is documented in native-notification-backend-review.md:
+recommend A, a bounded daemon notice read model, coherent immutable reads and
+exact presentation dismissal. Alternative B is a daemon-supervised renderer with
+private acknowledged IPC. Both retain the selected custom Full/Compact card.
+C3 changes the public local API/data model or process contract and a scoped GTK
+backend lifecycle; await that decision before C3 production code. Current transient
+presentation is useful while GTK runs, but does not yet provide closed-GUI delivery
+or visible backend-unavailable Dolphin errors. Keyed GTK row reconciliation is
+also needed before final expansion/focus acceptance; current rebuild behavior is
+explicitly carried into the reviewed C3 GTK lifecycle work, not claimed fixed.

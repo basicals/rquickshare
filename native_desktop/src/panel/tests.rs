@@ -208,6 +208,23 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(!panel.window.is_visible());
     assert!(!panel.model.borrow().closing);
     panel.submit(|| panic!("preview must not admit actions"));
+    panel.window.present();
+    assert!(panel.window.is_visible());
+    panel.safety_update(crate::desktop_guard::SafetyState {
+        locked: Some(true),
+        inhibited: Some(false),
+        closed: false,
+    });
+    assert!(!panel.window.is_visible() && !settings.is_visible());
+    panel.safety_update(crate::desktop_guard::SafetyState {
+        locked: Some(false),
+        inhibited: Some(false),
+        closed: false,
+    });
+    assert!(!panel.window.is_visible());
+    panel.window.present();
+    panel.safety_update(crate::desktop_guard::SafetyState::default());
+    assert!(!panel.window.is_visible());
     panel.close();
     assert!(panel.model.borrow().closing);
     assert!(panel.settings.borrow().is_none());
