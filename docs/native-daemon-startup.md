@@ -1,5 +1,28 @@
 # Native daemon startup and visibility recovery
 
+## Current native settings checkpoint (2026-10-13)
+
+[native-settings.md](native-settings.md) now owns normal native startup/settings.
+With no override, the daemon reads the private schema-1 native store under
+`$XDG_CONFIG_HOME/io.github.morozhenko_apps.RQuickShare/native-settings.json` (BaseDirs
+fallback). If absent, it reads the original legacy file without modifying it.
+Only explicit Settings1 Save imports/replaces data with a private exact backup.
+The daemon holds LaunchGuard across writes and joined restart generations.
+
+Invalid whole-file configuration or unavailable receive-directory identity now
+keeps a configuration-only Stopped service available for the secondary GTK editor,
+without starting discovery/receive transports. Invalid legacy visibility alone
+still starts hidden with a durable warning. Successful explicit save/live adoption
+clears it. Save does not implicitly start a stopped service or interrupt transfers;
+Settings offers an explicit idle-guarded start/restart and reconnect.
+
+`--check` validates the selected source and custom-directory identity read-only.
+`--settings PATH` keeps its original developer read-only semantics: no native
+writer/import is activated, and GTK persistence is unavailable. Original legacy
+configuration is preserved. Oversized/unreadable/unsafe storage cannot be silently
+reset. The original slice and observations below are historical; its Manager1 wire
+reference is superseded by the existing Manager2 plus Settings1 contracts.
+
 2026-10-12. Mode A. The user selected option 2 from native-daemon-startup-review.md
 and rejected a manual configuration-file repair workflow. This SSOT records the
 implementation sequence before code. Existing descriptor/state/ownership contracts

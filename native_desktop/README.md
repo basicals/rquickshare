@@ -1,5 +1,19 @@
 # Native development shell
 
+Settings now supports explicit Save/import, source conflict recovery, retry,
+visibility, optional port, locally acquired receive-directory FD, and persistent
+Full/Compact. The daemon is sole writer of a private native file; the original
+Tauri file remains intact with an exact private backup on import. See
+[native-settings.md](../docs/native-settings.md) for the authoritative contract.
+Mode menu changes preview temporarily until explicitly saved in Settings.
+
+Corrupt configuration or failed transport startup keeps a Stopped settings service
+available for in-app repair. Save is distinct from guarded start/restart; prepared
+files/live transfers block restart. Reconnect reads the new generation without
+replaying source/send/save actions. Missing daemon or read-only `--settings PATH`
+override disables persistence and labels appearance temporary. No install/autostart
+is implied; normal native startup uses the separate native store when present.
+
 An uninstalled GTK4 tray client for the native daemon. This does not retire the
 Tauri application or establish Google Quick Share parity. The current plan,
 invariants, exact measured checks and pending acceptance are in
@@ -67,8 +81,8 @@ The public ingress contract and measured SDK checks are in
 
 Custom card presentation now starts in Compact mode. Full keeps Nearby, Incoming
 and Transfers, with source controls on Nearby. The header menu and right-click
-menu expose secondary actions; Settings contains the implemented Appearance mode
-for this process. No legacy persistent setting is overwritten. Full/Compact share
+menu expose secondary actions; Settings persists Appearance and supported service
+values through the daemon's typed contract. No legacy persistent setting is overwritten. Full/Compact share
 checked consent/cancel commands and preserve the prepared source owner.
 
 Use `--preview-mode compact` or `--preview-mode full` with the explicit preview

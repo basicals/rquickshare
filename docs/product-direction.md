@@ -1,5 +1,28 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-13: daemon-owned native settings implemented
+
+User selected 1/A. [native-settings.md](native-settings.md) is the implementation
+SSOT: owner-local per-transfer receive authority, private transactional schema-1
+store, exact source/revision conflict checks, retained original legacy file/private
+backup, typed authenticated Settings1, joined nonblocking writer, truthful saved/
+applied/restart status, configuration-only recovery, idle session cutoff/restart,
+and secondary GTK editor with persistent Full/Compact. No manual JSON repair is
+required for readable bounded corrupt settings; inaccessible/oversized storage is
+never discarded. Missing backend keeps appearance explicitly temporary.
+
+Verification includes the full core command (532 unit/export + 8 integration),
+18 native methods followed only by affected checks, strict core/native lint and
+native build. The compiled inert settings image is reviewed. These are automated
+source checks, not installed migration, compositor or Google peer acceptance.
+No user settings access, live registration/install, push or Tauri retirement.
+
+Remaining native migration: clipboard/text/reveal, separate tray dropdown,
+autostart/updates and installed package lifecycle. Physical KDE lock/DND/focus/
+placement/scale and Google interoperability/parity remain open. Do not claim full
+native feature parity from this settings milestone. Work stays on dev; upstream
+references are retained. Earlier checkpoints below describe historical state.
+
 ## 2026-10-13: native settings ownership review prepared
 
 The next native gap is persistent settings and in-app visibility recovery. GTK

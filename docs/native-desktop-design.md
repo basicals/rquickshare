@@ -5,8 +5,10 @@ _2026-10-12. Mode A. Status: descriptor input approved; offline file/core bounda
 Current integration checkpoint: the native daemon, authenticated immutable reads/
 controls, GTK Full/Compact cards, descriptor-based CLI/Dolphin ingress and canonical
 notifications are implemented in source. See [native-notification-backend.md](native-notification-backend.md).
-Next is [native settings ownership](native-settings-review.md), awaiting a new
-persistence/API decision. Installed migration and physical Google parity remain
+Daemon-owned transactional settings, secondary GTK editor, persistent Full/Compact,
+configuration-only repair and idle restart are implemented in [native-settings.md](native-settings.md).
+Clipboard/reveal, native autostart/updates and package equivalence remain unfinished.
+Installed migration and physical Google parity remain
 open. The original foundation/design analysis below is historical.
 
 

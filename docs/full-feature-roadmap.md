@@ -7,7 +7,8 @@ The product goal is a native Linux client with feature parity and full interoper
 Implemented capability markers below describe existing core/legacy source and
 scoped checks; they do not establish native GTK feature parity or current-package
 physical Google compatibility. Native file/card/notification ownership is now
-implemented; persistent settings await the [ownership review](native-settings-review.md).
+implemented; daemon-owned persistent settings and in-app recovery are implemented
+in [native-settings.md](native-settings.md), with physical migration acceptance pending.
 Native text/clipboard/reveal/account/QR/package capabilities still require their
 own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
 

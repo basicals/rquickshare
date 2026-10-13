@@ -1,5 +1,10 @@
 # Building and checking rQuickShare
 
+Native settings now have a daemon-owned transactional store and secondary GTK
+editor; see [native-settings.md](docs/native-settings.md) for paths, read-only
+developer overrides, migration/recovery and actual verification. Do not install or
+start a second transport owner to review the uninstalled native source.
+
 The project has three Rust crates and one frontend:
 
 - `core_lib`: discovery, protocol, connections and payload transfers.

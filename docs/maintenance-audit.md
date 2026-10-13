@@ -1,5 +1,32 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
+## 2026-10-13: native settings and receive authority completed
+
+Accepted 1/A is implemented; see [native-settings.md](native-settings.md) for the
+staged contracts, rationale, rollback, fault inventory and actual checks. The daemon
+is sole writer of separate private native configuration; original legacy data and
+unknown source fields remain preserved. TCP/BLE requests snapshot owner-local
+receive policy, then retain directory authority through consent and creation.
+No process-global receive setting or late mutable root lookup remains.
+
+Settings1 and GTK expose explicit save/import/recovery/retry, saved/applied/restart
+state, and persistent card preference. A damaged configuration or failed transport
+startup retains an editable Stopped service without starting radio discovery.
+Restart rejects preparations, live leases and pending settings writes, then closes
+session admission atomically and joins the previous generation. No source replay.
+
+Full core command passed: 532 unit/export and 8 integration methods. Native 18
+methods passed, with affected-only reruns after fixes; strict core/native Clippy,
+native build and format/diff passed. Twenty-three new scoped methods across this
+settings slice: Positive 2, N1 1, N2 1, N4 2, N5 6, N6 4, N7 5, N9 1, N12 1
+by primary purpose; secondary privacy/network/interruption coverage is in SSOT.
+No Mode B exhaustive/ten-run or physical-device claim. Existing dependency/feature
+warnings are recorded separately. All private processes were joined.
+
+No user migration, install, autostart registration, push or branch creation.
+Native clipboard/reveal, tray dropdown, autostart/updates/package equivalence and
+real KDE/Google acceptance remain pending. Prior review/pending entries are historical.
+
 ## 2026-10-13: native settings ownership review prepared
 
 The next native gap is persistent settings and in-app visibility recovery. GTK
