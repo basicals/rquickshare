@@ -97,3 +97,63 @@ categories above; these are focused Mode A checks, not whole-product coverage.
 All fixture processes exited. Terminal closed. A final fixture lifetime correction
 keeps the non-directory file alive during its negative assertion; its affected
 method is rechecked below, without repeating unaffected suites.
+
+The corrected non-directory fixture passed its one affected method (4.89s build,
+0.00s execution). Commit 9202dbb completes S1. Terminal closed.
+
+## S2 frozen persistence contract before code
+
+The daemon's native store is `$XDG_CONFIG_HOME/io.github.morozhenko_apps.RQuickShare/`
+`native-settings.json` (BaseDirs config fallback). The original legacy file remains
+read-only. Inject both paths; developer `--settings PATH` stays read-only and must
+not activate native writes. Reading never creates files/directories.
+
+Schema 1 has a nonzero u64 revision, validated visibility (0/1/2), optional u16 port
+(0 keeps its existing automatic meaning), compact/full card mode, optional receive
+directory record (absolute OS path bytes <=4096, device/inode identity), and the
+last committed request identity/fingerprint. Unknown schema/fields, malformed or
+oversized documents are explicit recovery state, never defaults. Missing native
+state reads the coherent legacy snapshot; both absent retains existing defaults.
+Invalid legacy visibility retains its hidden/recovered warning until explicit save.
+
+Every save carries the loaded revision and SHA-256 source token, a 32-lowercase-hex
+request ID, explicit scalar values, and Retain/Default/Replace-directory intent.
+Replace uses one acquired directory FD, not a caller-supplied path. Validate its
+type and canonical absolute /proc identity; pin that capability on successful apply.
+Retain preserves the persisted record. Restart resolution must verify the recorded
+device/inode before applying it. Non-UTF8 OS paths survive persistence; display is
+lossy text only. Fingerprint the raw intent plus FD identity before transforming
+Retain, so exact retry after commit remains exact. Reusing the ID with changed
+intent fails. Only the last commit is an idempotent retry; older/stale edits conflict.
+
+Read/commit use a retained private directory descriptor, nofollow/nonblocking
+regular file opens, actual UID ownership, no group/other bits and single link for
+native files. The store directory is private 0700 and native files 0600. Legacy
+source reads are bounded regular nofollow reads; legacy permissions are preserved.
+Cap every source/document at 1 MiB. Recovery requires an explicit flag and a
+readable bounded source; inaccessible/oversized source cannot be silently discarded.
+
+Before first import or replacing invalid native JSON, save the exact source bytes
+to a content-addressed private backup. Maximum eight distinct backup files, each
+<=1 MiB; no automatic deletion/overwriting. Existing identical backup is verified.
+Source token is rechecked immediately before replacement; unrelated external edits
+conflict. This CAS protects cooperating writers; same-UID hostile writers are not
+a new filesystem security boundary. The process LaunchGuard remains sole writer.
+
+Write an exclusive random private temp file, write all bytes, fsync file, atomically
+rename and fsync the directory. Before-rename failure preserves old native state
+and runtime. After-rename directory-sync failure returns Indeterminate, never a
+rollback claim. Exact retry re-reads the receipt and syncs the directory before
+acknowledging. Always join admitted writes. Cleanup only this operation's owned
+temp file; backups are retained. No watcher, timer or global mutable settings.
+
+S2 inventory: real temporary-directory store tests cover import/default/native
+roundtrip and backup bytes (Positive/N6/N10), stale/exact/changed retries and source
+edits (N4/N5), schema/field/value/size corruption and explicit recovery (N1/N2/N6),
+wrong permissions/symlinks/hardlinks/FIFO/directory capabilities (N7/N12), backup
+quota/existing-content validation (N2/N6), and injected write/file-sync/rename/
+directory-sync failures with old/new byte and receipt assertions (N12/N4).
+External IO is an injected adapter; parsing, CAS, migration and commit logic are
+real. Assertions must kill missing CAS, lost unknown backup fields, truncation,
+false rollback after rename, and retry fingerprint changes. No network/time/billing
+contract changes (N3/N8/N11 not applicable); abandoned requester ownership is S3.
