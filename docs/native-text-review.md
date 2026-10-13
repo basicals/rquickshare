@@ -3,8 +3,8 @@
 2026-10-13. Mode A. Guide /home/morozhenko/.codex/AGENTS.md sections 3/3.1.
 User selected 1/A: explicit Copy after receipt; R1-R4 are implemented in source. Implementation SSOT is
 [native-text.md](native-text.md). Settings and separate tray menu source are complete.
-The analysis below is historical. Review only: no clipboard,
-payload-read API or text consent behavior is implemented in this checkpoint.
+The analysis below describes the historical review before R1-R4 implementation.
+Use native-text.md for the current implemented receive/read/copy contracts.
 
 ## Current evidence and next significant product boundary
 

@@ -1,5 +1,17 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-13: outgoing native source ownership review prepared
+
+The user requested continuation beyond received text. Core already sends text, but
+native Selection/Reservation/SendDispatch only own opened files. Source inspection
+confirms that outgoing clipboard needs a typed ownership/refactor/API decision,
+not a direct UI-to-core shortcut. [native-outbound-review.md](native-outbound-review.md)
+recommends A: one prepared Files/Text source with shared queue, quota, receipts,
+recovery and recipient flow. B keeps separate text preparation/dispatch lifecycles.
+Native64KiB wire bounds require staged text bytes. No new production code precedes
+selection; substantial file-source refactor must be explicit. Remaining priority
+and prospective milestones are recorded in the review. Work stays on dev.
+
 ## 2026-10-13: received native text and explicit copy implemented
 
 User selected 1/A. [native-text.md](native-text.md) records R1-R4: bounded native
