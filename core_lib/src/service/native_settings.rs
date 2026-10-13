@@ -61,6 +61,9 @@ impl fmt::Debug for DirectoryRecord {
     }
 }
 impl DirectoryRecord {
+    pub fn same_object(&self, other: &Self) -> bool {
+        self.device == other.device && self.inode == other.inode
+    }
     pub fn path(&self) -> PathBuf {
         std::ffi::OsString::from_vec(self.path.clone()).into()
     }
@@ -174,6 +177,13 @@ pub struct Snapshot {
     pub visibility_recovered: bool,
     raw: Option<Vec<u8>>,
     receipt: Option<Receipt>,
+}
+impl Snapshot {
+    pub fn last_request(&self) -> Option<&str> {
+        self.receipt
+            .as_ref()
+            .map(|receipt| receipt.request.as_str())
+    }
 }
 
 pub enum DirectoryIntent {

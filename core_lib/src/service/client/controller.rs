@@ -33,9 +33,12 @@ pub struct PanelState {
     pub pending: bool,
     pub error: Option<ClientError>,
     pub disconnected: bool,
+    pub settings: Option<super::settings::SettingsView>,
+    pub settings_pending: bool,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ActionResult {
+    Settings(super::settings::SettingsView),
     Selection(Selection),
     Transfer(Transfer),
     Completed,
@@ -51,6 +54,9 @@ impl Completion {
 }
 
 enum Action {
+    SettingsSave(super::settings::SettingsEdit),
+    SettingsReload,
+    SettingsRetry,
     Dismiss(Vec<super::notices::Notice>),
     Choose(OpenedSelection),
     Send(Selection, String),
@@ -71,6 +77,15 @@ pub struct PanelHandle {
     state: watch::Receiver<PanelState>,
 }
 impl PanelHandle {
+    pub fn save_settings(&self, edit: super::settings::SettingsEdit) -> Result<Completion> {
+        self.submit(Action::SettingsSave(edit))
+    }
+    pub fn reload_settings(&self) -> Result<Completion> {
+        self.submit(Action::SettingsReload)
+    }
+    pub fn retry_settings(&self) -> Result<Completion> {
+        self.submit(Action::SettingsRetry)
+    }
     pub fn subscribe(&self) -> watch::Receiver<PanelState> {
         self.state.clone()
     }
@@ -214,13 +229,17 @@ impl Worker {
             state.error = error;
             state.busy = busy;
             state.pending = self.client.has_pending() || self.preparation.is_some();
+            state.settings_pending = self.client.has_pending_settings();
             state.disconnected |= error.is_some_and(fatal);
         });
     }
     async fn refresh(&mut self) -> std::result::Result<(), ClientError> {
         let view = self.client.read_state().await?;
-        self.state
-            .send_modify(|state| state.view = Some(Arc::new(view)));
+        let settings = self.client.read_settings().await?;
+        self.state.send_modify(|state| {
+            state.view = Some(Arc::new(view));
+            state.settings = Some(settings);
+        });
         Ok(())
     }
     fn recovered_preparation(
@@ -300,6 +319,21 @@ impl Worker {
         }
         self.refresh().await?;
         match action {
+            Action::SettingsSave(edit) => self
+                .client
+                .save_settings(edit)
+                .await
+                .map(ActionResult::Settings),
+            Action::SettingsReload => self
+                .client
+                .reload_settings()
+                .await
+                .map(ActionResult::Settings),
+            Action::SettingsRetry => self
+                .client
+                .retry_settings()
+                .await
+                .map(ActionResult::Settings),
             Action::Dismiss(notices) => {
                 for batch in notices.chunks(16) {
                     self.client.dismiss_notices(batch).await?;

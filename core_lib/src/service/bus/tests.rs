@@ -127,6 +127,7 @@ impl Harness {
 
 mod controls;
 mod operations;
+mod settings;
 mod state;
 
 #[tokio::test]

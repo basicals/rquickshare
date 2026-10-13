@@ -36,6 +36,12 @@ impl fmt::Debug for Root {
     }
 }
 impl ReceivePolicy {
+    pub(crate) fn set_directory(&self, directory: Option<Directory>) {
+        *self
+            .0
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = directory;
+    }
     pub(crate) fn new(path: Option<PathBuf>) -> Self {
         Self(Arc::new(RwLock::new(path.map(Directory::configured))))
     }
@@ -54,6 +60,14 @@ impl ReceivePolicy {
     }
 }
 impl Directory {
+    #[cfg(target_os = "linux")]
+    pub(crate) fn adopt(file: File) -> Result<Self, crate::service::native_settings::StoreError> {
+        let record = crate::service::native_settings::DirectoryRecord::acquire(&file)?;
+        Ok(Self {
+            path: record.path(),
+            authority: Some(Arc::new(file)),
+        })
+    }
     fn configured(path: PathBuf) -> Self {
         Self {
             path,

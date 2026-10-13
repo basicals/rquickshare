@@ -441,6 +441,10 @@ impl NativeClient {
             if hint.epoch.is_some_and(|epoch| epoch != self.epoch) {
                 return Err(ClientError::DaemonChanged);
             }
+            if hint.settings_generation > self.settings_seen {
+                self.settings_seen = hint.settings_generation;
+                return Ok(hint.revision);
+            }
             if self
                 .last_view
                 .as_ref()

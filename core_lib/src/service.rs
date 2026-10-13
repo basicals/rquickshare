@@ -878,6 +878,7 @@ pub mod uploads;
 pub mod bus;
 pub mod native_settings;
 pub mod process;
+pub mod settings_service;
 
 pub mod operations;
 

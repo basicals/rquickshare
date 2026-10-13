@@ -19,7 +19,7 @@ separate RQS owners. Fix the authority boundary before adding mutable settings.
    Preserve existing file/folder framing, naming/collisions and non-Linux guards.
 2. [x] S2: freeze native schema/path, transactional private store/backup/recovery
    and scoped fault inventory, then implement the injected single-writer store.
-3. [ ] S3: freeze Settings1 XML, bounded read/edit/receipt contracts, idempotency,
+3. [x] S3: freeze Settings1 XML, bounded read/edit/receipt contracts, idempotency,
    caller/FD validation and nonblocking owned writer/apply lifecycle before API code.
 4. [ ] S4: integrate native startup/settings owner and saved/configured/applied/
    restart-required state. Unusable storage must remain explicit, never silent defaults.
@@ -217,3 +217,65 @@ continued serial dispatch, caller disconnect and joined shutdown (N3/N5/N9/N12).
 Use explicit barriers/events, real store and owner logic. Do not mock save/CAS or
 sleep. Existing source/consent suites remain the regression boundary. No network
 peer, locale or billing protocol changes (N8/N11 not applicable).
+
+S3 observations: typed service/XML/SDK/controller and owned writer are implemented;
+normal daemon startup is not yet switched to it. Five new private-broker methods
+passed (0.05s). After strengthening actual Replace-FD and redacted projection
+checks, all 233 affected service methods passed once (7.06s), strict all-target
+core Clippy passed (7.76s), nightly formatting passed. The initial borrowed message
+body lifetime compile error was corrected by retaining the body through FD decoding.
+No weakened assertion, sleep, domain mock, user file or live broker was used.
+Primary new categories: Positive 1, N7 2, N4 1, N5 1; secondary categories above.
+The blocked-disk test proves actual serial reads continue and disconnected caller
+work is joined on stop. All private brokers/tasks/commands exited. Terminal closed.
+
+Retain uses the active directory identity when unchanged. After external Reload,
+a different saved root is resolved in the IO worker; it cannot falsely acknowledge
+the old live root as the new configuration. Failed resolution after durable save
+is explicitly saved-but-unapplied, not falsely reported as persistence rollback.
+Settings signals invalidate the SDK view independently of transfer revision.
+
+## S4 frozen startup and controlled idle restart contract before code
+
+Normal native startup takes LaunchGuard before activating any writer. Native
+config path comes from BaseDirs; `--settings PATH` remains the existing read-only
+developer override and exposes settings unavailable. `--check` is read-only for
+the selected source and also verifies persisted custom-directory identity.
+
+After claiming the bus name, normal startup loads the injected store in one owned,
+joined blocking operation. A valid configuration and verified custom directory
+capability create/start one runtime. Missing files retain existing defaults.
+Unreadable/invalid/unknown configuration or unavailable custom root starts an
+explicit configuration-only owner: Manager2 is Stopped, Settings1 remains usable,
+no network/Bluetooth discovery/receive transports start, and no invented fallback
+configuration is applied. Keep a readable source token/values for in-app repair;
+unreadable storage reports its finite error and requires explicit Reload after
+access is restored. Saving valid replacement does not implicitly enable transports.
+
+Settings1.Restart(epoch) is an explicit action, independent of Save. It is available
+only with a native settings owner, valid cached configured values, and no settings
+write/read admitted or in flight. Prepared selections/uploads, nonterminal
+transfers, unacknowledged controls/dispatches/releases, or unprovable synchronization
+reject Busy. The runtime atomically checks/closes core session admission only when
+the SessionHub has no live leases, eliminating a new-inbound race between idle
+check and cutoff. Rejecting restart leaves admission and transfers unchanged.
+
+After this barrier, acknowledge the request, join the old runtime/writer/bus and
+rebuild in the same process with a fresh epoch/connection from persisted settings.
+Keep LaunchGuard across generations. Stop signals take priority; no child process,
+shell, timer, kill or auto-restart loop. A lost restart response is uncertain;
+the pinned old client never replays it into a new owner. GTK offers explicit service
+reconnect after generation replacement, preserving the existing no-source-replay
+rule. The restart acknowledgement is intent acceptance, not proof the next runtime
+started; its new complete view proves that. Epoch-local notices/history follow the
+already documented daemon restart lifetime. A still invalid root returns to the
+configuration-only owner with a visible finite error.
+
+S4 inventory: private fixture startup/check paths (missing/legacy/native/corrupt/
+directory identity), configuration-only repair without transport startup, idle
+restart acceptance vs prepared/active/session-admission/settings-busy rejection,
+fresh epoch and joined shutdown (Positive/N4/N5/N6/N7/N9/N12). Tests use retained
+fake external channels and actual runtime/coordinator/session logic, not radio
+hardware. Installed activation, live settings migration and physical radios remain
+separate acceptance gates. Rollback: consumers/API then process activation; original
+Tauri settings and read-only developer override are preserved.

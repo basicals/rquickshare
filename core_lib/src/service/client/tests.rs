@@ -33,7 +33,7 @@ pub(super) async fn scenario(test: impl Future<Output = ()>) {
         .await
         .expect("Owned client scenario must finish");
 }
-pub(super) fn hook(client: &mut NativeClient, method: &'static str, after: bool) -> Arc<Notify> {
+pub(crate) fn hook(client: &mut NativeClient, method: &'static str, after: bool) -> Arc<Notify> {
     let reached = Arc::new(Notify::new());
     client.hook = Some(ReplyHook {
         method,
@@ -43,7 +43,7 @@ pub(super) fn hook(client: &mut NativeClient, method: &'static str, after: bool)
     });
     reached
 }
-pub(super) async fn interrupted<T>(future: impl Future<Output = Result<T>>, reached: Arc<Notify>) {
+pub(crate) async fn interrupted<T>(future: impl Future<Output = Result<T>>, reached: Arc<Notify>) {
     tokio::pin!(future);
     tokio::select! {
         _=reached.notified()=>(),

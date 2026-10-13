@@ -68,6 +68,7 @@ pub struct SelectionBus {
     visibility_recovered: bool,
     uid: u32,
     wakeup: Option<super::wakeup::Wakeup>,
+    settings: Option<super::settings_service::SettingsOwner>,
 }
 
 impl SelectionBus {
@@ -138,6 +139,7 @@ impl SelectionBus {
             notified: BTreeMap::new(),
             visibility_recovered: false,
             uid,
+            settings: None,
             wakeup: None,
         };
         let initialization = async {
@@ -194,6 +196,23 @@ impl SelectionBus {
     pub(super) fn set_visibility_recovered(&mut self, value: bool) {
         self.visibility_recovered = value;
     }
+    pub fn set_settings(
+        &mut self,
+        store: super::native_settings::Store,
+        initial: Result<super::native_settings::Snapshot, super::native_settings::StoreError>,
+        epoch: u128,
+        running: bool,
+        port: i32,
+    ) -> Result<(), BusError> {
+        if self.settings.is_some() {
+            return Err(BusError::Coordinator(Error::InvalidState));
+        }
+        let connection = self.connection.as_ref().ok_or(BusError::Transport)?.clone();
+        self.settings = Some(super::settings_service::SettingsOwner::spawn(
+            store, initial, epoch, running, port, connection,
+        ));
+        Ok(())
+    }
     pub(super) async fn close_unstarted(&mut self) {
         self.close_connection().await;
     }
@@ -229,11 +248,31 @@ impl SelectionBus {
             _ = failure.cancelled() => return Err(BusError::Transport),
             result = runtime.start() => result.map_err(BusError::Runtime)?,
         }
+        self.run_started(runtime, stop).await
+    }
+
+    async fn run_started(
+        &mut self,
+        runtime: &mut NativeRuntime,
+        stop: CancellationToken,
+    ) -> Result<(), BusError> {
+        let failure = self.failed.clone();
         loop {
             tokio::select! {
                 _ = stop.cancelled() => return Ok(()),
                 _ = failure.cancelled() => return Err(BusError::Transport),
                 result = runtime.step() => result.map_err(BusError::Runtime)?,
+                request = async {
+                    match &mut self.settings {
+                        Some(settings) => settings.apply.recv().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    let request = request.ok_or(BusError::Transport)?;
+                    let applied = runtime.apply_live_settings(&request.values, request.root);
+                    if applied { self.visibility_recovered = false; }
+                    let _ = request.reply.send(applied);
+                }
                 message = self.inbox.recv() => {
                     let message = message.ok_or(BusError::Transport)?;
                     let (coordinator, endpoints) = runtime.bus_state_parts();
@@ -277,6 +316,9 @@ impl SelectionBus {
             return;
         }
         self.closed.cancel();
+        if let Some(settings) = self.settings.take() {
+            settings.close().await;
+        }
         if let Some(wakeup) = self.wakeup.take() {
             wakeup.close().await;
         }
@@ -478,6 +520,77 @@ impl SelectionBus {
         }
         let interface = header.interface().map(|interface| interface.as_str());
         let member = header.member().map(|member| member.as_str());
+        if interface == Some(super::settings_service::INTERFACE) {
+            use super::settings_service::{Command, SaveIntent, SettingsView};
+            let invalid = || Error::InvalidInput;
+            match member {
+                Some("Read") => {
+                    if !message.data().fds().is_empty()
+                        || message.body().deserialize::<()>().is_err()
+                    {
+                        return self.domain_error(&header, invalid()).await;
+                    }
+                    let view = self
+                        .settings
+                        .as_ref()
+                        .map(|settings| settings.view())
+                        .unwrap_or_else(|| SettingsView::unavailable(coordinator.epoch));
+                    return self.state_reply(&header, &(view,)).await;
+                }
+                Some("Reload") => {
+                    if !message.data().fds().is_empty()
+                        || message.body().deserialize::<()>().is_err()
+                    {
+                        return self.domain_error(&header, invalid()).await;
+                    }
+                    let result = self
+                        .settings
+                        .as_ref()
+                        .ok_or(Error::NotRunning)
+                        .and_then(|settings| settings.submit(Command::Reload(message.clone())));
+                    return match result {
+                        Ok(()) => Ok(()),
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                Some("Save") => {
+                    let body = message.body();
+                    let args = body
+                        .deserialize::<(SaveIntent, Vec<Fd<'_>>)>()
+                        .map_err(|_| invalid());
+                    let edit = args.and_then(|(intent, files)| {
+                        let expected = usize::from(intent.directory == 2);
+                        if !intent.valid(coordinator.epoch)
+                            || files.len() != expected
+                            || message.data().fds().len() != expected
+                        {
+                            return Err(invalid());
+                        }
+                        let file = files
+                            .first()
+                            .map(|file| file.as_fd().try_clone_to_owned().map(File::from))
+                            .transpose()
+                            .map_err(|_| invalid())?;
+                        intent.edit(file).map_err(|_| invalid())
+                    });
+                    let result = edit.and_then(|edit| {
+                        self.settings
+                            .as_ref()
+                            .ok_or(Error::NotRunning)?
+                            .submit(Command::Save(edit, message.clone()))
+                    });
+                    return match result {
+                        Ok(()) => Ok(()),
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                _ => {
+                    return self
+                        .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                        .await
+                }
+            }
+        }
         if interface == Some("org.freedesktop.DBus.Introspectable") && member == Some("Introspect")
         {
             if message.body().deserialize::<()>().is_err() || !message.data().fds().is_empty() {

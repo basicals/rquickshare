@@ -9,12 +9,12 @@ use crate::file_source::{OpenedFile, SelectionLimits};
 use crate::managed::{acknowledge_release, OutboundJob, OutboundReceiver};
 use crate::sessions::{consent_command, SessionLease};
 
-struct Fixture {
-    runtime: NativeRuntime,
+pub(crate) struct Fixture {
+    pub(crate) runtime: NativeRuntime,
     receiver: OutboundReceiver,
     discovery: broadcast::Sender<EndpointInfo>,
 }
-fn fixture() -> Fixture {
+pub(crate) fn fixture() -> Fixture {
     let (sender, receiver) = ManagedSender::channel().unwrap();
     let events = sender.sessions().subscribe_fresh().unwrap();
     let (discovery, observed) = broadcast::channel(128);

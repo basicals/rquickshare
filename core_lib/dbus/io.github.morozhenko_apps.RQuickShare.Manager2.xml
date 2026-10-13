@@ -1,4 +1,21 @@
 <node>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Settings1">
+    <method name="Read">
+      <arg name="settings" type="(sbybtsyiysbtbbys)" direction="out"/>
+    </method>
+    <method name="Reload">
+      <arg name="settings" type="(sbybtsyiysbtbbys)" direction="out"/>
+    </method>
+    <method name="Save">
+      <arg name="intent" type="(stssyiyyb)" direction="in"/>
+      <arg name="directory" type="ah" direction="in"/>
+      <arg name="settings" type="(sbybtsyiysbtbbys)" direction="out"/>
+    </method>
+    <signal name="SettingsChanged">
+      <arg name="epoch" type="s"/>
+      <arg name="revision" type="t"/>
+    </signal>
+  </interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Manager2">
     <method name="BeginSelection">
       <arg name="request_id" type="s" direction="in"/>

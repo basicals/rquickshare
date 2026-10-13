@@ -27,6 +27,7 @@ pub enum ClientError {
     Exhausted,
     Closed,
     Rejected(DomainError),
+    Settings(super::native_settings::StoreError),
 }
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -38,6 +39,7 @@ impl std::error::Error for ClientError {}
 pub mod controller;
 pub mod desktop;
 pub mod notices;
+pub mod settings;
 pub mod state;
 mod watch;
 
@@ -148,6 +150,8 @@ pub struct NativeClient {
     capture: Option<String>,
     last_view: Option<state::StateView>,
     view_incomplete: bool,
+    pending_settings: Option<settings::SettingsEdit>,
+    settings_seen: u64,
     #[cfg(test)]
     hook: Option<ReplyHook>,
 }
@@ -257,6 +261,8 @@ impl NativeClient {
             capture: None,
             last_view: None,
             view_incomplete: true,
+            pending_settings: None,
+            settings_seen: 0,
             #[cfg(test)]
             hook: None,
         };
@@ -398,6 +404,9 @@ impl NativeClient {
                 reply_sender(&reply, &self.owner)?;
                 if let Some(error) = domain(name.as_str()) {
                     return Err(ClientError::Rejected(error));
+                }
+                if let Some(error) = super::settings_service::store_error(name.as_str()) {
+                    return Err(ClientError::Settings(error));
                 }
                 if matches!(
                     name.as_str(),
@@ -821,7 +830,7 @@ struct ReplyHook {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 impl Drop for NativeClient {
     fn drop(&mut self) {

@@ -13,6 +13,7 @@ use super::*;
 pub(super) struct Hint {
     pub epoch: Option<u128>,
     pub revision: u64,
+    pub settings_generation: u64,
     pub failure: Option<ClientError>,
 }
 
@@ -96,6 +97,20 @@ impl WatchOwner {
         let mut states = MessageStream::for_match_rule(state_rule, connection, Some(8))
             .await
             .map_err(|_| ClientError::Transport)?;
+        let settings_rule = MatchRule::builder()
+            .msg_type(MessageType::Signal)
+            .sender(owner)
+            .map_err(|_| ClientError::Protocol)?
+            .path(PATH)
+            .map_err(|_| ClientError::Protocol)?
+            .interface(crate::service::settings_service::INTERFACE)
+            .map_err(|_| ClientError::Protocol)?
+            .member("SettingsChanged")
+            .map_err(|_| ClientError::Protocol)?
+            .build();
+        let mut settings = MessageStream::for_match_rule(settings_rule, connection, Some(8))
+            .await
+            .map_err(|_| ClientError::Transport)?;
         let mut owners = MessageStream::for_match_rule(owner_rule, connection, Some(8))
             .await
             .map_err(|_| ClientError::Transport)?;
@@ -109,18 +124,22 @@ impl WatchOwner {
                     biased;
                     _=end.cancelled()=>break,
                     message=owners.next()=>match message {
-                        Some(Ok(message))=>changed_owner(&message,&owner).map(|changed|if changed {Some((None,0,Some(ClientError::DaemonChanged)))} else {None}),
+                        Some(Ok(message))=>changed_owner(&message,&owner).map(|changed|if changed {Some((None,0,Some(ClientError::DaemonChanged),false))} else {None}),
                         _=>Err(ClientError::Transport),
                     },
                     message=states.next()=>match message {
-                        Some(Ok(message))=>hint(&message,&owner).map(|(epoch,revision)|Some((Some(epoch),revision,None))),
+                        Some(Ok(message))=>hint(&message,&owner).map(|(epoch,revision)|Some((Some(epoch),revision,None,false))),
+                        _=>Err(ClientError::Transport),
+                    },
+                    message=settings.next()=>match message {
+                        Some(Ok(message))=>settings_hint(&message,&owner).map(|epoch|Some((Some(epoch),0,None,true))),
                         _=>Err(ClientError::Transport),
                     },
                 };
                 let update = match update {
                     Ok(None) => continue,
                     Ok(Some(update)) => update,
-                    Err(error) => (None, 0, Some(error)),
+                    Err(error) => (None, 0, Some(error), false),
                 };
                 sender.send_modify(|hint| {
                     if hint.failure.is_some() {
@@ -136,6 +155,12 @@ impl WatchOwner {
                     }
                     hint.epoch = update.0;
                     hint.revision = hint.revision.max(update.1);
+                    if update.3 {
+                        match hint.settings_generation.checked_add(1) {
+                            Some(generation) => hint.settings_generation = generation,
+                            None => hint.failure = Some(ClientError::Exhausted),
+                        }
+                    }
                 });
                 if sender.borrow().failure.is_some() {
                     break;
@@ -148,6 +173,28 @@ impl WatchOwner {
             task: Some(task),
         })
     }
+}
+
+fn settings_hint(message: &Message, owner: &str) -> Result<u128> {
+    reply_sender(message, owner)?;
+    let header = message.header();
+    if message.message_type() != MessageType::Signal
+        || header.path().is_none_or(|value| value.as_str() != PATH)
+        || header
+            .interface()
+            .is_none_or(|value| value.as_str() != crate::service::settings_service::INTERFACE)
+        || header
+            .member()
+            .is_none_or(|value| value.as_str() != "SettingsChanged")
+        || !message.data().fds().is_empty()
+    {
+        return Err(ClientError::Protocol);
+    }
+    let (value, _): (String, u64) = message
+        .body()
+        .deserialize()
+        .map_err(|_| ClientError::Protocol)?;
+    epoch(&value)
 }
 
 #[cfg(test)]

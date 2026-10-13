@@ -105,6 +105,33 @@ pub struct NativeRuntime {
 }
 
 impl NativeRuntime {
+    pub(super) fn apply_live_settings(
+        &mut self,
+        values: &super::native_settings::Values,
+        root: super::settings_service::RootUpdate,
+    ) -> bool {
+        if !self.started || values.validate().is_err() {
+            return false;
+        }
+        let Ok(sender) = self.core.visibility_sender.lock() else {
+            return false;
+        };
+        let Some(visibility) = crate::Visibility::try_from_raw_value(values.visibility.into())
+        else {
+            return false;
+        };
+        match root {
+            super::settings_service::RootUpdate::Retain => (),
+            super::settings_service::RootUpdate::Default => {
+                self.core.receive_policy.set_directory(None)
+            }
+            super::settings_service::RootUpdate::Replace(directory) => {
+                self.core.receive_policy.set_directory(Some(directory))
+            }
+        }
+        sender.send_modify(|state| *state = visibility);
+        true
+    }
     /// Prepare synchronously, subscribing before transports can create sessions.
     pub fn new(epoch: u128, limits: Limits, core: RQS) -> Result<Self, RejectedRuntime> {
         let prepared = (|| {
@@ -791,4 +818,4 @@ fn phase(state: &State, direction: &crate::channel::TransferType) -> Phase {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
