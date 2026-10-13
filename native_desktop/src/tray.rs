@@ -14,6 +14,13 @@ type Pixmaps = Vec<(i32, i32, Vec<u8>)>;
 type ToolTip<'a> = (&'a str, Pixmaps, &'a str, &'a str);
 pub mod menu;
 async fn authenticate(connection: &Connection, header: &Header<'_>) -> fdo::Result<()> {
+    authenticate_uid(connection, header, rustix::process::geteuid().as_raw()).await
+}
+async fn authenticate_uid(
+    connection: &Connection,
+    header: &Header<'_>,
+    expected: u32,
+) -> fdo::Result<()> {
     if header.unix_fds().unwrap_or(0) != 0 {
         return Err(fdo::Error::InvalidArgs(
             "Menu descriptors are forbidden".into(),
@@ -29,7 +36,7 @@ async fn authenticate(connection: &Connection, header: &Header<'_>) -> fdo::Resu
         .await?
         .get_connection_unix_user(sender.clone().into())
         .await?;
-    if !same_user(uid, rustix::process::geteuid().as_raw()) {
+    if !same_user(uid, expected) {
         return Err(fdo::Error::AccessDenied("Different user".into()));
     }
     Ok(())
@@ -165,6 +172,7 @@ impl Tray {
                 menu::Menu {
                     state: menu_state.clone(),
                     actions,
+                    uid: rustix::process::geteuid().as_raw(),
                 },
             )?
             .build()

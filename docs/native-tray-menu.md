@@ -27,7 +27,7 @@ Primary protocol references checked before code:
 2. [x] T2 bind GTK action/readiness projection, bridge ordered events to existing
    actions, and direct ContextMenu fallback to the card's existing popover. Preserve
    primary activation, hide/Quit ownership and lock safety; strengthen GTK smoke.
-3. [ ] T3 run affected native checks/lint/build once, record observations, update
+3. [x] T3 run affected native checks/lint/build once, record observations, update
    checkpoints/export exact committed source. Installed Plasma menu/focus is a
    separate physical gate. Roll back GTK binding, then tray export; prior card
    menu and daemon settings remain independently usable.
@@ -114,3 +114,34 @@ Keep bounded all-or-none admission and standard failed-event IDs; strengthen the
 real wire assertion. Inject expected UID into the menu adapter to exercise actual
 credential denial on a private broker, rather than relying only on a UID helper.
 No new trust boundary, action or UI choice is introduced.
+
+Safety invalidation must render current button/action readiness before publishing
+the tray projection. Otherwise a progress update while locked could leave actions
+disabled after unlock until another unrelated core event. Reuse the existing render
+on safety updates and extend the one GTK smoke with an actual projected state across
+lock/unlock; presentation-only fixtures never gain a service mutation handle.
+
+T3 observations: the affected real menu method passed (0.07s) after receipt/UID
+corrections, with a correctly wrapped variant-FD rejection, actual broker credential
+denial and group/property/count bounds. The affected GTK smoke passed (0.39s) after
+immediate safety readiness refresh; no Layer Shell-on-preview warnings remain.
+Final native strict all-target no-deps Clippy passed (3.65s), build passed (4.66s),
+nightly format/diff passed. Earlier full 20-method native result remains applicable
+to unchanged methods. No redundant complete rerun/ten-run gate/core suite run.
+Two new methods: primary N1=1,N7=1; secondary bounds/concurrency/privacy/interruption
+coverage is explicit above. Existing core feature and Xvfb DRI3 warnings remain.
+All owned broker/display/task/command processes exited. Terminal closed.
+
+All T1-T3 source stages complete. No live menu registration, package installation,
+user configuration access or push. The standard /Menu object is a static safe
+read model with GTK-owned enabled/mode state. Primary activation still opens the
+card; direct ContextMenu uses its existing popover, while Plasma may import the
+DBusMenu natively. Physical Plasma renderer, right-click positioning, menu keyboard
+focus, mixed scales and Wayland activation remain manual acceptance. Source checks
+do not establish installed Google interoperability or native feature parity.
+
+Next native gaps: clipboard/text/reveal, autostart/updates and package equivalence;
+account/QR/full Google parity and actual peer matrices remain open. Latest settings
+contract/verification remains native-settings.md, original Tauri remains current.
+Rollback GUI menu binding first, then export; preserve daemon settings/notice/source
+authority. Work stays on dev with retained upstream references and atomic commits.

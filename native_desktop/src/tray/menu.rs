@@ -124,6 +124,7 @@ impl Handle {
 pub(super) struct Menu {
     pub state: watch::Sender<State>,
     pub actions: mpsc::Sender<Vec<Action>>,
+    pub uid: u32,
 }
 
 fn invalid() -> fdo::Error {
@@ -226,7 +227,7 @@ impl Menu {
         #[zbus(connection)] connection: &Connection,
         #[zbus(header)] header: Header<'_>,
     ) -> fdo::Result<(u32, Layout)> {
-        authenticate(connection, &header).await?;
+        authenticate_uid(connection, &header, self.uid).await?;
         let state = *self.state.borrow();
         Ok((
             state.revision,
@@ -240,7 +241,7 @@ impl Menu {
         #[zbus(connection)] connection: &Connection,
         #[zbus(header)] header: Header<'_>,
     ) -> fdo::Result<Properties> {
-        authenticate(connection, &header).await?;
+        authenticate_uid(connection, &header, self.uid).await?;
         if ids.len() > 32 || ids.iter().any(|id| !known(*id)) {
             return Err(invalid());
         }
@@ -263,7 +264,7 @@ impl Menu {
         #[zbus(connection)] connection: &Connection,
         #[zbus(header)] header: Header<'_>,
     ) -> fdo::Result<OwnedValue> {
-        authenticate(connection, &header).await?;
+        authenticate_uid(connection, &header, self.uid).await?;
         if !known(id) {
             return Err(invalid());
         }
@@ -281,7 +282,7 @@ impl Menu {
         #[zbus(connection)] connection: &Connection,
         #[zbus(header)] header: Header<'_>,
     ) -> fdo::Result<()> {
-        authenticate(connection, &header).await?;
+        authenticate_uid(connection, &header, self.uid).await?;
         self.enqueue(
             checked_event(id, &event_id, *self.state.borrow())?
                 .into_iter()
@@ -294,13 +295,14 @@ impl Menu {
         #[zbus(connection)] connection: &Connection,
         #[zbus(header)] header: Header<'_>,
     ) -> fdo::Result<Vec<i32>> {
-        authenticate(connection, &header).await?;
+        authenticate_uid(connection, &header, self.uid).await?;
         if events.is_empty() || events.len() > 16 {
             return Err(invalid());
         }
         let state = *self.state.borrow();
         let mut invalid_ids = Vec::new();
         let mut actions = Vec::new();
+        let event_ids = events.iter().map(|(id, _, _, _)| *id).collect();
         for (id, event, _, _) in events {
             match checked_event(id, &event, state) {
                 Ok(Some(action)) => actions.push(action),
@@ -310,8 +312,10 @@ impl Menu {
         }
         if invalid_ids.is_empty() {
             self.enqueue(actions)?;
+            Ok(Vec::new())
+        } else {
+            Ok(event_ids)
         }
-        Ok(invalid_ids)
     }
     async fn about_to_show(
         &self,
@@ -319,7 +323,7 @@ impl Menu {
         #[zbus(connection)] connection: &Connection,
         #[zbus(header)] header: Header<'_>,
     ) -> fdo::Result<bool> {
-        authenticate(connection, &header).await?;
+        authenticate_uid(connection, &header, self.uid).await?;
         if !known(id) {
             return Err(invalid());
         }
@@ -331,7 +335,7 @@ impl Menu {
         #[zbus(connection)] connection: &Connection,
         #[zbus(header)] header: Header<'_>,
     ) -> fdo::Result<(Vec<i32>, Vec<i32>)> {
-        authenticate(connection, &header).await?;
+        authenticate_uid(connection, &header, self.uid).await?;
         if ids.len() > 32 {
             return Err(invalid());
         }

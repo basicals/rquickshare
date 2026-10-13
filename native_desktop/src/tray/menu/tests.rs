@@ -90,6 +90,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
             Menu {
                 state: state.clone(),
                 actions: commands,
+                uid: rustix::process::geteuid().as_raw(),
             },
         )
         .await
@@ -162,7 +163,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         )
         .await
         .unwrap();
-    assert_eq!(bad, vec![999]);
+    assert_eq!(bad, vec![2, 999]);
     assert!(received.try_recv().is_err());
     let good: Vec<i32> = proxy
         .call(
@@ -217,10 +218,65 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
     assert!(proxy
         .call::<_, _, ()>(
             "Event",
-            &(8i32, "clicked", Fd::from(file.as_file().as_fd()), 0u32)
+            &(
+                8i32,
+                "clicked",
+                Value::from(Fd::from(file.as_file().as_fd())),
+                0u32
+            )
         )
         .await
         .is_err());
+    assert!(proxy
+        .call::<_, _, Vec<i32>>(
+            "EventGroup",
+            &vec![(8i32, "clicked", OwnedValue::from(0i32), 0u32); 17]
+        )
+        .await
+        .is_err());
+    assert!(proxy
+        .call::<_, _, Properties>(
+            "GetGroupProperties",
+            &(vec![1i32; 33], Vec::<String>::new())
+        )
+        .await
+        .is_err());
+    assert!(proxy
+        .call::<_, _, (Vec<i32>, Vec<i32>)>("AboutToShowGroup", &vec![1i32; 33])
+        .await
+        .is_err());
+    server
+        .object_server()
+        .remove::<Menu, _>(PATH)
+        .await
+        .unwrap();
+    let (commands, mut denied) = mpsc::channel(8);
+    server
+        .object_server()
+        .at(
+            PATH,
+            Menu {
+                state,
+                actions: commands,
+                uid: rustix::process::geteuid().as_raw().wrapping_add(1),
+            },
+        )
+        .await
+        .unwrap();
+    for result in [
+        proxy
+            .call::<_, _, (u32, Layout)>("GetLayout", &(0i32, -1i32, Vec::<String>::new()))
+            .await
+            .map(|_| ()),
+        proxy
+            .call::<_, _, ()>("Event", &(8i32, "clicked", OwnedValue::from(0i32), 0u32))
+            .await,
+    ] {
+        assert!(
+            matches!(result, Err(zbus::Error::MethodError(name, _, _)) if name.as_str() == "org.freedesktop.DBus.Error.AccessDenied")
+        );
+    }
+    assert!(denied.try_recv().is_err());
     assert!(received.try_recv().is_err());
     assert!(proxy
         .call::<_, _, (u32, Layout)>("GetLayout", &(0i32, -1i32, vec!["enabled"; 17]))
