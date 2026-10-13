@@ -1,7 +1,7 @@
 # Native outgoing text / clipboard ownership review
 
 2026-10-13. Mode A. Direct dev checkout. Guide /home/morozhenko/.codex/AGENTS.md
-sections 3.1,11,13. Status: awaiting the user's architecture selection. This is an
+sections 3.1,11,13. Status: user authorized continuation after the concrete recommendation; implement A. This is an
 analysis/proposal, not implemented source or a new compatibility claim.
 
 ## Remaining plan and priority
@@ -47,6 +47,8 @@ The accepted received-text Copy policy does not authorize this significant chang
 to source lifecycle and public native preparation contracts. Await selection before
 production code. The user asked to ask before substantial refactoring; do not hide
 this change as a button-only addition or infer selection from general continuation.
+
+Implementation SSOT: [native-outbound.md](native-outbound.md). Historical proposal follows.
 
 ## Proposed implementation milestones if A is selected
 
