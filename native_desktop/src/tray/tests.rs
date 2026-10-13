@@ -50,6 +50,13 @@ async fn given_private_kde_watcher_when_registered_activated_and_lost_then_lates
         "Active"
     );
     assert!(!item.get_property::<bool>("ItemIsMenu").await.unwrap());
+    assert_eq!(
+        item.get_property::<zbus::zvariant::OwnedObjectPath>("Menu")
+            .await
+            .unwrap()
+            .as_str(),
+        menu::PATH
+    );
     let mut updates = tray.updates.clone();
     for (method, point) in [
         ("Activate", (1, 2)),
@@ -59,7 +66,23 @@ async fn given_private_kde_watcher_when_registered_activated_and_lost_then_lates
         item.call::<_, _, ()>(method, &point).await.unwrap();
         updates.changed().await.unwrap();
         assert_eq!(updates.borrow_and_update().activation, Some(point));
+        assert_eq!(updates.borrow().context, method == "ContextMenu");
     }
+    let menu_proxy = zbus::Proxy::new(&observer, identity.as_str(), menu::PATH, menu::INTERFACE)
+        .await
+        .unwrap();
+    let mut layouts = menu_proxy.receive_signal("LayoutUpdated").await.unwrap();
+    tray.menu.publish(menu::Projection {
+        enabled: 0x7ff,
+        full: true,
+    });
+    let signal = layouts.next().await.unwrap();
+    assert_eq!(signal.body().deserialize::<(u32, i32)>().unwrap(), (2, 0));
+    let (revision, _): (u32, menu::Layout) = menu_proxy
+        .call("GetLayout", &(0i32, 0i32, Vec::<String>::new()))
+        .await
+        .unwrap();
+    assert_eq!(revision, 2);
     for x in 0..64 {
         item.call::<_, _, ()>("Activate", &(x, 100)).await.unwrap();
     }

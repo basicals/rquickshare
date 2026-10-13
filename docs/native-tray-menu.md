@@ -21,7 +21,7 @@ Primary protocol references checked before code:
 
 ## Stages / rollback
 
-1. [ ] T1 export fixed DBusMenu layout/properties/event methods and owned bounded
+1. [x] T1 export fixed DBusMenu layout/properties/event methods and owned bounded
    command queue; StatusNotifierItem.Menu returns /Menu. Freeze/read/event validation,
    dynamic enabled/mode snapshot and revision signalling. Private-broker checks.
 2. [ ] T2 bind GTK action/readiness projection, bridge ordered events to existing
@@ -78,3 +78,11 @@ Assert exact rows/actions/order and unchanged state for rejections; kill missing
 auth/readiness, dropped/coalesced events, mode mismatch and consent-bearing menu.
 No domain mocks/sleeps, no competing GTK test thread. Storage/migrations/time/billing
 unchanged (N6/N8/N11/N12 not applicable); settings verification remains historical.
+
+T1 observations: fixed projection/export and bounded mailbox implemented. Four
+affected tray methods passed (0.13s), including two new methods (primary N1 and N7)
+and strengthened real watcher/revision/context checks. Initial signal visibility
+compile error was corrected by exposing the owned signal emitter to its parent.
+GUI consumer fields/methods are intentionally not yet wired and generate temporary
+unused warnings until T2; no suppression added. Existing core no-default feature
+warnings remain. All private brokers/commands exited. Terminal closed.
