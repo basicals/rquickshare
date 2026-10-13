@@ -33,11 +33,11 @@ No native settings write API or migration is implemented by this review.
 ## This review's reversible maintenance plan before code
 
 1. [x] Map actual readers/writers, native gaps and receive-policy ownership.
-2. [ ] Replace only the two download-setter log messages with fixed categories;
+2. [x] Replace only the two download-setter log messages with fixed categories;
    keep setter signatures, persistence, path semantics and runtime behavior.
-3. [ ] Run focused core lint/format and inspect both setter diagnostics once;
+3. [x] Run focused core lint/format and inspect both setter diagnostics once;
    record actual results and commit separately. No new test mirrors log wording.
-4. [ ] Record the current handoff and wait for the significant settings decision.
+4. [x] Record the current handoff; awaiting approval for the significant settings decision.
    Do not implement a new disk schema/API/global receive-policy refactor yet.
 
 The small log fix rolls back independently. It does not claim that all repository
@@ -118,3 +118,24 @@ Direct GTK/CLI writes to the legacy file are not proposed as a durable alternati
 Analysis/review and the narrow log-fix plan are recorded before production edits.
 No user settings file has been read or changed for this review. Settings ownership
 and the substantial receive-policy refactor remain awaiting user selection.
+
+
+The two setter diagnostics now contain fixed categories and do not interpolate
+paths/options. Setter signatures, path conversion, synchronization and persistence
+are unchanged. The process-global receive root is deliberately not refactored
+before the pending significant ownership decision. Focused checks follow.
+
+
+## Observed maintenance checks / pending decision
+
+Core strict library Clippy passed once (4.61s); existing bluer future-compatibility
+notice is unchanged. Core and Tauri nightly formatting and git diff checks passed.
+Exactly two production log statements changed, with no path formatting remaining
+in those setter diagnostics. No new test mirrors the message text; no whole-core,
+Tauri runtime or device behavior test is claimed for this narrow log-only change.
+All owned command processes exited. Terminal closed.
+
+Options 1/A and 2/B remain awaiting user selection. Recommend 1/A. After selection,
+create the detailed settings SSOT/schema/API/lifecycle inventory before settings
+code. Preserve original legacy config, direct dev commits, the chosen notification
+ownership, explicit consent/source authority and one-run development verification.

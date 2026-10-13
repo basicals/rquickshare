@@ -7,7 +7,7 @@ pub fn change_download_path(
     message: Option<String>,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
-    info!("change_download_path: {message:?}");
+    info!("Download directory update requested");
 
     let rqs = state
         .rqs

@@ -389,7 +389,7 @@ impl RQS {
 
     // Setting None here will resume the default settings
     pub fn set_download_path(&self, p: Option<PathBuf>) {
-        debug!("Setting the download path to {:?}", p);
+        debug!("Updating download directory policy");
         match CUSTOM_DOWNLOAD.write() {
             Ok(mut guard) => *guard = p,
             Err(_) => error!("CUSTOM_DOWNLOAD lock is poisoned while changing path"),
