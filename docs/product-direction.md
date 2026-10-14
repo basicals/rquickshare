@@ -1,5 +1,33 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-14: signed native APT staging and trust tooling implemented
+
+User selected1. [native-apt.md](native-apt.md) records tracked native Debian
+revision2, immutable standard APT indexes/by-hash/Release, explicit external GPG
+signing, isolated pinned public verification, freshness and authenticated previous
+release comparison. Signed bootstrap derives actual architectures; it does not
+enroll a system. Build CI produces an explicitly unsigned staging artifact and
+has no signing secret/publication authority. APT owns installation and network
+checks; no native self-updater, HTTP polling or privileged transfer daemon exists.
+
+Measured package Python5/0 in1.244s, repository7/0 in6.753s and affected final clock
+boundary1/0 in1.436s passed. Actual isolated APT update/candidate/download matched
+package bytes and refused a wrong key; ephemeral test authority was destroyed.
+Actual compiled0.11.5+native2 amd64 release package/extracted offline smoke and
+unsigned repository stage passed. Package SHA256
+5821ad8c85556b603461876b7c6a5484c01048feb2dbf4e741c04058880ec3c7.
+No Rust change or needless core/native suite repetition. Syntax/YAML/whitespace
+passed; native CI source only, not remotely run. Exact state/provenance in SSOT.
+
+Production HTTPS URI/operator and signing custody are not configured. Review in
+[native-apt-publication-review.md](native-apt-publication-review.md): prefer an
+isolated signer outside CI; compare protected CI signing as an alternative.
+Hosting must retain authenticated immutable objects across metadata promotion.
+No production key, trust enrollment, package install, publication/push or peer
+operation occurred. These concrete bindings precede an operational public APT
+channel. Installed upgrade/removal/KDE lifecycle and protocol/account/QR/Google
+parity remain open. Earlier pending update-choice entries below are historical.
+
 ## 2026-10-14: opt-in daemon and tray login-start implemented
 
 User selected1. [native-autostart.md](native-autostart.md) freezes the unified

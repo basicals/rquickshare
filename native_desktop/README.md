@@ -183,3 +183,11 @@ reads actual systemd enablement and requires explicit Apply; Reload resolves
 unconfirmed changes. Custom/masked/unknown units remain unavailable. See
 [native-autostart.md](../docs/native-autostart.md) for ownership, constraints and
 measured checks; a real installed login/logout remains acceptance.
+
+Native updates use the selected signed APT channel design, with local immutable
+prepare/sign/verify/bootstrap tooling and tracked Debian revision. Installation
+and network update checks belong to the system package manager, not this GUI or
+transfer daemon. CI emits unsigned staging only. Production HTTPS URI/signing
+custody and installed update lifecycle remain pending; see
+[native-apt.md](../docs/native-apt.md) and
+[publication review](../docs/native-apt-publication-review.md).
