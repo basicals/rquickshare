@@ -5,7 +5,7 @@ use tokio::{net::UnixStream, sync::watch, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use zbus::Connection;
 
-use super::{bus, client::desktop};
+use super::bus;
 
 trait Activator: Send + 'static {
     fn activate(&mut self) -> impl Future<Output = bool> + Send;
@@ -14,37 +14,7 @@ trait Activator: Send + 'static {
 struct BusActivator(Connection);
 impl Activator for BusActivator {
     async fn activate(&mut self) -> bool {
-        let Ok(broker) = zbus::fdo::DBusProxy::new(&self.0).await else {
-            return false;
-        };
-        match broker
-            .get_name_owner(desktop::SERVICE.try_into().expect("fixed service name"))
-            .await
-        {
-            Ok(owner) => {
-                return broker.get_connection_unix_user(owner.into()).await.ok()
-                    == Some(rustix::process::geteuid().as_raw())
-            }
-            Err(zbus::fdo::Error::NameHasNoOwner(_)) => (),
-            Err(_) => return false,
-        }
-        let reply = self
-            .0
-            .call_method(
-                Some("org.freedesktop.DBus"),
-                "/org/freedesktop/DBus",
-                Some("org.freedesktop.DBus"),
-                "StartServiceByName",
-                &(desktop::SERVICE, 0u32),
-            )
-            .await;
-        reply.ok().is_some_and(|reply| {
-            reply
-                .header()
-                .sender()
-                .is_some_and(|sender| sender.as_str() == "org.freedesktop.DBus")
-                && matches!(reply.body().deserialize::<u32>(), Ok(1 | 2))
-        })
+        super::activation::ensure_desktop(&self.0).await.is_ok()
     }
     async fn close(self) {
         let _ = self.0.close().await;
@@ -118,6 +88,7 @@ mod tests {
     use tokio::sync::{mpsc, Semaphore};
 
     use super::*;
+    use crate::service::client::desktop;
     struct Provider {
         called: mpsc::Sender<()>,
         release: Arc<Semaphore>,

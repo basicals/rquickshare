@@ -12,7 +12,7 @@ Adding another login launcher would compete with those paths. Current daemon
 Type=exec and LaunchGuard already survive joined settings-generation name changes.
 Native settings JSON must not duplicate actual OS enablement state.
 
-1. [ ] A1: fixed GUI systemd/D-Bus process ownership, typed shared activation and
+1. [x] A1: fixed GUI systemd/D-Bus process ownership, typed shared activation and
    separate retained GUI guard. Preserve daemon process/typed ingress contracts.
 2. [ ] A2: headless normal/CLI launch delegates to GUI service; explicit --service
    runs one foreground worker for installed manager/development. Event-driven tray
@@ -126,3 +126,21 @@ changes lists and subscription lifecycle. These operations differ from Start/Sto
 Graphical session target stops PartOf services; independently enabled wants links
 select login services, pre-target concerns environment setup. Installed behavior
 is not proven by reading specifications or a fake external manager.
+
+A1 implemented: shared fixed daemon/desktop activation, GUI unit/delegation,
+independent retained desktop guard and hardened daemon wake reuse. Initial compile
+missed a test-only desktop import after removing the old activation code; corrected
+that fixture import. Service run observed264 pass/1 fail (7.17s): the new lock test
+used a TempDir whose permissions did not meet the existing private-runtime contract.
+Reused the existing explicit0700 fixture, preserving production checks. Corrected
+lock1/0 passed0.00s/build5.52s; strict core lint5.72s. New actual cold desktop broker
+and old activation/wake scenarios were among264 passes. Inventory578 core, no fresh
+whole265 service run claimed after the fixture-only repair. No real manager/guard
+or user files touched. Terminal closed.
+
+A2 startup/launcher implementation compiles all native targets (4.83s): no child
+spawn fallback, explicit foreground worker, process signal ownership, independent
+GUI lock across reconnect, normal launcher Show and cancellable event-driven tray
+readiness. One now-test-only immediate Tray::connect still warned unused in the
+production target; mark it test-only before strict checks. No warning suppression.
+A2 behavior/private-tray checks and A3 settings owner/UI remain pending.

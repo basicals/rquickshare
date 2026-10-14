@@ -311,3 +311,64 @@ async fn given_real_systemd_activation_broker_when_external_manager_admits_then_
         manager.close().await.unwrap();
     }).await;
 }
+
+#[tokio::test]
+async fn given_packaged_desktop_activation_when_manager_admits_then_existing_desktop_ingress_is_reused_without_child_or_implicit_show(
+) {
+    crate::service::client::tests::scenario(async {
+        use futures::StreamExt;
+
+        use crate::service::client::desktop::{DesktopClient, DesktopServer, PreparationGate};
+        let bus = PrivateBus::with_desktop_activation();
+        let manager = bus.client().await;
+        manager
+            .request_name("org.freedesktop.systemd1")
+            .await
+            .unwrap();
+        let rule = zbus::MatchRule::builder()
+            .msg_type(zbus::message::Type::Signal)
+            .sender(BROKER)
+            .unwrap()
+            .path(PATH)
+            .unwrap()
+            .interface("org.freedesktop.systemd1.Activator")
+            .unwrap()
+            .member("ActivationRequest")
+            .unwrap()
+            .build();
+        let mut requests = zbus::MessageStream::for_match_rule(rule, &manager, Some(8))
+            .await
+            .unwrap();
+        let mut activation = tokio::spawn(activate_desktop(
+            bus.socket().await,
+            CancellationToken::new(),
+        ));
+        let request = tokio::select! {
+            request=requests.next()=>request.unwrap().unwrap(),
+            result=&mut activation=>panic!("Expected desktop unit admission: {result:?}"),
+        };
+        checked(&request).unwrap();
+        assert_eq!(
+            request.body().deserialize::<String>().unwrap(),
+            "rquickshare-desktop.service"
+        );
+        let server =
+            DesktopServer::connect_optional(bus.socket().await, None, PreparationGate::new())
+                .await
+                .unwrap();
+        let updates = server.handle().subscribe();
+        assert_eq!(activation.await.unwrap(), Ok(()));
+        activate_desktop(bus.socket().await, CancellationToken::new())
+            .await
+            .unwrap();
+        assert_eq!(updates.borrow().show_revision, 0);
+        let mut client = DesktopClient::connect(bus.socket().await).await.unwrap();
+        client.show().await.unwrap();
+        assert_eq!(updates.borrow().show_revision, 1);
+        client.close().await.unwrap();
+        server.close().await.unwrap();
+        drop(requests);
+        manager.close().await.unwrap();
+    })
+    .await;
+}

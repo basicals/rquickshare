@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=io.github.morozhenko_apps.RQuickShare.Desktop
-Exec=/usr/bin/rquickshare
+SystemdService=rquickshare-desktop.service
+Exec=/usr/bin/false

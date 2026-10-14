@@ -18,19 +18,22 @@ impl PrivateBus {
         self.address.clone()
     }
     pub(crate) fn new() -> Self {
-        Self::configured(false)
+        Self::configured(None)
     }
     pub(crate) fn with_systemd_activation() -> Self {
-        Self::configured(true)
+        Self::configured(Some(SERVICE))
     }
-    fn configured(systemd: bool) -> Self {
+    pub(crate) fn with_desktop_activation() -> Self {
+        Self::configured(Some(crate::service::client::desktop::SERVICE))
+    }
+    fn configured(systemd: Option<&str>) -> Self {
         let directory = tempfile::tempdir().unwrap();
         let address = format!("unix:path={}", directory.path().join("bus").display());
         let mut command = Command::new("dbus-daemon");
-        if systemd {
+        if let Some(service) = systemd {
             let services = directory.path().join("services");
             std::fs::create_dir(&services).unwrap();
-            std::fs::write(services.join(format!("{SERVICE}.service")), include_str!("../../../../native_desktop/packaging/share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.service")).unwrap();
+            std::fs::write(services.join(format!("{service}.service")), if service == SERVICE { include_str!("../../../../native_desktop/packaging/share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.service") } else { include_str!("../../../../native_desktop/packaging/share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service") }).unwrap();
             let config = directory.path().join("bus.conf");
             std::fs::write(
                 &config,

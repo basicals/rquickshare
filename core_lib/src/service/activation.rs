@@ -25,7 +25,10 @@ trait Broker: Sync {
     fn supported(&self) -> impl std::future::Future<Output = Result<bool, ActivationError>> + Send;
     fn start(&self) -> impl std::future::Future<Output = Result<u32, ActivationError>> + Send;
 }
-struct Bus<'a>(&'a Connection);
+struct Bus<'a> {
+    connection: &'a Connection,
+    target: &'static str,
+}
 fn checked(reply: &Message) -> Result<(), ActivationError> {
     if reply
         .header()
@@ -45,7 +48,7 @@ impl Bus<'_> {
         body: &B,
     ) -> Result<Message, ActivationError> {
         match self
-            .0
+            .connection
             .call_method(Some(BROKER), PATH, Some(interface), member, body)
             .await
         {
@@ -64,8 +67,14 @@ impl Bus<'_> {
 impl Broker for Bus<'_> {
     async fn owner(&self) -> Result<Option<String>, ActivationError> {
         match self
-            .0
-            .call_method(Some(BROKER), PATH, Some(BROKER), "GetNameOwner", &SERVICE)
+            .connection
+            .call_method(
+                Some(BROKER),
+                PATH,
+                Some(BROKER),
+                "GetNameOwner",
+                &self.target,
+            )
             .await
         {
             Ok(reply) => {
@@ -112,7 +121,7 @@ impl Broker for Bus<'_> {
             .any(|feature| feature == "SystemdActivation"))
     }
     async fn start(&self) -> Result<u32, ActivationError> {
-        self.call(BROKER, "StartServiceByName", &(SERVICE, 0u32))
+        self.call(BROKER, "StartServiceByName", &(self.target, 0u32))
             .await?
             .body()
             .deserialize()
@@ -163,12 +172,40 @@ pub async fn activate_daemon(
     stream: UnixStream,
     cancel: CancellationToken,
 ) -> Result<(), ActivationError> {
+    activate(stream, cancel, SERVICE).await
+}
+pub async fn activate_desktop(
+    stream: UnixStream,
+    cancel: CancellationToken,
+) -> Result<(), ActivationError> {
+    activate(stream, cancel, super::client::desktop::SERVICE).await
+}
+pub(crate) async fn ensure_desktop(connection: &Connection) -> Result<(), ActivationError> {
+    ensure(&Bus {
+        connection,
+        target: super::client::desktop::SERVICE,
+    })
+    .await
+}
+async fn activate(
+    stream: UnixStream,
+    cancel: CancellationToken,
+    target: &'static str,
+) -> Result<(), ActivationError> {
     let connection = tokio::select! { biased;
         _ = cancel.cancelled() => return Err(ActivationError::Cancelled),
         result = connection_builder(stream).build() => result.map_err(|_| ActivationError::Unavailable)?,
     };
     let broker_connection = connection.clone();
-    owned(connection, &Bus(&broker_connection), cancel).await
+    owned(
+        connection,
+        &Bus {
+            connection: &broker_connection,
+            target,
+        },
+        cancel,
+    )
+    .await
 }
 #[cfg(test)]
 mod tests;

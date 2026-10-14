@@ -1,0 +1,15 @@
+[Unit]
+Description=rQuickShare tray client
+PartOf=graphical-session.target
+Wants=rquickshare-daemon.service
+After=graphical-session-pre.target dbus.socket rquickshare-daemon.service
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/rquickshare --service
+Restart=no
+TimeoutStopSec=infinity
+SendSIGKILL=no
+
+[Install]
+WantedBy=graphical-session.target

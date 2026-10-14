@@ -248,6 +248,12 @@ pub struct LaunchGuard {
 }
 impl LaunchGuard {
     pub fn acquire(directory: &Path) -> Result<Self, ProcessError> {
+        Self::acquire_named(directory, "rquickshare-owner.lock")
+    }
+    pub fn acquire_desktop(directory: &Path) -> Result<Self, ProcessError> {
+        Self::acquire_named(directory, "rquickshare-desktop-owner.lock")
+    }
+    fn acquire_named(directory: &Path, name: &'static str) -> Result<Self, ProcessError> {
         let uid = rustix::process::geteuid().as_raw();
         let metadata = directory
             .symlink_metadata()
@@ -271,7 +277,7 @@ impl LaunchGuard {
                     | rustix::fs::OFlags::CLOEXEC)
                     .bits() as i32,
             )
-            .open(directory.join("rquickshare-owner.lock"))
+            .open(directory.join(name))
             .map_err(|_| ProcessError::Owner)?;
         let metadata = file.metadata().map_err(|_| ProcessError::Owner)?;
         if !metadata.is_file()

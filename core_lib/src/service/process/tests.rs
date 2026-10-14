@@ -357,3 +357,28 @@ fn given_os_randomness_when_epochs_are_created_then_no_zero_or_reused_identity_i
     assert_ne!(second, 0);
     assert_ne!(first, second);
 }
+
+#[test]
+fn given_private_runtime_when_daemon_and_desktop_guards_overlap_then_each_role_has_one_independent_retained_owner(
+) {
+    let directory = private_directory();
+    let daemon = LaunchGuard::acquire(directory.path()).unwrap();
+    let desktop = LaunchGuard::acquire_desktop(directory.path()).unwrap();
+    assert!(matches!(
+        LaunchGuard::acquire(directory.path()),
+        Err(ProcessError::Owner)
+    ));
+    assert!(matches!(
+        LaunchGuard::acquire_desktop(directory.path()),
+        Err(ProcessError::Owner)
+    ));
+    drop(desktop);
+    let desktop = LaunchGuard::acquire_desktop(directory.path()).unwrap();
+    assert!(matches!(
+        LaunchGuard::acquire(directory.path()),
+        Err(ProcessError::Owner)
+    ));
+    drop(daemon);
+    let daemon = LaunchGuard::acquire(directory.path()).unwrap();
+    drop((daemon, desktop));
+}
