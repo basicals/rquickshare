@@ -1,5 +1,9 @@
 # Production native signing custody: concrete deployment decision
 
+2026-10-14 decision update: user selected the existing Linux workstation and
+rejected additional machines/VMs/hardware. The options below are historical.
+Current accepted boundary and implementation plan: native-local-signing.md.
+
 2026-10-14. Mode A. Direct dev. Continuation after the deployed shared download
 route. Read native-r2.md operator/remaining gates, native-download-route.md,
 native_signer.py and the existing agent guide. Working tree initially clean.
