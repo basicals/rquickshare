@@ -1,5 +1,11 @@
 # Building and checking rQuickShare
 
+2026-10-14 custody update: user selected the existing Linux workstation; no
+additional host/VM/token. Protected local certification/signing profiles and
+operator initialization are implemented/tested in [local signing](docs/native-local-signing.md).
+Earlier separate-host requirements below are superseded. Production keys still
+await the user's local Pinentry password input and recovery/publication acceptance.
+
 2026-10-14 current checkpoint: user selected
 https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
 A narrow read-only Worker keeps the dedicated bucket separate from Picturix.

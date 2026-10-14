@@ -1,5 +1,11 @@
 # Shared download hostname, isolated rQuickShare APT prefix
 
+2026-10-14 custody update: user selected the existing Linux workstation; no
+additional host/VM/token. Protected local certification/signing profiles and
+operator initialization are implemented/tested in [local signing](native-local-signing.md).
+Earlier separate-host requirements below are superseded. Production keys still
+await the user's local Pinentry password input and recovery/publication acceptance.
+
 2026-10-14. Mode A. User selected the exact production base URI
 https://download.morozhenko.com/dist/rQuickShare/ (case sensitive), superseding the
 independent apt subdomain recommendation. Cloudflare/Wrangler and Workers Best

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Public signing-request handoff; run approval/sign only on the isolated signer."""
+"""Public signing-request handoff; sign only in the explicitly selected GPG home."""
 import argparse
 import hashlib
 import json
