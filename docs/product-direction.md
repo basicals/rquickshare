@@ -1,5 +1,37 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-14: private R2 bucket and external signing handoff prepared
+
+User selected Cloudflare R2 and isolated signing outside CI. Dedicated private
+rquickshare-native-apt bucket created, Standard/WEUR; observed0 objects, no custom
+domain, r2.dev disabled. Existing download.morozhenko.com is active on app-dist
+and used by Picturix /dist/Picturix/latest.json; no existing product/storage/DNS or
+cache setting was changed. [Domain review](native-r2-domain-review.md) recommends
+an independent apt.morozhenko.com binding after collision preflight, alternative
+shared-host path routing with a narrowly scoped Worker. Selection remains pending.
+
+[native-r2.md](native-r2.md) records the conditional R2 publisher, canonical public
+signing request with independently approved digest, outside-CI signer commands,
+scoped public authority, optional pinned SDK and by-hash-only public APT projection.
+Immutable pool/by-hash/audit objects precede one conditional no-store InRelease
+commit; no deletion/unconditional overwrite/blind retry. The application/daemon
+still have no signing key, HTTP update poller or privileged installer.
+
+Measured publication/signer/S3/HTTP APT7/0 in6.916s, affected bootstrap1/0 in0.996s
+and isolated file-APT1/0 in0.691s. Actual loopback APT accepted/downloaded by-hash
+projection and rejected wrong key. Real test signing subkey verified under pinned
+primary. R2 external writes use a conditional fake store and real SDK Stubber,
+not production PUT evidence. Syntax/YAML/whitespace passed; optional SDK is in a
+CI task venv with contents:read and no signing/publish grant. No remote CI run.
+
+No production key, public object upload/enrollment, transfer/config/clipboard/peer,
+branch/push or sibling change. Local stages R1–R4 complete; production hostname,
+isolated signer host/hardware/release fingerprint and scoped publish credential
+still need concrete binding. Native2 package/unsigned artifact retain prior
+provenance/expiry; no Rust or package asset change required repetition/rebuild.
+Installed and Google/KDE acceptance remain separate. Earlier production-choice
+reviews below are historical where these selections supersede them.
+
 ## 2026-10-14: signed native APT staging and trust tooling implemented
 
 User selected1. [native-apt.md](native-apt.md) records tracked native Debian

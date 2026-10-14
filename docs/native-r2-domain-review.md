@@ -14,8 +14,9 @@ This is an actual existing dependency, not an unused hostname.
 
 The new dedicated rquickshare-native-apt bucket exists, Standard/WEUR, object count0,
 no custom domains, r2.dev public access disabled. Its creation did not change
-app-dist. Current publisher source is a staged, untested conditional R2 adapter;
-R2–R4 implementation/verification remains pending in native-r2.md.
+app-dist. Conditional publisher and external signing handoff now pass local domain/SDK/
+HTTP APT checks in native-r2.md. These checks do not establish production R2
+object writes or authorize a domain/routing change.
 
 ## Options requiring selection
 

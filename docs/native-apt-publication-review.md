@@ -1,5 +1,12 @@
 # Native APT production binding review
 
+Current selection: Cloudflare R2 storage and isolated signing outside CI. The
+dedicated private bucket and checked local publication/approval tooling are in
+[native-r2.md](native-r2.md). Existing download.morozhenko.com belongs to app-dist/
+Picturix; [domain review](native-r2-domain-review.md) records the remaining hostname/
+routing choice. Actual signer host/hardware and public fingerprint remain unbound.
+The initial alternatives below are retained as decision history.
+
 2026-10-14. Mode A analysis after native-apt.md U1–U4 local completion. No
 production signing authority, hosting endpoint, trust enrollment or external
 publication exists in this work. Guide /home/morozhenko/.codex/AGENTS.md3/3.1:

@@ -21,7 +21,9 @@ packaging are implemented in [native-package.md](native-package.md), with instal
 lifecycle acceptance open. Selected opt-in login-start (daemon plus hidden-card
 tray) is implemented in [native-autostart.md](native-autostart.md). Signed native APT
 staging/trust/bootstrap tooling is implemented in [native-apt.md](native-apt.md);
-production hosting/signing custody and installed updates remain pending. Account/QR
+R2 and isolated outside-CI signing are selected, with a dedicated private bucket
+and checked local publication/approval tooling in [native-r2.md](native-r2.md).
+Production domain routing/signing identity and installed updates remain pending. Account/QR
 capabilities still require their own work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles

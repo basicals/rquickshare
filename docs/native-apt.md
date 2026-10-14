@@ -1,5 +1,11 @@
 # Native signed APT distribution
 
+Current follow-up: the user selected Cloudflare R2 and isolated outside-CI signing.
+[native-r2.md](native-r2.md) records the created private bucket, checked conditional
+publisher, public request/approval handoff, By-Hash:force bootstrap and actual
+HTTP APT projection checks. Production domain routing/signing identity remain
+unbound; earlier U1–U4 measurements below are preserved without repeated checks.
+
 2026-10-14. Mode A. User selected1 in native-update-review.md: a dedicated signed
 native APT channel, system package-manager ownership. Guide
 /home/morozhenko/.codex/AGENTS.md. Direct dev; no installation/enrollment, live

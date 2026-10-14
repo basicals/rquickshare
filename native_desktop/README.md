@@ -191,3 +191,9 @@ transfer daemon. CI emits unsigned staging only. Production HTTPS URI/signing
 custody and installed update lifecycle remain pending; see
 [native-apt.md](../docs/native-apt.md) and
 [publication review](../docs/native-apt-publication-review.md).
+
+R2 storage and outside-CI isolated signing are selected. A dedicated private bucket
+and checked conditional publisher/public approval handoff are implemented in
+[native-r2.md](../docs/native-r2.md). Existing download.morozhenko.com serves
+Picturix; domain routing remains a separate choice before public binding. No
+production key or publicly trusted channel is provisioned by these builds.
