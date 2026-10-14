@@ -20,7 +20,7 @@ so use bounded image/png stream and png0.18.1 decoder/encoder in an owned worker
 2. [x] I2: bounded PNG decoder, normalized PNG encoder, small preview, immutable
    source; tracked joined worker/cancellation and explicit GTK review/Prepare.
    Reuse source gate/controller, no automatic image fallback, new Send or path IPC.
-3. [ ] I3: actual affected checks once, failures fixed, SSOT/atomic commits/export.
+3. [x] I3: actual affected checks once, failures fixed, SSOT/atomic commits/export.
    Physical KDE/Google PNG capture/peer acceptance remains a separate gate.
 
 Rollback UI/worker/decoder before factory/accounting. Existing legacy ephemeral
@@ -201,3 +201,11 @@ No watchers or terminal sessions remain. Exact committed ZIP and SSOT exports ar
 verified against git archive/HEAD and recorded in the external progress artifact;
 I3 export checkbox is updated after that verification. The next significant choice
 is documented in native-reveal-review.md; no reveal production API is implemented.
+
+
+I3 export verified from committed9593c0a before marking completion: archive CRC,
+tracked file inventory and selected source/SSOT byte equality against git show
+passed. The final documentation commit is exported again with its exact HEAD/SHA256
+in outputs/rquickshare-progress.md outside the repository; that artifact is the
+source ZIP provenance record. All accepted image stages are complete. Further
+received-file reveal implementation waits for its separate documented choice.
