@@ -17,7 +17,7 @@ GTK controller serializes requests and keeps private results out of PanelState.
 1. [x] F1: bounded private completed file receipts, original directory authority,
    actual EOF metadata/fingerprint capture, manifest order, session/runtime/history
    ownership. Preserve declared-size success, legacy DTO/transport and text behavior.
-2. [ ] F2: Files1 captured availability plus typed read-only FD acquisition, bounded
+2. [x] F2: Files1 captured availability plus typed read-only FD acquisition, bounded
    joined daemon filesystem worker, SDK/controller checked private result. Preserve
    Manager2/Text1/Operations signatures, no caller paths or persistent file leases.
 3. [ ] F3: explicit per-file Show in folder controls and owned portal OpenDirectory
@@ -126,6 +126,26 @@ ten-run gate; failures trigger focused repair/recheck. Record actual observation
 Primary desktop API reference inspected in review; recheck adapter ownership details
 against official portal Request/Response documentation before implementing F3.
 
+F3 adapter detail before code: reuse the existing joined Ingress task owner for
+the portal operation, retaining the shared permit and received FD through actual
+completion even if the GUI wait is dropped. Use a dedicated bounded connection,
+resolve portal unique owner and verify same UID, subscribe to Response and owner
+changes before OpenDirectory. Random per-request handle_token uses the existing
+rand0.9 dependency graph. Verify the expected request path, not only method success.
+Send owned Request.Close without waiting for a Close reply on cancellation, then
+close the dedicated connection. Do not Close arbitrary mismatched returned paths.
+No suitable backend-specific GTK surface handle is currently exposed by this crate;
+use the officially permitted empty parent_window, without guessed focus identity.
+Physical portal focus/selection remains acceptance, not an automated claim.
+
+Official Request and Window Identifiers pages inspected2026-10-14:
+https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Request.html
+https://flatpak.github.io/xdg-desktop-portal/docs/window-identifiers.html
+Response codes0/1/2 represent success/user cancellation/other termination. A
+caller-supplied handle_token permits subscription before method call; Close ends
+interaction without a Response signal. An empty parent is permitted without a
+suitable actual window handle. These details avoid reply/signal and focus guesses.
+
 
 F1 inspection correction before further code: TransferDetails already sorts Files
 by(relative name,size). Receipt indices must follow that established display order,
@@ -146,3 +166,15 @@ passed14/0 (0.07s, build10.32s), including kernel replacement/root/budget and se
 eligibility tables. Five new methods so far. Temporary unused resolver methods in
 library builds remain until F2 uses them; no warning suppression. No portal invoked.
 Terminal closed.
+
+
+F2 implemented: Files1 captured metadata and read-only acquisition, exactly-one-FD
+SDK success exception, private controller File completion and tracked joined daemon
+worker. Initial compile fixes bound the reply body before borrowed Fd decode and
+qualified the test broker path; no contract relaxation. All26 files-filtered methods
+passed0.10s/build25.34s; strict core all-target clippy passed11.29s. Five new F2
+methods cover broker/SDK, stale revision/index/FD abuse, history metadata nonownership,
+actual worker join and coordinator128 cap. Controller completion assertions added
+before final overall core verification; do not claim that later addition was already
+run here. Library inventory570. GUI TransferView fixtures receive reveal_revision
+None; actual reveal controls are F3. Terminal closed.

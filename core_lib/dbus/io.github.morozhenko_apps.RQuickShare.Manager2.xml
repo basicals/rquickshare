@@ -204,6 +204,20 @@
       <arg name="reader_id" type="s" direction="in"/>
     </method>
   </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Files1">
+    <method name="GetMetadataPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="metadata" type="a(stu)" direction="out"/>
+    </method>
+    <method name="AcquireFile">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="terminal_revision" type="t" direction="in"/>
+      <arg name="index" type="u" direction="in"/>
+      <arg name="file" type="h" direction="out"/>
+    </method>
+  </interface>
   <interface name="org.freedesktop.DBus.Introspectable">
     <method name="Introspect">
       <arg name="xml_data" type="s" direction="out"/>

@@ -38,6 +38,7 @@ impl std::error::Error for ClientError {}
 
 pub mod controller;
 pub mod desktop;
+pub mod files;
 pub mod notices;
 pub mod settings;
 pub mod state;
@@ -206,11 +207,14 @@ fn canonical(value: &str, current: u128) -> Result<()> {
 }
 
 fn reply_sender(message: &Message, expected: &str) -> Result<()> {
+    reply_sender_fds(message, expected, 0)
+}
+fn reply_sender_fds(message: &Message, expected: &str, count: usize) -> Result<()> {
     if message
         .header()
         .sender()
         .is_none_or(|sender| sender.as_str() != expected)
-        || !message.data().fds().is_empty()
+        || message.data().fds().len() != count
     {
         return Err(ClientError::Protocol);
     }
@@ -402,7 +406,9 @@ impl NativeClient {
         self.barrier(method, true).await;
         match result {
             Ok(reply) => {
-                reply_sender(&reply, &self.owner)?;
+                let count =
+                    usize::from(interface == bus::files::INTERFACE && method == "AcquireFile");
+                reply_sender_fds(&reply, &self.owner, count)?;
                 Ok(reply)
             }
             Err(zbus::Error::MethodError(name, _, reply)) => {

@@ -40,6 +40,7 @@ pub struct PanelState {
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ActionResult {
+    File(super::files::ReceivedFile),
     Text(super::text::TextRead),
     Settings(super::settings::SettingsView),
     Selection(Selection),
@@ -57,6 +58,7 @@ impl Completion {
 }
 
 enum Action {
+    AcquireFile(Transfer, u64, u32),
     ReadText(Transfer, u64),
     SettingsRestart,
     SettingsSave(super::settings::SettingsEdit),
@@ -83,6 +85,17 @@ pub struct PanelHandle {
     state: watch::Receiver<PanelState>,
 }
 impl PanelHandle {
+    pub fn acquire_file(
+        &self,
+        transfer: Transfer,
+        revision: u64,
+        index: u32,
+    ) -> Result<Completion> {
+        if revision == 0 || index >= crate::sessions::details::FILE_LIMIT as u32 {
+            return Err(ClientError::InvalidInput.into());
+        }
+        self.submit(Action::AcquireFile(transfer, revision, index))
+    }
     pub fn read_text(&self, transfer: Transfer, revision: u64) -> Result<Completion> {
         if revision == 0 {
             return Err(ClientError::InvalidInput.into());
@@ -363,6 +376,11 @@ impl Worker {
         }
         self.refresh().await?;
         match action {
+            Action::AcquireFile(transfer, revision, index) => self
+                .client
+                .acquire_received_file(&transfer, revision, index)
+                .await
+                .map(ActionResult::File),
             Action::ReadText(transfer, revision) => self
                 .client
                 .read_received_text(&transfer, revision)

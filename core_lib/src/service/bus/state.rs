@@ -59,6 +59,7 @@ pub(super) type SourceRow = (String, &'static str, u32, u64);
 
 struct Capture {
     sources: Vec<SourceRow>,
+    received: Vec<super::files::MetadataRow>,
     text: Vec<super::text::MetadataRow>,
     notices: Vec<NoticeRow>,
     charge: usize,
@@ -195,6 +196,26 @@ impl StateCache {
             .iter()
             .map(|view| (token(view.id.0, view.id.1), view.details.clone()))
             .collect();
+        let received = snapshot
+            .transfers
+            .iter()
+            .map(|view| {
+                let resource = &coordinator.transfers[&view.id];
+                let count = resource
+                    .received_files
+                    .as_ref()
+                    .map_or(0, |files| files.len() as u32);
+                (
+                    token(view.id.0, view.id.1),
+                    if count > 0 {
+                        resource.terminal_revision.unwrap_or(0)
+                    } else {
+                        0
+                    },
+                    count,
+                )
+            })
+            .collect();
         let text = snapshot
             .transfers
             .iter()
@@ -257,6 +278,7 @@ impl StateCache {
             .collect();
         let capture = Capture {
             sources,
+            received,
             text,
             notices,
             charge,
@@ -334,6 +356,14 @@ impl StateCache {
         offset: u32,
     ) -> Result<(u32, Vec<SourceRow>), Error> {
         page(&self.get(client, id)?.sources, offset)
+    }
+    pub(super) fn received_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<super::files::MetadataRow>), Error> {
+        page(&self.get(client, id)?.received, offset)
     }
     pub(super) fn text_page(
         &self,

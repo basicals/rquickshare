@@ -38,6 +38,7 @@ impl fmt::Debug for Endpoint {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransferView {
     pub content_revision: Option<u64>,
+    pub reveal_revision: Option<u64>,
     pub transfer: Transfer,
     pub direction: Direction,
     pub phase: Phase,
@@ -252,6 +253,7 @@ impl NativeClient {
         }
         Ok(TransferView {
             content_revision: None,
+            reveal_revision: None,
             transfer: Transfer {
                 id: row.0,
                 connection: self.identity.clone(),
@@ -405,7 +407,22 @@ impl NativeClient {
                 None,
             )
             .await?;
-        for ((transfer, header), text) in view.transfers.iter_mut().zip(headers).zip(text_rows) {
+        let file_rows: Vec<(String, u64, u32)> = self
+            .pages_for_on(
+                bus::files::INTERFACE,
+                "GetMetadataPage",
+                &metadata.0,
+                metadata.10,
+                None,
+            )
+            .await?;
+        for (((transfer, header), text), files) in view
+            .transfers
+            .iter_mut()
+            .zip(headers)
+            .zip(text_rows)
+            .zip(file_rows)
+        {
             if transfer.transfer.id() != header.0 || header.7 > 256 {
                 return Err(ClientError::Protocol);
             }
@@ -442,6 +459,20 @@ impl NativeClient {
                     .files
                     .windows(2)
                     .any(|files| (&files[0].name, files[0].size) > (&files[1].name, files[1].size))
+            {
+                return Err(ClientError::Protocol);
+            }
+            if files.0 != transfer.transfer.id() || ((files.1 == 0) != (files.2 == 0)) {
+                return Err(ClientError::Protocol);
+            }
+            transfer.reveal_revision = optional_revision(files.1 != 0, files.1, view.revision)?;
+            if files.1 != 0
+                && (transfer.direction != Direction::Inbound
+                    || transfer.phase != Phase::Finished
+                    || details.0.kind != crate::sessions::details::PayloadKind::Files
+                    || details.0.status != DetailsStatus::Ready
+                    || details.0.transferred_bytes != details.0.total_bytes
+                    || files.2 as usize != details.0.files.len())
             {
                 return Err(ClientError::Protocol);
             }

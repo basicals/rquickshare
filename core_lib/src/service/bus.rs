@@ -22,6 +22,7 @@ use super::uploads::{UploadState, BATCH_FILES};
 use super::{ClientId, Coordinator, Error, SelectionId, TransferId, UploadId};
 use crate::file_source::OpenedFile;
 
+pub mod files;
 mod state;
 pub mod text;
 pub(super) mod transport;
@@ -66,6 +67,7 @@ pub struct SelectionBus {
     clients: BTreeMap<String, ClientId>,
     state: state::StateCache,
     text: text::TextCache,
+    file_job: Option<JoinHandle<Result<File, Error>>>,
     notified: BTreeMap<ClientId, u64>,
     visibility_recovered: bool,
     uid: u32,
@@ -142,6 +144,7 @@ impl SelectionBus {
             clients: BTreeMap::new(),
             state: state::StateCache::default(),
             text: text::TextCache::default(),
+            file_job: None,
             notified: BTreeMap::new(),
             visibility_recovered: false,
             uid,
@@ -369,6 +372,9 @@ impl SelectionBus {
             return;
         }
         self.closed.cancel();
+        if let Some(job) = self.file_job.take() {
+            let _ = job.await;
+        }
         if let Some(settings) = self.settings.take() {
             settings.close().await;
         }
@@ -676,6 +682,73 @@ impl SelectionBus {
                 .reply(&header, &INTROSPECTION)
                 .await
                 .map_err(|_| BusError::Transport);
+        }
+        if interface == Some(files::INTERFACE) {
+            if !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            match member {
+                Some("GetMetadataPage") => {
+                    let result = message
+                        .body()
+                        .deserialize::<(&str, u32)>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|(id, offset)| {
+                            token_parts(id, coordinator.epoch)?;
+                            self.state.received_page(client, id, offset)
+                        });
+                    return match result {
+                        Ok(page) => self.state_reply(&header, &page).await,
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                Some("AcquireFile") => {
+                    let result = message
+                        .body()
+                        .deserialize::<(&str, u64, u32)>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|(id, revision, index)| {
+                            let (epoch, sequence) = token_parts(id, coordinator.epoch)?;
+                            files::resource(
+                                coordinator,
+                                client,
+                                TransferId(epoch, sequence),
+                                revision,
+                                index,
+                            )
+                            .map(|files| (files, index))
+                        });
+                    let (files, index) = match result {
+                        Ok(value) => value,
+                        Err(error) => return self.domain_error(&header, error).await,
+                    };
+                    if self.file_job.is_some() {
+                        return self.domain_error(&header, Error::Busy).await;
+                    }
+                    self.file_job = Some(tokio::task::spawn_blocking(move || {
+                        files.open(index).map_err(|_| Error::InvalidState)
+                    }));
+                    let result = self
+                        .file_job
+                        .as_mut()
+                        .expect("owned file worker")
+                        .await
+                        .unwrap_or(Err(Error::InvalidState));
+                    self.file_job.take();
+                    return match result {
+                        Ok(file) => connection
+                            .reply(&header, &Fd::from(file.as_fd()))
+                            .await
+                            .map_err(|_| BusError::Transport),
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                _ => {
+                    return self
+                        .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                        .await
+                }
+            }
         }
         if interface == Some(text::INTERFACE) {
             if !message.data().fds().is_empty() {
