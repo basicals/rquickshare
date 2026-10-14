@@ -206,3 +206,11 @@ Artifacts/export should record actual committed HEAD and exclude build/private d
 Source text flow is implemented; remaining image capture, received reveal/open,
 autostart/update/package migration and Google Account/QR/parity are separate stages.
 Retain upstream refs and Tauri baseline until installed/physical equivalence gates.
+
+
+2026-10-14 follow-on: native-image.md reuses this Files controller for immutable
+PNG capture. Tray image ID17 widens the private menu projection to u32; text ID16
+and existing source/receipt/wire contracts remain. The shared editor guard uses
+its acquired permit rather than a possibly delayed Ingress busy watch projection.
+The current whole core558/native25 observations and subsequent affected checks
+are in the image SSOT; earlier O1-O4 timings remain historical measurements.

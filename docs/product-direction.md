@@ -1,5 +1,31 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-14: native clipboard images implemented; received-file reveal reviewed
+
+User selected anonymous immutable source1/A. [native-image.md](native-image.md)
+records completed source/accounting/PNG/worker/GTK stages: encoded PNG32MiB,
+64million pixels, preview512×512, daemon anonymous Files128MiB aggregate retained
+through actual readers. Capture and Prepare are explicit; recipient Send is separate.
+The shared file controller/queue/recovery handles images without named private files
+or caller deletion paths. Lock/epoch/close clears local image review and joins owned
+CPU work. Mutable seal-capable tmpfs source descriptors are deliberately rejected;
+ordinary disk descriptors retain existing behavior. Tray image ID17 preserves prior IDs.
+
+Actual core whole suite558 plus8 binary integrations passed; additional anonymous
+broker scenario and strengthened PNG3 passed. Native25 passed and final affected
+GTK1/lint/build passed. Inventory became559 core library methods; exact timings,
+limitations and failed/corrected fixtures are in SSOT, without a fresh559 whole-run,
+ten-run stability or installed Google/KDE claim. Work stays directly on dev.
+
+Next [native-reveal-review.md](native-reveal-review.md) recommends actual completed
+transfer receipts and descriptor-based explicit Show in folder over opening only
+the current receive folder. New API/security/UX boundary awaits selection. The
+independent premature file EOF defect found during analysis is repaired under the
+maintenance preference in [inbound-file-completion.md](inbound-file-completion.md).
+Autostart/update/package lifecycle, protocol/name/temporary visibility/trust/
+previews/resume/streams/multi-recipient/Wi-Fi/apps, Google account/QR and physical
+Android/Windows/KDE matrices remain. Historical pending-image entries below are dated.
+
 ## 2026-10-13: clipboard image storage review prepared
 
 Native outgoing text O1-O4 is complete. [native-image-review.md](native-image-review.md)

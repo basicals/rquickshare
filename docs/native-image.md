@@ -190,3 +190,14 @@ I2 GUI completion: tracked capture/review source, explicit Prepare, current safe
 epoch checks and fixed menu ID17 implemented. Core commit56f1147 precedes the GUI
 adapter commit. I3 export/handoff remains pending; no further production change
 is required by the accepted image plan.
+
+
+I3 final review: anonymous source/PNG and GTK adapters are committed separately as
+086c47b/56f1147/5b314a7. The independent exact inbound EOF repair is46a3f10 after
+planf1ae396; its affected29 checks/lint are recorded in inbound-file-completion.md.
+After that shared core change the native binary rebuilt successfully5.46s; nightly
+core/native formatting, git diff whitespace and the one GTK UI XML parse passed.
+No watchers or terminal sessions remain. Exact committed ZIP and SSOT exports are
+verified against git archive/HEAD and recorded in the external progress artifact;
+I3 export checkbox is updated after that verification. The next significant choice
+is documented in native-reveal-review.md; no reveal production API is implemented.

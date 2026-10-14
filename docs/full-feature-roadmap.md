@@ -1,6 +1,6 @@
 # Full Quick Share roadmap
 
-_Last updated: 2026-10-13_
+_Last updated: 2026-10-14_
 
 The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, pending UX choice, initial compatibility matrix and migration stages.
 
@@ -11,7 +11,11 @@ implemented; daemon-owned persistent settings and in-app recovery are implemente
 in [native-settings.md](native-settings.md), with physical migration acceptance pending.
 Native received Text/URL review and explicit Copy are implemented in
 [native-text.md](native-text.md). Outgoing native text/clipboard capture and shared recipient preparation are implemented
-in [native-outbound.md](native-outbound.md). Native clipboard images, reveal, account/QR/
+in [native-outbound.md](native-outbound.md). Native clipboard PNG images are implemented
+in [native-image.md](native-image.md), with bounded validation, immutable anonymous
+sources and explicit review/Prepare/Send. Received-file reveal is reviewed in
+[native-reveal-review.md](native-reveal-review.md), awaiting its own boundary choice.
+Reveal, account/QR/
 package capabilities still require their own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles
