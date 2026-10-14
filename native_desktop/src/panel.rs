@@ -21,6 +21,7 @@ use std::{
 use tokio::runtime::Handle;
 
 mod compose;
+mod image;
 mod menu;
 mod presentation;
 mod rows;
@@ -68,6 +69,7 @@ pub struct Panel {
     settings_owner: RefCell<Option<Rc<settings::Editor>>>,
     text_review: RefCell<Option<Rc<text::Review>>>,
     composer: RefCell<Option<Rc<compose::Composer>>>,
+    image: RefCell<Option<Rc<image::Image>>>,
     text_generation: RefCell<Rc<()>>,
     rows: RefCell<rows::Rows>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
@@ -283,6 +285,7 @@ impl Panel {
             settings_owner: RefCell::new(None),
             text_review: RefCell::new(None),
             composer: RefCell::new(None),
+            image: RefCell::new(None),
             text_generation: RefCell::new(Rc::new(())),
             rows: RefCell::new(rows::Rows::default()),
             dismissal: RefCell::new(None),
@@ -395,6 +398,7 @@ impl Panel {
         if state.disconnected || previous_epoch != current_epoch {
             self.close_text_review();
             self.close_composer();
+            self.close_image();
         }
         let saved = state
             .settings
@@ -429,6 +433,7 @@ impl Panel {
         }
         self.refresh_text_review();
         self.refresh_composer();
+        self.refresh_image();
         self.render();
         self.apply_presentation();
     }
@@ -512,6 +517,7 @@ impl Panel {
         }
         self.close_text_review();
         self.close_composer();
+        self.close_image();
         if let Some(task) = self.completion.borrow_mut().take() {
             task.abort();
         }
@@ -720,6 +726,7 @@ impl Panel {
             ("files", ready && !selected),
             ("folder", ready && !selected),
             ("send-text", ready && !selected),
+            ("send-image", ready && !selected),
             ("discard", ready && selected),
             ("nearby", !preview),
             ("incoming", !preview),

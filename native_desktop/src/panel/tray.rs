@@ -13,7 +13,7 @@ impl Panel {
             && !model.preview
             && ((!self.layer && !model.safety_active) || model.safety.manual_allowed());
         let mut enabled = 0;
-        for id in (1..=11).chain([16]) {
+        for id in (1..=11).chain([16, 17]) {
             let action = Action::from_id(id).expect("fixed tray action");
             let cleanup = matches!(action, Action::Hide | Action::Quit);
             let allowed = !model.closing
@@ -59,6 +59,7 @@ impl Panel {
             Action::Files
             | Action::Folder
             | Action::Text
+            | Action::Image
             | Action::Incoming
             | Action::Transfers => {
                 self.mark_manual();
@@ -113,6 +114,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     let full = panel.tray_projection();
     assert_ne!(full.enabled & Action::Settings.bit(), 0);
     assert_ne!(full.enabled & Action::Text.bit(), 0);
+    assert_ne!(full.enabled & Action::Image.bit(), 0);
     assert_ne!(full.enabled & Action::Files.bit(), 0); // Presentation projection; no service handle exists.
     panel.tray_action(Action::Compact);
     assert_eq!(panel.mode(), Mode::Compact);

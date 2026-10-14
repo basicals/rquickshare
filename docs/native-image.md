@@ -17,7 +17,7 @@ so use bounded image/png stream and png0.18.1 decoder/encoder in an owned worker
 1. [x] I1: anonymous sealed/read-only source factory and kernel-derived memory
    classification; reserve aggregate memory through staged/direct/actual-held file
    sources. Preserve disk descriptors and existing file/CLI/source lifetime checks.
-2. [ ] I2: bounded PNG decoder, normalized PNG encoder, small preview, immutable
+2. [x] I2: bounded PNG decoder, normalized PNG encoder, small preview, immutable
    source; tracked joined worker/cancellation and explicit GTK review/Prepare.
    Reuse source gate/controller, no automatic image fallback, new Send or path IPC.
 3. [ ] I3: actual affected checks once, failures fixed, SSOT/atomic commits/export.
@@ -185,3 +185,8 @@ adapters; N8/N11 not applicable. N12 allocation/syscall failure paths return fix
 errors but OS allocator/syscall exhaustion was not fault-injected. No exhaustive
 Mode B, ten-run stability, installed KDE, real clipboard or Google peer signoff.
 All owned commands/private brokers/workers exited. Terminal closed.
+
+I2 GUI completion: tracked capture/review source, explicit Prepare, current safety/
+epoch checks and fixed menu ID17 implemented. Core commit56f1147 precedes the GUI
+adapter commit. I3 export/handoff remains pending; no further production change
+is required by the accepted image plan.

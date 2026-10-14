@@ -27,6 +27,7 @@ impl Panel {
             "files",
             "folder",
             "send-text",
+            "send-image",
             "discard",
             "recover",
             "abort",
@@ -49,6 +50,7 @@ impl Panel {
                         panel.pages.set_visible_child_name(name);
                     }
                     "send-text" => panel.show_composer(),
+                    "send-image" => panel.show_image(),
                     "files" | "folder" => {
                         panel.set_mode(Mode::Full);
                         panel.pages.set_visible_child_name("nearby");
@@ -80,6 +82,7 @@ impl Panel {
             ("files", "Send files…"),
             ("folder", "Send a folder…"),
             ("send-text", "Send text…"),
+            ("send-image", "Send image…"),
             ("incoming", "Incoming requests"),
             ("transfers", "Transfers"),
         ] {

@@ -1,6 +1,6 @@
 # Native development shell
 
-The tray now exports a standard DBusMenu with Open, file/folder selection, incoming/
+The tray now exports a standard DBusMenu with Open, file/folder/text/image selection, incoming/
 transfer navigation, Compact/Full, Settings, Reconnect, Hide and Quit. It contains
 fixed labels only. Actions share current GTK readiness and lock safety; no consent,
 implicit Send, saved-setting write or daemon-stop action is exposed. Primary click
@@ -124,7 +124,7 @@ clipboard, after fresh unlock/epoch/resource checks and GTK provider acknowledge
 Receipt/view/reconnect never copies or opens links. Lock/epoch change closes review;
 closing review preserves an explicit prior copy. Daemon text is bounded and epoch-local,
 not a permanent journal. Read recovery uses Recover operation; pending reads block
-new source/settings mutations. Outgoing native text/clipboard/image and URL opening
+new source/settings mutations. Outgoing preparation and URL opening
 remain separate capabilities. See [native-text.md](../docs/native-text.md) for contracts
 and exact actual observations; no installed Wayland/Google acceptance is implied.
 
@@ -135,4 +135,17 @@ prepared files/text must be discarded first. Clipboard capture is bounded, cance
 and does not run when opening the panel. Lock/epoch/close clears the private editor.
 Uncertain preparation uses the existing Recover/Discard controls without recapturing
 clipboard. Full/Compact source summaries show generic kind/size. See
-[native-outbound.md](../docs/native-outbound.md). Clipboard images are the next slice.
+[native-outbound.md](../docs/native-outbound.md).
+
+Send image… opens a separate review window. Capture clipboard image reads PNG only
+on that explicit action, validates a static image up to32 MiB/64 million pixels,
+and displays a preview up to512×512. Prepare image uses the same Files recipient
+flow; Send remains separate. Anonymous sealed data is immutable and has no temporary
+file to clean up. Unsupported/rejected recapture preserves the previous snapshot.
+Lock/epoch/close clears the local image; owned CPU work retains the preparation
+permit until completion. See [native-image.md](../docs/native-image.md).
+
+Memory-backed file descriptors must carry all immutable seals and fit32 MiB each/
+128 MiB aggregate in the daemon. Mutable tmpfs sources are rejected; ordinary disk
+sources retain their existing descriptor behavior. For automated disk-source tests
+on a host with tmpfs /tmp, set TMPDIR to a directory on a disk filesystem first.

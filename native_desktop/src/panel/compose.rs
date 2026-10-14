@@ -299,7 +299,7 @@ impl Drop for Composer {
     }
 }
 impl Panel {
-    fn compose_allowed(&self, epoch: u128) -> bool {
+    pub(super) fn compose_allowed(&self, epoch: u128) -> bool {
         let model = self.model.borrow();
         !model.closing
             && !model.preview
@@ -311,7 +311,8 @@ impl Panel {
             && !model.state.busy
             && !model.waiting
             && model.dialog.is_none()
-            && !model.ingress.busy
+            // This editor already owns the shared permit. Its own worker may publish
+            // idle asynchronously; the cached ingress projection is not authority.
             && model.state.view.as_ref().is_some_and(|view| {
                 view.epoch == epoch
                     && view.synchronized

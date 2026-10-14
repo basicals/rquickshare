@@ -43,7 +43,7 @@ or receive-accept menu command. ItemIsMenu stays false; primary activation opens
 
 Menu reads/events authenticate actual same-UID unique caller, reject any FDs and
 reuse existing 64KiB/16-FD predecode framing. Static root/leaf layouts have at most
-15 rows; recursion depth -1/0/positive valid values cannot amplify the flat tree.
+17 rows (18 nodes including root; image extension2026-10-14); recursion depth -1/0/positive valid values cannot amplify the flat tree.
 Property-name requests <=16 with each name <=64 bytes; IDs <=32. Unknown IDs or
 unsupported event names fail explicitly. clicked dispatches; opened/closed/hovered
 are presentation-only no-ops. Event data is an ignored non-FD variant; timestamps
@@ -145,3 +145,10 @@ account/QR/full Google parity and actual peer matrices remain open. Latest setti
 contract/verification remains native-settings.md, original Tauri remains current.
 Rollback GUI menu binding first, then export; preserve daemon settings/notice/source
 authority. Work stays on dev with retained upstream references and atomic commits.
+
+
+2026-10-14 image extension: native-image.md records Send image ID17 and private
+u32 enabled projection (Send text stays ID16; other IDs unchanged). The flat tree
+now has17 children/18 nodes. Property/event/FD/queue/auth/readiness contracts stay
+unchanged; the event group limit remains16. Actual menu broker and GTK projection
+checks passed with the full25-method native suite (0.50s). This is no Plasma signoff.
