@@ -56,11 +56,18 @@ bootstrap artifacts. Run focused packaging/distribution checks with Python >=3.1
 dpkg-dev, gnupg/gpgv and apt (no installation or host trust changes):
 
 ```bash
-python3 -m unittest discover -s scripts/tests -p 'test_native_*.py' -v
+python3 -m venv /absolute/task-only/publication-python
+/absolute/task-only/publication-python/bin/python -m pip install -r scripts/requirements-r2.txt
+/absolute/task-only/publication-python/bin/python -m unittest discover -s scripts/tests -p 'test_native_*.py' -v
 ```
 
 CI uploads an explicitly unsigned APT staging artifact. Production URI/signing
 custody/publication remain separate bindings, not supplied silently by a build.
+The user selected R2 and isolated signing outside CI. The dedicated private
+bucket, conditional publisher, signing request/approval handoff and exact measured
+HTTP APT checks are recorded in [native R2](docs/native-r2.md). The existing
+download.morozhenko.com belongs to app-dist/Picturix; [domain review](docs/native-r2-domain-review.md)
+compares isolated apt.morozhenko.com with shared-host path routing before any DNS change.
 Existing Tauri release jobs remain the migration baseline; native installed startup,
 upgrade/removal and KDE/Google acceptance are still separate gates.
 

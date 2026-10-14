@@ -92,6 +92,7 @@ class NativeAptTests(unittest.TestCase):
             self.assertEqual((output / "FINGERPRINT").read_text(), self.fingerprint + "\n")
             self.assertEqual((output / "rquickshare-native-archive-keyring.gpg").read_bytes(), self.keyring.read_bytes())
             text = (output / "rquickshare-native.sources").read_text()
+            self.assertIn("By-Hash: force\n", text)
             self.assertIn(f"Signed-By: /etc/apt/keyrings/rquickshare-native-archive-keyring.gpg {self.fingerprint}\n", text)
             self.assertNotIn("Trusted:", text)
             self.assertNotIn("Allow-Insecure", text)
@@ -218,6 +219,9 @@ class NativeAptTests(unittest.TestCase):
                     self.assertFalse(signed.exists())
 
     def test_given_real_apt_with_isolated_state_when_signed_channel_is_acquired_then_candidate_and_download_match_and_wrong_key_fails(self):
+        self.assert_apt_acquisition(self.signed.as_uri())
+
+    def assert_apt_acquisition(self, repository_uri):
         # Arrange: no host apt config, trust, status, hooks, lists or installation.
         with tempfile.TemporaryDirectory(prefix="rqs-apt-client-") as temporary:
             root = Path(temporary)
@@ -226,7 +230,7 @@ class NativeAptTests(unittest.TestCase):
             (root / "state/status").write_text("")
             keyring = root / "keyring.gpg"
             shutil.copyfile(self.keyring, keyring)
-            (root / "etc/apt/sources.sources").write_text(f"Types: deb\nURIs: {self.signed.as_uri()}\nSuites: {apt.SUITE}\nComponents: main\nArchitectures: amd64\nSigned-By: {keyring} {self.fingerprint}\n")
+            (root / "etc/apt/sources.sources").write_text(f"Types: deb\nURIs: {repository_uri}\nSuites: {apt.SUITE}\nComponents: main\nArchitectures: amd64\nBy-Hash: force\nSigned-By: {keyring} {self.fingerprint}\n")
             config = root / "apt.conf"
             config.write_text(f'''Dir "{root}";
 Dir::Etc "etc/apt";

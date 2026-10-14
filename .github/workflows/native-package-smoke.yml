@@ -20,11 +20,18 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates git curl build-essential pkg-config dpkg-dev python3 \
+            ca-certificates git curl build-essential pkg-config dpkg-dev python3 python3-venv \
             protobuf-compiler libdbus-1-dev libudev-dev libgtk-4-dev \
             libgtk4-layer-shell-dev dbus-daemon dbus-x11 xvfb xauth desktop-file-utils gnupg gpgv
 
       - uses: actions/checkout@v5
+
+      - name: Install isolated publication contract-test dependencies (no credentials)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/native-publication-python"
+          "$RUNNER_TEMP/native-publication-python/bin/python" -m pip install -r scripts/requirements-r2.txt
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -49,7 +56,7 @@ jobs:
           cargo +nightly fmt --manifest-path native_desktop/Cargo.toml -- --check
           cargo +stable test --locked --manifest-path core_lib/Cargo.toml
           cargo +stable clippy --locked --manifest-path core_lib/Cargo.toml --all-targets -- -D warnings
-          python3 -m unittest discover -s scripts/tests -p 'test_native_*.py' -v
+          "$RUNNER_TEMP/native-publication-python/bin/python" -m unittest discover -s scripts/tests -p 'test_native_*.py' -v
           desktop-file-validate native_desktop/packaging/share/applications/io.github.morozhenko_apps.RQuickShare.desktop
 
       - name: Isolated GTK and native lint gate

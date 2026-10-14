@@ -328,7 +328,7 @@ def bootstrap(repository_uri, repository, keyring, expected, output, now=None):
     architectures = sorted(verify(repository, keyring, expected, now)["packages"])
     with stage(output) as root:
         shutil.copyfile(keyring, root / "rquickshare-native-archive-keyring.gpg")
-        sources = f"Types: deb\nURIs: {repository_uri}\nSuites: {SUITE}\nComponents: main\nArchitectures: {' '.join(architectures)}\nSigned-By: /etc/apt/keyrings/rquickshare-native-archive-keyring.gpg {expected}\n"
+        sources = f"Types: deb\nURIs: {repository_uri}\nSuites: {SUITE}\nComponents: main\nArchitectures: {' '.join(architectures)}\nBy-Hash: force\nSigned-By: /etc/apt/keyrings/rquickshare-native-archive-keyring.gpg {expected}\n"
         (root / "rquickshare-native.sources").write_text(sources)
         (root / "FINGERPRINT").write_text(expected + "\n")
         for path in root.iterdir():
