@@ -26,7 +26,7 @@ activation asset installation, live manager call, autostart or transport start h
   and packaging example, not evidence that its service lifecycle is implemented.
   No files in that repository were changed.
 
-## Choice awaiting user selection
+## Choice selected: option1
 
 1. Recommended: systemd user service owns the daemon process; D-Bus activation
    requests that fixed service. GTK/CLI remain clients. Use process lifetime rather
@@ -102,7 +102,7 @@ failures in the next implementation SSOT. No new tests executed for this analysi
 ## Handoff
 
 Received-file reveal is complete at2ed984c; its exact checks remain native-reveal.md.
-This review is awaiting choice1/2. Do not implement installed activation ownership
-until selected. No live user service, package installation, peer/config/clipboard
+User selected1 (systemd user + D-Bus). Implementation contract/stages are in
+native-package.md; the alternatives above are retained for decision history. No live user service, package installation, peer/config/clipboard
 operation or NativePair modification occurred. All terminal commands exited.
 Terminal closed.
