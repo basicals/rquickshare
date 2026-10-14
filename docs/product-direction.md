@@ -22,8 +22,11 @@ Final amd64 package SHA256 d2a8211bd2e5ff05771b6381fb3e3a0a04fa770008db66d8e1639
 Exact timings, earlier failures/repairs and remaining installed recovery acceptance
 are recorded in the autostart SSOT. No user-manager/install/enable/config/clipboard/
 portal/peer operation, push or sibling project change. Earlier pending-autostart
-entries below are historical. Remaining: update distribution/lifecycle, protocol
-parity/account/QR and physical Google/KDE acceptance.
+entries below are historical. Next distribution choice is prepared in [native-update-review.md](native-update-review.md):
+recommend a signed native APT channel with package-manager installation ownership.
+Alternative: authenticated native GitHub artifacts with explicit OS-installer handoff.
+No updater/repository trust or publication is configured. Protocol parity/account/QR
+and physical Google/KDE acceptance remain.
 
 ## 2026-10-14: systemd user activation and native Debian package implemented
 
