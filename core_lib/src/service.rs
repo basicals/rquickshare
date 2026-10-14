@@ -984,6 +984,8 @@ pub mod runtime;
 
 pub mod uploads;
 
+#[cfg(target_os = "linux")]
+pub mod activation;
 pub mod bus;
 pub mod native_settings;
 pub mod process;

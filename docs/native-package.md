@@ -13,7 +13,7 @@ process with Type=dbus. Existing NativeClient passive connect and typed snapshot
 epoch handshake stay intact. NativePair supplies the direct Debian tooling model,
 not a working activation contract. Current workflows package Tauri only.
 
-1. [ ] P1: fixed process/activation assets and explicit owned activation adapter,
+1. [x] P1: fixed process/activation assets and explicit owned activation adapter,
    preserving passive SDK connect, UID/owner checks, cancellation and settings restart.
 2. [ ] P2: native GTK launch/reconnect opts into activation, package-owned application
    entry and direct Debian builder/verifier; preserve legacy release jobs.
@@ -99,3 +99,18 @@ Applicable Positive,N1,N2,N3,N4,N5,N6,N7,N9,N10,N12; N8/N11 not applicable (no t
 billing policy). No coverage/stability/full interoperability claim. Record exact
 checks and failures here after each milestone. Login-autostart/updater behavior and
 installed KDE lifecycle/real Google checks remain separate decisions/acceptance.
+
+P1 implemented: bounded separate activation connection, verified broker replies,
+explicit SystemdActivation requirement for missing owners, fixed once-only start,
+same-UID stable unique owner and unconditional connection close. Passive NativeClient
+is unchanged; GTK wiring belongs to P2. Unit supervises process, never enables or
+restarts it, and preserves joined shutdown. First compile found the existing test
+watchdog helper was module-private; widened only its test-only visibility for reuse.
+Four activation methods then passed0.04s/build30.34s. Strict lint exposed the
+async_trait macro's generated duplicate must_use annotation on the new seam;
+replaced this private statically dispatched seam with native impl-Future trait
+methods, avoiding boxing/macro rather than suppressing lint. Final affected service
+262/0 passed8.38s/build28.24s; strict core lint11.62s. Inventory575 core. Existing
+restart/process and actual private-broker ownership tests are included in the
+service filter. Real installed systemd delegation/coalescing remains acceptance;
+fake external admission tests do not prove a real manager. Terminal closed.

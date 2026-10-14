@@ -1,0 +1,11 @@
+[Unit]
+Description=rQuickShare transfer service
+PartOf=graphical-session.target
+After=dbus.socket
+
+[Service]
+Type=exec
+ExecStart=/usr/libexec/rquickshare-daemon
+Restart=no
+TimeoutStopSec=infinity
+SendSIGKILL=no

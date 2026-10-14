@@ -28,7 +28,7 @@ pub(super) fn source() -> (tempfile::NamedTempFile, Vec<OpenedFile>) {
         OpenedFile::adopt(File::open(file.path()).unwrap(), "folder/document".into()).unwrap();
     (file, vec![opened])
 }
-pub(super) async fn scenario(test: impl Future<Output = ()>) {
+pub(crate) async fn scenario(test: impl Future<Output = ()>) {
     tokio::time::timeout(std::time::Duration::from_secs(30), test)
         .await
         .expect("Owned client scenario must finish");
