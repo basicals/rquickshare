@@ -20,7 +20,7 @@ handling. A native app must not replace package-owned binaries itself or use the
 transfer daemon as a privileged installer. A checksum shipped beside a package
 checks consistency, not independently authenticated release provenance.
 
-## Options awaiting selection
+## Selected option1 (alternatives retained)
 
 1. Recommended: a dedicated signed native APT channel for the current Debian/Ubuntu
    package distribution; the system package manager owns installation/update.
@@ -60,6 +60,6 @@ not evidence that this project already operates a signed repository.
 
 ## Handoff
 
-Recommend1 for clear installation ownership, maintainability and recovery. No
-production update code until selection. Completed login artifact/checks remain
+User selected1. The implementation plan and measured checks are in native-apt.md.
+Production URI/key custody remain unbound; no publication is implied. Completed login artifact/checks remain
 in native-autostart.md. Physical package/Google acceptance remains separate.
