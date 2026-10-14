@@ -30,7 +30,9 @@ tray) is implemented in [native-autostart.md](native-autostart.md). Signed nativ
 staging/trust/bootstrap tooling is implemented in [native-apt.md](native-apt.md);
 R2 and isolated outside-CI signing are selected, with a dedicated private bucket
 and checked local publication/approval tooling in [native-r2.md](native-r2.md).
-Production domain routing/signing identity and installed updates remain pending. Account/QR
+Production prefix routing is deployed and checked in native-download-route.md. Concrete
+signing custody/identity and installed updates remain pending; see
+native-signer-custody-review.md for the next decision. Account/QR
 capabilities still require their own work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles
