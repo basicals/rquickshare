@@ -15,7 +15,7 @@ host/key or package-manager UI contract. Tools dpkg-scanpackages, gpg/gpgv, apt-
 and apt-cache are available; apt-ftparchive is not. Use the existing Debian index
 tool plus a small exact SHA256 Release serializer, not a private package resolver.
 
-1. [ ] U1: tracked native package revision; strict positive bounded revision and
+1. [x] U1: tracked native package revision; strict positive bounded revision and
    release/debug version validation; expose validated metadata from package verify.
    Preserve binaries/service behavior and existing package inventory.
 2. [ ] U2: local immutable repository prepare/sign/verify/bootstrap utilities.
@@ -103,3 +103,9 @@ failed; use installed Debian tool documentation and actual APT acceptance below.
 Plan frozen before code. U1–U4 pending. The previous login package/checks remain
 recorded in native-autostart.md. Production publication needs a separately chosen
 URI/key custody; complete local reviewable tooling before asking for that binding.
+
+U1 complete: revision2 is tracked in packaging/release.toml; strict positive bounded
+revision/native version and real dpkg ordering are covered by the existing package
+metadata table. Package verification now returns its already validated fields for
+repository admission. Python package5/0 passed1.244s. No Rust binary, service,
+settings or public wire behavior changed. Terminal closed.

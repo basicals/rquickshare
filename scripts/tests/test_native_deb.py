@@ -22,7 +22,7 @@ class NativeDebTests(unittest.TestCase):
         package.validate_metadata(fields())
         for field, variants in {
             "Package": ["", "other"],
-            "Version": ["", "0.11.5", "0.11.5+native1.fake", "0.11.5\nInjected: field"],
+            "Version": ["", "0.11.5", "0.11.5+native1.fake", "0.11.5\nInjected: field", "0.11.5+native0", "0.11.5+native01", "0.11.5+native2147483648"],
             "Architecture": ["", "i386", "amd64\n"],
             "Depends": ["", DEPENDENCIES.replace("systemd, ", "", 1), DEPENDENCIES.replace("libgtk4-layer-shell0", "wrong"), DEPENDENCIES.replace(" (>= 4.12)", "")],
         }.items():
@@ -32,6 +32,13 @@ class NativeDebTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         package.validate_metadata(invalid)
         package.validate_metadata(fields() | {"Version": "0.11.5+native1.debug", "Architecture": "arm64"})
+        for revision in [1, 2, 10, 2147483647]:
+            package.validate_metadata(fields() | {"Version": package.native_version("0.11.5", revision)})
+        for revision in [None, True, "2", 0, -1, 2147483648]:
+            with self.subTest(revision=revision), self.assertRaises(ValueError):
+                package.native_version("0.11.5", revision)
+        for left, right in [(1, 2), (2, 10), (10, 2147483647)]:
+            subprocess.run(["dpkg", "--compare-versions", package.native_version("0.11.5", left), "lt", package.native_version("0.11.5", right)], check=True)
 
     def test_given_selected_assets_when_validated_then_process_ownership_supports_only_opt_in_login_without_direct_fallback(self):
         # Arrange / Act / Assert: actual shipped service/activation assets.

@@ -41,9 +41,21 @@ def require(condition, message):
         raise ValueError(message)
 
 
+def native_revision(value):
+    require(type(value) is int and 1 <= value <= 2147483647, "Invalid native revision")
+    return value
+
+
+def native_version(version, revision, debug=False):
+    require(re.fullmatch(r"\d+\.\d+\.\d+", version) is not None, "Invalid source version")
+    return version + "+native" + str(native_revision(revision)) + (".debug" if debug else "")
+
+
 def validate_metadata(fields):
     require(fields.get("Package") == "rquickshare", "Unexpected package identity")
-    require(re.fullmatch(r"\d+\.\d+\.\d+\+native1(?:\.debug)?", fields.get("Version", "")), "Invalid native version")
+    version = re.fullmatch(r"\d+\.\d+\.\d+\+native([1-9][0-9]{0,9})(?:\.debug)?", fields.get("Version", ""))
+    require(version is not None, "Invalid native version")
+    native_revision(int(version[1]))
     require(fields.get("Architecture") in {"amd64", "arm64"}, "Unsupported architecture")
     depends = fields.get("Depends", "")
     names = {re.match(r"[a-z0-9+.-]+", item.strip())[0] for item in depends.split(",") if re.match(r"[a-z0-9+.-]+", item.strip())}
@@ -153,6 +165,7 @@ def verify(package, smoke=True):
             settings.write_text('{"visibility":0}')
             require("no service started" in run(str(daemon), "--settings", str(settings), "--check", env=clean), "Offline settings check failed")
     print("Native Debian package verified:", package)
+    return fields
 
 
 def build(args):
@@ -162,7 +175,8 @@ def build(args):
     architecture = run("dpkg", "--print-architecture")
     require(architecture in {"amd64", "arm64"}, "Unsupported native architecture")
     require(not os.environ.get("CARGO_BUILD_TARGET") and not os.environ.get("CARGO_TARGET_DIR"), "Use native default cargo target directories")
-    version = versions[0] + "+native1" + (".debug" if args.profile == "dev" else "")
+    revision = tomllib.loads((ASSETS / "release.toml").read_text())["revision"]
+    version = native_version(versions[0], revision, args.profile == "dev")
     for crate, binary in [("core_lib", "rquickshare-daemon"), ("native_desktop", "rquickshare")]:
         subprocess.run(["cargo", "+stable", "build", "--locked", "--manifest-path", str(ROOT / crate / "Cargo.toml"), "--bin", binary, "--profile", args.profile], check=True)
     output = args.output.resolve()
