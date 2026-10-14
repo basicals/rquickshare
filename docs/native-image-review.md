@@ -1,7 +1,7 @@
 # Native clipboard image source review
 
-2026-10-13. Mode A. Work on dev. Status: awaiting image storage/source-boundary
-selection. Guide /home/morozhenko/.codex/AGENTS.md sections3.1/11: significant new
+2026-10-13. Mode A. Work on dev. Status: user selected1/A on2026-10-14. Implementation SSOT: native-image.md.
+The proposal below is historical. Guide /home/morozhenko/.codex/AGENTS.md sections3.1/11: significant new
 storage/resource/security boundary requires explicit selection. This review follows
 completed native-outbound.md O1-O4; it does not reopen accepted text decisions.
 
