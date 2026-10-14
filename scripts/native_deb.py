@@ -162,6 +162,8 @@ def build(args):
             target.chmod(mode)
         (work / "debian").mkdir(exist_ok=True)
         (work / "debian/control").write_text("Source: rquickshare\n\nPackage: rquickshare\nArchitecture: any\nDescription: Native nearby sharing\n")
+        control = stage / "DEBIAN"
+        control.mkdir()
         command = ["dpkg-shlibdeps", "-O", "-e" + str(stage / "usr/bin/rquickshare"), "-e" + str(stage / "usr/libexec/rquickshare-daemon")]
         for library in args.library_dir:
             command.append("-l" + str(library.resolve(strict=True)))
@@ -171,8 +173,6 @@ def build(args):
         require(dependencies.startswith("shlibs:Depends="), "Missing generated ELF dependencies")
         depends = dependencies.removeprefix("shlibs:Depends=") + ", libgtk-4-1 (>= 4.12), systemd, libpam-systemd, dbus-user-session, bluez, xdg-desktop-portal"
         validate_metadata({"Package": "rquickshare", "Version": version, "Architecture": architecture, "Depends": depends})
-        control = stage / "DEBIAN"
-        control.mkdir()
         (control / "control").write_text(f"Package: rquickshare\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: rQuickShare contributors <noreply@github.com>\nSection: net\nPriority: optional\nDepends: {depends}\nRecommends: xdg-desktop-portal-kde\nDescription: Native nearby file and text sharing\n GTK4 tray client and independently owned transfer daemon.\n")
         (control / "control").chmod(0o644)
         for directory in [stage, *[path for path in stage.rglob("*") if path.is_dir()]]:
