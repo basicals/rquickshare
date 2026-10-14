@@ -41,7 +41,7 @@ No ambient ~/.gnupg, environment secret, secret CLI option, loopback or generate
 password. Production initialize uses normal system Pinentry for the user's
 passphrase. No production key initialization during this development turn: the
 operator must enter their own password locally. Prepare/test all commands first.
-Default CLI state is ~/.local/share/rquickshare-signing; allow an explicit absolute
+Default CLI state is ~/.rquickshare-signing; allow an explicit absolute
 canonical state path, never an existing directory, symlink or repository child.
 Parent must exist, be owned by the caller and not group/world writable. Root and
 GPG homes0700, state/config/temporary secret files0600, no overwrite/resume magic.
@@ -133,7 +133,7 @@ python3 scripts/native_signer_local.py initialize
 python3 scripts/native_signer_local.py inspect
 ```
 
-Default private root: ~/.local/share/rquickshare-signing. Pinentry may ask during
+Default private root: ~/.rquickshare-signing. Pinentry may ask during
 key generation/export/import. Passphrase minimum16 characters is enforced; do not
 paste it into chat, CLI options, environment, source or a shell script. Production
 CLI exposes no test Pinentry/loopback/password bypass. Initialization is explicit,
@@ -166,3 +166,19 @@ awaits local Pinentry input, then public identity verification/recovery and real
 publication acceptance. No extra host/VM/token is requested. No real secret,
 production signature/R2 object, enrollment/install, user GPG settings or unrelated
 process was changed. All task-owned test agents/terminals closed; Terminal closed.
+
+## Production initialization preflight correction (2026-10-14)
+
+User is at the workstation and explicitly authorized launching Pinentry. Initial
+initialize refused before creating state: ~/.local/share is caller-owned0775,
+violating the frozen non-group/world-writable parent invariant. No agent/key or
+partial profile was created. Home itself is canonical/caller-owned0750.
+
+Before retry: use ~/.rquickshare-signing as the default private root directly under
+that secure home. Preserve fresh-state/ownership/permission guards; do not chmod
+existing user directories or introduce an implicit insecure-parent exception.
+This is an internal storage-default correction within the selected same-PC custody,
+not a new signing authority/host. Explicit --state-dir remains available and guarded.
+Update operator instructions before retry, check syntax/help/whitespace, then run
+real initialization with system Pinentry. Existing insecure-parent tests already
+protect the refusal; unchanged key-generation tests need no repetition.

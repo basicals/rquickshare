@@ -189,7 +189,7 @@ def initialize(state, pinentry=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["initialize", "inspect"])
-    parser.add_argument("--state-dir", type=Path, default=Path.home() / ".local/share/rquickshare-signing")
+    parser.add_argument("--state-dir", type=Path, default=Path.home() / ".rquickshare-signing")
     args = parser.parse_args()
     try:
         value = initialize(args.state_dir) if args.command == "initialize" else inspect(args.state_dir)
