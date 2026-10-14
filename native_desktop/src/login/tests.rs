@@ -6,6 +6,8 @@ struct State {
     fragment: String,
     dropins: Vec<String>,
     deny: bool,
+    reloads: usize,
+    deny_reload: bool,
     noop: bool,
     calls: Vec<(Vec<String>, bool, bool)>,
     subscribed: usize,
@@ -33,6 +35,8 @@ impl Default for State {
             fragment: "/usr/lib/systemd/user/rquickshare-desktop.service".into(),
             dropins: Vec::new(),
             deny: false,
+            reloads: 0,
+            deny_reload: false,
             noop: false,
             calls: Vec::new(),
             subscribed: 0,
@@ -45,6 +49,14 @@ struct Fake(Arc<Mutex<State>>);
 impl Fake {
     fn subscribe(&self) {
         self.0.lock().unwrap().subscribed += 1;
+    }
+    fn reload(&self) -> zbus::fdo::Result<()> {
+        let mut state = self.0.lock().unwrap();
+        state.reloads += 1;
+        if state.deny_reload {
+            return Err(zbus::fdo::Error::AccessDenied("Reload denied".into()));
+        }
+        Ok(())
     }
     fn load_unit(&self, name: &str) -> zbus::fdo::Result<OwnedObjectPath> {
         if name != UNIT {
@@ -264,6 +276,7 @@ async fn given_explicit_login_edit_when_stale_denied_or_readback_disagrees_then_
         assert_eq!(state.lock().unwrap().calls.len(), 1);
         assert_eq!(handle.set(true, false).unwrap().wait().await, Ok(false));
         assert_eq!(state.lock().unwrap().calls.len(), 2);
+        assert_eq!(state.lock().unwrap().reloads, 2);
         state.lock().unwrap().deny = true;
         assert_eq!(
             handle.set(false, true).unwrap().wait().await,
@@ -272,6 +285,7 @@ async fn given_explicit_login_edit_when_stale_denied_or_readback_disagrees_then_
         assert_eq!(handle.subscribe().borrow().enabled, None);
         assert_eq!(handle.read().unwrap().wait().await, Ok(false));
         assert_eq!(state.lock().unwrap().calls.len(), 3);
+        assert_eq!(state.lock().unwrap().reloads, 2);
         {
             let mut state = state.lock().unwrap();
             state.deny = false;
@@ -390,6 +404,39 @@ fn given_manager_reply_when_sender_or_descriptor_is_invalid_then_reject_before_i
         .build(&zbus::zvariant::Fd::from(&file))
         .unwrap();
     assert_eq!(checked(&reply, ":1.7"), Err(Error::Protocol));
+}
+
+#[tokio::test]
+async fn given_changed_login_links_when_configuration_reload_fails_then_readback_recovers_without_repeating_enable(
+) {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        // Arrange: link changes succeed, but the external manager rejects configuration reload.
+        let (_broker, connection, state, owner) = fixture(State {
+            deny_reload: true,
+            ..State::default()
+        })
+        .await;
+        let handle = owner.handle();
+        assert_eq!(handle.read().unwrap().wait().await, Ok(false));
+        // Act / Assert: persistent state alone cannot acknowledge a synchronized configuration.
+        assert_eq!(
+            handle.set(false, true).unwrap().wait().await,
+            Err(Error::Uncertain)
+        );
+        assert_eq!(handle.subscribe().borrow().enabled, None);
+        assert!(state.lock().unwrap().enabled);
+        assert_eq!(state.lock().unwrap().calls.len(), 1);
+        assert_eq!(state.lock().unwrap().reloads, 1);
+        assert_eq!(handle.read().unwrap().wait().await, Err(Error::Uncertain));
+        state.lock().unwrap().deny_reload = false;
+        assert_eq!(handle.read().unwrap().wait().await, Ok(true));
+        assert_eq!(state.lock().unwrap().calls.len(), 1);
+        assert_eq!(state.lock().unwrap().reloads, 3);
+        owner.close().await;
+        connection.close().await.unwrap();
+    })
+    .await
+    .expect("Private manager reload scenario did not complete");
 }
 
 #[tokio::test]

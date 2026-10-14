@@ -1,7 +1,10 @@
 //! One bounded owner of explicit, persistent user-manager login enablement.
 use futures::StreamExt;
 use rqs_lib::service::{bus::connection_builder, process::BusAddress};
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicBool, Ordering},
+};
 use tokio::{
     sync::{mpsc, oneshot, watch},
     task::JoinHandle,
@@ -91,6 +94,7 @@ async fn owner(connection: &Connection) -> Result<String> {
 struct Manager<'a> {
     connection: &'a Connection,
     owner: &'a str,
+    reload_needed: AtomicBool,
 }
 impl Manager<'_> {
     async fn call<B: serde::Serialize + zbus::zvariant::Type>(
@@ -128,6 +132,21 @@ impl Manager<'_> {
         Ok(reply)
     }
     async fn read(&self) -> Result<bool> {
+        if self.reload_needed.load(Ordering::Relaxed) {
+            self.call(PATH, MANAGER, "Reload", &())
+                .await
+                .map_err(|error| {
+                    if error == Error::Closed {
+                        error
+                    } else {
+                        Error::Uncertain
+                    }
+                })?
+                .body()
+                .deserialize::<()>()
+                .map_err(|_| Error::Uncertain)?;
+            self.reload_needed.store(false, Ordering::Relaxed);
+        }
         let reply = self.call(PATH, MANAGER, "LoadUnit", &UNIT).await?;
         let unit: OwnedObjectPath = reply.body().deserialize().map_err(|_| Error::Protocol)?;
         if unit.as_str() != UNIT_PATH {
@@ -175,6 +194,7 @@ impl Manager<'_> {
         if current == desired {
             return Ok(current);
         }
+        self.reload_needed.store(true, Ordering::Relaxed);
         let changes = if desired {
             let reply = self
                 .call(
@@ -184,7 +204,7 @@ impl Manager<'_> {
                     &(vec![UNIT], false, false),
                 )
                 .await
-                .map_err(uncertain)?;
+                .map_err(|error| self.mutation_error(error))?;
             let (install, changes): (bool, Vec<(String, String, String)>) =
                 reply.body().deserialize().map_err(|_| Error::Uncertain)?;
             if !install {
@@ -195,7 +215,7 @@ impl Manager<'_> {
             let reply = self
                 .call(PATH, MANAGER, "DisableUnitFiles", &(vec![UNIT], false))
                 .await
-                .map_err(uncertain)?;
+                .map_err(|error| self.mutation_error(error))?;
             reply
                 .body()
                 .deserialize::<Vec<(String, String, String)>>()
@@ -215,6 +235,12 @@ impl Manager<'_> {
             return Err(Error::Conflict);
         }
         Ok(actual)
+    }
+    fn mutation_error(&self, error: Error) -> Error {
+        if error == Error::Denied {
+            self.reload_needed.store(false, Ordering::Relaxed);
+        }
+        uncertain(error)
     }
 }
 fn uncertain(error: Error) -> Error {
@@ -328,6 +354,7 @@ impl Owner {
             let manager = Manager {
                 connection: &connection,
                 owner: &name,
+                reload_needed: AtomicBool::new(false),
             };
             manager
                 .call(PATH, MANAGER, "Subscribe", &())
@@ -359,6 +386,7 @@ impl Owner {
             let manager = Manager {
                 connection: &connection,
                 owner: &name,
+                reload_needed: AtomicBool::new(false),
             };
             let mut refresh = true;
             loop {

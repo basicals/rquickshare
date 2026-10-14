@@ -20,7 +20,7 @@ Native settings JSON must not duplicate actual OS enablement state.
 3. [x] A3: one bounded native login-settings owner for systemd reads/explicit edits,
    actual OS state/watch/readback and secondary Settings controls, no JSON/schema
    or daemon API changes. Keep active transfers and GUI lifetime unaffected.
-4. [ ] A4: affected domain/private-broker/GTK/package checks once, strict lint/
+4. [x] A4: affected domain/private-broker/GTK/package checks once, strict lint/
    format/build, actual release .deb/extract smoke, SSOT/atomic commits/exact export.
 
 Rollback UI/login adapter, then launch/GUI assets/core activation extensions. Keep
@@ -82,8 +82,8 @@ connection releases subscription. Re-read on actual signals/explicit reload.
 Explicit Apply carries expected observed boolean and desired boolean. Re-read before
 mutation; stale value conflicts instead of blindly overwriting. EnableUnitFiles
 ([fixed unit],runtime=false,force=false) or DisableUnitFiles([fixed unit],false),
-then read back actual state before acknowledgement. Never Start/Stop/Restart unit,
-Reload manager or touch current transfers. A concurrent external change can still
+then Reload the same user manager configuration and read back actual state before
+acknowledgement. Never Start/Stop/Restart unit or touch current transfers. A concurrent external change can still
 race (manager has no CAS revision); report actual observation, not durable exclusion.
 Failure/lost reply becomes unknown until explicit/owned readback; never auto-repeat
 a write. Dropping a GUI completion does not abandon admitted work. Shutdown retains
@@ -169,3 +169,49 @@ Both Rust format checks and git diff whitespace passed. Native inventory37, core
 full36 passed before the additional owner-loss test, followed by affected6; no
 fresh full37/578 or ten-run/coverage claim. The known nine core no-default-feature
 warnings remain visible, no new native lint warning is suppressed. Terminal closed.
+
+A4 source review correction before package completion: upstream systemctl-enable.c
+explicitly reloads the manager after unit-file changes. Enable/Disable alone edits
+symlinks but can leave an already loaded target dependency graph stale, especially
+with a lingering user manager. Correct the adapter within selected login behavior:
+a confirmed mutation is followed by Manager.Reload (configuration only, no service
+restart), then readback. Retain a pending configuration-reload requirement after
+uncertain admission; subsequent owned readback/explicit Reload may synchronize
+configuration but never repeats Enable/Disable. Denied-before-change clears that
+requirement. A new process cannot reconstruct lost in-memory admission; external
+manager/graph state after process death stays an installed recovery acceptance gate.
+This replaces the earlier overly broad no-manager-Reload statement, preserving the
+actual no-Start/Stop/no-transfer-interruption contract.
+Primary source inspected2026-10-14:
+https://raw.githubusercontent.com/systemd/systemd/main/src/systemctl/systemctl-enable.c
+
+A4 complete: corrected manager configuration synchronization7/0 passed0.14s/
+build2.85s; strict native all-target no-deps lint1.44s. Denied reload remains
+Uncertain (links may already be changed); subsequent read synchronizes the pending
+configuration without repeating Enable/Disable. Tests assert exact reload counts,
+no reload for no-op/stale/denied-before-mutation and no guessed success. AtomicBool
+is only a Send/Sync-compatible per-owner flag, not global state or durable receipt.
+Native inventory38; full36 plus affected7 is the actual execution sequence.
+
+Actual final locked release Debian build and exact10-file root-owned/mode/asset/
+checksum/ELF/dependency verifier passed, including extracted GUI/daemon --help and
+private fixture --settings --check. First build core1m49s/native32.38s; after the
+review correction only affected native rebuilt11.55s, core remained cached.
+Final package rquickshare_0.11.5+native1_amd64.deb SHA256 d2a8211bd2e5ff05771b6381fb3e3a0a04fa770008db66d8e163930bc0f4fc99.
+Built on Ubuntu26.04 with actual private Layer Shell shlibs metadata; this does
+not claim Ubuntu24.04 compatibility. Host merged-/usr loader diversion warning and
+nine existing core feature-specific warnings remain visible, not suppressed.
+No installed user manager, services, sign-in/logout, clipboard, peer or portal was
+used. All task-owned terminal processes exited; Terminal closed.
+
+Handoff: A1–A4 complete in source; isolated checks and real uninstalled release
+package complete. Rollback feature commit plus subsequent configuration-sync fix,
+then package inventory/docs and A1 unit/activation extension if needed. Same normal
+launch/CLI/daemon-wake service owner, independent daemon work after GUI Quit, and
+default-off future-login enablement are recorded above. Export final committed
+source ZIP and exact package/checksum with separate checkpoint provenance.
+Remaining installed acceptance: KDE session env/late watcher/login/logout/lingering
+manager, already admitted change across GUI death, unit customization/global
+enablement, package upgrade/removal with live transfers, physical scale/focus/DND/
+lock/portal/Dolphin and actual Google peer matrix. Updates/account/QR and protocol
+parity gaps remain separate roadmap work; no full Google compatibility claim.
