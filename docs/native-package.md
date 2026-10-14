@@ -174,3 +174,24 @@ trigger/container checks passed. Remote workflow was not run. Source archives ca
 build without .git: SOURCE_DATE_EPOCH is respected, otherwise defaults to the source
 manifest mtime; no unrelated parent Git repository is queried. This affects only
 artifact timestamp normalization, not runtime behavior.
+
+
+P3 staging follow-up: the conventional directory alone did not remove the dpkg
+stage warning. Read the installed primary Dpkg::Path implementation: package-root
+recognition requires an existing DEBIAN subdirectory. Create that owned directory
+before dependency analysis, then write final control metadata afterward. This fixes
+the actual root cause; do not suppress the warning or assume absolute paths are
+wrong. Repeat only affected staging/dependency/archive smoke; binaries stay cached.
+
+P3 build invalidation repair plan before code: the staging-only rerun still entered
+expensive core release compilation. Inspected core_lib/build.rs: no explicit rerun
+inputs, and every run truncates/rewrites tracked bindings/index.ts inside its own
+default watched package. This self-invalidates the next Cargo invocation and reruns
+prost generation unnecessarily. Stopped only this owned build (exit130), no test or
+user process. Under the cross-project maintenance authorization, add explicit proto
+and bindings input watches and compiler environment watches; write the sorted index
+only when bytes differ. Preserve generated exports/protocol output and current
+contracts. No runtime change or significant refactor. Rollback build.rs independently.
+The actual final build is required after this change; then one immediate same-command
+Cargo build verifies cache freshness/index mtime rather than repeating business
+suites. Record observed Fresh/build time and exact payload/checksum before export.
