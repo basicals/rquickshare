@@ -23,6 +23,7 @@ FILES = {
 }
 for relative in [
     "lib/systemd/user/rquickshare-daemon.service",
+    "lib/systemd/user/rquickshare-desktop.service",
     "share/applications/io.github.morozhenko_apps.RQuickShare.desktop",
     "share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.service",
     "share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service",
@@ -71,6 +72,24 @@ def validate_assets():
         "name": "io.github.morozhenko_apps.RQuickShare",
         "systemdservice": "rquickshare-daemon.service", "exec": "/usr/bin/false",
     }, "Unsafe daemon activation contract")
+    desktop = configparser.ConfigParser(interpolation=None)
+    desktop.read(ASSETS / "lib/systemd/user/rquickshare-desktop.service")
+    require(set(desktop.sections()) == {"Unit", "Service", "Install"}, "Unexpected desktop unit sections")
+    require(dict(desktop["Service"]) == {
+        "type": "exec", "execstart": "/usr/bin/rquickshare --service",
+        "restart": "no", "timeoutstopsec": "infinity", "sendsigkill": "no",
+    }, "Unsafe desktop lifetime contract")
+    require(desktop["Unit"].get("PartOf") == "graphical-session.target"
+            and desktop["Unit"].get("Wants") == "rquickshare-daemon.service"
+            and desktop["Unit"].get("After") == "graphical-session-pre.target dbus.socket rquickshare-daemon.service",
+            "Unsafe desktop session ordering")
+    require(dict(desktop["Install"]) == {"wantedby": "graphical-session.target"}, "Unsafe opt-in enablement")
+    gui = configparser.ConfigParser(interpolation=None)
+    gui.read(ASSETS / "share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service")
+    require(dict(gui["D-BUS Service"]) == {
+        "name": "io.github.morozhenko_apps.RQuickShare.Desktop",
+        "systemdservice": "rquickshare-desktop.service", "exec": "/usr/bin/false",
+    }, "Unsafe desktop activation contract")
 
 
 def checksum(package):

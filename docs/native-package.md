@@ -1,5 +1,12 @@
 # Native package and systemd user activation
 
+Current follow-up: selected opt-in daemon + tray login-start and unified desktop
+process ownership are implemented in [native-autostart.md](native-autostart.md).
+The original P1–P3 observations below are historical; the refreshed package adds
+the desktop Type=exec user unit, explicit Install metadata and fixed D-Bus delegation.
+Installation/build still never enables or starts a service. Latest verification
+and artifact provenance are recorded in the autostart SSOT.
+
 2026-10-14. Mode A. User selected option1 in native-package-review.md: a systemd
 user service owns the daemon process; D-Bus requests its launch; GTK remains a
 client. Guide /home/morozhenko/.codex/AGENTS.md. Direct dev, no install/enable/live

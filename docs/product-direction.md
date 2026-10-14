@@ -1,5 +1,30 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-14: opt-in daemon and tray login-start implemented
+
+User selected1. [native-autostart.md](native-autostart.md) freezes the unified
+systemd desktop process owner, default-off Start at sign-in, actual OS enablement
+and explicit Settings Apply/Reload. Normal app/CLI/daemon-wake activation delegates
+to the same unit; a foreground --service worker retains its own guard/signals
+across reconnect and waits for actual tray readiness. Login starts daemon and tray
+with hidden card. Disabling future startup and GUI Quit preserve daemon transfers.
+No JSON duplication, detached child, shell/systemctl or forced custom-unit override.
+
+Persistent unit-file changes are followed by manager configuration reload and
+readback. Failed/uncertain outcomes stay unknown; readback can finish pending
+configuration sync without repeating enable/disable. Unit definitions remain
+vendor-only with no dropins, same-UID/unique-owner checks and bounded owned IO.
+
+Measured full native36/0, then affected login6/0 and final synchronization7/0;
+strict native/core lint, package Python5/0 and actual final release Debian/extracted
+offline smoke passed. Inventory578 core/38 native is not a newly run full suite.
+Final amd64 package SHA256 d2a8211bd2e5ff05771b6381fb3e3a0a04fa770008db66d8e163930bc0f4fc99.
+Exact timings, earlier failures/repairs and remaining installed recovery acceptance
+are recorded in the autostart SSOT. No user-manager/install/enable/config/clipboard/
+portal/peer operation, push or sibling project change. Earlier pending-autostart
+entries below are historical. Remaining: update distribution/lifecycle, protocol
+parity/account/QR and physical Google/KDE acceptance.
+
 ## 2026-10-14: systemd user activation and native Debian package implemented
 
 User selected1. [native-package.md](native-package.md) records the process-based

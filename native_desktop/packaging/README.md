@@ -29,20 +29,32 @@ then runs extracted GUI/daemon --help and a private fixture --settings PATH --ch
 It does not connect to the user bus, show UI or read user configuration.
 
 The `rquickshare` package owns `/usr/bin/rquickshare`, `/usr/libexec/rquickshare-daemon`,
-`/usr/lib/systemd/user/rquickshare-daemon.service` and fixed application/D-Bus/Dolphin
+both daemon and desktop user units and fixed application/D-Bus/Dolphin
 assets. It replaces the same-name legacy package on explicit installation; never
 install two different packages owning `/usr/bin/rquickshare`. The legacy source
 and release workflows remain migration baseline until native acceptance.
 
-Explicit application launch/Reconnect requests the fixed daemon D-Bus name when
-missing, requiring a systemd-activation-capable user bus. That request delegates
-to the user unit. The activation Exec sentinel fails closed on unsupported brokers;
-there is no shell/direct-daemon fallback. Type=exec supervises process lifetime,
-preserving the daemon's joined settings-generation bus-name changes. SIGTERM joins
-shutdown without an arbitrary forced-kill deadline. GUI Quit leaves daemon work
-alone. The package has no enablement/autostart/maintainer start scripts and does not
-start sharing merely because it is installed. Login-start controls and updates
-remain separate work. No Google compatibility or installed KDE acceptance implied.
+Normal application/Dolphin/daemon-wake launch delegates to the fixed desktop user
+unit through D-Bus. The foreground worker is `rquickshare --service`; it starts
+hidden and waits for actual tray readiness. An explicit normal launch sends Show
+to the existing owner. Separate retained process guards prevent competing daemon
+or GUI workers, including reconnect. No shell/direct-child fallback is provided.
+Both Type=exec services join shutdown and belong to the graphical session. GUI
+Quit leaves daemon work alone; an external blocked IO may delay joined shutdown.
+
+Settings > Start at sign-in > Apply login start explicitly enables only the
+package desktop unit for future graphical sessions. It pulls in the daemon and
+starts the tray with the card hidden. The default is disabled. Disabling future
+startup never stops current services or transfers. This setting reads actual
+systemd state, checks the vendor unit and uses no-force persistent enablement;
+custom/masked/unknown state remains unavailable. Unit-file changes are followed by
+manager configuration reload and actual readback; no service start/stop is issued.
+Reload resolves unconfirmed edits without repeating unit-file writes.
+The package has no maintainer enable/start scripts, presets or separate XDG login
+launcher; installation alone starts/enables nothing. A supported systemd user bus,
+graphical session environment and KDE tray watcher are required. Updates and
+installed lifecycle acceptance remain separate work. No Google compatibility or
+installed KDE acceptance is implied.
 
 Dolphin uses `rquickshare send -- %U`, 1..256 local files/folders as separate arguments.
 Acquisition is all-or-nothing; preparation preserves existing source and requires

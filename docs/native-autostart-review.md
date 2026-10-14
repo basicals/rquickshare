@@ -1,5 +1,9 @@
 # Native login-start behavior review
 
+Current state: user selected1 and implementation/checks/package are complete in
+[native-autostart.md](native-autostart.md). The analysis and alternatives below are
+retained as decision history, not pending implementation or user selection.
+
 2026-10-14. Mode A analysis only, following selected systemd user ownership in
 native-package.md. No login-start implementation or live user manager operation.
 Guide /home/morozhenko/.codex/AGENTS.md sections3/3.1 requires a choice for material

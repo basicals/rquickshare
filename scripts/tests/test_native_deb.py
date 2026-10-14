@@ -33,10 +33,10 @@ class NativeDebTests(unittest.TestCase):
                         package.validate_metadata(invalid)
         package.validate_metadata(fields() | {"Version": "0.11.5+native1.debug", "Architecture": "arm64"})
 
-    def test_given_selected_assets_when_validated_then_process_ownership_has_no_login_enablement_or_direct_fallback(self):
+    def test_given_selected_assets_when_validated_then_process_ownership_supports_only_opt_in_login_without_direct_fallback(self):
         # Arrange / Act / Assert: actual shipped service/activation assets.
         package.validate_assets()
-        self.assertEqual(len(package.FILES), 9)
+        self.assertEqual(len(package.FILES), 10)
         self.assertFalse(any("autostart" in name for name in package.FILES))
 
     def test_given_elf_header_when_truncated_wrong_type_endian_or_machine_then_reject_relabelled_binary(self):
@@ -86,6 +86,8 @@ class NativeDebTests(unittest.TestCase):
             "link": lambda root: ((root / "usr/bin/rquickshare").unlink(), (root / "usr/bin/rquickshare").symlink_to("/bin/true")),
             "maintainer-script": lambda root: ((root / "DEBIAN/postinst").write_text("#!/bin/sh\nexit 0\n"), (root / "DEBIAN/postinst").chmod(0o755)),
             "asset": lambda root: (root / "usr/lib/systemd/user/rquickshare-daemon.service").write_text("[Service]\nType=dbus\n"),
+            "desktop-unit": lambda root: (root / "usr/lib/systemd/user/rquickshare-desktop.service").write_text("[Service]\nExecStart=/usr/bin/rquickshare\n"),
+            "desktop-activation": lambda root: (root / "usr/share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service").write_text("[D-BUS Service]\nExec=/usr/bin/rquickshare\n"),
             "extra-directory": lambda root: (root / "etc").mkdir(),
         }
         for name, mutate in [("valid", None), *mutations.items()]:

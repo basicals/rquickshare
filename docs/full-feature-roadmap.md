@@ -18,8 +18,8 @@ Show in folder is implemented in [native-reveal.md](native-reveal.md), with veri
 read-only descriptor acquisition and owned portal requests. Physical KDE selection
 remains acceptance. Native systemd user activation and direct verified Debian release
 packaging are implemented in [native-package.md](native-package.md), with installed
-lifecycle acceptance open. Autostart component choice is reviewed in
-[native-autostart-review.md](native-autostart-review.md); updater and account/QR
+lifecycle acceptance open. Selected opt-in login-start (daemon plus hidden-card
+tray) is implemented in [native-autostart.md](native-autostart.md); updater and account/QR
 capabilities still require their own work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles

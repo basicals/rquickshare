@@ -43,6 +43,11 @@ stages the systemd user/D-Bus/application/Dolphin assets and verifies the archiv
 checksum and extracted offline help/settings fixture. It never installs, enables
 or starts services. Python >=3.11, Debian tooling and native GTK4/Layer Shell
 development dependencies are required; see [native packaging](native_desktop/packaging/README.md).
+Normal native application launch delegates to its desktop user service; development
+without installed assets uses the foreground `rquickshare --service` worker.
+Settings has default-off opt-in login start for daemon plus hidden-card tray;
+see [native autostart](docs/native-autostart.md). Disabling it affects future logins
+without stopping live transfers. No build installs/enables these assets.
 The manual native-package-smoke workflow targets an Ubuntu26.04 container explicitly.
 Existing Tauri release jobs remain the migration baseline; native installed startup,
 upgrade/removal and KDE/Google acceptance are still separate gates.
