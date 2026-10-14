@@ -272,3 +272,42 @@ fn given_broker_reply_when_sender_or_descriptors_are_wrong_then_activation_rejec
         .unwrap();
     assert_eq!(checked(&reply), Err(ActivationError::Protocol));
 }
+
+#[tokio::test]
+async fn given_real_systemd_activation_broker_when_external_manager_admits_then_fixed_unit_request_precedes_actual_sdk_handshake(
+) {
+    crate::service::client::tests::scenario(async {
+        use futures::StreamExt;
+        // Arrange: a real private broker reads the actual packaged activation asset.
+        // Only the external manager is replaced; the service/SDK remain real.
+        let bus = PrivateBus::with_systemd_activation();
+        let manager = bus.client().await;
+        manager.request_name("org.freedesktop.systemd1").await.unwrap();
+        let rule = zbus::MatchRule::builder()
+            .msg_type(zbus::message::Type::Signal)
+            .sender(BROKER).unwrap()
+            .path(PATH).unwrap()
+            .interface("org.freedesktop.systemd1.Activator").unwrap()
+            .member("ActivationRequest").unwrap().build();
+        let mut requests = zbus::MessageStream::for_match_rule(rule, &manager, Some(8)).await.unwrap();
+        let stream = bus.socket().await;
+        let mut activation = tokio::spawn(activate_daemon(stream, CancellationToken::new()));
+        // Act: an early protocol failure must finish the scenario rather than hang.
+        let request = tokio::select! {
+            request = requests.next() => request.unwrap().unwrap(),
+            result = &mut activation => panic!("Expected manager admission before completion: {result:?}"),
+        };
+        checked(&request).unwrap();
+        assert_eq!(request.body().deserialize::<String>().unwrap(), "rquickshare-daemon.service");
+        let host = Harness::start(SelectionBus::connect(bus.socket().await).await.unwrap());
+        assert_eq!(activation.await.unwrap(), Ok(()));
+        // Assert: activation does not replace readiness/epoch checks or own the daemon.
+        let mut client = NativeClient::connect(bus.socket().await).await.unwrap();
+        assert!(client.read_state().await.is_ok());
+        client.close().await.unwrap();
+        activate_daemon(bus.socket().await, CancellationToken::new()).await.unwrap();
+        assert_eq!(host.finish().await.1, Ok(()));
+        drop(requests);
+        manager.close().await.unwrap();
+    }).await;
+}

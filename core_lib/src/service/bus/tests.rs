@@ -18,16 +18,37 @@ impl PrivateBus {
         self.address.clone()
     }
     pub(crate) fn new() -> Self {
+        Self::configured(false)
+    }
+    pub(crate) fn with_systemd_activation() -> Self {
+        Self::configured(true)
+    }
+    fn configured(systemd: bool) -> Self {
         let directory = tempfile::tempdir().unwrap();
         let address = format!("unix:path={}", directory.path().join("bus").display());
-        let child = Command::new("dbus-daemon")
-            .args([
-                "--session",
-                "--nofork",
-                "--print-address=1",
-                "--address",
-                &address,
-            ])
+        let mut command = Command::new("dbus-daemon");
+        if systemd {
+            let services = directory.path().join("services");
+            std::fs::create_dir(&services).unwrap();
+            std::fs::write(services.join(format!("{SERVICE}.service")), include_str!("../../../../native_desktop/packaging/share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.service")).unwrap();
+            let config = directory.path().join("bus.conf");
+            std::fs::write(
+                &config,
+                include_str!("../../../../docs/prototypes/preview-bus.conf").replace(
+                    "<busconfig>",
+                    &format!("<busconfig><servicedir>{}</servicedir>", services.display()),
+                ),
+            )
+            .unwrap();
+            command
+                .arg("--systemd-activation")
+                .arg("--config-file")
+                .arg(config);
+        } else {
+            command.arg("--session");
+        }
+        let child = command
+            .args(["--nofork", "--print-address=1", "--address", &address])
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
