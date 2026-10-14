@@ -483,6 +483,8 @@ impl NativeRuntime {
                 )?;
                 self.coordinator
                     .retain_received_text(binding.transfer, snapshot.received_text)?;
+                self.coordinator
+                    .retain_received_files(binding.transfer, snapshot.received_files)?;
                 self.coordinator.owner_closed(binding.transfer)?;
                 return Ok(());
             }
@@ -506,6 +508,8 @@ impl NativeRuntime {
         }
         self.coordinator
             .retain_received_text(binding.transfer, snapshot.received_text)?;
+        self.coordinator
+            .retain_received_files(binding.transfer, snapshot.received_files)?;
         if snapshot.direction == crate::channel::TransferType::Inbound
             && snapshot.state == State::WaitingForUserConsent
             && snapshot.consent.is_none()

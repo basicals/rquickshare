@@ -66,6 +66,8 @@ pub struct SessionSnapshot {
     pub consent: Option<ConsentToken>,
     pub details: Arc<TransferDetails>,
     pub(crate) received_text: Option<Arc<text::ReceivedText>>,
+    #[cfg(target_os = "linux")]
+    pub(crate) received_files: Option<Arc<crate::received_files::ReceivedFiles>>,
 }
 
 impl fmt::Debug for SessionSnapshot {
@@ -196,6 +198,8 @@ fn validate(status: &Status, decision: Decision) -> Result<bool, SessionError> {
 pub struct SessionHub(Arc<Mutex<HubState>>);
 
 struct HubState {
+    #[cfg(target_os = "linux")]
+    file_budget: crate::received_files::ReceiptBudget,
     epoch: u128,
     sequence: u64,
     limit: usize,
@@ -215,6 +219,8 @@ impl SessionHub {
             return Err(SessionError::Invalid);
         }
         Ok(Self(Arc::new(Mutex::new(HubState {
+            #[cfg(target_os = "linux")]
+            file_budget: Default::default(),
             epoch,
             sequence: 0,
             limit,
@@ -323,6 +329,8 @@ impl SessionHub {
             consent: None,
             details: Arc::default(),
             received_text: None,
+            #[cfg(target_os = "linux")]
+            received_files: None,
         };
         let (status, receiver) = watch::channel(Status {
             snapshot,
@@ -338,6 +346,10 @@ impl SessionHub {
         state.sessions.insert(id, control.clone());
         let _ = state.events.send(SessionEvent::Opened(control.clone()));
         Ok(SessionLease {
+            #[cfg(target_os = "linux")]
+            file_budget: state.file_budget.clone(),
+            #[cfg(target_os = "linux")]
+            completed_files: None,
             id,
             hub: Arc::downgrade(&self.0),
             control,
@@ -354,6 +366,10 @@ pub(crate) struct ConsentCommand {
 }
 
 pub(crate) struct SessionLease {
+    #[cfg(target_os = "linux")]
+    pub(crate) file_budget: crate::received_files::ReceiptBudget,
+    #[cfg(target_os = "linux")]
+    pub(crate) completed_files: Option<Arc<crate::received_files::ReceivedFiles>>,
     id: SessionId,
     hub: Weak<Mutex<HubState>>,
     control: SessionControl,
@@ -500,6 +516,27 @@ impl SessionLease {
             details
         };
         let details_changed = *status.snapshot.details != details;
+        #[cfg(target_os = "linux")]
+        let files_changed = {
+            let files = if *actual == State::Finished
+                && status.snapshot.direction == TransferType::Inbound
+                && status.decision.is_some_and(|decision| decision.accept)
+                && details.status == details::DetailsStatus::Ready
+                && details.kind == details::PayloadKind::Files
+                && details.transferred_bytes == details.total_bytes
+            {
+                self.completed_files
+                    .clone()
+                    .filter(|files| files.valid_for(&details))
+            } else {
+                None
+            };
+            let changed = status.snapshot.received_files != files;
+            status.snapshot.received_files = files;
+            changed
+        };
+        #[cfg(not(target_os = "linux"))]
+        let files_changed = false;
         let text_changed = status.snapshot.received_text != received_text;
         status.snapshot.received_text = received_text;
         if details_changed {
@@ -507,6 +544,7 @@ impl SessionLease {
         }
         if details_changed
             || text_changed
+            || files_changed
             || status.snapshot.state != *actual
             || status.snapshot.consent != self.status.borrow().snapshot.consent
         {

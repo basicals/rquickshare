@@ -15,7 +15,7 @@ fn invalid(message: &'static str) -> io::Error {
     io::Error::new(ErrorKind::InvalidInput, message)
 }
 
-fn validate_name(name: &str) -> io::Result<()> {
+pub(crate) fn validate_name(name: &str) -> io::Result<()> {
     if name.is_empty()
         || name.len() > 16 * 1024
         || name

@@ -220,6 +220,7 @@ struct Replay {
 }
 
 struct Transfer {
+    received_files: Option<Arc<crate::received_files::ReceivedFiles>>,
     received_text: Option<Arc<crate::sessions::text::ReceivedText>>,
     view: TransferSnapshot,
     resource: Option<Arc<crate::prepared_source::PreparedSource>>,
@@ -575,6 +576,7 @@ impl Coordinator {
             id,
             Transfer {
                 received_text: None,
+                received_files: None,
                 view: TransferSnapshot {
                     id,
                     direction: Direction::Outbound,
@@ -645,6 +647,7 @@ impl Coordinator {
             id,
             Transfer {
                 received_text: None,
+                received_files: None,
                 view: TransferSnapshot {
                     id,
                     direction: Direction::Inbound,
@@ -679,6 +682,48 @@ impl Coordinator {
             details.pin.clear();
         }
         self.observe_details(id, phase, Arc::new(details))
+    }
+    pub(crate) fn retain_received_files(
+        &mut self,
+        id: TransferId,
+        received: Option<Arc<crate::received_files::ReceivedFiles>>,
+    ) -> Result<(), Error> {
+        let Some(received) = received else {
+            return Ok(());
+        };
+        let transfer = self.transfers.get(&id).ok_or(Error::UnknownTransfer)?;
+        if transfer.view.direction != Direction::Inbound
+            || transfer.view.phase != Phase::Finished
+            || transfer.view.details.status != crate::sessions::details::DetailsStatus::Ready
+            || transfer.view.details.kind != crate::sessions::details::PayloadKind::Files
+            || transfer.view.details.transferred_bytes != transfer.view.details.total_bytes
+            || transfer.terminal_revision.is_none()
+            || !received.valid_for(&transfer.view.details)
+        {
+            return Err(Error::InvalidState);
+        }
+        if let Some(existing) = &transfer.received_files {
+            return if Arc::ptr_eq(existing, &received) {
+                Ok(())
+            } else {
+                Err(Error::ReplayConflict)
+            };
+        }
+        if self
+            .transfers
+            .values()
+            .filter(|entry| entry.received_files.is_some())
+            .count()
+            >= crate::received_files::RECEIPT_LIMIT
+        {
+            return Ok(());
+        }
+        self.advance()?;
+        self.transfers
+            .get_mut(&id)
+            .ok_or(Error::UnknownTransfer)?
+            .received_files = Some(received);
+        Ok(())
     }
     pub(crate) fn retain_received_text(
         &mut self,

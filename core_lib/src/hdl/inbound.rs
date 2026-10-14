@@ -505,6 +505,8 @@ pub struct InboundRequest<S = TcpStream> {
     peer_endpoint_id: Option<String>,
     receive_directory: crate::receive::Directory,
     receive_root: Option<crate::receive::Root>,
+    #[cfg(target_os = "linux")]
+    pending_files: Option<crate::received_files::PendingFiles>,
 }
 
 impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
@@ -529,6 +531,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             peer_endpoint_id: None,
             receive_directory: crate::receive::ReceivePolicy::new(None).snapshot(),
             receive_root: None,
+            #[cfg(target_os = "linux")]
+            pending_files: None,
         }
     }
 
@@ -1376,8 +1380,29 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                             if new_offset != file_internal.total_size {
                                 return Err(anyhow!("File payload ended before its declared size"));
                             }
+                            #[cfg(target_os = "linux")]
+                            if let Some(pending) = self.pending_files.as_mut() {
+                                if pending
+                                    .record(
+                                        payload_id,
+                                        &file_internal.file_url,
+                                        file,
+                                        file_internal.total_size as u64,
+                                    )
+                                    .is_err()
+                                {
+                                    self.pending_files = None;
+                                }
+                            }
                             self.state.transferred_files.remove(&payload_id);
                             if self.state.transferred_files.is_empty() {
+                                #[cfg(target_os = "linux")]
+                                if let Some(session) = self.session.as_mut() {
+                                    session.completed_files = self
+                                        .pending_files
+                                        .take()
+                                        .and_then(|pending| pending.finish());
+                                }
                                 info!("Transfer finished");
                                 self.update_state(
                                     |e| {
@@ -1586,6 +1611,18 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 .receive_root
                 .as_ref()
                 .ok_or_else(|| anyhow!("Receive directory is unavailable"))?;
+            #[cfg(target_os = "linux")]
+            if let Some(session) = &self.session {
+                self.pending_files = crate::received_files::PendingFiles::new(
+                    root.clone(),
+                    introduction
+                        .file_metadata
+                        .iter()
+                        .map(|file| file.payload_id())
+                        .collect(),
+                    session.file_budget.clone(),
+                );
+            }
             let planning = root.planning_path();
             let PreparedInboundFiles {
                 files: mut prepared_files,
@@ -2871,35 +2908,42 @@ mod security_tests {
         assert!(negative.state.transfer_metadata.is_none());
     }
 
-    #[tokio::test]
-    async fn given_inbound_file_end_when_content_is_short_or_destination_missing_then_success_is_rejected_without_retiring_file(
-    ) {
-        fn frame(id: i64, size: i64, offset: i64, body: &[u8], flags: i32) -> OfflineFrame {
-            OfflineFrame {
-                v1: Some(location_nearby_connections::V1Frame {
-                    r#type: Some(
-                        location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into(),
-                    ),
-                    payload_transfer: Some(PayloadTransferFrame {
-                        packet_type: Some(PacketType::Data.into()),
-                        payload_header: Some(PayloadHeader {
-                            id: Some(id),
-                            r#type: Some(payload_header::PayloadType::File.into()),
-                            total_size: Some(size),
-                            ..Default::default()
-                        }),
-                        payload_chunk: Some(PayloadChunk {
-                            offset: Some(offset),
-                            flags: Some(flags),
-                            body: Some(body.to_vec()),
-                        }),
+    fn received_file_frame(
+        id: i64,
+        size: i64,
+        offset: i64,
+        body: &[u8],
+        flags: i32,
+    ) -> OfflineFrame {
+        OfflineFrame {
+            v1: Some(location_nearby_connections::V1Frame {
+                r#type: Some(
+                    location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into(),
+                ),
+                payload_transfer: Some(PayloadTransferFrame {
+                    packet_type: Some(PacketType::Data.into()),
+                    payload_header: Some(PayloadHeader {
+                        id: Some(id),
+                        r#type: Some(payload_header::PayloadType::File.into()),
+                        total_size: Some(size),
                         ..Default::default()
+                    }),
+                    payload_chunk: Some(PayloadChunk {
+                        offset: Some(offset),
+                        flags: Some(flags),
+                        body: Some(body.to_vec()),
                     }),
                     ..Default::default()
                 }),
                 ..Default::default()
-            }
+            }),
+            ..Default::default()
         }
+    }
+
+    #[tokio::test]
+    async fn given_inbound_file_end_when_content_is_short_or_destination_missing_then_success_is_rejected_without_retiring_file(
+    ) {
         // Arrange / Act / Assert: actual frame handler and destination writes, both request modes.
         for managed in [false, true] {
             for (size, body, opened, offset, extra, complete) in [
@@ -2960,21 +3004,21 @@ mod security_tests {
                 }
                 if !body.is_empty() {
                     request
-                        .process_offline_frame(frame(101, size, 0, body, 0))
+                        .process_offline_frame(received_file_frame(101, size, 0, body, 0))
                         .await
                         .unwrap();
                 }
                 let before_ack = request.state.transfer_metadata.as_ref().unwrap().ack_bytes;
                 if opened && offset == body.len() as i64 {
                     request
-                        .process_offline_frame(frame(101, size, offset, &[], 0))
+                        .process_offline_frame(received_file_frame(101, size, offset, &[], 0))
                         .await
                         .unwrap();
                     assert!(request.state.transferred_files.contains_key(&101));
                     // Empty nonfinal chunk is not EOF.
                 }
                 let result = request
-                    .process_offline_frame(frame(101, size, offset, &[], 1))
+                    .process_offline_frame(received_file_frame(101, size, offset, &[], 1))
                     .await;
                 assert_eq!(request.state.transferred_files.contains_key(&101), !complete, "size={size}, body={body:?}, opened={opened}, offset={offset}, managed={managed}");
                 assert_eq!(
@@ -2986,7 +3030,7 @@ mod security_tests {
                     assert!(result.is_ok());
                     assert_eq!(request.state.state, State::ReceivingFiles);
                     let last = request
-                        .process_offline_frame(frame(102, 0, 0, &[], 1))
+                        .process_offline_frame(received_file_frame(102, 0, 0, &[], 1))
                         .await
                         .unwrap_err();
                     assert!(last.is::<crate::errors::AppError>());
@@ -3004,6 +3048,96 @@ mod security_tests {
                     );
                 }
             }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn given_accepted_managed_files_when_completed_out_of_order_then_private_receipt_uses_actual_collision_names_and_survives_session_close(
+    ) {
+        // Arrange: real consent, actual destination writes, final observation and EOF handling.
+        let mut request = test_request();
+        let (socket, _peer) = tokio::io::duplex(8192);
+        request.socket = socket;
+        request.state.encrypt_key = Some(vec![0; 32]);
+        request.state.send_hmac_key = Some(vec![0; 32]);
+        request.state.remote_device_info = Some(RemoteDeviceInfo {
+            name: "phone".into(),
+            device_type: crate::utils::DeviceType::Phone,
+        });
+        request.state.pin_code = Some("0123".into());
+        let hub = crate::sessions::SessionHub::new(42).unwrap();
+        let session = hub
+            .open(
+                crate::channel::TransferType::Inbound,
+                None,
+                tokio_util::sync::CancellationToken::new(),
+            )
+            .unwrap();
+        let control = session.control();
+        request.session = Some(session);
+        request
+            .process_introduction(&introduction_frame(
+                vec![
+                    file_metadata("same.txt", 101, 1),
+                    file_metadata("same.txt", 102, 2),
+                ],
+                vec![],
+                vec![],
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            control.snapshot().details.status,
+            crate::sessions::details::DetailsStatus::Ready
+        );
+        let consent = control.snapshot().consent.unwrap();
+        let receipt = control.respond(consent, 1, true).unwrap();
+        let command = crate::sessions::consent_command(&mut request.session)
+            .await
+            .unwrap();
+        let state = request.state.state.clone();
+        assert_eq!(
+            request.session.as_mut().unwrap().apply(command, &state),
+            Some(true)
+        );
+        receipt.wait().await.unwrap();
+        request.accept_transfer().await.unwrap();
+        // Act
+        request
+            .process_offline_frame(received_file_frame(102, 2, 0, b"bc", 0))
+            .await
+            .unwrap();
+        request
+            .process_offline_frame(received_file_frame(102, 2, 2, &[], 1))
+            .await
+            .unwrap();
+        assert!(control.snapshot().received_files.is_none());
+        request
+            .process_offline_frame(received_file_frame(101, 1, 0, b"a", 0))
+            .await
+            .unwrap();
+        let error = request
+            .process_offline_frame(received_file_frame(101, 1, 1, &[], 1))
+            .await
+            .unwrap_err();
+        // Assert
+        assert!(error.is::<crate::errors::AppError>());
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.state, State::Finished);
+        let files = snapshot.received_files.as_ref().unwrap();
+        assert!(files.valid_for(&snapshot.details));
+        assert_eq!(files.len(), 2);
+        assert_ne!(
+            snapshot.details.files[0].name,
+            snapshot.details.files[1].name
+        );
+        drop(request.session.take());
+        use std::io::Read;
+        for (index, expected) in [(0, b"bc".as_slice()), (1, b"a".as_slice())] {
+            let mut body = Vec::new();
+            files.open(index).unwrap().read_to_end(&mut body).unwrap();
+            assert_eq!(body, expected);
         }
     }
 

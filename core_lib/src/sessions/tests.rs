@@ -844,3 +844,80 @@ async fn given_text_completion_when_consent_type_length_or_encoding_differs_then
         }
     }
 }
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn given_received_files_when_consent_direction_phase_or_manifest_differs_then_only_accepted_matching_finished_receipt_is_published(
+) {
+    use crate::received_files::tests::fixture;
+    // Arrange / Act / Assert: actual session command/ack path, no mocked eligibility.
+    for (direction, phase, accept, mismatch, expected) in [
+        (
+            TransferType::Inbound,
+            State::Finished,
+            Some(true),
+            false,
+            true,
+        ),
+        (TransferType::Inbound, State::Finished, None, false, false),
+        (
+            TransferType::Inbound,
+            State::Finished,
+            Some(false),
+            false,
+            false,
+        ),
+        (
+            TransferType::Inbound,
+            State::ReceivingFiles,
+            Some(true),
+            false,
+            false,
+        ),
+        (TransferType::Outbound, State::Finished, None, false, false),
+        (
+            TransferType::Inbound,
+            State::Finished,
+            Some(true),
+            true,
+            false,
+        ),
+    ] {
+        let (_directory, received, mut details) = fixture();
+        let hub = SessionHub::new(123).unwrap();
+        let mut lease = hub.open(direction, None, CancellationToken::new()).unwrap();
+        let control = lease.control();
+        details.pin = "0123".into();
+        lease.observe_details(&State::WaitingForUserConsent, details.clone());
+        if let Some(accept) = accept {
+            let token = control.snapshot().consent.unwrap();
+            let receipt = control.respond(token, 1, accept).unwrap();
+            let command = lease.mailbox.recv().await.unwrap();
+            assert_eq!(
+                lease.apply(command, &State::WaitingForUserConsent),
+                Some(accept)
+            );
+            receipt.wait().await.unwrap();
+        }
+        lease.completed_files = Some(received.clone());
+        details.pin.clear();
+        if mismatch {
+            details.files = vec![details::FileDetail {
+                name: "other.txt".into(),
+                size: 8,
+            }]
+            .into();
+        }
+        lease.observe_details(&phase, details);
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.received_files.is_some(), expected);
+        if expected {
+            assert!(Arc::ptr_eq(
+                snapshot.received_files.as_ref().unwrap(),
+                &received
+            ));
+            lease.observe(&State::Disconnected);
+            assert!(control.snapshot().received_files.is_some()); // Terminal absorption preserves actual receipt.
+        }
+    }
+}

@@ -15,6 +15,7 @@ pub(crate) struct Directory {
     #[cfg(target_os = "linux")]
     authority: Option<Arc<File>>,
 }
+#[derive(Clone)]
 pub(crate) struct Root {
     display: PathBuf,
     #[cfg(target_os = "linux")]
@@ -116,6 +117,17 @@ impl Root {
         {
             self.display.clone()
         }
+    }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn open_received(&self, relative: &str) -> io::Result<File> {
+        use rustix::fs::{openat2, Mode, OFlags, ResolveFlags};
+        Ok(File::from(openat2(
+            &self.authority,
+            relative,
+            OFlags::RDONLY | OFlags::NONBLOCK | OFlags::CLOEXEC,
+            Mode::empty(),
+            ResolveFlags::BENEATH | ResolveFlags::NO_SYMLINKS | ResolveFlags::NO_MAGICLINKS,
+        )?))
     }
     pub(crate) fn create_file(&self, destination: &Path) -> io::Result<File> {
         let relative = destination

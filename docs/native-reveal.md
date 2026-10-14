@@ -14,7 +14,7 @@ bounded terminal history. StateCache captures metadata without file IO. Native S
 currently rejects all FD replies; Files1 must permit exactly one only for acquisition.
 GTK controller serializes requests and keeps private results out of PanelState.
 
-1. [ ] F1: bounded private completed file receipts, original directory authority,
+1. [x] F1: bounded private completed file receipts, original directory authority,
    actual EOF metadata/fingerprint capture, manifest order, session/runtime/history
    ownership. Preserve declared-size success, legacy DTO/transport and text behavior.
 2. [ ] F2: Files1 captured availability plus typed read-only FD acquisition, bounded
@@ -35,8 +35,8 @@ baseline; no existing saved-data migration or wire framing change.
 Linux private ReceivedFiles contains one original Root authority, ordered records
 (actual protocol-relative collision-resolved name, size, dev/ino, mtime/ctime incl
 nanoseconds). Capture fstat from each actual opened destination only on exact EOF;
-require regular file and actual length equal declared size. Keep introduction payload
-ID order independent of chunk completion order. No re-resolve by current settings.
+require regular file and actual length equal declared size. Collect records by introduction payload ID, independent of completion order;
+then sort by(relative name,size) to match the existing public details manifest. No re-resolve by current settings.
 No complete received-file FD is retained in history. Root-only authority does not
 pin each deleted file's disk contents. Root rename survives; moving a file outside
 its recorded relative position or detectable replacement/edit makes it unavailable.
@@ -125,3 +125,24 @@ parallel GTK tests. N8/N11 not applicable (no time/billing). No exhaustive Mode 
 ten-run gate; failures trigger focused repair/recheck. Record actual observations.
 Primary desktop API reference inspected in review; recheck adapter ownership details
 against official portal Request/Response documentation before implementing F3.
+
+
+F1 inspection correction before further code: TransferDetails already sorts Files
+by(relative name,size). Receipt indices must follow that established display order,
+not introduce wire introduction order into the existing UI. Freeze this alignment
+without changing display behavior. The first actual-request fixture also lacked the
+real handshake sender/PIN context; supply it and assert Ready before consent rather
+than weakening the required accepted/valid-manifest gate. Preliminary13 received-
+filtered methods passed0.05s/build35.58s; the separate accepted request initially
+failed because receipt was correctly withheld for unavailable fixture details.
+
+
+F1 implemented: actual EOF records align with canonical display sorting; accepted
+Finished session resource propagates through runtime to bounded coordinator/history.
+Receipt reservation follows actual Arc lifetime, not history labels. After sender/PIN
+fixture correction and preserving established sorted manifest, actual accepted
+out-of-order/collision request passed1/0 (0.00s, build20.66s). Final received filter
+passed14/0 (0.07s, build10.32s), including kernel replacement/root/budget and session
+eligibility tables. Five new methods so far. Temporary unused resolver methods in
+library builds remain until F2 uses them; no warning suppression. No portal invoked.
+Terminal closed.

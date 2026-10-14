@@ -69,6 +69,8 @@ pub mod location_nearby_connections {
 }
 
 mod receive;
+#[cfg(target_os = "linux")]
+mod received_files;
 
 #[derive(Debug)]
 pub struct RQS {
