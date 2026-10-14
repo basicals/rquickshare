@@ -31,6 +31,14 @@ pub(super) struct Editor {
     closed: Cell<bool>,
     task: RefCell<Option<glib::JoinHandle<()>>>,
     dialog: RefCell<Option<gio::Cancellable>>,
+    login: gtk::CheckButton,
+    login_apply: gtk::Button,
+    login_reload: gtk::Button,
+    login_status: gtk::Label,
+    login_dirty: Cell<bool>,
+    login_loading: Cell<bool>,
+    login_busy: Cell<bool>,
+    login_task: RefCell<Option<glib::JoinHandle<()>>>,
 }
 #[derive(Clone, Copy)]
 enum Operation {
@@ -88,6 +96,24 @@ fn failure(error: ControllerError) -> &'static str {
         _ => "The settings action was not accepted. Review its state before retrying.",
     }
 }
+fn login_failure(error: crate::login::Error) -> &'static str {
+    use crate::login::Error;
+    match error {
+        Error::Unsupported => {
+            "Login start is unavailable for a missing, masked or customized desktop service."
+        }
+        Error::Denied => "Login change was denied. Reload to read the current state.",
+        Error::Conflict => "Login state changed. Reload and review before applying again.",
+        Error::Uncertain => {
+            "Login change is unconfirmed. Reload the actual state; no write will be repeated."
+        }
+        Error::Busy => "Another login settings request is in progress.",
+        Error::Closed | Error::Unavailable => {
+            "Login settings are unavailable. Check installation or reconnect the app."
+        }
+        Error::Protocol => "Login settings could not be verified. Reload before changing them.",
+    }
+}
 impl Editor {
     pub fn open(panel: &Rc<Panel>) {
         let window = gtk::Window::builder()
@@ -133,6 +159,14 @@ impl Editor {
             closed: Cell::new(false),
             task: RefCell::new(None),
             dialog: RefCell::new(None),
+            login: gtk::CheckButton::with_label("Start at sign-in"),
+            login_apply: gtk::Button::with_label("Apply login start"),
+            login_reload: gtk::Button::with_label("Reload login state"),
+            login_status: label("Login settings are unavailable."),
+            login_dirty: Cell::new(false),
+            login_loading: Cell::new(false),
+            login_busy: Cell::new(false),
+            login_task: RefCell::new(None),
         });
         editor
             .appearance
@@ -167,6 +201,14 @@ impl Editor {
         content.append(&label(
             "Mode changes preview immediately. Save to keep them after closing the app.",
         ));
+        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        content.append(&editor.login);
+        content.append(&label("Starts the daemon and tray with the card hidden. Applies to future sign-ins; active transfers keep running."));
+        let login_actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        login_actions.append(&editor.login_apply);
+        login_actions.append(&editor.login_reload);
+        content.append(&login_actions);
+        content.append(&editor.login_status);
         content.append(&editor.recover);
         content.append(&editor.status);
         let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
@@ -197,6 +239,24 @@ impl Editor {
         panel.settings_owner.replace(Some(editor.clone()));
         if let Some(view) = panel.model.borrow().state.settings.clone() {
             editor.load(view, false);
+        }
+        let weak = Rc::downgrade(&editor);
+        editor.login.connect_toggled(move |_| {
+            if let Some(editor) = weak
+                .upgrade()
+                .filter(|editor| !editor.login_loading.get() && !editor.closed.get())
+            {
+                editor.login_dirty.set(true);
+                editor.refresh_login();
+            }
+        });
+        for (button, apply) in [(&editor.login_apply, true), (&editor.login_reload, false)] {
+            let weak = Rc::downgrade(&editor);
+            button.connect_clicked(move |_| {
+                if let Some(editor) = weak.upgrade() {
+                    editor.login_action(apply);
+                }
+            });
         }
         let weak = Rc::downgrade(&editor);
         editor
@@ -344,6 +404,7 @@ impl Editor {
         self.refresh();
     }
     pub fn refresh(&self) {
+        self.refresh_login();
         let Some(panel) = self.panel.upgrade() else {
             return;
         };
@@ -412,6 +473,100 @@ impl Editor {
         if !available {
             self.status.set_text("Service settings are unavailable. Appearance changes are temporary. Reconnect to save.");
         }
+    }
+    pub fn refresh_login(&self) {
+        let Some(panel) = self.panel.upgrade() else {
+            return;
+        };
+        if self.closed.get() {
+            return;
+        }
+        let model = panel.model.borrow();
+        let safe = !model.closing && (!model.safety_active || model.safety.manual_allowed());
+        let handle = panel.login.borrow();
+        let view = handle
+            .as_ref()
+            .map(|handle| *handle.subscribe().borrow())
+            .unwrap_or_default();
+        self.login_loading.set(true);
+        self.login.set_inconsistent(view.enabled.is_none());
+        if !self.login_dirty.get() {
+            if let Some(enabled) = view.enabled {
+                self.login.set_active(enabled);
+            }
+        }
+        if view.enabled == Some(self.login.is_active()) {
+            self.login_dirty.set(false);
+        }
+        self.login_loading.set(false);
+        let ready = safe && handle.is_some() && !view.busy && !self.login_busy.get();
+        self.login.set_sensitive(ready && view.enabled.is_some());
+        self.login_apply
+            .set_sensitive(ready && view.enabled.is_some() && self.login_dirty.get());
+        self.login_reload.set_sensitive(ready);
+        self.login_status
+            .set_text(if self.login_busy.get() || view.busy {
+                "Waiting for login settings…"
+            } else if let Some(error) = view.error {
+                login_failure(error)
+            } else if self.login_dirty.get() {
+                "Unsaved login choice. Apply it separately from service settings."
+            } else if view.enabled == Some(true) {
+                "Daemon and tray will start at sign-in; the card stays hidden."
+            } else if view.enabled == Some(false) {
+                "Login start is off."
+            } else {
+                "Login settings are unavailable."
+            });
+    }
+    fn login_action(self: &Rc<Self>, apply: bool) {
+        self.refresh_login();
+        if self.closed.get()
+            || !(if apply {
+                self.login_apply.is_sensitive()
+            } else {
+                self.login_reload.is_sensitive()
+            })
+        {
+            return;
+        }
+        let Some(panel) = self.panel.upgrade() else {
+            return;
+        };
+        let Some(handle) = panel.login.borrow().clone() else {
+            return;
+        };
+        let view = *handle.subscribe().borrow();
+        let completion = if apply {
+            let Some(expected) = view.enabled else { return };
+            handle.set(expected, self.login.is_active())
+        } else {
+            handle.read()
+        };
+        let completion = match completion {
+            Ok(completion) => completion,
+            Err(error) => {
+                self.login_status.set_text(login_failure(error));
+                return;
+            }
+        };
+        self.login_busy.set(true);
+        self.refresh_login();
+        let weak = Rc::downgrade(self);
+        self.login_task
+            .replace(Some(glib::spawn_future_local(async move {
+                let result = completion.wait().await;
+                if let Some(editor) = weak.upgrade().filter(|editor| !editor.closed.get()) {
+                    editor.login_busy.set(false);
+                    if result.is_ok() {
+                        editor.login_dirty.set(false);
+                    }
+                    editor.refresh_login();
+                    if let Err(error) = result {
+                        editor.login_status.set_text(login_failure(error));
+                    }
+                }
+            })));
     }
     fn act(self: &Rc<Self>, operation: Operation) {
         self.refresh();
@@ -545,6 +700,9 @@ impl Editor {
     }
     pub fn close(&self) {
         self.closed.set(true);
+        if let Some(task) = self.login_task.borrow_mut().take() {
+            task.abort();
+        }
         if let Some(dialog) = self.dialog.borrow_mut().take() {
             dialog.cancel();
         }
@@ -559,6 +717,10 @@ impl Editor {
 pub(super) fn verify_editor_smoke(editor: &Editor) {
     // Run on the existing single GTK test thread; no real settings owner is connected.
     assert!(!editor.save.is_sensitive());
+    assert!(editor.login.is_inconsistent());
+    assert!(!editor.login.is_sensitive());
+    assert!(!editor.login_apply.is_sensitive());
+    assert!(!editor.login_reload.is_sensitive());
     assert_eq!(editor.visibility.selected(), 0);
     assert!(!editor.choose.is_sensitive());
     assert!(!editor.recover.is_visible());

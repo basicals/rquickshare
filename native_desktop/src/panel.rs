@@ -79,6 +79,7 @@ pub struct Panel {
     reconnect_button: gtk::Button,
     style: gtk::CssProvider,
     tray_menu: RefCell<Option<crate::tray::menu::Handle>>,
+    login: RefCell<Option<crate::login::Handle>>,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -243,6 +244,16 @@ fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'stat
 }
 
 impl Panel {
+    pub fn bind_login(&self, handle: crate::login::Handle) {
+        self.login.replace(Some(handle));
+        self.refresh_login();
+    }
+    pub fn refresh_login(&self) {
+        if let Some(editor) = self.settings_owner.borrow().as_ref() {
+            editor.refresh_login();
+        }
+    }
+
     pub fn new(
         application: &gtk::Application,
         handle: Option<PanelHandle>,
@@ -309,6 +320,7 @@ impl Panel {
             reconnect_button,
             style: provider,
             tray_menu: RefCell::new(None),
+            login: RefCell::new(None),
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {

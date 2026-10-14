@@ -14,10 +14,10 @@ Native settings JSON must not duplicate actual OS enablement state.
 
 1. [x] A1: fixed GUI systemd/D-Bus process ownership, typed shared activation and
    separate retained GUI guard. Preserve daemon process/typed ingress contracts.
-2. [ ] A2: headless normal/CLI launch delegates to GUI service; explicit --service
+2. [x] A2: headless normal/CLI launch delegates to GUI service; explicit --service
    runs one foreground worker for installed manager/development. Event-driven tray
    readiness and process-lifetime signals/guard across reconnect; no spawned child.
-3. [ ] A3: one bounded native login-settings owner for systemd reads/explicit edits,
+3. [x] A3: one bounded native login-settings owner for systemd reads/explicit edits,
    actual OS state/watch/readback and secondary Settings controls, no JSON/schema
    or daemon API changes. Keep active transfers and GUI lifetime unaffected.
 4. [ ] A4: affected domain/private-broker/GTK/package checks once, strict lint/
@@ -144,3 +144,28 @@ GUI lock across reconnect, normal launcher Show and cancellable event-driven tra
 readiness. One now-test-only immediate Tray::connect still warned unused in the
 production target; mark it test-only before strict checks. No warning suppression.
 A2 behavior/private-tray checks and A3 settings owner/UI remain pending.
+
+A2/A3 implemented: one foreground process across reconnect, finite explicit launcher
+and event-driven tray readiness; cancellation also wraps read-only bootstrap
+connections/handshakes before owners are returned. The toolkit-independent login
+owner and explicit Settings Apply/Reload are separate from daemon settings JSON.
+The direct serde dependency adds only an existing locked dependency edge.
+
+First full native run compiled but found a malformed Enable/Disable body: a Rust
+fixed-size array encoded a struct instead of the required D-Bus string array,
+so the fake external manager rejected the request and two admission waits hung.
+Stopped only this task-owned check; corrected production arguments to Vec and
+added test-only30s scenario watchdogs, preserving event/condition waits and asserts.
+Corrected full native36/0 passed0.49s/build2.46s under an isolated broker/Xvfb.
+Strict native all-target no-deps lint3.31s passed before the subsequent startup
+cancellation/owner-loss additions; affected final checks are recorded below.
+No real systemd, sign-in or installed desktop claim. Terminal closed.
+
+Final affected login6/0 passed0.14s/build2.55s, including missing/lost manager,
+admitted write cancellation and no reactivation/retry. Strict native all-target
+no-deps lint1.27s passed with startup cancellation changes. Python package5/0
+passed1.245s with exact10-file inventory and desktop-unit/activation tamper cases.
+Both Rust format checks and git diff whitespace passed. Native inventory37, core578;
+full36 passed before the additional owner-loss test, followed by affected6; no
+fresh full37/578 or ten-run/coverage claim. The known nine core no-default-feature
+warnings remain visible, no new native lint warning is suppressed. Terminal closed.

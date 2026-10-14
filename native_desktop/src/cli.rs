@@ -1,5 +1,4 @@
-//! Headless local acquisition and event-driven GUI startup. Paths never cross IPC.
-use futures::StreamExt;
+//! Headless local acquisition and fixed GUI activation. Paths never cross IPC.
 use rqs_lib::{
     file_source::{OpenedSelection, SelectionLimits},
     service::{
@@ -10,9 +9,8 @@ use rqs_lib::{
 use std::{
     ffi::OsString,
     os::unix::ffi::{OsStrExt, OsStringExt},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
-use zbus::fdo;
 
 const ARGUMENT_BYTES: usize = 64 * 1024;
 const USAGE: &str = "Usage: rquickshare send -- <local-path-or-file-URI>...";
@@ -110,39 +108,31 @@ fn hex(byte: u8) -> Option<u8> {
     }
 }
 
-pub async fn ensure_gui(address: &BusAddress, executable: &Path) -> Result<(), &'static str> {
-    let connection = rqs_lib::service::bus::connection_builder(
+pub async fn ensure_gui(address: &BusAddress) -> Result<(), &'static str> {
+    rqs_lib::service::activation::activate_desktop(
+        address
+            .connect()
+            .await
+            .map_err(|_| "Session bus unavailable")?,
+        tokio_util::sync::CancellationToken::new(),
+    )
+    .await
+    .map_err(|_| "Native panel could not start. Check installation and desktop session support.")
+}
+pub async fn open(address: &BusAddress) -> Result<(), &'static str> {
+    ensure_gui(address).await?;
+    let mut client = DesktopClient::connect(
         address
             .connect()
             .await
             .map_err(|_| "Session bus unavailable")?,
     )
-    .build()
     .await
-    .map_err(|_| "Session bus unavailable")?;
-    let outcome=async {
-        let broker=fdo::DBusProxy::new(&connection).await.map_err(|_|"Session bus unavailable")?;
-        let mut changes=broker.receive_name_owner_changed_with_args(&[(0,desktop::SERVICE)]).await.map_err(|_|"Cannot observe panel startup")?;
-        let name=desktop::SERVICE.try_into().map_err(|_|"Invalid panel service")?;
-        match broker.get_name_owner(name).await {
-            Ok(_)=>return Ok(()),
-            Err(fdo::Error::NameHasNoOwner(_))=>(),
-            Err(_)=>return Err("Cannot resolve panel owner"),
-        }
-        let mut child=tokio::process::Command::new(executable).stdin(std::process::Stdio::null()).spawn().map_err(|_|"Cannot start the native panel")?;
-        loop { tokio::select! {
-            change=changes.next()=>{
-                let args=change.as_ref().and_then(|change|change.args().ok()).ok_or("Panel startup connection closed")?;
-                if args.new_owner().is_some() {return Ok(())}
-            },
-            _=child.wait()=>{
-                return if broker.get_name_owner(desktop::SERVICE.try_into().map_err(|_|"Invalid panel service")?).await.is_ok() {Ok(())} else {Err("Native panel failed to start. Check the daemon and Layer Shell support.")};
-            }
-        }}
-    }.await;
-    let closed = connection.close().await;
-    outcome?;
-    closed.map_err(|_| "Cannot close startup connection")
+    .map_err(message)?;
+    let result = client.show().await.map_err(message);
+    let closed = client.close().await.map_err(message);
+    result?;
+    closed
 }
 
 #[derive(Debug)]
@@ -169,9 +159,8 @@ fn desktop_failure(error: DesktopError) -> Failure {
 pub async fn show_error(
     code: desktop::ErrorCode,
     address: &BusAddress,
-    executable: &Path,
 ) -> Result<(), &'static str> {
-    ensure_gui(address, executable).await?;
+    ensure_gui(address).await?;
     let mut client = DesktopClient::connect(
         address
             .connect()
@@ -186,11 +175,7 @@ pub async fn show_error(
     closed
 }
 
-pub async fn send(
-    paths: Vec<PathBuf>,
-    address: &BusAddress,
-    executable: &Path,
-) -> Result<(), Failure> {
+pub async fn send(paths: Vec<PathBuf>, address: &BusAddress) -> Result<(), Failure> {
     let source = tokio::task::spawn_blocking(move || {
         OpenedSelection::acquire(&paths, SelectionLimits::default())
     })
@@ -213,7 +198,7 @@ pub async fn send(
             "Selection exceeds the native manifest limits",
         ));
     }
-    ensure_gui(address, executable)
+    ensure_gui(address)
         .await
         .map_err(|message| Failure::new(desktop::ErrorCode::PanelUnavailable, message))?;
     let mut client = DesktopClient::connect(address.connect().await.map_err(|_| {
@@ -231,7 +216,7 @@ pub async fn send(
 }
 fn message(error: DesktopError) -> &'static str {
     match error {
-    DesktopError::Unavailable=>"Native daemon unavailable. Start it, then reconnect the panel.",
+    DesktopError::Unavailable=>"Native daemon unavailable. Check installation, then reconnect the panel.",
     DesktopError::Busy=>"The panel already has files or an active preparation. Finish or discard it in the panel.",
     DesktopError::Recovery=>"Preparation needs recovery in the panel. Do not repeat the send.",
     DesktopError::GuiChanged|DesktopError::Transport|DesktopError::Protocol=>"Panel connection changed. Review the panel before retrying; no automatic send was requested.",
@@ -302,60 +287,27 @@ mod tests {
             );
         }
     }
-    struct Broker(std::process::Child);
-    impl Drop for Broker {
-        fn drop(&mut self) {
-            let _ = self.0.kill();
-            let _ = self.0.wait();
-        }
-    }
     #[tokio::test]
-    async fn given_missing_gui_when_startup_child_exits_then_failure_is_event_driven_and_broker_remains_usable(
+    async fn given_missing_or_current_gui_when_activated_then_no_child_is_spawned_and_manual_open_reuses_the_owner(
     ) {
-        // Arrange: isolated broker with no activation directories, condition-based readiness and owned teardown.
-        let temp = tempfile::TempDir::new().unwrap();
-        let socket = temp.path().join("bus");
-        let mut bus = Broker(
-            std::process::Command::new("dbus-daemon")
-                .arg("--config-file")
-                .arg(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/../docs/prototypes/preview-bus.conf"
-                ))
-                .args(["--nofork", "--nopidfile", "--print-address=1", "--address"])
-                .arg(format!("unix:path={}", socket.display()))
-                .stdout(std::process::Stdio::piped())
-                .spawn()
-                .unwrap(),
+        let broker = crate::test_bus::Broker::new();
+        assert_eq!(
+            ensure_gui(&broker.address).await,
+            Err("Native panel could not start. Check installation and desktop session support.")
         );
-        use std::io::BufRead;
-        let mut address = String::new();
-        std::io::BufReader::new(bus.0.stdout.take().unwrap())
-            .read_line(&mut address)
-            .unwrap();
-        let address = BusAddress::parse(address.trim()).unwrap();
-        // Act / Assert: child exit, not a sleep or retry loop.
-        let result = tokio::time::timeout(
-            std::time::Duration::from_secs(30),
-            ensure_gui(&address, Path::new("/bin/false")),
+        let server = desktop::DesktopServer::connect_optional(
+            broker.address.connect().await.unwrap(),
+            None,
+            desktop::PreparationGate::new(),
         )
         .await
         .unwrap();
-        assert_eq!(
-            result,
-            Err("Native panel failed to start. Check the daemon and Layer Shell support.")
-        );
-        let owner = rqs_lib::service::bus::connection_builder(address.connect().await.unwrap())
-            .build()
-            .await
-            .unwrap();
-        owner.request_name(desktop::SERVICE).await.unwrap();
-        assert_eq!(
-            ensure_gui(&address, Path::new("/nonexistent/unlaunched-panel")).await,
-            Ok(())
-        );
-        owner.close().await.unwrap();
-        drop(bus);
+        let updates = server.handle().subscribe();
+        ensure_gui(&broker.address).await.unwrap();
+        assert_eq!(updates.borrow().show_revision, 0);
+        open(&broker.address).await.unwrap();
+        assert_eq!(updates.borrow().show_revision, 1);
+        server.close().await.unwrap();
     }
     #[tokio::test]
     async fn given_unavailable_backend_or_unreadable_source_when_cli_fails_then_fixed_error_is_visible_without_retrying_import(
@@ -375,22 +327,12 @@ mod tests {
         let source = tempfile::NamedTempFile::new().unwrap();
         source.as_file().set_len(3).unwrap();
         // Act / Assert
-        let failure = send(
-            vec![source.path().to_owned()],
-            &private.address,
-            Path::new("/nonexistent/unlaunched-panel"),
-        )
-        .await
-        .unwrap_err();
+        let failure = send(vec![source.path().to_owned()], &private.address)
+            .await
+            .unwrap_err();
         assert_eq!(failure.code, desktop::ErrorCode::BackendUnavailable);
         assert!(!failure.message.contains(source.path().to_str().unwrap()));
-        show_error(
-            failure.code,
-            &private.address,
-            Path::new("/nonexistent/unlaunched-panel"),
-        )
-        .await
-        .unwrap();
+        show_error(failure.code, &private.address).await.unwrap();
         updates
             .wait_for(|state| state.error_revision == 1)
             .await
@@ -402,13 +344,7 @@ mod tests {
         assert!(!updates.borrow().staging && !*gate.subscribe().borrow());
         assert!(source.path().exists());
         let missing = source.path().join("missing-source");
-        let failure = send(
-            vec![missing],
-            &private.address,
-            Path::new("/nonexistent/unlaunched-panel"),
-        )
-        .await
-        .unwrap_err();
+        let failure = send(vec![missing], &private.address).await.unwrap_err();
         assert_eq!(failure.code, desktop::ErrorCode::InvalidSelection);
         assert_eq!(updates.borrow().error_revision, 1);
         for (error, expected) in [

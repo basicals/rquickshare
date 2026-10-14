@@ -152,7 +152,21 @@ pub struct Tray {
     commands: Option<mpsc::Receiver<Vec<menu::Action>>>,
 }
 impl Tray {
+    #[cfg(test)]
     pub async fn connect(address: &BusAddress) -> zbus::Result<Self> {
+        Self::connect_inner(address, CancellationToken::new(), false).await
+    }
+    pub async fn connect_when_ready(
+        address: &BusAddress,
+        cancel: CancellationToken,
+    ) -> zbus::Result<Self> {
+        Self::connect_inner(address, cancel, true).await
+    }
+    async fn connect_inner(
+        address: &BusAddress,
+        cancel: CancellationToken,
+        wait: bool,
+    ) -> zbus::Result<Self> {
         let stream = address
             .connect()
             .await
@@ -180,10 +194,31 @@ impl Tray {
         let setup = async {
             let broker = fdo::DBusProxy::new(&connection).await?;
             // Subscribe before resolving/registering; the owner is pinned until restart.
-            let changes = broker
+            let mut changes = broker
                 .receive_name_owner_changed_with_args(&[(0, WATCHER)])
                 .await?;
-            let owner = broker.get_name_owner(WATCHER.try_into()?).await?;
+            let owner = loop {
+                match broker.get_name_owner(WATCHER.try_into()?).await {
+                    Ok(owner) => break owner,
+                    Err(fdo::Error::NameHasNoOwner(_)) if wait => {
+                        let change = changes.next().await.ok_or_else(|| {
+                            zbus::Error::Failure("Tray readiness connection closed".into())
+                        })?;
+                        if change
+                            .message()
+                            .header()
+                            .sender()
+                            .is_none_or(|sender| sender.as_str() != "org.freedesktop.DBus")
+                        {
+                            return Err(zbus::Error::Failure(
+                                "Invalid tray readiness sender".into(),
+                            ));
+                        }
+                        let _ = change.args()?;
+                    }
+                    Err(error) => return Err(error.into()),
+                }
+            };
             if !same_user(
                 broker
                     .get_connection_unix_user(owner.clone().into())
@@ -214,8 +249,11 @@ impl Tray {
                 return Err(zbus::Error::Failure("Tray watcher changed".into()));
             }
             Ok(changes)
-        }
-        .await;
+        };
+        let setup = tokio::select! { biased;
+            _ = cancel.cancelled() => Err(zbus::Error::Failure("Tray startup cancelled".into())),
+            result = setup => result,
+        };
         let mut changes = match setup {
             Ok(changes) => changes,
             Err(error) => {

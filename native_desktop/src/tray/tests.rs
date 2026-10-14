@@ -130,3 +130,31 @@ async fn given_missing_watcher_or_explicit_close_when_connecting_then_no_invisib
         .unwrap());
     watcher.close().await.unwrap();
 }
+
+#[tokio::test]
+async fn given_late_watcher_or_shutdown_when_waiting_for_tray_then_registration_is_event_driven_and_cancelled_wait_closes(
+) {
+    let broker = Broker::new();
+    let cancel = CancellationToken::new();
+    let pending = Tray::connect_when_ready(&broker.address, cancel.clone());
+    tokio::pin!(pending);
+    assert!(futures::poll!(&mut pending).is_pending());
+    cancel.cancel();
+    assert!(pending.await.is_err());
+    let pending = Tray::connect_when_ready(&broker.address, CancellationToken::new());
+    tokio::pin!(pending);
+    assert!(futures::poll!(&mut pending).is_pending());
+    let watcher = broker.connection().await;
+    let (registered, mut registration) = watch::channel(None);
+    watcher
+        .object_server()
+        .at("/StatusNotifierWatcher", Watcher { registered })
+        .await
+        .unwrap();
+    watcher.request_name(WATCHER).await.unwrap();
+    let tray = pending.await.unwrap();
+    registration.changed().await.unwrap();
+    assert!(registration.borrow().is_some());
+    tray.close().await.unwrap();
+    watcher.close().await.unwrap();
+}

@@ -3,6 +3,8 @@ mod card_view;
 mod cli;
 mod desktop_guard;
 mod ingress;
+mod lifecycle;
+mod login;
 mod panel;
 mod placement;
 mod portal;
@@ -40,6 +42,7 @@ fn follow<T: Clone + 'static>(
 #[derive(Clone)]
 struct Options {
     preview: bool,
+    service: bool,
     output: Option<PathBuf>,
     page: String,
     mode: card_view::Mode,
@@ -49,6 +52,7 @@ impl Options {
         let mut args = args.into_iter();
         let mut options = Self {
             preview: false,
+            service: false,
             output: None,
             page: "nearby".into(),
             mode: card_view::Mode::Compact,
@@ -57,11 +61,15 @@ impl Options {
         while let Some(arg) = args.next() {
             match arg.to_str() {
                 Some("--preview")=>options.preview=true,
+                Some("--service") if !options.service=>options.service=true,
                 Some("--preview-output")=>{options.preview=true;options.output=Some(PathBuf::from(args.next().ok_or("Missing preview output")?));},
                 Some("--preview-mode")=>{preview_options=true;options.mode=args.next().and_then(|arg|arg.into_string().ok()).and_then(|value|card_view::Mode::parse(&value)).ok_or("Invalid preview mode")?;},
                 Some("--preview-page")=>{preview_options=true;options.page=args.next().and_then(|arg|arg.into_string().ok()).filter(|page|["nearby","incoming","transfers"].contains(&page.as_str())).ok_or("Invalid preview page")?;},
                 _=>return Err("Usage: rquickshare [--preview [--preview-page nearby|incoming|transfers] [--preview-mode compact|full] [--preview-output PATH]]"),
             }
+        }
+        if options.preview && options.service {
+            return Err("Service and preview modes are separate");
         }
         if !options.preview && preview_options {
             return Err("Preview options require preview mode");
@@ -99,15 +107,20 @@ fn main() {
         };
         eprintln!("rQuickShare: {message}");
         if let RunError::Cli(error) = error {
-            if let (Ok(address), Ok(executable), Ok(runtime)) = (
-                session_address(),
-                std::env::current_exe(),
-                tokio::runtime::Builder::new_multi_thread()
-                    .worker_threads(2)
-                    .enable_all()
-                    .build(),
+            // A failed activation is not retried just to display its own error.
+            if !matches!(
+                error.code,
+                rqs_lib::service::client::desktop::ErrorCode::PanelUnavailable
             ) {
-                let _ = runtime.block_on(cli::show_error(error.code, &address, &executable));
+                if let (Ok(address), Ok(runtime)) = (
+                    session_address(),
+                    tokio::runtime::Builder::new_multi_thread()
+                        .worker_threads(2)
+                        .enable_all()
+                        .build(),
+                ) {
+                    let _ = runtime.block_on(cli::show_error(error.code, &address));
+                }
             }
         }
         std::process::exit(1);
@@ -116,7 +129,7 @@ fn main() {
 fn run() -> Result<(), RunError> {
     let args = std::env::args_os().skip(1).collect::<Vec<_>>();
     if args.len() == 1 && args[0] == "--help" {
-        println!("rquickshare\nLaunch the native tray client.\nrquickshare send -- FILE_OR_LOCAL_URI...\nPrepare files for an explicit recipient selection and Send.\nrquickshare --preview [--preview-page nearby|incoming|transfers] [--preview-mode compact|full] [--preview-output PATH]");
+        println!("rquickshare\nLaunch the native tray client.\nrquickshare --service\nRun the foreground panel worker (manager/development).\nrquickshare send -- FILE_OR_LOCAL_URI...\nPrepare files for an explicit recipient selection and Send.\nrquickshare --preview [--preview-page nearby|incoming|transfers] [--preview-mode compact|full] [--preview-output PATH]");
         return Ok(());
     }
     if args.first().is_some_and(|arg| arg == "send") {
@@ -132,42 +145,73 @@ fn run() -> Result<(), RunError> {
             })?;
         let address = session_address()
             .map_err(|message| cli::Failure::new(ErrorCode::PanelUnavailable, message))?;
-        let executable = std::env::current_exe().map_err(|_| {
-            cli::Failure::new(
-                ErrorCode::PanelUnavailable,
-                "Cannot locate native panel executable",
-            )
-        })?;
-        runtime.block_on(cli::send(paths, &address, &executable))?;
+        runtime.block_on(cli::send(paths, &address))?;
         println!("Files prepared. Choose a recipient in the panel to send.");
         return Ok(());
     }
-    let mut options = Options::parse(args)?;
-    loop {
-        let (reconnect, mode) = run_gui(options.clone())?;
-        if !reconnect {
+    let options = Options::parse(args)?;
+    if !options.preview && !options.service {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .map_err(|_| "Cannot create native runtime")?;
+        return runtime
+            .block_on(cli::open(&session_address()?))
+            .map_err(RunError::Gui);
+    }
+    run_worker(options)
+}
+fn run_worker(mut options: Options) -> Result<(), RunError> {
+    let _ownership = if options.preview {
+        None
+    } else {
+        Some(
+            rqs_lib::service::process::LaunchGuard::acquire_desktop(
+                &rqs_lib::service::process::runtime_directory()
+                    .map_err(|_| "Invalid session runtime directory")?,
+            )
+            .map_err(|_| {
+                "Another native panel owns this session or runtime access is unavailable"
+            })?,
+        )
+    };
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .map_err(|_| "Cannot create native runtime")?;
+    let shutdown = runtime.block_on(async { lifecycle::Shutdown::new() })?;
+    let process_stop = shutdown.stop.clone();
+    let result = (|| loop {
+        if process_stop.is_cancelled() {
+            return Ok(());
+        }
+        let (reconnect, mode) = run_gui(&runtime, options.clone(), process_stop.clone())?;
+        if !reconnect || process_stop.is_cancelled() {
             return Ok(());
         }
         options.mode = mode;
-    }
+    })();
+    runtime.block_on(shutdown.close());
+    result
 }
 async fn close_controller(controller: Option<PanelController>) {
     if let Some(controller) = controller {
         let _ = controller.close().await;
     }
 }
-fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
+fn run_gui(
+    runtime: &tokio::runtime::Runtime,
+    options: Options,
+    process_stop: CancellationToken,
+) -> Result<(bool, card_view::Mode), &'static str> {
     gtk::init().map_err(|_| "GTK display is unavailable")?;
     if !options.preview && !gtk4_layer_shell::is_supported() {
         return Err(
             "This desktop does not support GTK4 Layer Shell. Use --preview only for review.",
         );
     }
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(2)
-        .enable_all()
-        .build()
-        .map_err(|_| "Cannot create native runtime")?;
     let ingress = Arc::new(ingress::Ingress::new());
     let (controller, mut tray, desktop, guard) = if options.preview {
         (None, None, None, None)
@@ -175,69 +219,63 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
         let address = session_address()?;
         let connected = runtime.block_on(async {
             let controller = async {
-                let stream = address.connect().await.ok()?;
-                rqs_lib::service::activation::activate_daemon(stream, CancellationToken::new())
-                    .await
-                    .ok()?;
-                let client = NativeClient::connect(address.connect().await.ok()?)
-                    .await
-                    .ok()?;
+                let client = tokio::select! { biased;
+                    _ = process_stop.cancelled() => None,
+                    client = async {
+                        let stream = address.connect().await.ok()?;
+                        rqs_lib::service::activation::activate_daemon(stream, process_stop.clone()).await.ok()?;
+                        NativeClient::connect(address.connect().await.ok()?).await.ok()
+                    } => client,
+                }?;
                 let controller = PanelController::spawn(client);
                 let mut updates = controller.handle().subscribe();
-                let complete = updates
-                    .wait_for(|state| state.view.is_some() || state.disconnected)
-                    .await
-                    .is_ok()
-                    && !updates.borrow().disconnected;
-                if complete {
-                    Some(controller)
-                } else {
-                    let _ = controller.close().await;
-                    None
-                }
-            }
-            .await;
-            let tray = match tray::Tray::connect(&address).await {
+                let complete = tokio::select! { biased;
+                    _ = process_stop.cancelled() => false,
+                    result = updates.wait_for(|state| state.view.is_some() || state.disconnected) => result.is_ok(),
+                } && !updates.borrow().disconnected;
+                if complete { Some(controller) } else { let _ = controller.close().await; None }
+            }.await;
+            if process_stop.is_cancelled() { close_controller(controller).await; return Ok(None); }
+            let tray = match tray::Tray::connect_when_ready(&address, process_stop.clone()).await {
                 Ok(tray) => tray,
                 Err(_) => {
                     close_controller(controller).await;
-                    return Err("KDE tray watcher unavailable or changed");
+                    return if process_stop.is_cancelled() { Ok(None) } else { Err("KDE tray watcher unavailable or changed") };
                 }
             };
-            let guard = match desktop_guard::DesktopGuard::connect(&address).await {
+            let guard = match tokio::select! { biased;
+                _ = process_stop.cancelled() => Err(()),
+                guard = desktop_guard::DesktopGuard::connect(&address) => guard.map_err(|_| ()),
+            } {
                 Ok(guard) => guard,
                 Err(_) => {
                     close_controller(controller).await;
                     let _ = tray.close().await;
-                    return Err("Cannot observe desktop privacy state");
+                    return if process_stop.is_cancelled() { Ok(None) } else { Err("Cannot observe desktop privacy state") };
                 }
             };
-            let desktop = match address.connect().await {
-                Ok(stream) => {
-                    DesktopServer::connect_optional(
-                        stream,
-                        controller.as_ref().map(PanelController::handle),
-                        ingress.gate.clone(),
-                    )
-                    .await
-                }
-                Err(_) => {
-                    close_controller(controller).await;
-                    guard.close().await;
-                    let _ = tray.close().await;
-                    return Err("Session bus unavailable");
-                }
+            if process_stop.is_cancelled() {
+                close_controller(controller).await; guard.close().await; let _ = tray.close().await; return Ok(None);
+            }
+            let desktop = tokio::select! { biased;
+                _ = process_stop.cancelled() => Err(()),
+                desktop = async {
+                    let stream = address.connect().await.map_err(|_| ())?;
+                    DesktopServer::connect_optional(stream, controller.as_ref().map(PanelController::handle), ingress.gate.clone()).await.map_err(|_| ())
+                } => desktop,
             };
             match desktop {
-                Ok(desktop) => Ok((controller, tray, desktop, guard)),
-                Err(_) => {
-                    close_controller(controller).await;
-                    guard.close().await;
-                    let _ = tray.close().await;
-                    Err("Another panel owns the desktop service or registration failed")
+                Ok(desktop) if !process_stop.is_cancelled() => Ok(Some((controller, tray, desktop, guard))),
+                outcome => {
+                    close_controller(controller).await; guard.close().await; let _ = tray.close().await;
+                    if let Ok(desktop) = outcome { let _ = desktop.close().await; }
+                    if process_stop.is_cancelled() { Ok(None) } else { Err("Another panel owns the desktop service or registration failed") }
                 }
             }
         })?;
+        let Some(connected) = connected else {
+            return Ok((false, options.mode));
+        };
         (
             connected.0,
             Some(connected.1),
@@ -245,6 +283,16 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
             Some(connected.3),
         )
     };
+    let login = if options.preview {
+        None
+    } else {
+        Some(runtime.block_on(login::Owner::connect(
+            &session_address()?,
+            process_stop.clone(),
+        )))
+    };
+    let login_handle = login.as_ref().map(login::Owner::handle);
+    let login_updates = login_handle.as_ref().map(login::Handle::subscribe);
     let application = gtk::Application::new(
         Some("io.github.morozhenko_apps.RQuickShare.Native"),
         gio::ApplicationFlags::NON_UNIQUE,
@@ -270,6 +318,9 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
     let failure = Rc::new(Cell::new(None));
     let failure_ui = failure.clone();
     application.connect_activate(move |application| {
+        let quit = application.clone();
+        let process_stop = process_stop.clone();
+        tasks_ui.borrow_mut().push(glib::spawn_future_local(async move { process_stop.cancelled().await; quit.quit(); }));
         if retained_ui.borrow().is_some() {
             return;
         }
@@ -281,6 +332,13 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
             ingress_ui.clone(),
             !options.preview,
         );
+        if let Some(handle) = &login_handle { panel.bind_login(handle.clone()); }
+        if let Some(updates) = login_updates.clone() {
+            let weak = Rc::downgrade(&panel);
+            tasks_ui.borrow_mut().push(follow(updates, stop_ui.clone(), move |_| {
+                if let Some(panel) = weak.upgrade() { panel.refresh_login(); }
+            }));
+        }
         if let Some(menu) = &tray_menu { panel.bind_tray_menu(menu.clone()); }
         if let Some(mut commands) = tray_commands.borrow_mut().take() {
             let weak = Rc::downgrade(&panel); let end = stop_ui.clone();
@@ -440,6 +498,9 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
             let _ = desktop.close().await;
         }
         ingress.close().await;
+        if let Some(login) = login {
+            login.close().await;
+        }
         if let Some(guard) = guard {
             guard.close().await;
         }

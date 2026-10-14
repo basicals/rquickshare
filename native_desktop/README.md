@@ -36,9 +36,11 @@ cargo +stable build --locked --manifest-path native_desktop/Cargo.toml
 ```
 
 Normal launch requires a supported Layer Shell compositor and same-user KDE status
-notifier watcher. Explicit launch/Reconnect now requests the installed daemon through
-systemd user D-Bus activation when missing. A development checkout without installed
-assets still needs a manually started daemon; builds never install/enable services.
+notifier watcher. Normal launch delegates to the fixed systemd desktop user service
+and explicitly shows its existing card; the worker activates the daemon when needed.
+A development checkout without installed assets uses `rquickshare --service` and
+a separately started daemon. Builds never install/enable services. The worker waits
+for actual tray readiness and joins SIGINT/SIGTERM cleanup across reconnect.
 Follow [native-package.md](../docs/native-package.md) and
 [native-daemon-startup.md](../docs/native-daemon-startup.md); do not start it beside
 an existing transport owner. Passive SDK connections and preview never activate it.
@@ -81,8 +83,9 @@ native_desktop/target/debug/rquickshare send -- /local/file 'file:///local/a%20b
 ```
 
 Invocation prepares the complete selection and presents recipient selection; it
-never sends automatically. A missing GUI is started from this same executable,
-without paths. The daemon must already be started explicitly. The panel's own
+never sends automatically. A missing GUI is activated through its fixed desktop
+user unit, without paths; that worker activates the daemon. There is no child-launch
+fallback. The panel's own
 chooser and CLI share one preparation owner; an existing selection is preserved.
 CLI failures preserve fixed stderr diagnostics and route a finite error code to the
 same GUI, without paths or arbitrary text. Error display works without a transfer
@@ -172,3 +175,11 @@ the received content. Cancel folder request, hide/lock/epoch change and shutdown
 close owned pending work. Already accepted external actions cannot be retracted.
 See [native-reveal.md](../docs/native-reveal.md) for exact limits, ownership, actual
 checks and physical KDE selection/activation acceptance still required.
+
+Settings > Start at sign-in > Apply login start enables the vendor desktop user
+unit for future sessions: daemon and tray start with the card hidden. Default off.
+Disabling future startup leaves current services/transfers running. The setting
+reads actual systemd enablement and requires explicit Apply; Reload resolves
+unconfirmed changes. Custom/masked/unknown units remain unavailable. See
+[native-autostart.md](../docs/native-autostart.md) for ownership, constraints and
+measured checks; a real installed login/logout remains acceptance.
