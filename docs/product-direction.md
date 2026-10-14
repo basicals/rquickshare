@@ -1,5 +1,32 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-14: systemd user activation and native Debian package implemented
+
+User selected1. [native-package.md](native-package.md) records the process-based
+systemd user unit, fixed fail-closed D-Bus delegation, owned explicit activation
+and unchanged passive SDK handshake. GTK launch/Reconnect activates missing service;
+Quit does not stop transfers. Installation does not start/enable sharing. Direct
+locked release Debian build/verifier and separate manual Ubuntu26.04-container
+artifact workflow are implemented; existing Tauri release jobs remain baseline.
+
+Actual release package/extracted offline smoke, service262 plus additional real
+cold-broker1, Python package5, strict core/native lint and affected GTK1 passed.
+The private broker reads the shipped activation asset and requests the fixed unit;
+its external manager is fake, so installed systemd/session acceptance stays open.
+Inventory576 core/29 native is not a newly run full suite. Small root-cause repair
+prevents build.rs rewriting/invalidation on every invocation; final release cache
+checks0.18/0.15s preserved the generated index mtime. Exact failed fixtures, repairs,
+warnings and timings are in the SSOT. Direct dev, no host install/enable/live user
+manager/config/clipboard/peer, push/branch or NativePair change.
+
+Next [native-autostart-review.md](native-autostart-review.md) recommends1: explicit
+default-off Settings login-start launches daemon plus hidden-card tray client;
+alternative2 starts only daemon with lazy GUI. Selection is needed for that product
+presentation and larger GUI ownership/readiness refactor. Legacy default-off was
+verified in source. Updater policy, installed package lifecycle, protocol/account/
+QR and real Google/KDE matrices remain. Earlier pending-package entries below are
+historical; full Google parity remains the goal, not an achieved claim.
+
 ## 2026-10-14: installed daemon ownership review prepared
 
 [native-package-review.md](native-package-review.md) audits current source assets,

@@ -1,5 +1,15 @@
 # Native daemon startup and visibility recovery
 
+## Installed activation source checkpoint (2026-10-14)
+
+[native-package.md](native-package.md) adds the selected systemd user process owner
+and fixed D-Bus activation for explicit native GUI launch/Reconnect. Passive SDK
+connect remains unchanged; missing installation keeps the visible unavailable state.
+The Type=exec unit preserves this document's joined in-process settings generation
+restart/name changes. Neither build nor package verification installs/enables/starts
+a live service. Source/development manual launch and prior process checks below
+remain valid; installed KDE lifecycle and login-start policy remain separate gates.
+
 ## Current native settings checkpoint (2026-10-13)
 
 [native-settings.md](native-settings.md) now owns normal native startup/settings.

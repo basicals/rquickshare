@@ -195,3 +195,28 @@ contracts. No runtime change or significant refactor. Rollback build.rs independ
 The actual final build is required after this change; then one immediate same-command
 Cargo build verifies cache freshness/index mtime rather than repeating business
 suites. Record observed Fresh/build time and exact payload/checksum before export.
+
+
+P3 final observations after build repair: actual locked daemon release2m05s and
+GUI release35.64s passed; final staging/dependency/ELF/checksum/extract/offline help/
+private settings smoke passed. The package-root warning is gone after DEBIAN exists
+before analysis; host libc loader-diversion notices remain visible. One same-profile
+-vv Cargo recheck for each binary reported Fresh rqs_lib, taking0.18s/0.15s with the
+source index mtime unchanged. This verifies the repaired cache invariant, not ten
+repeated feature tests. Earlier staging-only owned rebuild was interrupted130; no
+owned process remains. Final build-script strict core lint passed; its build timing
+is recorded below. Both source format checks, manual workflow syntax/trigger/container
+and application desktop validation passed earlier; no remote workflow run/install.
+
+Isolated affected GTK1/0 passed0.68s/build25.28s before the build-only repair; runtime
+widget behavior did not change afterward, so it was not repeated. Earlier service
+262 + extra cold-broker1 and final Python5 are separate actual observations. Final
+inventory576 core/29 native; no newly run full576/29 or Mode B stability/coverage claim.
+
+All approved package/activation implementation is complete. Final P3 export below
+will verify exact committed source, English SSOT copies/progress and release .deb/
+sidecar copied bytes in chat outputs. Installed startup/session/environment/restart/
+upgrade/removal/tray/Google acceptance remains explicit; nothing was installed or
+enabled. The next native-autostart-review.md is analysis only and awaits option1/2
+for login component UX/GUI owner refactoring, preserving existing default-off.
+Final build-script lint: Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.71s.

@@ -16,8 +16,11 @@ in [native-image.md](native-image.md), with bounded validation, immutable anonym
 sources and explicit review/Prepare/Send. Explicit transfer-bound received-file
 Show in folder is implemented in [native-reveal.md](native-reveal.md), with verified
 read-only descriptor acquisition and owned portal requests. Physical KDE selection
-remains acceptance. Autostart/update/package lifecycle and account/QR capabilities
-still require their own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
+remains acceptance. Native systemd user activation and direct verified Debian release
+packaging are implemented in [native-package.md](native-package.md), with installed
+lifecycle acceptance open. Autostart component choice is reviewed in
+[native-autostart-review.md](native-autostart-review.md); updater and account/QR
+capabilities still require their own work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles
 
