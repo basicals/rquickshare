@@ -38,6 +38,30 @@ struct TextStaging {
 }
 
 impl Coordinator {
+    fn memory_usage(&self) -> u64 {
+        self.reservations
+            .values()
+            .map(|entry| entry.memory_bytes)
+            .sum::<u64>()
+            + self
+                .uploads
+                .values()
+                .filter(|upload| upload.state == UploadState::Preparing)
+                .flat_map(|upload| upload.files.iter())
+                .map(OpenedFile::memory_bytes)
+                .sum::<u64>()
+    }
+    pub(super) fn reserve_memory(&self, added: u64) -> Result<(), Error> {
+        if self
+            .memory_usage()
+            .checked_add(added)
+            .is_none_or(|bytes| bytes > crate::memory_source::MEMORY_RESERVATION_BYTES)
+        {
+            return Err(Error::Capacity);
+        }
+        Ok(())
+    }
+
     pub(super) fn upload_usage(&self) -> ResourceUsage {
         self.uploads
             .values()
@@ -195,6 +219,7 @@ impl Coordinator {
         {
             return Err(Error::Capacity);
         }
+        self.reserve_memory(files.iter().map(OpenedFile::memory_bytes).sum())?;
         self.advance()?;
         if let Some(upload) = self.uploads.get_mut(&id) {
             upload.files.extend(files);
@@ -321,6 +346,7 @@ impl Coordinator {
             self.reservations.insert(
                 selection,
                 Reservation {
+                    memory_bytes: resource.files().iter().map(OpenedFile::memory_bytes).sum(),
                     text_bytes: if resource.text().is_some() {
                         resource.total_bytes()
                     } else {

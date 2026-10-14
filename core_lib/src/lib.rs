@@ -33,6 +33,8 @@ mod hdl;
 pub mod managed;
 mod manager;
 #[cfg(target_os = "linux")]
+pub mod memory_source;
+#[cfg(target_os = "linux")]
 pub mod prepared_source;
 mod protocol;
 #[cfg(target_os = "linux")]

@@ -689,3 +689,134 @@ fn given_global_text_memory_budget_when_reserved_before_body_then_exact_cap_and_
     }
     assert_eq!(service.usage(), ResourceUsage::default());
 }
+
+fn memory_file(name: &str, size: u64) -> OpenedFile {
+    use std::os::fd::AsRawFd;
+
+    use rustix::fs::*;
+    let writer = File::from(memfd_create("budget-test", MemfdFlags::ALLOW_SEALING).unwrap());
+    writer.set_len(size).unwrap();
+    fcntl_add_seals(&writer, crate::memory_source::IMMUTABLE_SEALS).unwrap();
+    let reader = File::from(
+        open(
+            format!("/proc/self/fd/{}", writer.as_raw_fd()),
+            OFlags::RDONLY,
+            Mode::empty(),
+        )
+        .unwrap(),
+    );
+    OpenedFile::adopt(reader, name.into()).unwrap()
+}
+
+#[test]
+fn given_staged_and_direct_memory_when_budget_is_exceeded_then_rejection_is_atomic_and_commit_moves_charge(
+) {
+    // Arrange: sparse sealed descriptors exercise actual kernel classification without filling RAM.
+    let (mut service, client) = setup(Limits::default());
+    let size = crate::memory_source::MAX_MEMORY_FILE_BYTES as u64;
+    let direct = OpenedSelection::from_files(
+        vec![memory_file("direct", size)],
+        SelectionLimits::default(),
+    )
+    .unwrap();
+    let selected = service.create_selection(client, direct).unwrap();
+    let upload = service.begin_selection(client, "memory").unwrap();
+    service
+        .append_files(
+            client,
+            upload,
+            0,
+            vec![
+                memory_file("a", size),
+                memory_file("b", size),
+                memory_file("c", size - 1),
+                file("disk", size),
+            ],
+        )
+        .unwrap();
+    assert_eq!(
+        service.memory_usage(),
+        crate::memory_source::MEMORY_RESERVATION_BYTES - 1
+    );
+    let before = service.snapshot(client).unwrap();
+    // Act / Assert: mixed rejected batch leaves every preceding handle/sequence unchanged.
+    assert_eq!(
+        service.append_files(
+            client,
+            upload,
+            1,
+            vec![file("other-disk", 1), memory_file("overflow", 2)]
+        ),
+        Err(Error::Capacity)
+    );
+    assert_eq!(service.snapshot(client).unwrap(), before);
+    assert_eq!(service.get_upload(client, upload).unwrap().next_sequence, 1);
+    service
+        .append_files(client, upload, 1, vec![memory_file("last", 1)])
+        .unwrap();
+    let before = service.snapshot(client).unwrap().resources;
+    service.commit_selection(client, upload).unwrap();
+    assert_eq!(service.snapshot(client).unwrap().resources, before);
+    assert_eq!(
+        service.memory_usage(),
+        crate::memory_source::MEMORY_RESERVATION_BYTES
+    );
+    let extra =
+        OpenedSelection::from_files(vec![memory_file("extra", 1)], SelectionLimits::default())
+            .unwrap();
+    assert_eq!(
+        service.create_selection(client, extra),
+        Err(Error::Capacity)
+    );
+    // Text has an independent budget even while memory Files are full.
+    let text = service.begin_text_upload(client, 1).unwrap();
+    service.append_text(client, text, 0, b"x").unwrap();
+    service.commit_upload(client, text).unwrap();
+    service.discard_selection(client, selected).unwrap();
+    service.refresh_resources().unwrap();
+    assert_eq!(
+        service.memory_usage(),
+        crate::memory_source::MEMORY_RESERVATION_BYTES - size
+    );
+    service.disconnect(client).unwrap();
+    service.refresh_resources().unwrap();
+    assert_eq!(service.memory_usage(), 0);
+}
+
+#[test]
+fn given_memory_owners_when_aborted_cancelled_or_finished_then_only_actual_reader_drop_releases_charge(
+) {
+    // Arrange / Act / Assert
+    let (mut service, client) = setup(Limits::default());
+    let upload = service.begin_selection(client, "abort").unwrap();
+    service
+        .append_files(client, upload, 0, vec![memory_file("a", 1)])
+        .unwrap();
+    service.abort_selection(client, upload).unwrap();
+    assert_eq!(service.memory_usage(), 0);
+    service.set_endpoints(vec!["recipient".into()]).unwrap();
+    for active in [false, true] {
+        let files =
+            OpenedSelection::from_files(vec![memory_file("a", 1)], SelectionLimits::default())
+                .unwrap();
+        let selected = service.create_selection(client, files).unwrap();
+        let transfer = service
+            .send_selection(
+                client,
+                selected,
+                "recipient",
+                if active { "active" } else { "queued" },
+            )
+            .unwrap();
+        let reader = active.then(|| service.next_send().unwrap().unwrap());
+        service.cancel(client, transfer).unwrap();
+        if active {
+            service.observe(transfer, Phase::Finished).unwrap();
+        }
+        service.refresh_resources().unwrap();
+        assert_eq!(service.memory_usage(), u64::from(active));
+        drop(reader);
+        service.refresh_resources().unwrap();
+        assert_eq!(service.memory_usage(), 0);
+    }
+}

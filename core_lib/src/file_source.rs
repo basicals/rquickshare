@@ -82,6 +82,7 @@ pub struct OpenedFile {
     file: File,
     relative_name: String,
     size: u64,
+    memory_bytes: u64,
 }
 
 impl fmt::Debug for OpenedFile {
@@ -102,15 +103,27 @@ impl OpenedFile {
         if flags.contains(OFlags::PATH) || flags & OFlags::ACCMODE != OFlags::RDONLY {
             return Err(invalid("Expected a read-only file descriptor"));
         }
+        let memory_backed = match rustix::fs::fcntl_get_seals(&file) {
+            Ok(seals) if seals.contains(crate::memory_source::IMMUTABLE_SEALS) => true,
+            Ok(_) => return Err(invalid("Expected an immutable memory descriptor")),
+            Err(rustix::io::Errno::INVAL) => false,
+            Err(error) => return Err(error.into()),
+        };
+        // Read size after checking irrevocable seals; a mutable memory size cannot race adoption.
         let metadata = file.metadata()?;
         if !metadata.is_file() {
             return Err(invalid("Expected a regular file descriptor"));
         }
         let size = source_size(metadata.len())?;
+        if memory_backed && (size == 0 || size > crate::memory_source::MAX_MEMORY_FILE_BYTES as u64)
+        {
+            return Err(invalid("Memory source size exceeds bounds"));
+        }
         Ok(Self {
             file,
             relative_name,
             size,
+            memory_bytes: if memory_backed { size } else { 0 },
         })
     }
 
@@ -120,6 +133,11 @@ impl OpenedFile {
 
     pub fn size(&self) -> u64 {
         self.size
+    }
+
+    /// Kernel-derived immutable memory charge, independent of the display name.
+    pub fn memory_bytes(&self) -> u64 {
+        self.memory_bytes
     }
 
     pub fn read_chunk_at(&self, offset: u64, buffer: &mut [u8]) -> io::Result<usize> {

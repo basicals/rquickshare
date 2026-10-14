@@ -206,6 +206,7 @@ struct Selection {
 }
 
 struct Reservation {
+    memory_bytes: u64,
     text_bytes: u64,
     resource: Weak<crate::prepared_source::PreparedSource>,
     handles: usize,
@@ -473,12 +474,19 @@ impl Coordinator {
             .ok_or(Error::Capacity)?;
         let bytes = selection.total_bytes();
         reserve_usage(self.usage(), handles, bytes, self.limits)?;
+        let memory_bytes = selection
+            .files()
+            .iter()
+            .map(|file| file.memory_bytes())
+            .sum();
+        self.reserve_memory(memory_bytes)?;
         let id = SelectionId(self.epoch, self.advance()?);
         let resource = Arc::new(crate::prepared_source::PreparedSource::from(selection));
         self.reservations.insert(
             id,
             Reservation {
                 text_bytes: 0,
+                memory_bytes,
                 resource: Arc::downgrade(&resource),
                 handles,
                 bytes,

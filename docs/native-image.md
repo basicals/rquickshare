@@ -14,7 +14,7 @@ without new image IPC or deletion API. Native text editor already owns cancellab
 GTK stream capture. GDK read_texture decodes before caller dimension validation,
 so use bounded image/png stream and png0.18.1 decoder/encoder in an owned worker.
 
-1. [ ] I1: anonymous sealed/read-only source factory and kernel-derived memory
+1. [x] I1: anonymous sealed/read-only source factory and kernel-derived memory
    classification; reserve aggregate memory through staged/direct/actual-held file
    sources. Preserve disk descriptors and existing file/CLI/source lifetime checks.
 2. [ ] I2: bounded PNG decoder, normalized PNG encoder, small preview, immutable
@@ -112,7 +112,19 @@ No full-product Mode B/ten-run/Google signoff claim. Record actual observations 
 
 ## Primary API references inspected
 
+I1 environment observation: this host's /tmp is seal-capable tmpfs. The initial
+`memory` test filter passed4/failed2 because existing disk fixtures used mutable
+tmpfs descriptors. This is the deliberately frozen rejection above, not a relaxed
+assertion. Disk compatibility checks use TMPDIR=$PWD/core_lib/target/image-test-tmp
+on the repository filesystem; tmpfs rejection stays independently tested. Test
+commands must retain this setting when they create ordinary mutable disk fixtures.
+
 https://docs.rs/png/0.18.1/png/struct.Decoder.html (limits are best effort, caller
 buffers separately bounded); https://docs.rs/png/0.18.1/png/struct.Reader.html;
 https://man7.org/linux/man-pages/man2/memfd_create.2.html. Local png/rustix source
 inspected alongside these APIs. New dependency pinned, lock changes checked.
+
+I1 actual verification: memory filter6passed/0failed0.07s with disk TMPDIR; includes
+existing text quota/retention plus4 new factory/accounting scenarios. Strict core
+all-target clippy passed6.54s. Kernel-source size/read-only/seals and atomic staged/
+direct admission/lifetime checks passed. Terminal closed.
