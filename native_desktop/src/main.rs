@@ -5,6 +5,7 @@ mod desktop_guard;
 mod ingress;
 mod panel;
 mod placement;
+mod portal;
 #[cfg(test)]
 mod test_bus;
 mod tray;

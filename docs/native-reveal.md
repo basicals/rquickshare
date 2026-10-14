@@ -20,7 +20,7 @@ GTK controller serializes requests and keeps private results out of PanelState.
 2. [x] F2: Files1 captured availability plus typed read-only FD acquisition, bounded
    joined daemon filesystem worker, SDK/controller checked private result. Preserve
    Manager2/Text1/Operations signatures, no caller paths or persistent file leases.
-3. [ ] F3: explicit per-file Show in folder controls and owned portal OpenDirectory
+3. [x] F3: explicit per-file Show in folder controls and owned portal OpenDirectory
    adapter; current epoch/revision/unlock checks and cancellation. No OpenFile/default
    application/URL/automatic reveal. Reuse one controller and existing UI ownership.
 4. [ ] F4: affected domain/kernel/private-broker/GTK/portal checks once, strict lint/
@@ -138,6 +138,15 @@ No suitable backend-specific GTK surface handle is currently exposed by this cra
 use the officially permitted empty parent_window, without guessed focus identity.
 Physical portal focus/selection remains acceptance, not an automated claim.
 
+F3 cold-start review: an installed portal may be D-Bus activatable without an
+existing owner. Explicit Show in folder must use the broker's fixed
+StartServiceByName(SERVICE,0) once if GetNameOwner reports NameHasNoOwner, then resolve
+and validate the resulting unique owner. This is standard activation of the known
+desktop portal on the user's explicit action, not application install, shell launch
+or a new auto-start policy. Other lookup errors fail; no retry loop or activation
+from watch/receipt events. Verification uses a private non-activating broker and
+owned test service; no real portal activation occurs. Add before final adapter checks.
+
 Official Request and Window Identifiers pages inspected2026-10-14:
 https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.Request.html
 https://flatpak.github.io/xdg-desktop-portal/docs/window-identifiers.html
@@ -178,3 +187,50 @@ actual worker join and coordinator128 cap. Controller completion assertions adde
 before final overall core verification; do not claim that later addition was already
 run here. Library inventory570. GUI TransferView fixtures receive reveal_revision
 None; actual reveal controls are F3. Terminal closed.
+
+
+F4 first combined observations: full core570/0 passed7.44s/build10.43s, binary
+modern_protocol4/0 and native_daemon4/0 passed0.00/0.02s; strict core lint3.83s.
+Native built13.30s and observed27 methods pass,1 portal method fail,1 portal wait
+remain pending. Interrupted only this owned test session (exit130); no own brokers
+or test processes remained. Isolated failing method then reproduced Unavailable
+instead of expected success (0.01s/build3.46s). Root cause: the external test portal's
+zbus property defaulted to Version while the real portal contract is lowercase
+version. Correct the fake's property annotation; keep production lookup unchanged.
+The pending test will select both admission and early completion, so contract
+failure cannot hang waiting for an event. No sleeps/weak assertions added. This
+corrects the external dependency contract, not a domain-logic mock.
+
+
+Portal fixture follow-up: lowercase property correction reached OpenDirectory;
+then an incorrect hard-coded token prefix length in the fake panicked its method
+handler, leaving both callers without replies. Correct suffix validation to32 exact
+hexadecimal characters after the fixed prefix, and return a D-Bus contract error
+instead of panicking inside an external mock handler. Both owned hung test sessions
+were interrupted (exit130); no production timeout or assertion relaxation. Also
+verify actual private FD Arc drop after cancelled/lost-owner worker shutdown.
+
+
+F3 completed: per-file lazy full-manifest controls, explicit cancel, latest
+controller/epoch/revision/unlock guards and joined descriptor-only portal operation.
+Portal fake repairs retained strict contracts: final3 portal methods passed0.07s
+(build4.40s); strict native lint4.03s and build11.28s passed. Existing isolated GTK
+and identity guard passed in the initial native run. No fresh29 full-suite pass is
+claimed after the portal-only repairs. Cold activation follows fixed standard
+StartServiceByName; private tests prove missing-service failure/owned-service paths,
+not an installed successful activation or physical file-manager focus/selection.
+One new guard and three new portal methods, plus strengthened existing GTK smoke.
+Terminal closed.
+
+F4 responsiveness repair plan before code: awaiting filesystem acquisition inside
+serial dispatch can block runtime.step/control/read processing while an external
+filesystem is slow. Move that one already-owned worker result/reply into the existing
+bus select loop, as settings already do. Keep one outstanding file request and Busy
+for additional acquisitions, revalidate client/terminal receipt before reply, and
+join worker/drop pending reply on close. No API/schema/source behavior change. Add
+an explicit resolver seam to delay the actual filesystem call in a private-broker
+scenario: second client snapshot/cancel must complete while first read waits; a
+second acquisition must return Busy. Release by condition, then verify exact FD.
+This is a scoped internal availability fix in the approved owner, not another
+service or significant public-contract choice. Repeat only affected core/bus checks
+and rebuild the native consumer after this shared implementation change.

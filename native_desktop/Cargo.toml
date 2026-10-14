@@ -16,6 +16,7 @@ tokio = { version = "1.43", features = ["rt-multi-thread", "sync", "net", "proce
 tokio-util = { version = "0.7", features = ["rt"] }
 zbus = { version = "=5.19.0", default-features = false, features = ["tokio"] }
 futures = "0.3"
+rand = "0.9"
 rustix = { version = "1.0", features = ["process", "fs"] }
 
 [dev-dependencies]

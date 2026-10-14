@@ -35,6 +35,7 @@ fn same_description(a: &TransferView, b: &TransferView) -> bool {
         && a.phase == b.phase
         && a.consent_revision == b.consent_revision
         && a.content_revision == b.content_revision
+        && a.reveal_revision == b.reveal_revision
         && a.details.kind == b.details.kind
         && a.details.status == b.details.status
         && a.details.sender == b.details.sender
@@ -131,6 +132,14 @@ impl Panel {
             if let Some(button) = named(root.upcast_ref(), name) {
                 button.set_sensitive(enabled);
             }
+        }
+        for index in 0..transfer.details.files.len() {
+            if let Some(button) = named(root.upcast_ref(), &format!("reveal-{index}")) {
+                button.set_sensitive(ready && transfer.reveal_revision.is_some());
+            }
+        }
+        if let Some(cancel) = named(root.upcast_ref(), "cancel-reveal") {
+            cancel.set_visible(self.revealing(&transfer.transfer));
         }
         if let Some(progress) = named(root.upcast_ref(), "progress").and_downcast::<gtk::Label>() {
             progress.set_text(&format!(

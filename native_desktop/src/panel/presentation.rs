@@ -13,6 +13,7 @@ impl Panel {
         self.close_text_review();
         self.close_composer();
         self.close_image();
+        self.close_reveal();
         let dismissed = self.policy.borrow_mut().dismiss();
         let notices = self
             .model
@@ -71,10 +72,12 @@ impl Panel {
             self.close_text_review();
             self.close_composer();
             self.close_image();
+            self.close_reveal();
         }
         self.refresh_text_review();
         self.refresh_composer();
         self.refresh_image();
+        self.refresh_reveal();
         self.render();
         self.apply_presentation();
     }

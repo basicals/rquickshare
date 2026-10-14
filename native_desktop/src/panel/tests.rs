@@ -69,6 +69,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     // Arrange: this single GTK test runs on an isolated display/session bus.
     gtk::init().unwrap();
     rows::verify_keyed_layout();
+    reveal::tests::verify_reveal_smoke();
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let application = gtk::Application::new(
         Some("io.github.morozhenko_apps.RQuickShare.WidgetTest"),

@@ -24,6 +24,7 @@ mod compose;
 mod image;
 mod menu;
 mod presentation;
+mod reveal;
 mod rows;
 mod settings;
 mod text;
@@ -70,6 +71,7 @@ pub struct Panel {
     text_review: RefCell<Option<Rc<text::Review>>>,
     composer: RefCell<Option<Rc<compose::Composer>>>,
     image: RefCell<Option<Rc<image::Image>>>,
+    reveal: RefCell<Option<Rc<reveal::Pending>>>,
     text_generation: RefCell<Rc<()>>,
     rows: RefCell<rows::Rows>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
@@ -102,7 +104,15 @@ fn clear(container: &gtk::Box) {
 fn details_card(details: &TransferDetails) -> gtk::Box {
     details_card_mode(details, true)
 }
+type FileAction = dyn Fn(&gtk::Box, u32);
 fn details_card_mode(details: &TransferDetails, full: bool) -> gtk::Box {
+    details_card_mode_with_files(details, full, None)
+}
+fn details_card_mode_with_files(
+    details: &TransferDetails,
+    full: bool,
+    action: Option<Rc<FileAction>>,
+) -> gtk::Box {
     let row = card();
     match details.status {
         DetailsStatus::Unavailable => row.append(&label("Waiting for sender and payload details")),
@@ -156,8 +166,13 @@ fn details_card_mode(details: &TransferDetails, full: bool) -> gtk::Box {
             expander.connect_expanded_notify(move |expander| {
                 if expander.is_expanded() {
                     let list = gtk::Box::new(gtk::Orientation::Vertical, 4);
-                    for file in files.iter() {
-                        list.append(&label(&format!("{} · {} bytes", file.name, file.size)));
+                    for (index, file) in files.iter().enumerate() {
+                        let row = gtk::Box::new(gtk::Orientation::Vertical, 4);
+                        row.append(&label(&format!("{} · {} bytes", file.name, file.size)));
+                        if let Some(action) = &action {
+                            action(&row, index as u32);
+                        }
+                        list.append(&row);
                     }
                     expander.set_child(Some(&list));
                 } else {
@@ -286,6 +301,7 @@ impl Panel {
             text_review: RefCell::new(None),
             composer: RefCell::new(None),
             image: RefCell::new(None),
+            reveal: RefCell::new(None),
             text_generation: RefCell::new(Rc::new(())),
             rows: RefCell::new(rows::Rows::default()),
             dismissal: RefCell::new(None),
@@ -399,6 +415,7 @@ impl Panel {
             self.close_text_review();
             self.close_composer();
             self.close_image();
+            self.close_reveal();
         }
         let saved = state
             .settings
@@ -434,6 +451,7 @@ impl Panel {
         self.refresh_text_review();
         self.refresh_composer();
         self.refresh_image();
+        self.refresh_reveal();
         self.render();
         self.apply_presentation();
     }
@@ -518,6 +536,7 @@ impl Panel {
         self.close_text_review();
         self.close_composer();
         self.close_image();
+        self.close_reveal();
         if let Some(task) = self.completion.borrow_mut().take() {
             task.abort();
         }
@@ -922,7 +941,8 @@ impl Panel {
         ready: bool,
         full: bool,
     ) -> gtk::Box {
-        let row = details_card_mode(&transfer.details, full);
+        let row =
+            details_card_mode_with_files(&transfer.details, full, self.file_action(transfer, full));
         let phase = label(phase_text(transfer.phase));
         phase.set_widget_name("phase");
         row.append(&phase);
@@ -960,6 +980,20 @@ impl Panel {
                 });
                 row.append(&review);
             }
+        }
+        if full && transfer.reveal_revision.is_some() {
+            let cancel = gtk::Button::with_label("Cancel folder request");
+            cancel.set_widget_name("cancel-reveal");
+            cancel.set_visible(self.revealing(&transfer.transfer));
+            let weak = Rc::downgrade(self);
+            cancel.connect_clicked(move |_| {
+                if let Some(panel) = weak.upgrade() {
+                    panel.close_reveal();
+                    panel.notice("Folder request cancelled.");
+                    panel.render();
+                }
+            });
+            row.append(&cancel);
         }
         if !transfer.phase.is_terminal() {
             let cancel = gtk::Button::with_label("Cancel");

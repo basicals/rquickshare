@@ -1717,6 +1717,7 @@ dependencies = [
  "futures",
  "gtk4",
  "gtk4-layer-shell",
+ "rand",
  "rqs_lib",
  "rustix",
  "tempfile",

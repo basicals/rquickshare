@@ -7,7 +7,10 @@ use rqs_lib::{
         desktop::{PreparationGate, PreparationPermit},
     },
 };
-use std::{path::PathBuf, sync::Mutex};
+use std::{
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 use tokio::{runtime::Handle, sync::watch, task::JoinHandle};
 type ImageReply = tokio::sync::oneshot::Receiver<(
     Result<rqs_lib::clipboard_image::CapturedImage, rqs_lib::clipboard_image::ImageError>,
@@ -26,6 +29,43 @@ pub struct Ingress {
     pub gate: PreparationGate,
 }
 impl Ingress {
+    pub fn start_reveal(
+        &self,
+        runtime: &Handle,
+        file: Arc<std::fs::File>,
+        cancel: tokio_util::sync::CancellationToken,
+        permit: PreparationPermit,
+    ) -> tokio::sync::oneshot::Receiver<Result<(), crate::portal::Error>> {
+        self.reveal_job(runtime, permit, crate::portal::show(file, cancel))
+    }
+    pub(crate) fn reveal_job(
+        &self,
+        runtime: &Handle,
+        permit: PreparationPermit,
+        work: impl std::future::Future<Output = Result<(), crate::portal::Error>> + Send + 'static,
+    ) -> tokio::sync::oneshot::Receiver<Result<(), crate::portal::Error>> {
+        let (reply, receive) = tokio::sync::oneshot::channel();
+        let mut task = self.task.lock().expect("ingress ownership");
+        let previous = task.take();
+        let state = self.state.clone();
+        state.send_replace(IngressState {
+            busy: true,
+            failed: false,
+        });
+        *task = Some(runtime.spawn(async move {
+            if let Some(previous) = previous {
+                let _ = previous.await;
+            }
+            let result = work.await;
+            state.send_replace(IngressState {
+                busy: false,
+                failed: false,
+            });
+            drop(permit);
+            let _ = reply.send(result);
+        }));
+        receive
+    }
     pub fn start_image(
         &self,
         runtime: &Handle,
