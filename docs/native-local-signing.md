@@ -1,5 +1,11 @@
 # Native release signing on the existing Linux workstation
 
+Current production checkpoint: same-PC keys have been initialized through user
+Pinentry and verified by an actual non-release subkey signature/gpgv check.
+Primary6D8854762CF0C86881138A56695A0888D09FA616. Both dedicated agents are closed.
+Default private root is ~/.rquickshare-signing. Recovery destination and release
+approval/publication remain open; earlier pending-initialization notes are history.
+
 2026-10-14. Mode A. Direct dev. User explicitly rejected additional machines/VMs/
 hardware and selected the existing Linux PC. This supersedes the separate-host
 requirement in native-signer-custody-review.md and earlier R2 custody notes.
@@ -182,3 +188,33 @@ not a new signing authority/host. Explicit --state-dir remains available and gua
 Update operator instructions before retry, check syntax/help/whitespace, then run
 real initialization with system Pinentry. Existing insecure-parent tests already
 protect the refusal; unchanged key-generation tests need no repetition.
+
+## Actual production profile initialization (2026-10-14)
+
+User explicitly confirmed being at the workstation and entered the passphrase in
+system Pinentry. initialize and subsequent read-only inspect succeeded using the
+corrected ~/.rquickshare-signing default. Public primary fingerprint:
+6D8854762CF0C86881138A56695A0888D09FA616. Public signing subkey:
+1F5150D98D94C43109FBA2503E7DE744C1014357. Public keyring SHA256:
+2c9f0593c762c4a792ca1d27f0c7911a3f0f935c3e36332c9944700aa763a25b.
+Primary expires2031-10-13T18:22:36Z, subkey2027-10-14T18:23:43Z. Current verified
+profile layout/protection is the initialized same-PC custody, not an offline host.
+No production password/private key was read, logged, exported into Git or CI.
+
+Next bounded verification: use the working signer profile for a fixed-format
+non-release challenge with fresh nonce/time, require exactly the expected subkey
+and pinned primary in real gpgv status. This message is explicitly not APT metadata,
+a release approval or package signature. Run only if its dedicated agent socket
+is initially closed, and close the exclusively started agent in finally. Retain
+only public identity/challenge/signature evidence; no secret profile copy. Do not
+sign/publish a release as a side effect of key verification.
+
+Control challenge verification succeeded with exact signing subkey/primary and
+SHA256. Public keyring committed at scripts/keyrings/rquickshare-native-archive.gpg;
+public challenge/signature/evidence at docs/evidence/native-signing-2026-10-14/.
+Keyring export SHA256 matches the initialized profile. Real agent Unix sockets for
+both authority and signer reject connections after completion. No unchanged test
+suite repetition, release signature, R2 key backup/object upload or host enrollment.
+Private material stays only under the user's private home root, outside Git/output
+archives. Recovery copy destination must be selected before key material is sent
+to any external storage. The live signature is expressly not a release approval.
