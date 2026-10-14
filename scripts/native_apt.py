@@ -196,7 +196,7 @@ def validate_tree(root, now=None, signed=False, check_time=True):
         raise ValueError("Invalid Release date") from error
     if check_time:
         now = clock() if now is None else now
-        require(date.tzinfo is not None and date <= now + timedelta(minutes=10) and now < date + LIFETIME, "Expired or future repository metadata")
+        require(date.tzinfo is not None and date <= now + timedelta(seconds=10) and now < date + LIFETIME, "Expired or future repository metadata")
     expected = {f"dists/{SUITE}/Release"}
     packages = {}
     version = None

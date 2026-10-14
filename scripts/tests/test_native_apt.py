@@ -78,7 +78,7 @@ class NativeAptTests(unittest.TestCase):
         result = apt.verify(self.signed, self.keyring, self.fingerprint, self.now)
         self.assertEqual(result["version"], "0.11.5+native1")
         self.assertEqual(set(result["packages"]), {"amd64"})
-        for now, valid in [(self.now - timedelta(minutes=10), True), (self.now - timedelta(minutes=10, seconds=1), False),
+        for now, valid in [(self.now - timedelta(seconds=10), True), (self.now - timedelta(seconds=11), False),
                            (self.now + apt.LIFETIME - timedelta(seconds=1), True), (self.now + apt.LIFETIME, False)]:
             with self.subTest(now=now):
                 if valid:

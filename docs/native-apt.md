@@ -8,7 +8,7 @@ manager, real signing key, external publication/push or sibling project change.
 ## Analysis and plan before code
 
 The native Debian builder/verifier already validates exact assets, ELF identity,
-dependencies and no maintainer scripts. It fixes every artifact to +native1, which
+dependencies and no maintainer scripts. At stage entry it fixed every artifact to +native1, which
 cannot distinguish successive native builds to APT. Legacy release jobs build
 Tauri and its version fetch is not native provenance. There is no configured APT
 host/key or package-manager UI contract. Tools dpkg-scanpackages, gpg/gpgv, apt-get
@@ -25,7 +25,7 @@ tool plus a small exact SHA256 Release serializer, not a private package resolve
 3. [x] U3: isolated contract tests with ephemeral test-only signing authority and
    actual APT acquisition/candidate/download; native CI runs affected checks and
    emits an explicitly unsigned repository staging artifact, with no signing secrets.
-4. [ ] U4: actual rebuilt release package + unsigned repository stage; document exact
+4. [x] U4: actual rebuilt release package + unsigned repository stage; document exact
    measured checks, trust bootstrap, signing/promotion handoff, atomic commits and
    exact source/artifact export. Bind production URI/key custody only after review.
 
@@ -100,9 +100,10 @@ failed; use installed Debian tool documentation and actual APT acceptance below.
 
 ## Current state
 
-Plan frozen before code. U1–U4 pending. The previous login package/checks remain
-recorded in native-autostart.md. Production publication needs a separately chosen
-URI/key custody; complete local reviewable tooling before asking for that binding.
+U1–U4 local implementation/checks/artifacts complete. The previous login package
+checks remain in native-autostart.md. Production publication still needs a chosen
+URI/key custody; native-apt-publication-review.md records that binding decision.
+No production trust enrollment or externally published APT channel is claimed.
 
 U1 complete: revision2 is tracked in packaging/release.toml; strict positive bounded
 revision/native version and real dpkg ordering are covered by the existing package
@@ -182,3 +183,37 @@ fresh standalone snapshot is not authorization to delete the old public tree.
 Use immutable object publication followed by metadata-last/atomic promotion.
 Promotion/refresh job, production signing-key lifecycle and real installed
 upgrade/removal/session behavior are pending the concrete production binding.
+
+Final standards review: sources.list(5) specifies a10-second default future-date
+allowance. Align the verifier with actual APT instead of the initial ten-minute
+tolerance; adjust only the boundary table and rerun that affected scenario.
+
+The corrected affected date/bootstrap scenario1/0 passed1.436s. No other unchanged
+scenario was repeated. Python syntax compilation, native workflow YAML parse with
+contents:read permission assertion and whitespace checks passed. Rust code was
+unchanged, so existing core/native checks are preserved rather than rerun.
+
+U4 local complete: actual locked release package0.11.5+native2 amd64 built/verified,
+core/native cached0.71s/0.56s; exact10-file assets/modes/owner/checksum/ELF/dependency
+checks and extracted offline GUI/daemon --help + private settings fixture passed.
+SHA256 5821ad8c85556b603461876b7c6a5484c01048feb2dbf4e741c04058880ec3c7.
+Actual unsigned repository prepared from those bytes at
+native_desktop/target/apt-unsigned-native2; Date2026-10-14 16:10:26 UTC,
+Valid-Until2026-10-21 16:10:26 UTC. Exact Release/index/gzip/by-hash/pool admission
+passed. This output has no production signature and must not be enrolled as a
+trusted repository. Ephemeral test authorities were not exported as release keys.
+
+Current source boundaries: package revision and local APT production tools/CI
+staging only; no new HTTP client/UI/update installer, native protocol or daemon
+behavior change. Known core feature-specific and merged-/usr loader notices remain
+visible. All owned terminals exited (Terminal closed). No real manager, package
+install, host APT lists/status/hooks/trust, production key, publication/push, peer,
+clipboard or sibling project mutation. Rollback commits in reverse stage order.
+
+Next: choose concrete hosting and signing custody before publishing/enrollment.
+Then prepare reviewable production release/refresh/rotation/revocation workflow,
+retain authenticated snapshots and confirm fingerprint independently. Installed
+upgrade/removal during transfers and actual OS/KDE/system-update behavior remain
+acceptance; isolated APT update/download does not prove installed lifecycle or
+Google interoperability. Exact committed source and unsigned artifact are exported
+with separately recorded SHA256/provenance in the output checkpoint.
