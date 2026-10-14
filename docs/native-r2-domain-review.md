@@ -25,7 +25,7 @@ app-dist. Conditional publisher and external signing handoff now pass local doma
 HTTP APT checks in native-r2.md. These checks do not establish production R2
 object writes or authorize a domain/routing change.
 
-## Options requiring selection
+## Options reviewed before selection
 
 1. Recommended: a dedicated single-level subdomain such as apt.morozhenko.com,
    directly connected to rquickshare-native-apt after checking existing DNS/usage.
@@ -53,10 +53,11 @@ option2. No routing Worker or DNS mutation before selection (AGENTS3/3.1).
 
 ## Handoff
 
-Domain choice pending. Existing isolated signer choice remains selected and is not
-asked again; concrete signer host/hardware and public release fingerprint are
-still missing operational inputs. Keep the private bucket and local work scoped;
-do not publish artifacts, create production keys or change Picturix while waiting.
+User selected https://download.morozhenko.com/dist/rQuickShare/. Its narrow
+Worker route is deployed and checked in native-download-route.md. Existing
+isolated signer choice remains selected; concrete signer host/hardware and public
+release fingerprint are still missing operational inputs. No production key or
+signed artifacts were invented. Picturix manifest bytes remain unchanged.
 
 Primary source:
 https://developers.cloudflare.com/r2/buckets/public-buckets/

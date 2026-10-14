@@ -21,11 +21,11 @@ HTTP preflight provide separate observations, not those unavailable API checks.
 2. [x] D2: generated Wrangler types, strict TypeScript/static checks, actual local
    workerd+R2 integration/HTTP path/stream/range/HEAD/error isolation once and dry-run
    build/startup check. Package/client bytes remain unchanged.
-3. [ ] D3: deploy the reviewed new Worker with only route
+3. [x] D3: deploy the reviewed new Worker with only route
    https://download.morozhenko.com/dist/rQuickShare/* and dedicated R2 binding;
    verify actual route diff, public prefix/error/cache headers and unchanged
    Picturix manifest. No DNS repointing, wildcard-host takeover or app-dist write.
-4. [ ] D4: bind producer/bootstrap/operator URI, record actual limitations/results,
+4. [x] D4: bind producer/bootstrap/operator URI, record actual limitations/results,
    update SSOT/atomic commits/exact source export. Production signing remains gated
    on concrete isolated signer/public fingerprint; no fabricated release authority.
 
@@ -86,7 +86,7 @@ authority. Failed route-precedence web URL was replaced by the actual Routes pag
 
 ## Current state
 
-D1/D2 complete locally; D3 deployment and D4 final handoff pending. User selected URI and authorized scoped route setup; no renewed
+D1–D4 complete for the selected read-only route. Signed production publication remains gated below. User selected URI and authorized scoped route setup; no renewed
 architecture/permission question is needed for that exact binding. Missing signer
 identity gates production signing/enrollment only, not the selected read-only route.
 
@@ -122,3 +122,46 @@ After binding the bootstrap default, the affected real runtime/APT scenario pass
 again1/0 in1.482s (test1.006s). Python syntax/CLI help, exact route/bucket/logging
 config, CI YAML/contents:read and whitespace passed. No other passing scenario was
 repeated. All owned test HTTP/GPG/workerd processes disposed; Terminal closed.
+
+## Actual deployment and public acceptance
+
+Deployed source9fe77dc with Wrangler4.151.0, Worker rquickshare-download, version
+3d3a4542-b0c8-4717-a615-bf85efd6fd77, observed startup1ms. Route ID
+7a7f0f681b794453b1fe8407ec3b7097, pattern exactly
+https://download.morozhenko.com/dist/rQuickShare/*, request_limit_fail_open=false.
+Authenticated before/after comparison preserves all10 existing route IDs and
+fields and adds only this route. Earlier filtered baseline omitted the API
+request_limit_fail_open field; full predeployment baseline captured before upload
+and compared afterwards. No sibling route/DNS/cache mutation.
+
+Actual bounded public curl checks: prefix root/current empty InRelease404,
+POST to known InRelease405 with Allow:GET,HEAD, private snapshot/unknown query404;
+all five native errors33 bytes, Cache-Control:no-store and nosniff, no cache HIT.
+Picturix after deployment200/565 bytes, same ETag and exact preflight SHA256
+73a2d36a8a1e4b37ba9ddd05266f66323b9a763a845a9de45defbc88238b7fdc.
+Evidence: infra/native-download/evidence/deployment-2026-10-14.json.
+
+Bootstrap CLI now defaults to this production URI; generic explicit --uri remains
+validated for other isolated channels. No real production signature, object upload,
+APT enrollment/install, user manager/settings, peer test, sibling edit, branch or
+source push. Worker deployment is separate from release publication.
+
+Rollback: delete ONLY zone ae58570320d7024d7fd5e97205b4ff76 Worker route
+7a7f0f681b794453b1fe8407ec3b7097 through the Workers Routes API, then remove
+rquickshare-download if unused. Preserve bucket/app-dist/DNS/all10 baseline routes.
+This restores origin handling for the unused prefix; verify Picturix again.
+
+Remaining operational gates: concrete isolated signer host/hardware/custodian,
+approved real public primary fingerprint and offline recovery/refresh process;
+bucket-scoped publication credential; actual conditional R2 write/readback/denial
+and signed public HTTPS APT acceptance. DNS/cache settings API reads remain403;
+public observations above do not claim those inaccessible settings were audited.
+Signed metadata expires in seven days; do not enroll clients into an empty channel.
+All owned runtime/HTTP/GPG and terminal processes closed. No repeated unchanged
+tests or package rebuild. Export committed native/core/docs/scripts/infra source
+with exact Git inventory/CRC, preserving existing package bytes and unsigned status.
+
+Remote settings API also confirms exactly one ARCHIVE/rquickshare-native-apt
+binding, compatibility2026-10-14/nodejs_compat, query redaction, invocation_logs=false,
+traces disabled, workers.dev and preview URLs disabled. Selected public settings
+are included in committed deployment evidence; no credential value was recorded.
