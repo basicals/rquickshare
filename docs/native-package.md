@@ -17,7 +17,7 @@ not a working activation contract. Current workflows package Tauri only.
    preserving passive SDK connect, UID/owner checks, cancellation and settings restart.
 2. [x] P2: native GTK launch/reconnect opts into activation, package-owned application
    entry and direct Debian builder/verifier; preserve legacy release jobs.
-3. [ ] P3: isolated broker/domain/package checks, strict affected lint/build/format,
+3. [x] P3: isolated broker/domain/package checks, strict affected lint/build/format,
    native manual artifact workflow, actual observations, exact archive and handoff.
 
 Rollback GTK activation first, then adapter and service assets; package builder
@@ -220,3 +220,15 @@ upgrade/removal/tray/Google acceptance remains explicit; nothing was installed o
 enabled. The next native-autostart-review.md is analysis only and awaits option1/2
 for login component UX/GUI owner refactoring, preserving existing default-off.
 Final build-script lint: Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.71s.
+
+
+P3 export verified against committed3ddf924:278 tracked source files, ZIP integrity/
+exact inventory/selected Git bytes, all top-level SSOT copies and English progress.
+Release rquickshare_0.11.5+native1_amd64.deb and exact SHA256 sidecar copied/verified;
+package SHA256 cdc8a236498677831ef4d0c7646a20ce4bb76886c37f017e54baf705b9dd4763.
+Those package bytes are identical to the pre-build-cache-repair verified artifact,
+consistent with unchanged generated/runtime behavior. ZIP excludes build targets,
+private/user data; LICENSE and the manual native workflow are included. After this
+handoff commit, re-export exact final HEAD; progress stores final ZIP HEAD/hash.
+P1-P3 complete, next review remains a genuine pending product/lifecycle choice.
+All owned terminal commands/brokers/test workers closed. Terminal closed.
