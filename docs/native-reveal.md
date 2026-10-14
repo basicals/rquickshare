@@ -23,7 +23,7 @@ GTK controller serializes requests and keeps private results out of PanelState.
 3. [x] F3: explicit per-file Show in folder controls and owned portal OpenDirectory
    adapter; current epoch/revision/unlock checks and cancellation. No OpenFile/default
    application/URL/automatic reveal. Reuse one controller and existing UI ownership.
-4. [ ] F4: affected domain/kernel/private-broker/GTK/portal checks once, strict lint/
+4. [x] F4: affected domain/kernel/private-broker/GTK/portal checks once, strict lint/
    build/format/XML, actual results/failures, atomic commits and exact export/handoff.
    Physical KDE file-manager selection remains separate acceptance.
 
@@ -254,9 +254,19 @@ core/29 native. Earlier full570+8 and native partial/repaired observations remai
 separate; no newly rerun571/29 whole-suite or ten-run/coverage claim.
 Terminal closed. No owned command/server/broker/worker remains running.
 
-Current handoff: approved reveal implementation is complete; export verification
-will close F4. Physical installed KDE portal activation/focus/selection and changed
+Current handoff: approved reveal implementation and F4 are complete. Physical installed KDE portal activation/focus/selection and changed
 receive settings/real-peer results remain acceptance, not automated proof. Root
 rename/settings independence and collision ordering are checked at the authority
 boundary. Same-size edit checks detectable metadata change, not cryptographic
 attestation. No live user portal/clipboard/config/install or peer operation occurred.
+
+
+F4 export: native-source ZIP at the chat outputs/rquickshare-native-gtk-source.zip
+was verified against committed3d23c48:266 tracked files, integrity, exact inventory
+and selected committed source bytes; no target/private/user data. All top-level
+SSOT markdown and native README were copied from committed Git bytes. English
+rquickshare-progress.md records exact export HEAD/SHA256 and scoped observations.
+After this final handoff commit, rerun the same export once against final HEAD so
+ZIP/docs/progress agree. This is artifact integrity verification, not repeated tests.
+Remaining physical/product domains are explicit in product-direction.md and roadmap.
+No branch/worktree/upstream deletion, installation or push. Terminal closed.
