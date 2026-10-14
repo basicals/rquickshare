@@ -35,10 +35,13 @@ dependencies. This separate crate keeps GTK4 isolated from Tauri's GTK3 stack.
 cargo +stable build --locked --manifest-path native_desktop/Cargo.toml
 ```
 
-Normal launch requires a supported Layer Shell compositor, a same-user KDE status
-notifier watcher and the manually started native daemon on the user session bus.
-Follow [native-daemon-startup.md](../docs/native-daemon-startup.md); do not start it
-beside an existing transport owner. No implicit daemon installation/activation.
+Normal launch requires a supported Layer Shell compositor and same-user KDE status
+notifier watcher. Explicit launch/Reconnect now requests the installed daemon through
+systemd user D-Bus activation when missing. A development checkout without installed
+assets still needs a manually started daemon; builds never install/enable services.
+Follow [native-package.md](../docs/native-package.md) and
+[native-daemon-startup.md](../docs/native-daemon-startup.md); do not start it beside
+an existing transport owner. Passive SDK connections and preview never activate it.
 Missing graphical/tray prerequisites fail explicitly. A missing/incompatible daemon
 enters a visible, non-preview unavailable state with explicit Reconnect. The panel
 stays hidden until tray activation, a CLI import or a safe pending daemon notice. Escape/close hides it; Quit closes local clients, not daemon work.
@@ -149,6 +152,13 @@ Memory-backed file descriptors must carry all immutable seals and fit32 MiB each
 128 MiB aggregate in the daemon. Mutable tmpfs sources are rejected; ordinary disk
 sources retain their existing descriptor behavior. For automated disk-source tests
 on a host with tmpfs /tmp, set TMPDIR to a directory on a disk filesystem first.
+
+The native Debian builder is `python3 scripts/native_deb.py build` from the repository
+root. It uses locked release binaries, derives actual ELF library dependencies,
+stages fixed systemd/D-Bus/application/Dolphin assets and verifies the extracted
+artifact offline. `--profile dev` labels a development package explicitly. No package
+is installed or service enabled by build/verification. See
+[packaging/README.md](packaging/README.md) for requirements and remaining acceptance.
 
 
 Completed incoming files now offer Show in folder per manifest entry under Full >

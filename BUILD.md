@@ -32,6 +32,21 @@ pnpm install --frozen-lockfile
 
 ## Development and packages
 
+The native Linux package has an independent direct Debian build path:
+
+```bash
+python3 scripts/native_deb.py build
+```
+
+This builds locked release GUI/daemon binaries, derives ELF runtime dependencies,
+stages the systemd user/D-Bus/application/Dolphin assets and verifies the archive,
+checksum and extracted offline help/settings fixture. It never installs, enables
+or starts services. Python >=3.11, Debian tooling and native GTK4/Layer Shell
+development dependencies are required; see [native packaging](native_desktop/packaging/README.md).
+The manual native-package-smoke workflow targets an Ubuntu26.04 container explicitly.
+Existing Tauri release jobs remain the migration baseline; native installed startup,
+upgrade/removal and KDE/Google acceptance are still separate gates.
+
 From `core_lib`, use `cargo build` or `cargo build --release`. From `app/main`:
 
 ```bash

@@ -15,7 +15,7 @@ not a working activation contract. Current workflows package Tauri only.
 
 1. [x] P1: fixed process/activation assets and explicit owned activation adapter,
    preserving passive SDK connect, UID/owner checks, cancellation and settings restart.
-2. [ ] P2: native GTK launch/reconnect opts into activation, package-owned application
+2. [x] P2: native GTK launch/reconnect opts into activation, package-owned application
    entry and direct Debian builder/verifier; preserve legacy release jobs.
 3. [ ] P3: isolated broker/domain/package checks, strict affected lint/build/format,
    native manual artifact workflow, actual observations, exact archive and handoff.
@@ -114,3 +114,63 @@ methods, avoiding boxing/macro rather than suppressing lint. Final affected serv
 restart/process and actual private-broker ownership tests are included in the
 service filter. Real installed systemd delegation/coalescing remains acceptance;
 fake external admission tests do not prove a real manager. Terminal closed.
+
+P2 implementation state before actual package smoke: explicit native GTK startup/
+Reconnect uses the new adapter, then the unchanged passive SDK. Preview remains
+offline. Native --help returns before GTK/display/runtime/bus; extracted smoke can
+therefore identify the real GUI without showing a window. Failure notice now refers
+to installation/Reconnect rather than requiring manual daemon startup.
+
+Direct Debian builder/verifier and source application entry are implemented. Four
+Python methods use real tiny dpkg-deb archives and table-driven metadata/checksum/
+layout/mode/link/asset/control-script abuse. Initial fixture runs found directory
+modes inherited the host umask; builder now normalizes its own stage directories
+to0755 and control/file modes explicitly, preserving strict verification. Fixture
+postinst is executable so the verifier, rather than dpkg's earlier syntax check,
+rejects it. A subsequent valid fixture was rejected because its local loop shadowed
+the output directory variable and placed the artifact inside its own payload;
+corrected only that fixture variable, retaining exact inventory assertions. Final
+4/0 passed0.627s. Strict native all-target no-deps lint passed7.76s; the known nine
+core no-default-feature warnings remain separate. Release build of both binaries
+and actual stage/extract/help/settings smoke are in progress, not yet a pass.
+
+The manual native-package-smoke workflow builds inside official ubuntu:26.04,
+independently of its Ubuntu24.04 Actions host, with native prerequisites and one
+core/native/package quality gate before release artifact upload. It never installs
+the resulting package or enables a service. Source only: no remote run/push claim.
+Official Docker Ubuntu listing confirms26.04 tag; official Ubuntu package listing
+confirms libgtk4-layer-shell-dev1.3.0-1 for resolute. Inspected2026-10-14:
+https://hub.docker.com/_/ubuntu
+https://packages.ubuntu.com/resolute/libgtk4-layer-shell-dev
+The separate GTK development web fetch failed; installed host and private Debian
+metadata provide actual local GTK4.22.4 evidence, not an Ubuntu24.04 ABI claim.
+
+
+P2 actual release artifact: daemon release build2m46s and native GUI release1m49s
+passed; the actual .deb/checksum/extract/GUI --help/daemon --help/private settings
+--check all passed without install or bus/transport activation. ELF library metadata
+came from installed host records plus the actual extracted Layer Shell .deb shlibs;
+no unresolved dependency was ignored. The host dpkg reported merged-/usr libc
+loader-diversion notices and a stage-layout warning. Before final P3 artifact check,
+move the stage under the conventional debian/rquickshare directory so dpkg-shlibdeps
+recognizes package ownership. Preserve the independent host diversion notice.
+
+P3 additional actual cold broker check passed1/0 in0.05s/build24.20s: real isolated
+systemd-activation-capable dbus-daemon reads the shipped activation asset, requests
+exact rquickshare-daemon.service, then a fake external manager admits the actual
+SelectionBus. The actual NativeClient handshake/state and independent close pass.
+This verifies real broker wire/delegation, not installed systemd process management.
+Upstream systemd src/core/dbus.c signal_activation_request inspected2026-10-14:
+https://raw.githubusercontent.com/systemd/systemd/main/src/core/dbus.c
+It loads the requested unit and queues a start job; that adapter does not require
+Type=dbus. Inference: Type=exec can preserve the current name/epoch lifecycle while
+the broker still waits for the name. Installed unit environment remains acceptance.
+
+Final verifier also reads actual ELF class/endian/executable type/machine before
+smoke, rejecting relabelled binaries regardless of filenames. Final Python5/0
+passed0.965s; new cold-fixture strict core lint6.30s. Native application desktop-file
+validation, both nightly format checks, whitespace and manual workflow YAML/static
+trigger/container checks passed. Remote workflow was not run. Source archives can
+build without .git: SOURCE_DATE_EPOCH is respected, otherwise defaults to the source
+manifest mtime; no unrelated parent Git repository is queried. This affects only
+artifact timestamp normalization, not runtime behavior.

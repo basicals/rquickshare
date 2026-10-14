@@ -1,0 +1,75 @@
+name: Native Linux package smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native_debian:
+    runs-on: ubuntu-24.04
+    # Declare the target ABI explicitly; host-built 26.04 binaries are not 24.04 packages.
+    container: ubuntu:26.04
+    steps:
+      - name: Install native build and isolated-check prerequisites
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git curl build-essential pkg-config dpkg-dev python3 \
+            protobuf-compiler libdbus-1-dev libudev-dev libgtk-4-dev \
+            libgtk4-layer-shell-dev dbus-daemon dbus-x11 xvfb xauth desktop-file-utils
+
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v2.9.0
+        with:
+          workspaces: |
+            core_lib -> target
+            native_desktop -> target
+          shared-key: native-ubuntu-26.04
+
+      - name: Core and package quality gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/core_lib/target/disk-test-tmp"
+          export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/disk-test-tmp"
+          cargo +nightly fmt --manifest-path core_lib/Cargo.toml -- --check
+          cargo +nightly fmt --manifest-path native_desktop/Cargo.toml -- --check
+          cargo +stable test --locked --manifest-path core_lib/Cargo.toml
+          cargo +stable clippy --locked --manifest-path core_lib/Cargo.toml --all-targets -- -D warnings
+          python3 -m unittest discover -s scripts/tests -p test_native_deb.py -v
+          desktop-file-validate native_desktop/packaging/share/applications/io.github.morozhenko_apps.RQuickShare.desktop
+
+      - name: Isolated GTK and native lint gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/disk-test-tmp"
+          GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
+            dbus-run-session --config-file docs/prototypes/preview-bus.conf -- \
+            xvfb-run -a cargo +stable test --locked --manifest-path native_desktop/Cargo.toml
+          cargo +stable clippy --locked --manifest-path native_desktop/Cargo.toml --all-targets --no-deps -- -D warnings
+
+      - name: Build and verify uninstalled native release package
+        run: python3 scripts/native_deb.py build
+
+      - name: Upload verified native release artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: rquickshare-native-ubuntu-26.04
+          path: |
+            native_desktop/target/packages/*.deb
+            native_desktop/target/packages/*.deb.sha256
+          if-no-files-found: error

@@ -844,7 +844,7 @@ impl Panel {
         } else if let Some(notice) = model.notice {
             notice
         } else if self.handle.is_none() {
-            "Transfer service unavailable. Start it, then reconnect."
+            "Transfer service unavailable. Check installation, then reconnect."
         } else if model.desktop.staging {
             "Receiving files from the local sender. Abort to release this preparation."
         } else if model.ingress.busy || *self.ingress.gate.subscribe().borrow() {

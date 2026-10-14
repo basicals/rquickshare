@@ -1,40 +1,58 @@
-# Native desktop package assets
+# Native Linux package
 
-Source assets for the future native package; nothing here is installed by a build.
-Package the native `rquickshare` executable and these files in the same package:
+The source builds a native Debian package with GTK4/Layer Shell GUI, independent
+systemd user daemon, D-Bus activation, application entry and Dolphin Send action.
+A build stages/extracts/verifies files only; it never installs or enables services.
 
-| Source | Package destination | Mode |
-|---|---|---|
-| `../target/release/rquickshare` | `/usr/bin/rquickshare` | 0755 |
-| `share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service` | `/usr/share/dbus-1/services/io.github.morozhenko_apps.RQuickShare.Desktop.service` | 0644 |
-| `share/kio/servicemenus/io.github.morozhenko_apps.RQuickShare.Send.desktop` | `/usr/share/kio/servicemenus/io.github.morozhenko_apps.RQuickShare.Send.desktop` | 0644 |
+From the repository root, with Rust >=1.92, Python >=3.11 and Debian development
+libraries/tools installed:
 
-The package manager owns installation/removal. Uninstall removes its executable
-and D-Bus activation/service menu assets together. No first-run copy into user configuration, standalone
-menu installer, shell wrapper, or persistent user-config cleanup is needed.
-A package must resolve the existing Tauri executable's conflicting path before
-release; do not install this asset beside the legacy `rquickshare` binary, which
-has no native `send` contract. Native daemon activation/settings/package migration
-and dependency metadata remain a separate release stage.
+```sh
+python3 scripts/native_deb.py build
+python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native1_amd64.deb
+```
 
-The action is local-only, accepts 1..256 files/folders, and passes each URL as a
-separate argument after `--`. CLI acquisition is all-or-nothing. The panel preserves
-an existing preparation and requires explicit recipient selection and Send.
-The themed icon is a standard desktop send action, not a new application logo.
+Default artifacts contain locked release binaries. `build --profile dev` explicitly
+labels a development artifact `.debug`; it does not certify release optimization.
+The builder derives runtime shared-library dependencies from both actual ELF files
+using dpkg-shlibdeps and fails if library metadata is missing. GTK4>=4.12 and Layer
+Shell are required. ABI compatibility is determined by the build environment: a
+26.04 build is not an Ubuntu24.04 compatibility claim. Native amd64/arm64 only.
+`--output DIRECTORY` changes the artifact location without installing anything.
 
-Release gates: complete native notification/error presentation for nonterminal
-launch; installed daemon/GUI startup and migration acceptance; actual Dolphin
-multi-selection/folders/Unicode/percent/error/busy behavior; menu discovery,
-package upgrade/uninstall and KDE monitor/scale/focus checks. These assets and
-private-broker tests do not establish installed-product or Google peer acceptance.
+For an explicitly private development sysroot, `--library-dir DIRECTORY` and
+`--shlibs-file FILE` accept actual extracted Debian library metadata; no unresolved
+library is ignored. Such an artifact still requires those libraries when installed.
+The package and neighboring SHA256 sidecar are verified together. Verification
+checks exact allowed paths, owner/mode, assets, dependencies and native identity,
+then runs extracted GUI/daemon --help and a private fixture --settings PATH --check.
+It does not connect to the user bus, show UI or read user configuration.
 
-Contract and measured checks: [native-desktop-ingress.md](../../docs/native-desktop-ingress.md).
-KDE reference: https://develop.kde.org/docs/apps/dolphin/service-menus/
+The `rquickshare` package owns `/usr/bin/rquickshare`, `/usr/libexec/rquickshare-daemon`,
+`/usr/lib/systemd/user/rquickshare-daemon.service` and fixed application/D-Bus/Dolphin
+assets. It replaces the same-name legacy package on explicit installation; never
+install two different packages owning `/usr/bin/rquickshare`. The legacy source
+and release workflows remain migration baseline until native acceptance.
 
-Daemon-owned notification wake calls standard StartServiceByName for the constant
-Desktop service. The activation asset launches only the fixed native binary,
-without paths or shell arguments; transfer state is read from the daemon after
-startup. Missing activation assets retain pending notices for manual GUI startup.
-New event generations can wake again; the same generation never respawns on Quit
-or activation failure. This is not daemon autostart. No files are installed during
-build/tests, and installed desktop activation remains an acceptance gate.
+Explicit application launch/Reconnect requests the fixed daemon D-Bus name when
+missing, requiring a systemd-activation-capable user bus. That request delegates
+to the user unit. The activation Exec sentinel fails closed on unsupported brokers;
+there is no shell/direct-daemon fallback. Type=exec supervises process lifetime,
+preserving the daemon's joined settings-generation bus-name changes. SIGTERM joins
+shutdown without an arbitrary forced-kill deadline. GUI Quit leaves daemon work
+alone. The package has no enablement/autostart/maintainer start scripts and does not
+start sharing merely because it is installed. Login-start controls and updates
+remain separate work. No Google compatibility or installed KDE acceptance implied.
+
+Dolphin uses `rquickshare send -- %U`, 1..256 local files/folders as separate arguments.
+Acquisition is all-or-nothing; preparation preserves existing source and requires
+explicit recipient selection and Send. GUI activation is fixed and receives no
+untrusted paths; transfer/source handoff uses the bounded typed descriptor API.
+
+Installed acceptance remains: systemd delegation/session environment/logout,
+settings restart without process death, old-owner collision, upgrades/removal with
+running transfers, actual Dolphin multi-selection/folders/Unicode/percent/error/
+busy cases, menu discovery, GTK Layer Shell/portal lock/DND/focus/scale and real
+Google peers. Staged package verification does not establish these observations.
+Contracts and measured checks are maintained in repository docs/native-package.md,
+docs/native-desktop-ingress.md and docs/native-notification-backend.md.

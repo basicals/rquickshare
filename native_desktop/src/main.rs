@@ -115,6 +115,10 @@ fn main() {
 }
 fn run() -> Result<(), RunError> {
     let args = std::env::args_os().skip(1).collect::<Vec<_>>();
+    if args.len() == 1 && args[0] == "--help" {
+        println!("rquickshare\nLaunch the native tray client.\nrquickshare send -- FILE_OR_LOCAL_URI...\nPrepare files for an explicit recipient selection and Send.\nrquickshare --preview [--preview-page nearby|incoming|transfers] [--preview-mode compact|full] [--preview-output PATH]");
+        return Ok(());
+    }
     if args.first().is_some_and(|arg| arg == "send") {
         use rqs_lib::service::client::desktop::ErrorCode;
         let paths = cli::paths(args.into_iter().skip(1))
@@ -172,7 +176,12 @@ fn run_gui(options: Options) -> Result<(bool, card_view::Mode), &'static str> {
         let connected = runtime.block_on(async {
             let controller = async {
                 let stream = address.connect().await.ok()?;
-                let client = NativeClient::connect(stream).await.ok()?;
+                rqs_lib::service::activation::activate_daemon(stream, CancellationToken::new())
+                    .await
+                    .ok()?;
+                let client = NativeClient::connect(address.connect().await.ok()?)
+                    .await
+                    .ok()?;
                 let controller = PanelController::spawn(client);
                 let mut updates = controller.handle().subscribe();
                 let complete = updates
