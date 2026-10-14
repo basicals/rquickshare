@@ -25,6 +25,8 @@ use crate::hdl::MDnsServer;
 use crate::manager::TcpServer;
 
 pub mod channel;
+#[cfg(target_os = "linux")]
+pub mod clipboard_image;
 mod errors;
 mod file_reader;
 #[cfg(target_os = "linux")]

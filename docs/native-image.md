@@ -124,7 +124,64 @@ buffers separately bounded); https://docs.rs/png/0.18.1/png/struct.Reader.html;
 https://man7.org/linux/man-pages/man2/memfd_create.2.html. Local png/rustix source
 inspected alongside these APIs. New dependency pinned, lock changes checked.
 
-I1 actual verification: memory filter6passed/0failed0.07s with disk TMPDIR; includes
+I1 actual verification: memory filter6passed/0failed0.08s with disk TMPDIR; includes
 existing text quota/retention plus4 new factory/accounting scenarios. Strict core
 all-target clippy passed6.54s. Kernel-source size/read-only/seals and atomic staged/
 direct admission/lifetime checks passed. Terminal closed.
+
+I2 internal implementation: preview uses nearest-neighbor sampling with integer
+aspect ratio and minimum1px; all four decoded color formats normalize to RGBA8
+preview. PNG allocations use fallible reserves. Re-capture preserves the last
+successful local snapshot on unsupported/invalid input; at most the previous32MiB
+source and one new bounded capture coexist under the same permit. No quota claim
+for GUI provisional snapshots: coordinator admission applies when prepared.
+
+Image Prepare duplicates its already-held read-only descriptor through
+OpenedSelection::try_clone (no name/path reopen), retaining the local snapshot on
+adapter rejection. Close drops that local duplicate; daemon admission counts its
+actual PreparedSource lifetime. Additional descriptors share immutable kernel bytes.
+
+The secondary editor guard does not use the cached Ingress busy projection: the
+image editor owns that worker and idle watch delivery may lag its completion reply.
+The shared permit remains the acquisition authority; editor busy/permit fields and
+daemon/safety/epoch/source checks still gate Capture/Prepare. Global card control
+projection keeps its ingress busy check. This prevents valid results being discarded
+because two independently delivered notifications arrived in the opposite order.
+
+## Actual implementation and verification, 2026-10-14
+
+I1 commit086c47b implements sealed sources and private aggregate reservations.
+I2 core adds PNG validation/normalization/preview and descriptor duplication, plus
+an actual SCM_RIGHTS/controller/broker scenario. PNG is pinned to0.18.1. Both native
+and core locks add PNG/compression dependencies; only the PNG-related miniz_oxide
+0.8.5->0.8.9 resolution is retained. Unrelated offline resolver changes to adler2,
+rustc-demangle and Windows dependency edges were restored. Tauri's existing PNG
+0.18.1 lock receives only its rqs_lib dependency edge. No Tauri rebuild is claimed:
+locked offline metadata stopped at missing android_system_properties0.1.6 source,
+without requesting a lock rewrite. Its original application remains the baseline.
+
+- Initial PNG check passed7.05s; three PNG methods passed after37.86s build.
+- Full core suite passed558/0 in7.92s (build10.53s), plus modern_protocol4/0 and
+  native_daemon4/0 in0.00/0.01s, with disk TMPDIR. Strict core clippy passed14.21s.
+- Added actual anonymous-source broker/controller method passed1/0 in0.10s,
+  build12.54s. It proves no Send on Prepare and sealed exact bytes after GUI close.
+- Strengthened corrupt-deflate (valid chunk CRC) and nonuniform portrait/landscape/
+  square preview fixtures passed all three affected PNG methods0.52s, build10.72s.
+  Final strict core all-target clippy passed4.03s. Inventory now559 library methods;
+  do not relabel the earlier558 whole-suite result as a fresh559 whole-suite run.
+- Native initial all-target check found test-module visibility and deprecated
+  Picture API; fixed visibility and used ContentFit::Contain, without suppression.
+- Native complete suite passed25/0 in0.50s, build16.87s, including two new owned
+  worker methods, existing actual menu broker and strengthened single GTK method.
+- After final bounded reserve changes, affected GTK smoke passed1/0 in0.52s,
+  build5.29s; strict native all-target/no-deps clippy passed4.35s and native build
+  passed15.04s. Existing nine no-default-feature core warnings, bluer future
+  incompatibility and isolated Xvfb DRI3 warnings remain separately visible.
+
+Ten new test methods: core8/native2. Primary categories (not duplicated): Positive2,
+N2=3,N5=2,N6=1,N7=1,N9=1; N1/N4/N10 also exercised within those scenarios and the
+existing strengthened GTK/menu methods. N3 external failure uses existing checked
+adapters; N8/N11 not applicable. N12 allocation/syscall failure paths return fixed
+errors but OS allocator/syscall exhaustion was not fault-injected. No exhaustive
+Mode B, ten-run stability, installed KDE, real clipboard or Google peer signoff.
+All owned commands/private brokers/workers exited. Terminal closed.

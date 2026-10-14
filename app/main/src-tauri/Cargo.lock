@@ -4125,6 +4125,7 @@ dependencies = [
  "num-bigint",
  "once_cell",
  "p256",
+ "png 0.18.1",
  "prost",
  "prost-build",
  "rand",

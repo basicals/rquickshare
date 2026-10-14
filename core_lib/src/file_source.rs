@@ -198,6 +198,16 @@ impl OpenedSelection {
         &self.files
     }
 
+    /// Duplicate already-owned read-only capabilities; names never authorize reopening.
+    pub fn try_clone(&self) -> io::Result<Self> {
+        let files = self
+            .files
+            .iter()
+            .map(|file| OpenedFile::adopt(file.clone_handle()?, file.relative_name().to_owned()))
+            .collect::<io::Result<Vec<_>>>()?;
+        Self::from_files(files, SelectionLimits::default())
+    }
+
     pub fn total_bytes(&self) -> u64 {
         self.total_bytes
     }

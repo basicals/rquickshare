@@ -527,3 +527,57 @@ async fn given_outgoing_text_when_preparation_replies_are_lost_then_exact_captur
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_anonymous_source_when_prepared_over_actual_broker_then_seals_bytes_and_explicit_send_survive_gui_close(
+) {
+    scenario(async {
+        // Arrange: real SCM_RIGHTS/SDK/controller path, no local file or delete authority.
+        let (_bus, host, client) = fixture().await;
+        let controller = PanelController::spawn(client);
+        let handle = controller.handle();
+        let bytes = b"private-image-snapshot";
+        let file = crate::memory_source::create(bytes, "Clipboard.png".into()).unwrap();
+        let source = OpenedSelection::from_files(vec![file], SelectionLimits::default()).unwrap();
+        // Act
+        let ActionResult::Selection(selection) =
+            handle.choose(source).unwrap().wait().await.unwrap()
+        else {
+            panic!("Missing preparation");
+        };
+        // Assert: prepare alone never enqueues a transfer.
+        let state = handle.subscribe().borrow().clone();
+        let view = state.view.unwrap();
+        assert!(view.transfers.is_empty());
+        assert_eq!(
+            view.sources[0].kind,
+            crate::sessions::details::PayloadKind::Files
+        );
+        assert_eq!(
+            (view.sources[0].file_count, view.sources[0].byte_count),
+            (1, bytes.len() as u64)
+        );
+        assert!(!format!("{view:?}").contains("private-image-snapshot"));
+        handle
+            .send(selection, "peer".into())
+            .unwrap()
+            .wait()
+            .await
+            .unwrap();
+        controller.close().await.unwrap();
+        let (mut coordinator, outcome) = host.finish().await;
+        assert_eq!(outcome, Ok(()));
+        let dispatch = coordinator.next_send().unwrap().unwrap();
+        let file = &dispatch.selection.files()[0];
+        assert_eq!(file.memory_bytes(), bytes.len() as u64);
+        assert_eq!(
+            rustix::fs::fcntl_get_seals(file.clone_handle().unwrap()).unwrap(),
+            crate::memory_source::IMMUTABLE_SEALS
+        );
+        let mut actual = vec![0; bytes.len()];
+        assert_eq!(file.read_chunk_at(0, &mut actual).unwrap(), bytes.len());
+        assert_eq!(actual, bytes);
+        assert!(coordinator.next_send().unwrap().is_none());
+    })
+    .await;
+}

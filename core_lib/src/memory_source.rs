@@ -73,8 +73,15 @@ mod tests {
             drop(reader);
             assert_eq!(source.read_chunk_at(0, &mut captured).unwrap(), size);
             assert_eq!(captured, bytes);
-            let reader = source.clone_handle().unwrap();
-            drop(source);
+            let selection = crate::file_source::OpenedSelection::from_files(
+                vec![source],
+                crate::file_source::SelectionLimits::default(),
+            )
+            .unwrap();
+            let duplicate = selection.try_clone().unwrap();
+            let reader = duplicate.files()[0].clone_handle().unwrap();
+            drop(selection);
+            drop(duplicate);
             assert_eq!(reader.metadata().unwrap().len(), size as u64);
         }
     }
