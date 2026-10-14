@@ -27,7 +27,7 @@ adding a second launcher/unit would create a brittle competing-owner path. Avoid
 guessed delays or starting GTK before actual compositor/tray readiness. This is a
 larger lifecycle change to freeze only after the product choice.
 
-## Options requiring selection
+## Selected option1 (alternatives retained)
 
 1. Recommended: when the user enables Start at sign-in, start the daemon and the
    native tray client, with the card hidden. Benefits: visible access/control near
@@ -71,6 +71,7 @@ Prefer1 for discoverability, clear user control and product correctness, not spe
 
 ## Handoff
 
-Await option1/2. Native package/activation implementation and measured verification
+User selected1. The frozen implementation stages/contract are in native-autostart.md.
+Native package/activation implementation and measured verification
 remain in native-package.md. This document adds no production code, tests, service
 enablement, host install or Google compatibility claim. All analysis is source-only.
