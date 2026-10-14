@@ -1,5 +1,29 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-14: transfer-bound native Show in folder implemented
+
+User selected option1; [native-reveal.md](native-reveal.md) completes bounded actual
+EOF receipts, original receive-directory authority, Files1 metadata/read-only FD
+acquisition and explicit per-file portal OpenDirectory controls. No caller path,
+current-setting reconstruction, default application execution or automatic launch.
+Receipt quotas follow actual Arc ownership, history holds no completed-file FD,
+and stale/moved/changed targets fail closed. A slow file open no longer blocks the
+daemon event loop; one tracked filesystem worker is joined on close.
+
+Actual full core570+8 integrations passed before the responsiveness repair;
+afterward affected service258, receipt3, strict core lint and native rebuild passed.
+Native observed27 methods pass in the initial interrupted run; repaired portal3,
+strict lint/build passed afterward. Inventory571 core/29 native is not a fresh
+whole-suite claim. Exact timings, failed fixture repairs and remaining installed
+KDE selection/focus/activation gates are in the SSOT. Direct dev only; no live user
+portal/config/clipboard, installation, peer, push or branch operation.
+
+Remaining: native autostart/update/package lifecycle; protocol/name/temporary
+visibility/trust/previews/resume/streams/multi-recipient/Wi-Fi/apps, Google account/QR
+and actual Android/Windows/KDE matrices. Tauri remains the packaged migration
+baseline. Full Google compatibility is the target, not an achieved claim. Earlier
+review/pending entries below are historical.
+
 ## 2026-10-14: native clipboard images implemented; received-file reveal reviewed
 
 User selected anonymous immutable source1/A. [native-image.md](native-image.md)

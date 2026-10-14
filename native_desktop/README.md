@@ -149,3 +149,16 @@ Memory-backed file descriptors must carry all immutable seals and fit32 MiB each
 128 MiB aggregate in the daemon. Mutable tmpfs sources are rejected; ordinary disk
 sources retain their existing descriptor behavior. For automated disk-source tests
 on a host with tmpfs /tmp, set TMPDIR to a directory on a disk filesystem first.
+
+
+Completed incoming files now offer Show in folder per manifest entry under Full >
+Transfers. This uses the original completed transfer's collision-resolved result,
+not the current receive setting. The daemon retains bounded private receipts and
+opens a short-lived verified read-only descriptor on demand; the native client
+passes that descriptor to portal OpenDirectory after the explicit click. Rendering,
+receive completion and reconnect do not launch anything. Missing/moved/changed
+files and unavailable portals show a finite error; no default application executes
+the received content. Cancel folder request, hide/lock/epoch change and shutdown
+close owned pending work. Already accepted external actions cannot be retracted.
+See [native-reveal.md](../docs/native-reveal.md) for exact limits, ownership, actual
+checks and physical KDE selection/activation acceptance still required.

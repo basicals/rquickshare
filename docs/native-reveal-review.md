@@ -1,9 +1,9 @@
 # Native received-file reveal boundary review
 
-2026-10-14. Mode A analysis only for the next slice. Clipboard image ownership and
-capture are implemented in native-image.md. No native reveal production API/UI is
-implemented by this review. Guide /home/morozhenko/.codex/AGENTS.md sections3/3.1
-require selection for a new significant security/API/product boundary.
+2026-10-14. Option1 was selected and implemented in [native-reveal.md](native-reveal.md).
+This document preserves the pre-implementation analysis and alternatives; it is
+not a pending choice. The guide /home/morozhenko/.codex/AGENTS.md sections3/3.1
+governed that significant security/API/product boundary selection.
 
 ## Findings
 
@@ -86,6 +86,7 @@ freedesktop wiki fetch returned403; do not claim that page was inspected.
 
 ## Handoff
 
-Await user selection1/2 before new reveal production code. Existing image/EOF work
-and exact measured checks are recorded in their own SSOT. No real desktop portal,
+Option1 is implemented; native-reveal.md records frozen quotas/API, completion
+ownership, actual checks and rollback. Existing image/EOF work and exact measured
+checks remain recorded in their own SSOT. No real desktop portal,
 user files/clipboard/config, install, push, branch or physical peer operation here.

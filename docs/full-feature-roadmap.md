@@ -13,10 +13,11 @@ Native received Text/URL review and explicit Copy are implemented in
 [native-text.md](native-text.md). Outgoing native text/clipboard capture and shared recipient preparation are implemented
 in [native-outbound.md](native-outbound.md). Native clipboard PNG images are implemented
 in [native-image.md](native-image.md), with bounded validation, immutable anonymous
-sources and explicit review/Prepare/Send. Received-file reveal is reviewed in
-[native-reveal-review.md](native-reveal-review.md), awaiting its own boundary choice.
-Reveal, account/QR/
-package capabilities still require their own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
+sources and explicit review/Prepare/Send. Explicit transfer-bound received-file
+Show in folder is implemented in [native-reveal.md](native-reveal.md), with verified
+read-only descriptor acquisition and owned portal requests. Physical KDE selection
+remains acceptance. Autostart/update/package lifecycle and account/QR capabilities
+still require their own migration/compatibility work. Latest state: [product-direction.md](product-direction.md).
 
 ## Product principles
 
