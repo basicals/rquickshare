@@ -1,5 +1,17 @@
 # Product direction: native desktop and Google Quick Share parity
 
+## 2026-10-14: installed daemon ownership review prepared
+
+[native-package-review.md](native-package-review.md) audits current source assets,
+Tauri-only package workflows and NativePair's direct Debian build model. NativePair
+has no installed daemon activation contract to copy. Recommend1: systemd user
+process ownership with fixed D-Bus activation; alternative2 is direct session
+D-Bus daemon startup. This significant installed lifecycle choice awaits selection.
+The current daemon releases/reacquires its name during joined settings restart;
+a conventional Type=dbus unit would conflict with that behavior. Preserve process
+lifetime and existing readiness/epoch contracts rather than copy an unsafe unit.
+No production package/service/autostart change or live manager operation in this review.
+
 ## 2026-10-14: transfer-bound native Show in folder implemented
 
 User selected option1; [native-reveal.md](native-reveal.md) completes bounded actual
