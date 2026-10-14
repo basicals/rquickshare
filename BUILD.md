@@ -49,6 +49,18 @@ Settings has default-off opt-in login start for daemon plus hidden-card tray;
 see [native autostart](docs/native-autostart.md). Disabling it affects future logins
 without stopping live transfers. No build installs/enables these assets.
 The manual native-package-smoke workflow targets an Ubuntu26.04 container explicitly.
+Native Debian revisions are tracked in `native_desktop/packaging/release.toml`.
+The selected update owner is APT; [native APT distribution](docs/native-apt.md)
+documents immutable staging, external signing, isolated verification and public
+bootstrap artifacts. Run focused packaging/distribution checks with Python >=3.11,
+dpkg-dev, gnupg/gpgv and apt (no installation or host trust changes):
+
+```bash
+python3 -m unittest discover -s scripts/tests -p 'test_native_*.py' -v
+```
+
+CI uploads an explicitly unsigned APT staging artifact. Production URI/signing
+custody/publication remain separate bindings, not supplied silently by a build.
 Existing Tauri release jobs remain the migration baseline; native installed startup,
 upgrade/removal and KDE/Google acceptance are still separate gates.
 

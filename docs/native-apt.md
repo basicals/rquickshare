@@ -18,11 +18,11 @@ tool plus a small exact SHA256 Release serializer, not a private package resolve
 1. [x] U1: tracked native package revision; strict positive bounded revision and
    release/debug version validation; expose validated metadata from package verify.
    Preserve binaries/service behavior and existing package inventory.
-2. [ ] U2: local immutable repository prepare/sign/verify/bootstrap utilities.
+2. [x] U2: local immutable repository prepare/sign/verify/bootstrap utilities.
    Validate native release packages, generate standard Packages/gzip/by-hash/Release,
    sign only using an explicitly supplied external GPG home/fingerprint and verify
    with an isolated public keyring. No key creation or publication in production.
-3. [ ] U3: isolated contract tests with ephemeral test-only signing authority and
+3. [x] U3: isolated contract tests with ephemeral test-only signing authority and
    actual APT acquisition/candidate/download; native CI runs affected checks and
    emits an explicitly unsigned repository staging artifact, with no signing secrets.
 4. [ ] U4: actual rebuilt release package + unsigned repository stage; document exact
@@ -109,3 +109,76 @@ revision/native version and real dpkg ordering are covered by the existing packa
 metadata table. Package verification now returns its already validated fields for
 repository admission. Python package5/0 passed1.244s. No Rust binary, service,
 settings or public wire behavior changed. Terminal closed.
+
+U2/U3 complete in source: immutable local prepare/sign/verify/bootstrap, actual
+Debian indexes, exact signatures/cleartext/public key authority, SHA256 chain,
+seven-day freshness, same-version bytes/downgrade/architecture retention and
+reviewable scoped bootstrap. Linux renameat2(RENAME_NOREPLACE) protects local
+promotion against a concurrent output creator; no check-then-overwrite fallback.
+Gzip verification compares bounded deterministic bytes rather than decompressing
+an unbounded attacker input. Tree inventory rejects links/special files before
+reading or passing them to gpgv. Bootstrap derives architectures from a verified
+signed snapshot, never arbitrary caller labels. Files/directories are normalized
+to0644/0755 independently of umask. No ambient GPG or APT trust/config is used.
+
+Initial focused repository6/0 passed4.682s. Source review tightened URI authority/
+empty userinfo/query/fragment, signature trailing-data framing, bounded sidecars/
+Release before external verification, atomic no-replace and signed bootstrap.
+Final affected repository7/0 passed6.753s, including two-architecture metadata-only
+fixtures, actual APT candidate/download and wrong-key refusal. Test-only GPG
+agents were closed by their exact isolated home. No production signing authority,
+ARM binary execution, host APT configuration/status/hooks, HTTP server or package
+installation was used. Python package5/0 remains the measured U1 run above; no
+unnecessary repeat or ten-run/coverage claim. Native CI source now runs both
+scoped modules and uploads separate unsigned staging after real package checks;
+no remote workflow run or publication claim. Terminal closed.
+
+## Local operator commands
+
+Use Python>=3.11, Debian dpkg-dev, gnupg/gpgv and apt on Linux. Examples require
+explicit previously reviewed production inputs; placeholders are not configured
+endpoints, keys or grants. The prepare step needs no secret and never executes
+package maintainer code. Its package verifier compares assets to this checkout;
+use the matching audited source when signing older artifacts.
+
+```sh
+python3 scripts/native_deb.py build
+python3 scripts/native_apt.py prepare \
+  --package native_desktop/target/packages/rquickshare_0.11.5+native2_amd64.deb \
+  --output /absolute/existing-parent/native-apt-unsigned
+python3 scripts/native_apt.py sign \
+  --repository /absolute/existing-parent/native-apt-unsigned \
+  --output /absolute/existing-parent/native-apt-signed \
+  --gnupghome /explicit/external-signing-home \
+  --keyring /explicit/audited-public-keyring.gpg \
+  --fingerprint FULL_UPPERCASE_PRIMARY_FINGERPRINT \
+  --first-release
+python3 scripts/native_apt.py verify \
+  --repository /absolute/existing-parent/native-apt-signed \
+  --keyring /explicit/audited-public-keyring.gpg \
+  --fingerprint FULL_UPPERCASE_PRIMARY_FINGERPRINT
+python3 scripts/native_apt.py bootstrap \
+  --repository /absolute/existing-parent/native-apt-signed \
+  --uri https://EXPLICIT_REVIEWED_REPOSITORY_URI \
+  --keyring /explicit/audited-public-keyring.gpg \
+  --fingerprint FULL_UPPERCASE_PRIMARY_FINGERPRINT \
+  --output /absolute/existing-parent/native-apt-bootstrap
+```
+
+For every subsequent signing operation replace --first-release with --previous
+/path/to/previous-authenticated-snapshot. The prior metadata may be expired when
+used only as an authenticated anti-downgrade baseline; new metadata must be fresh.
+Refreshing metadata reuses the exact published packages at a new Date, preserving
+version/hash identity. Both signing and verify can compare the previous snapshot.
+No shell command downloads/executes an installer. Bootstrap only emits public
+keyring/FINGERPRINT/.sources; independent fingerprint confirmation must precede
+reviewed system enrollment. APT signatures grant archive authority, not a package
+code audit; production trust scope, key rotation/revocation and release approvals
+need the concrete authority/hosting binding before deployment.
+
+Publishing is deliberately not implemented against an invented host. Keep old
+pool and by-hash objects for at least all active metadata/cache references; a
+fresh standalone snapshot is not authorization to delete the old public tree.
+Use immutable object publication followed by metadata-last/atomic promotion.
+Promotion/refresh job, production signing-key lifecycle and real installed
+upgrade/removal/session behavior are pending the concrete production binding.

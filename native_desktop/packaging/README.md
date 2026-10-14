@@ -9,11 +9,14 @@ libraries/tools installed:
 
 ```sh
 python3 scripts/native_deb.py build
-python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native1_amd64.deb
+python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native2_amd64.deb
 ```
 
 Default artifacts contain locked release binaries. `build --profile dev` explicitly
 labels a development artifact `.debug`; it does not certify release optimization.
+The tracked packaging/release.toml revision increments for every changed native
+release at the same Rust version. APT needs a strictly newer package version;
+never silently replace the bytes of an already published version.
 The builder derives runtime shared-library dependencies from both actual ELF files
 using dpkg-shlibdeps and fails if library metadata is missing. GTK4>=4.12 and Layer
 Shell are required. ABI compatibility is determined by the build environment: a
@@ -55,6 +58,16 @@ launcher; installation alone starts/enables nothing. A supported systemd user bu
 graphical session environment and KDE tray watcher are required. Updates and
 installed lifecycle acceptance remain separate work. No Google compatibility or
 installed KDE acceptance is implied.
+
+Native updates use the selected dedicated signed APT distribution. The local
+scripts/native_apt.py prepares immutable standard indexes/by-hash/Release, signs
+using an explicit external GPG home and independently selected public fingerprint,
+verifies the complete trust/hash chain, and emits reviewable scoped deb822 bootstrap
+files. The application does not download/install its own replacements. Repository
+metadata expires after seven days and must be refreshed/resigned before expiry.
+The native CI artifact is explicitly unsigned; no production key, repository URI,
+enrollment or publication is configured by a build. See docs/native-apt.md in the
+source tree for signing/promotion commands, tests and remaining production binding.
 
 Dolphin uses `rquickshare send -- %U`, 1..256 local files/folders as separate arguments.
 Acquisition is all-or-nothing; preparation preserves existing source and requires

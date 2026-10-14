@@ -22,7 +22,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates git curl build-essential pkg-config dpkg-dev python3 \
             protobuf-compiler libdbus-1-dev libudev-dev libgtk-4-dev \
-            libgtk4-layer-shell-dev dbus-daemon dbus-x11 xvfb xauth desktop-file-utils
+            libgtk4-layer-shell-dev dbus-daemon dbus-x11 xvfb xauth desktop-file-utils gnupg gpgv
 
       - uses: actions/checkout@v5
 
@@ -49,7 +49,7 @@ jobs:
           cargo +nightly fmt --manifest-path native_desktop/Cargo.toml -- --check
           cargo +stable test --locked --manifest-path core_lib/Cargo.toml
           cargo +stable clippy --locked --manifest-path core_lib/Cargo.toml --all-targets -- -D warnings
-          python3 -m unittest discover -s scripts/tests -p test_native_deb.py -v
+          python3 -m unittest discover -s scripts/tests -p 'test_native_*.py' -v
           desktop-file-validate native_desktop/packaging/share/applications/io.github.morozhenko_apps.RQuickShare.desktop
 
       - name: Isolated GTK and native lint gate
@@ -63,13 +63,28 @@ jobs:
           cargo +stable clippy --locked --manifest-path native_desktop/Cargo.toml --all-targets --no-deps -- -D warnings
 
       - name: Build and verify uninstalled native release package
-        run: python3 scripts/native_deb.py build
+        run: python3 scripts/native_deb.py build --output "$RUNNER_TEMP/native-packages"
+
+      - name: Prepare unsigned native APT staging snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/native_apt.py prepare \
+            --package "$RUNNER_TEMP/native-packages/"*.deb \
+            --output "$RUNNER_TEMP/native-apt-unsigned"
 
       - name: Upload verified native release artifact
         uses: actions/upload-artifact@v6
         with:
           name: rquickshare-native-ubuntu-26.04
           path: |
-            native_desktop/target/packages/*.deb
-            native_desktop/target/packages/*.deb.sha256
+            ${{ runner.temp }}/native-packages/*.deb
+            ${{ runner.temp }}/native-packages/*.deb.sha256
+          if-no-files-found: error
+
+      - name: Upload unsigned APT staging artifact (not a published repository)
+        uses: actions/upload-artifact@v6
+        with:
+          name: UNSIGNED-rquickshare-native-ubuntu26.04
+          path: ${{ runner.temp }}/native-apt-unsigned/
           if-no-files-found: error
