@@ -56,7 +56,7 @@ impl fmt::Display for BusError {
 }
 impl std::error::Error for BusError {}
 
-/// One pump and one serial owner; no task is spawned for an individual method.
+/// One pump and one serial state owner, plus at most one joined filesystem worker.
 /// Call `run` or `close` to join cleanup. Drop only requests cancellation.
 pub struct SelectionBus {
     connection: Option<Connection>,
@@ -68,6 +68,8 @@ pub struct SelectionBus {
     state: state::StateCache,
     text: text::TextCache,
     file_job: Option<JoinHandle<Result<File, Error>>>,
+    file_request: Option<files::Request>,
+    file_resolver: std::sync::Arc<files::Resolver>,
     notified: BTreeMap<ClientId, u64>,
     visibility_recovered: bool,
     uid: u32,
@@ -145,6 +147,10 @@ impl SelectionBus {
             state: state::StateCache::default(),
             text: text::TextCache::default(),
             file_job: None,
+            file_request: None,
+            file_resolver: std::sync::Arc::new(|files, index| {
+                files.open(index).map_err(|_| Error::InvalidState)
+            }),
             notified: BTreeMap::new(),
             visibility_recovered: false,
             uid,
@@ -307,6 +313,13 @@ impl SelectionBus {
                     if applied { self.visibility_recovered = false; }
                     let _ = request.reply.send(applied);
                 }
+                result = files::next(&mut self.file_job) => {
+                    tokio::select! {
+                        _ = stop.cancelled() => return Ok(()),
+                        _ = failure.cancelled() => return Err(BusError::Transport),
+                        result = self.complete_file(runtime.selection_coordinator(), result) => result?,
+                    }
+                }
                 message = self.inbox.recv() => {
                     let message = message.ok_or(BusError::Transport)?;
                     let (coordinator, endpoints) = runtime.bus_state_parts();
@@ -324,7 +337,7 @@ impl SelectionBus {
                     let view = settings.view();
                     settings.idle() && view.configured && matches!(view.error, 0 | 4)
                 });
-                if ready && runtime.restart_if_idle() {
+                if ready && self.file_job.is_none() && runtime.restart_if_idle() {
                     self.restart_requested = true;
                     tokio::select! { biased;
                         _ = stop.cancelled() => return Ok(()),
@@ -375,6 +388,7 @@ impl SelectionBus {
         if let Some(job) = self.file_job.take() {
             let _ = job.await;
         }
+        self.file_request.take();
         if let Some(settings) = self.settings.take() {
             settings.close().await;
         }
@@ -386,6 +400,40 @@ impl SelectionBus {
         while self.inbox.try_recv().is_ok() {}
         if let Some(connection) = self.connection.take() {
             let _ = connection.close().await;
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_file_resolver(&mut self, resolver: std::sync::Arc<files::Resolver>) {
+        self.file_resolver = resolver;
+    }
+
+    async fn complete_file(
+        &mut self,
+        coordinator: &Coordinator,
+        result: Result<File, Error>,
+    ) -> Result<(), BusError> {
+        self.file_job.take();
+        let request = self.file_request.take().ok_or(BusError::Transport)?;
+        let header = request.message.header();
+        // History/client lifetime may have changed while the filesystem was busy.
+        let result = files::resource(
+            coordinator,
+            request.client,
+            request.target,
+            request.revision,
+            request.index,
+        )
+        .and(result);
+        match result {
+            Ok(file) => self
+                .connection
+                .as_ref()
+                .ok_or(BusError::Transport)?
+                .reply(&header, &Fd::from(file.as_fd()))
+                .await
+                .map_err(|_| BusError::Transport),
+            Err(error) => self.domain_error(&header, error).await,
         }
     }
 
@@ -709,39 +757,28 @@ impl SelectionBus {
                         .map_err(|_| Error::InvalidInput)
                         .and_then(|(id, revision, index)| {
                             let (epoch, sequence) = token_parts(id, coordinator.epoch)?;
-                            files::resource(
-                                coordinator,
-                                client,
-                                TransferId(epoch, sequence),
-                                revision,
-                                index,
-                            )
-                            .map(|files| (files, index))
+                            let target = TransferId(epoch, sequence);
+                            files::resource(coordinator, client, target, revision, index)
+                                .map(|files| (files, target, revision, index))
                         });
-                    let (files, index) = match result {
+                    let (files, target, revision, index) = match result {
                         Ok(value) => value,
                         Err(error) => return self.domain_error(&header, error).await,
                     };
                     if self.file_job.is_some() {
                         return self.domain_error(&header, Error::Busy).await;
                     }
-                    self.file_job = Some(tokio::task::spawn_blocking(move || {
-                        files.open(index).map_err(|_| Error::InvalidState)
-                    }));
-                    let result = self
-                        .file_job
-                        .as_mut()
-                        .expect("owned file worker")
-                        .await
-                        .unwrap_or(Err(Error::InvalidState));
-                    self.file_job.take();
-                    return match result {
-                        Ok(file) => connection
-                            .reply(&header, &Fd::from(file.as_fd()))
-                            .await
-                            .map_err(|_| BusError::Transport),
-                        Err(error) => self.domain_error(&header, error).await,
-                    };
+                    let resolve = self.file_resolver.clone();
+                    self.file_request = Some(files::Request {
+                        message,
+                        client,
+                        target,
+                        revision,
+                        index,
+                    });
+                    self.file_job =
+                        Some(tokio::task::spawn_blocking(move || resolve(files, index)));
+                    return Ok(());
                 }
                 _ => {
                     return self

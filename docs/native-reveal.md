@@ -73,9 +73,11 @@ Detectable moved/replaced/modified/permission failures map to finite InvalidStat
 no fallback to another file/current configured folder. Existing same-UID authority
 checks are not a sandbox permission grant.
 
-One tracked spawn_blocking acquisition per serial SelectionBus, storing its handle
-before await. It owns the receipt Arc; cancelled dispatch/shutdown joins that handle
-before bus cleanup. No detached task, magic timeout, unbounded request task or
+One tracked spawn_blocking acquisition per SelectionBus, storing its handle and
+request before returning to the shared event loop. Control/read/runtime processing
+continues while it waits; additional acquisitions return Busy. Completion revalidates
+the live client/terminal receipt before replying. It owns the receipt Arc; shutdown
+joins the handle before bus cleanup and drops the pending reply. No detached task, magic timeout, unbounded request task or
 long-lived per-client lease. At most one opened result in the server acquisition/
 reply path; successful FD reply transfers ownership, dropped/rejected reply closes.
 SDK permits exactly1 FD only on this known successful method, still checking sender
@@ -234,3 +236,27 @@ second acquisition must return Busy. Release by condition, then verify exact FD.
 This is a scoped internal availability fix in the approved owner, not another
 service or significant public-contract choice. Repeat only affected core/bus checks
 and rebuild the native consumer after this shared implementation change.
+
+
+F4 responsiveness implemented: shared bus loop polls the retained worker without
+blocking runtime/control/state. Restart remains Busy while acquisition owns work.
+The private harness uses the same completion path. A resolver dependency delays
+only the filesystem boundary; the actual receipt resolver still runs. The new
+scenario passed1/0 (0.09s/build21.69s), proving second-client snapshot/terminal Cancel
+reply and Busy on concurrent acquisition before release, then exact received bytes.
+Removed one unused test-local mut warning; affected service258/0 passed7.19s
+(build12.16s), including that scenario and shutdown ownership. Receipt kernel3/0
+passed0.00s/build5.47s, including newly activated same-size edit plus deterministic
+mtime change; this table branch was not in the earlier full570 run. Strict core
+lint6.08s and native consumer rebuild6.11s passed. Nightly format checks for both
+crates, GTK UI/two D-Bus XML parses and git diff whitespace passed. Inventory571
+core/29 native. Earlier full570+8 and native partial/repaired observations remain
+separate; no newly rerun571/29 whole-suite or ten-run/coverage claim.
+Terminal closed. No owned command/server/broker/worker remains running.
+
+Current handoff: approved reveal implementation is complete; export verification
+will close F4. Physical installed KDE portal activation/focus/selection and changed
+receive settings/real-peer results remain acceptance, not automated proof. Root
+rename/settings independence and collision ordering are checked at the authority
+boundary. Same-size edit checks detectable metadata change, not cryptographic
+attestation. No live user portal/clipboard/config/install or peer operation occurred.

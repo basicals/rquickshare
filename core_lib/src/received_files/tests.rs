@@ -84,6 +84,7 @@ fn given_received_target_when_deleted_edited_replaced_or_symlinked_then_no_other
     for change in [
         "deleted",
         "edited",
+        "same-size-edited",
         "replaced",
         "symlink",
         "parent-symlink",
@@ -95,6 +96,16 @@ fn given_received_target_when_deleted_edited_replaced_or_symlinked_then_no_other
         match change {
             "deleted" => std::fs::remove_file(&path).unwrap(),
             "edited" => std::fs::write(&path, b"different-length").unwrap(),
+            "same-size-edited" => {
+                let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+                std::fs::write(&path, b"modified").unwrap();
+                std::fs::OpenOptions::new()
+                    .write(true)
+                    .open(&path)
+                    .unwrap()
+                    .set_modified(modified + std::time::Duration::from_secs(1))
+                    .unwrap();
+            }
             "replaced" => {
                 std::fs::rename(&path, directory.path().join("old")).unwrap();
                 std::fs::write(&path, b"received").unwrap();

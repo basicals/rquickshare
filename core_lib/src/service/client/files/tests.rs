@@ -119,3 +119,81 @@ async fn given_actual_files_api_when_acquired_twice_or_abused_then_only_verified
     other.close().await.unwrap();
     assert_eq!(host.finish().await.1, Ok(()));
 }
+
+#[tokio::test]
+async fn given_delayed_actual_file_open_when_another_client_reads_or_controls_then_bus_remains_responsive_and_acquisition_stays_bounded(
+) {
+    super::super::tests::scenario(async {
+        // Arrange: delay only the filesystem boundary, then run the actual resolver.
+        let (_directory, received, details) = crate::received_files::tests::fixture();
+        let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+        let id = coordinator.register_inbound().unwrap();
+        coordinator
+            .observe_details(id, Phase::Finished, Arc::new(details))
+            .unwrap();
+        coordinator
+            .retain_received_files(id, Some(received))
+            .unwrap();
+        let broker = PrivateBus::new();
+        let mut bus = SelectionBus::connect(broker.socket().await).await.unwrap();
+        let (started, observed) = tokio::sync::oneshot::channel();
+        let started = std::sync::Mutex::new(Some(started));
+        let (release, wait) = std::sync::mpsc::channel();
+        let wait = std::sync::Mutex::new(wait);
+        bus.set_file_resolver(Arc::new(move |files, index| {
+            if let Some(started) = started.lock().unwrap().take() {
+                let _ = started.send(());
+            }
+            wait.lock()
+                .unwrap()
+                .recv()
+                .map_err(|_| crate::service::Error::InvalidState)?;
+            files
+                .open(index)
+                .map_err(|_| crate::service::Error::InvalidState)
+        }));
+        let host = Harness::with_coordinator(bus, coordinator);
+        let mut first = NativeClient::connect(broker.socket().await).await.unwrap();
+        let mut second = NativeClient::connect(broker.socket().await).await.unwrap();
+        let first_row = first.read_state().await.unwrap().transfers.remove(0);
+        let revision = first_row.reveal_revision.unwrap();
+        let acquisition = tokio::spawn(async move {
+            let result = first
+                .acquire_received_file(&first_row.transfer, revision, 0)
+                .await;
+            (first, result)
+        });
+        observed.await.unwrap();
+        // Act / Assert: these must reply before the delayed resolver is released.
+        let second_row = second.read_state().await.unwrap().transfers.remove(0);
+        assert_eq!(second_row.phase, Phase::Finished);
+        assert_eq!(second.cancel(&second_row.transfer).await, Ok(()));
+        assert_eq!(
+            second
+                .wire(
+                    bus::files::INTERFACE,
+                    "AcquireFile",
+                    &(second_row.transfer.id(), revision, 0u32)
+                )
+                .await
+                .unwrap_err(),
+            ClientError::Rejected(DomainError::Busy)
+        );
+        release.send(()).unwrap();
+        let (first, result) = acquisition.await.unwrap();
+        let file = result.unwrap();
+        let mut bytes = [0; 8];
+        use std::os::unix::fs::FileExt;
+        file.file().read_exact_at(&mut bytes, 0).unwrap();
+        assert_eq!(&bytes, b"received");
+        assert_eq!(
+            second.read_state().await.unwrap().transfers[0].phase,
+            Phase::Finished
+        );
+        drop(file);
+        first.close().await.unwrap();
+        second.close().await.unwrap();
+        assert_eq!(host.finish().await.1, Ok(()));
+    })
+    .await;
+}

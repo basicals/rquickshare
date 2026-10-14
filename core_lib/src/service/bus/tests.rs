@@ -94,6 +94,14 @@ impl Harness {
                 tokio::select! {
                     _ = end.cancelled() => break Ok(()),
                     _ = failure.cancelled() => break Err(BusError::Transport),
+                    result = files::next(&mut bus.file_job) => {
+                        let result = tokio::select! {
+                            _ = end.cancelled() => break Ok(()),
+                            _ = failure.cancelled() => break Err(BusError::Transport),
+                            result = bus.complete_file(&coordinator, result) => result,
+                        };
+                        if let Err(error) = result { break Err(error); }
+                    }
                     message = bus.inbox.recv() => {
                         let Some(message) = message else { break Err(BusError::Transport) };
                         let result = tokio::select! {
