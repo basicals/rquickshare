@@ -11,6 +11,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  native_download:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: infra/native-download/package-lock.json
+      - name: Install isolated APT test prerequisites
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev gnupg gpgv python3
+      - name: Validate read-only download Worker (local bindings, no credentials)
+        working-directory: infra/native-download
+        run: |
+          set -eu
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run types
+          git diff --exit-code -- worker-configuration.d.ts
+          npm run check
+          npm test
+          npm run dry-run
+
   native_debian:
     runs-on: ubuntu-24.04
     # Declare the target ABI explicitly; host-built 26.04 binaries are not 24.04 packages.

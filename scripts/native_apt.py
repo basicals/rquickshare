@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 import native_deb
 
 SUITE = "rquickshare-native-ubuntu26.04"
+PRODUCTION_URI = "https://download.morozhenko.com/dist/rQuickShare/"
 LIFETIME = timedelta(days=7)
 MAX_INDEX = 1024 * 1024
 MAX_PACKAGE = 1024 * 1024 * 1024
@@ -356,7 +357,7 @@ def main():
             else:
                 sub.add_argument("--previous", type=Path)
         else:
-            sub.add_argument("--uri", required=True)
+            sub.add_argument("--uri", default=PRODUCTION_URI, help="HTTPS archive base (default: selected production prefix)")
             sub.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:

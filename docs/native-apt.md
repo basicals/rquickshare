@@ -1,5 +1,12 @@
 # Native signed APT distribution
 
+2026-10-14 current checkpoint: user selected
+https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
+A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
+See [shared-prefix route SSOT](native-download-route.md) for current deployment/check status;
+earlier domain options/pending-choice notes below are historical. Isolated signer
+host and real public primary fingerprint still gate signed publication/enrollment.
+
 Current follow-up: the user selected Cloudflare R2 and isolated outside-CI signing.
 [native-r2.md](native-r2.md) records the created private bucket, checked conditional
 publisher, public request/approval handoff, By-Hash:force bootstrap and actual

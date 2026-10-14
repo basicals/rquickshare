@@ -1,5 +1,12 @@
 # Native APT on Cloudflare R2 with external signing
 
+2026-10-14 current checkpoint: user selected
+https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
+A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
+See [shared-prefix route SSOT](native-download-route.md) for current deployment/check status;
+earlier domain options/pending-choice notes below are historical. Isolated signer
+host and real public primary fingerprint still gate signed publication/enrollment.
+
 2026-10-14. Mode A. User selected R2 storage and isolated signing outside CI.
 Guide /home/morozhenko/.codex/AGENTS.md; Cloudflare and Wrangler skills read.
 Direct dev. No production key creation, installation/enrollment, live daemon/peer,

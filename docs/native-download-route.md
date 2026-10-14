@@ -15,10 +15,10 @@ and cache-rules API requests returned403 with current OAuth scopes; do not broad
 credentials or alter them. Existing R2 custom-domain state/TLS and live Picturix
 HTTP preflight provide separate observations, not those unavailable API checks.
 
-1. [ ] D1: freeze exact prefix/static-read contract and rollback, capture bounded
+1. [x] D1: freeze exact prefix/static-read contract and rollback, capture bounded
    live Picturix manifest baseline; create narrow Worker/config/tests in
    infra/native-download, no changes in Picturix or its bucket/DNS/cache.
-2. [ ] D2: generated Wrangler types, strict TypeScript/static checks, actual local
+2. [x] D2: generated Wrangler types, strict TypeScript/static checks, actual local
    workerd+R2 integration/HTTP path/stream/range/HEAD/error isolation once and dry-run
    build/startup check. Package/client bytes remain unchanged.
 3. [ ] D3: deploy the reviewed new Worker with only route
@@ -86,6 +86,39 @@ authority. Failed route-precedence web URL was replaced by the actual Routes pag
 
 ## Current state
 
-D1–D4 pending. User selected URI and authorized scoped route setup; no renewed
+D1/D2 complete locally; D3 deployment and D4 final handoff pending. User selected URI and authorized scoped route setup; no renewed
 architecture/permission question is needed for that exact binding. Missing signer
 identity gates production signing/enrollment only, not the selected read-only route.
+
+## Development observations
+
+Picturix baseline: curl returned200, 565 bytes, SHA256
+73a2d36a8a1e4b37ba9ddd05266f66323b9a763a845a9de45defbc88238b7fdc,
+ETag cf94ee5d7e30761435102fc0b4a01bb3 at2026-10-14T17:46:53Z.
+Earlier Python urllib preflight returned403; curl establishes a separate successful
+observation, not proof of its cause. No origin/WAF settings changed.
+
+HEAD ignores Range per HTTP semantics and uses only R2 head. If-Range accepts a
+matching strong ETag; date/weak/nonmatching validators receive the full response.
+Generated Env uses pinned current Workers types. Package-lock pins local tooling;
+no npm install scripts or global tool changes. Runtime integration owns and disposes
+Miniflare/R2, loopback server and temporary TEST ONLY GPG identity.
+
+D2 measurements: strict TypeScript passed. Nine policy/handler tests passed in
+the initial10-test run; runtime test initially failed on Miniflare5 config changes
+and fixture stdout framing, before production handling. Updated against installed
+current schema (config/manifest/env) and isolated fixture stdout. Affected real
+workerd/R2/APT scenario then passed1/0 in1.533s (test1.069s). Actual APT signature,
+by-hash, encoded-plus .deb download/bytes and wrong-key refusal passed. Dry-run
+bundle5.90KiB/gzip2.17KiB, only dedicated ARCHIVE binding. No fixture uploaded.
+
+D4 implementation: native_apt bootstrap CLI defaults to the selected production
+base while retaining explicit --uri for isolated channels. Its existing strict
+verification and public Python API remain unchanged. Runtime fixture checks this
+URI equals Worker policy. Native CI adds a separate credential-free local gate;
+no deployment/signing credentials or remote workflow run.
+
+After binding the bootstrap default, the affected real runtime/APT scenario passed
+again1/0 in1.482s (test1.006s). Python syntax/CLI help, exact route/bucket/logging
+config, CI YAML/contents:read and whitespace passed. No other passing scenario was
+repeated. All owned test HTTP/GPG/workerd processes disposed; Terminal closed.

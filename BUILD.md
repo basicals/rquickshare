@@ -1,5 +1,12 @@
 # Building and checking rQuickShare
 
+2026-10-14 current checkpoint: user selected
+https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
+A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
+See [shared-prefix route SSOT](docs/native-download-route.md) for current deployment/check status;
+earlier domain options/pending-choice notes below are historical. Isolated signer
+host and real public primary fingerprint still gate signed publication/enrollment.
+
 Native settings now have a daemon-owned transactional store and secondary GTK
 editor; see [native-settings.md](docs/native-settings.md) for paths, read-only
 developer overrides, migration/recovery and actual verification. Do not install or

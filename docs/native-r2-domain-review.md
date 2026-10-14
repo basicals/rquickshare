@@ -1,5 +1,12 @@
 # Existing download domain and native APT routing decision
 
+2026-10-14 current checkpoint: user selected
+https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
+A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
+See [shared-prefix route SSOT](native-download-route.md) for current deployment/check status;
+earlier domain options/pending-choice notes below are historical. Isolated signer
+host and real public primary fingerprint still gate signed publication/enrollment.
+
 2026-10-14. Mode A. User asks whether download.morozhenko.com can be shared with
 Picturix. Read-only source/account inspection completed; no Picturix code, bucket,
 domain, DNS, route, object or cache setting was changed.

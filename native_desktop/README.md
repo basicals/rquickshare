@@ -1,5 +1,12 @@
 # Native development shell
 
+2026-10-14 current checkpoint: user selected
+https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
+A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
+See [shared-prefix route SSOT](../docs/native-download-route.md) for current deployment/check status;
+earlier domain options/pending-choice notes below are historical. Isolated signer
+host and real public primary fingerprint still gate signed publication/enrollment.
+
 The tray now exports a standard DBusMenu with Open, file/folder/text/image selection, incoming/
 transfer navigation, Compact/Full, Settings, Reconnect, Hide and Quit. It contains
 fixed labels only. Actions share current GTK readiness and lock safety; no consent,

@@ -1,5 +1,12 @@
 # Full Quick Share roadmap
 
+2026-10-14 current checkpoint: user selected
+https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
+A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
+See [shared-prefix route SSOT](native-download-route.md) for current deployment/check status;
+earlier domain options/pending-choice notes below are historical. Isolated signer
+host and real public primary fingerprint still gate signed publication/enrollment.
+
 _Last updated: 2026-10-14_
 
 The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, pending UX choice, initial compatibility matrix and migration stages.
