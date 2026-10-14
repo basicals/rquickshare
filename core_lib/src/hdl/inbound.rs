@@ -1356,10 +1356,10 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                             ));
                         }
 
+                        let file = file_internal.file.as_ref().ok_or_else(|| {
+                            anyhow!("File payload received before destination file was opened")
+                        })?;
                         if !chunk.body().is_empty() {
-                            let file = file_internal.file.as_ref().ok_or_else(|| {
-                                anyhow!("File payload received before destination file was opened")
-                            })?;
                             file.write_all_at(chunk.body(), current_offset as u64)?;
                             file_internal.bytes_transferred = new_offset;
 
@@ -1373,6 +1373,9 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                             )
                             .await;
                         } else if (chunk.flags() & 1) == 1 {
+                            if new_offset != file_internal.total_size {
+                                return Err(anyhow!("File payload ended before its declared size"));
+                            }
                             self.state.transferred_files.remove(&payload_id);
                             if self.state.transferred_files.is_empty() {
                                 info!("Transfer finished");
@@ -2866,6 +2869,142 @@ mod security_tests {
             .is_err());
         assert!(negative.state.transferred_files.is_empty());
         assert!(negative.state.transfer_metadata.is_none());
+    }
+
+    #[tokio::test]
+    async fn given_inbound_file_end_when_content_is_short_or_destination_missing_then_success_is_rejected_without_retiring_file(
+    ) {
+        fn frame(id: i64, size: i64, offset: i64, body: &[u8], flags: i32) -> OfflineFrame {
+            OfflineFrame {
+                v1: Some(location_nearby_connections::V1Frame {
+                    r#type: Some(
+                        location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into(),
+                    ),
+                    payload_transfer: Some(PayloadTransferFrame {
+                        packet_type: Some(PacketType::Data.into()),
+                        payload_header: Some(PayloadHeader {
+                            id: Some(id),
+                            r#type: Some(payload_header::PayloadType::File.into()),
+                            total_size: Some(size),
+                            ..Default::default()
+                        }),
+                        payload_chunk: Some(PayloadChunk {
+                            offset: Some(offset),
+                            flags: Some(flags),
+                            body: Some(body.to_vec()),
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+        }
+        // Arrange / Act / Assert: actual frame handler and destination writes, both request modes.
+        for managed in [false, true] {
+            for (size, body, opened, offset, extra, complete) in [
+                (0, b"".as_slice(), true, 0, false, true),
+                (1, b"".as_slice(), true, 0, false, false),
+                (1, b"a".as_slice(), true, 1, false, true),
+                (3, b"a".as_slice(), true, 1, false, false),
+                (3, b"abc".as_slice(), true, 3, false, true),
+                (3, b"abc".as_slice(), true, 2, false, false),
+                (0, b"".as_slice(), false, 0, false, false),
+                (1, b"a".as_slice(), true, 1, true, true),
+            ] {
+                let mut request = test_request();
+                let (socket, _peer) = tokio::io::duplex(4096);
+                request.socket = socket;
+                request.state.encrypt_key = Some(vec![0; 32]);
+                request.state.send_hmac_key = Some(vec![0; 32]);
+                if managed {
+                    let hub = crate::sessions::SessionHub::new(42).unwrap();
+                    request.session = Some(
+                        hub.open(
+                            crate::channel::TransferType::Inbound,
+                            None,
+                            tokio_util::sync::CancellationToken::new(),
+                        )
+                        .unwrap(),
+                    );
+                }
+                request.state.state = State::ReceivingFiles;
+                request.state.transfer_metadata = Some(TransferMetadata {
+                    total_bytes: size as u64,
+                    ..Default::default()
+                });
+                let destination = tempfile::NamedTempFile::new().unwrap();
+                request.state.transferred_files.insert(
+                    101,
+                    InternalFileInfo {
+                        payload_id: 101,
+                        file_url: destination.path().to_owned(),
+                        parent_folder: None,
+                        bytes_transferred: 0,
+                        total_size: size,
+                        file: opened.then(|| destination.as_file().try_clone().unwrap()),
+                    },
+                );
+                if extra {
+                    request.state.transferred_files.insert(
+                        102,
+                        InternalFileInfo {
+                            payload_id: 102,
+                            file_url: destination.path().to_owned(),
+                            parent_folder: None,
+                            bytes_transferred: 0,
+                            total_size: 0,
+                            file: Some(tempfile::tempfile().unwrap()),
+                        },
+                    );
+                }
+                if !body.is_empty() {
+                    request
+                        .process_offline_frame(frame(101, size, 0, body, 0))
+                        .await
+                        .unwrap();
+                }
+                let before_ack = request.state.transfer_metadata.as_ref().unwrap().ack_bytes;
+                if opened && offset == body.len() as i64 {
+                    request
+                        .process_offline_frame(frame(101, size, offset, &[], 0))
+                        .await
+                        .unwrap();
+                    assert!(request.state.transferred_files.contains_key(&101));
+                    // Empty nonfinal chunk is not EOF.
+                }
+                let result = request
+                    .process_offline_frame(frame(101, size, offset, &[], 1))
+                    .await;
+                assert_eq!(request.state.transferred_files.contains_key(&101), !complete, "size={size}, body={body:?}, opened={opened}, offset={offset}, managed={managed}");
+                assert_eq!(
+                    request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                    before_ack
+                );
+                assert_eq!(std::fs::read(destination.path()).unwrap(), body);
+                if complete && extra {
+                    assert!(result.is_ok());
+                    assert_eq!(request.state.state, State::ReceivingFiles);
+                    let last = request
+                        .process_offline_frame(frame(102, 0, 0, &[], 1))
+                        .await
+                        .unwrap_err();
+                    assert!(last.is::<crate::errors::AppError>());
+                    assert_eq!(request.state.state, State::Finished);
+                } else {
+                    let error = result.unwrap_err();
+                    assert_eq!(error.is::<crate::errors::AppError>(), complete);
+                    assert_eq!(
+                        request.state.state,
+                        if complete {
+                            State::Finished
+                        } else {
+                            State::ReceivingFiles
+                        }
+                    );
+                }
+            }
+        }
     }
 
     #[tokio::test]
