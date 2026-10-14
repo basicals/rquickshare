@@ -14,7 +14,7 @@ not place its email/token/config in Git. Production domain and actual external
 signer host/hardware are still unspecified. R2 is selected, not a grant to invent
 those values or generate a release identity on this workstation.
 
-1. [ ] R1: inspect R2 account readiness; reserve a dedicated private empty bucket
+1. [x] R1: inspect R2 account readiness; reserve a dedicated private empty bucket
    if supported/absent, without enabling r2.dev, custom domain or object exposure.
    Record actual outcome; never alter an unrelated bucket or billing enrollment.
 2. [ ] R2: bounded toolkit-independent publication owner and R2 S3 adapter. Verify
@@ -112,3 +112,29 @@ R1–R4 pending after this plan. No bucket/domain/object/key modification yet. S
 do not impose a separate permission gate; user selection authorizes scoped private
 bucket setup and reviewable source work. Missing domain/signer identity gates only
 dependent public binding and production signing, not local implementation.
+
+R1 complete: dedicated bucket rquickshare-native-apt created2026-10-14 17:02:46 UTC,
+Standard, actual locationWEUR, observed object_count0/size0B. Existing other
+buckets were only listed and not modified. No r2.dev/custom domain/public setting
+was enabled, no object/token/production key uploaded, no billing enrollment change.
+Task-only Python venv /tmp/rqs-r2-python.ev80Fc contains boto3/botocore1.43.113
+and its pinned dependency graph for SDK contract checks; user Python is unchanged.
+Wrangler4.151.0 read/create/info completed; all owned terminals closed.
+
+User domain clarification: download.morozhenko.com already serves app-dist and
+Picturix /dist/Picturix/latest.json. Actual Wrangler read confirms domain/SSL active.
+New native bucket still has0 objects/no custom domains/r2.dev disabled. Read-only
+Picturix guide/source inspection only, no sibling edits. Domain/routing choice is
+recorded in native-r2-domain-review.md; recommend independent apt.morozhenko.com
+after DNS preflight, alternative a narrowly scoped shared-host Worker route.
+
+R2 source is staged but not yet behavior-tested or wired into CI: native_r2.py
+contains verified snapshot planning, immutable create/readback and InRelease CAS
+with explicit bucket-scoped credential adapter. Optional boto3 dependency graph
+is pinned in requirements-r2.txt. Single PUT uses documented Content-MD5 transport
+checksum, while signed SHA256/readback supplies actual content authentication; no
+assumed full-object SHA256 S3 feature. R2–R4 tests, signer approval handoff and
+By-Hash:force bootstrap/actual APT projection checks remain pending. Do not present
+this staged publisher as operational. Production source/transfer code is unchanged.
+Pause before significant domain/routing choice under AGENTS3/3.1, not a skill
+approval rule. Existing outside-CI signing selection remains recorded.
