@@ -32,8 +32,13 @@ The device-name review explicitly gates implementation on selection.
 Whitespace check passed. No production code changed or unaffected checks repeated.
 The user subsequently requested continuing the recommended live-update option1.
 [Live device name](native-device-name.md) N1–N5 are complete in source, scoped checks
-and a verified uninstalled native4 package. Continue the remaining parity gaps and
-installed/physical acceptance; do not restart the already completed name slice.
+and a verified uninstalled native4 package. The next scoped analysis is
+[temporary visibility ownership](native-visibility-review.md): mDNS currently
+owns expiry, so its failure can leave Bluetooth temporarily visible indefinitely;
+a stale tick can also overwrite a newer mode command. Core-owned policy is
+recommended; the substantial source-API/lifecycle refactor awaits user selection.
+No visibility production code has changed. Continue installed/physical acceptance
+separately; do not restart the already completed name slice.
 
 ## Implemented source and remaining acceptance
 

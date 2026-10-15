@@ -1,8 +1,18 @@
 # Product direction: native desktop and Google Quick Share parity
 
 Current implementation and next decision: [current state](current-state.md) and
-[custom device-name review](native-device-name-review.md). The dated checkpoints
+[temporary visibility review](native-visibility-review.md). The dated checkpoints
 below are historical; later selections supersede earlier pending-choice claims.
+
+## 2026-10-15: temporary visibility ownership review prepared
+
+Source analysis found that a failed mDNS worker can abandon the only temporary
+expiry timer while BLE still observes Temporary. A stale timer tick can also
+overwrite a newer mode/renewal. The review recommends one per-RQS core controller
+with generation-bound deadlines and read-only transport consumers. It records
+the alternative daemon-only ownership, proposed invariants, staged checks and
+rollback before code. Significant ownership/source-API selection is pending;
+the current one-minute UI and native4 artifacts remain unchanged.
 
 ## 2026-10-15: live native device name and corrected visibility preservation
 
