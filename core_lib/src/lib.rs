@@ -266,7 +266,11 @@ impl RQS {
         )?
         .with_identity(identity.subscribe(identity::ConsumerKind::Mdns)?);
         let ctk = ctoken.clone();
-        tracker.spawn(async move { mdns.run(ctk).await });
+        tracker.spawn(async move {
+            if mdns.run(ctk).await.is_err() {
+                error!("mDNS worker or its SDK shutdown failed");
+            }
+        });
 
         #[cfg(all(feature = "experimental", target_os = "linux"))]
         {

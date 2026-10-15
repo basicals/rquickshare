@@ -9,7 +9,7 @@ libraries/tools installed:
 
 ```sh
 python3 scripts/native_deb.py build
-python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native5_amd64.deb
+python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native6_amd64.deb
 ```
 
 Default artifacts contain locked release binaries. `build --profile dev` explicitly

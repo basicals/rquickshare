@@ -32,6 +32,7 @@ pub struct MDnsServer {
     visibility_receiver: crate::VisibilityReader,
     endpoint_id: [u8; 4],
     identity: Option<crate::identity::IdentityConsumer>,
+    shutdown_requested: bool,
 }
 
 impl MDnsServer {
@@ -61,10 +62,22 @@ impl MDnsServer {
             visibility_receiver,
             endpoint_id,
             identity: None,
+            shutdown_requested: false,
         })
     }
 
     pub async fn run(&mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
+        let outcome = self.run_inner(ctk).await;
+        self.shutdown_requested = true;
+        complete_lifetime(outcome, async {
+            let completion = self.daemon.shutdown()?;
+            completion.recv_async().await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn run_inner(&mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
         info!("{INNER_NAME}: service starting");
         let monitor = self.daemon.monitor()?;
         let ble_receiver = &mut self.ble_receiver;
@@ -220,9 +233,66 @@ impl MDnsServer {
     }
 }
 
+impl Drop for MDnsServer {
+    fn drop(&mut self) {
+        if !self.shutdown_requested && self.daemon.shutdown().is_err() {
+            error!("mDNS SDK shutdown admission failed during owner drop");
+        }
+    }
+}
+
+async fn complete_lifetime(
+    outcome: Result<(), anyhow::Error>,
+    shutdown: impl std::future::Future<Output = Result<(), anyhow::Error>>,
+) -> Result<(), anyhow::Error> {
+    let shutdown = shutdown.await;
+    if shutdown.is_err() {
+        error!("mDNS SDK shutdown failed");
+    }
+    outcome.and(shutdown)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn given_worker_and_sdk_outcomes_when_completing_then_shutdown_ack_is_required_and_primary_error_survives(
+    ) {
+        for worker_failed in [false, true] {
+            for shutdown_failed in [false, true] {
+                // Arrange
+                let (release, acknowledgement) = tokio::sync::oneshot::channel();
+                let outcome = if worker_failed {
+                    Err(anyhow::anyhow!("worker failure"))
+                } else {
+                    Ok(())
+                };
+                let mut completion = Box::pin(complete_lifetime(outcome, async {
+                    acknowledgement.await.unwrap();
+                    if shutdown_failed {
+                        Err(anyhow::anyhow!("SDK failure"))
+                    } else {
+                        Ok(())
+                    }
+                }));
+                // Act / Assert
+                assert!(futures::poll!(completion.as_mut()).is_pending());
+                release.send(()).unwrap();
+                let result = completion.await;
+                assert_eq!(
+                    result.err().map(|error| error.to_string()),
+                    if worker_failed {
+                        Some("worker failure".into())
+                    } else if shutdown_failed {
+                        Some("SDK failure".into())
+                    } else {
+                        None
+                    }
+                );
+            }
+        }
+    }
 
     #[test]
     fn given_display_name_change_when_service_is_rebuilt_then_dns_identity_and_endpoint_stay_fixed()

@@ -226,6 +226,60 @@ The full604 run preceded the enum relocation and async unregister refinement;
 it is not claimed as a repeated final604 run. No ten-run loop or final Mode B gate.
 V5 package verification remains separate from these source checks.
 
+## V5 intermediate native5 candidate provenance (superseded)
+
+Release candidate source is fb5c83dfd265215e079ed01baac63a173fd8a915,
+package revision5. The uninstalled release build uses the existing explicit
+private GTK library root and /tmp/rqs-layer-metadata/shlibs, as native4 did.
+Native4 remains the last verified package until this build/verification completes.
+Do not label later documentation-only commits as binary rebuilds. The source
+assertion in a signing request remains distinct from build attestation and exact
+release approval. No signing, publication, installation or remote request is part
+of this build. V5 artifact hashes/actual verification will follow after completion.
+
+## SDK lifetime correction before final candidate
+
+Native5 built and passed offline verification, but final dependency inspection
+found another owned-lifetime defect: mdns-sd ServiceDaemon has no Drop shutdown;
+its run loop exits only on Command::Exit, not disconnected command senders.
+Returning from an mDNS worker can therefore leave the SDK thread announcing
+registered services. This is an evident scoped resource-lifetime fix within V3,
+not a new visibility mode or unrelated transport redesign.
+
+Before code: wrap run_inner completion with an awaited SDK shutdown admission/
+acknowledgement on both success and error. Preserve the primary worker error,
+report shutdown failure without private service details, and add a Drop fallback
+for abandoned/unpolled owners. Never retry opaque failures or claim that local
+cleanup proves remote cache withdrawal. Do not cancel active transfers on an
+ordinary discovery error. SDK refusal/failure remains explicit, not a successful
+physical acknowledgement. No new timeout or background cleanup task.
+
+Add one table-driven real completion-orchestration regression: primary success/
+failure crossed with external shutdown success/failure, held acknowledgement
+must keep completion pending, primary error wins when both fail. The external SDK
+acknowledgement is injected; the domain completion logic is real. No live socket
+or discovery initialization. Recheck this affected mDNS suite and strict core
+lint once; unchanged GTK/legacy flows need no repeated test run.
+
+Keep native5 as a verified but superseded intermediate (its local receipt is
+/tmp/rqs-visibility-intermediate5.json). Advance final package revision to6; never
+overwrite native5 bytes. Final package will be built only after this source fix.
+Native5 size4639060, SHA256
+8644f7b9daf26755522b268958c0f4cd07c02d34d627d0bf477ce7d3e9eb30ea;
+source fb5c83dfd265215e079ed01baac63a173fd8a915. It was neither exported as the
+current candidate nor signed, installed or published.
+
+SDK correction implemented: run_inner always flows through awaited SDK shutdown;
+owner Drop requests shutdown if the run was abandoned before that admission.
+The core logs an mDNS worker/shutdown failure without raw SDK/service metadata.
+The timer remains independent; discovery failure does not cancel active transfers.
+The5 affected mDNS methods passed in0.01s (605 total compiled,600 filtered),
+including the new four-outcome gated-ack method. Final strict core all-features/
+all-target Clippy passed17.40s; affected nightly formatting passed. The final
+slice adds11 methods, including this extra N3-attributed lifetime method. The605
+library inventory is not a claimed whole605 execution. Rebuild/verify native6
+from this corrected source; preserve all measured native5 bytes as intermediate.
+
 No physical discovery, suspend, installed services or release publication was
 tested. The existing bluer future-incompatibility warning remains an upstream
 dependency observation, not a failed strict lint or a new waiver.
