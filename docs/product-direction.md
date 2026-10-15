@@ -11,8 +11,9 @@ expiry timer while BLE still observes Temporary. A stale timer tick can also
 overwrite a newer mode/renewal. The review recommends one per-RQS core controller
 with generation-bound deadlines and read-only transport consumers. It records
 the alternative daemon-only ownership, proposed invariants, staged checks and
-rollback before code. Significant ownership/source-API selection is pending;
-the current one-minute UI and native4 artifacts remain unchanged.
+rollback before code. The user selected option1; implementation/verification is
+in progress under the recorded contract. The current one-minute UI is preserved;
+native4 remains the last measured artifact until a replacement is verified.
 
 ## 2026-10-15: live native device name and corrected visibility preservation
 

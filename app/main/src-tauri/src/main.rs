@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate log;
 
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::sync::{atomic::AtomicBool, Mutex};
 
 use anyhow::anyhow;
 
@@ -38,7 +38,7 @@ mod store;
 pub struct AppState {
     pub message_sender: broadcast::Sender<ChannelMessage>,
     pub dch_sender: broadcast::Sender<EndpointInfo>,
-    pub visibility_sender: Arc<Mutex<watch::Sender<Visibility>>>,
+    pub visibility: rqs_lib::VisibilityReader,
     pub foreground_sender: watch::Sender<bool>,
     pub sender_file: mpsc::Sender<SendInfo>,
     pub ble_receiver: broadcast::Receiver<()>,
@@ -160,7 +160,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     app_handle.manage(AppState {
                         message_sender: rqs.message_sender.clone(),
                         dch_sender: broadcast::channel(10).0,
-                        visibility_sender: rqs.visibility_sender.clone(),
+                        visibility: rqs.subscribe_visibility(),
                         foreground_sender: rqs.foreground_sender.clone(),
                         sender_file,
                         ble_receiver,
@@ -277,21 +277,15 @@ fn spawn_receiver_tasks(app_handle: &AppHandle) {
     let capp_handle = app_handle.clone();
     tauri::async_runtime::spawn(async move {
         let state: tauri::State<'_, AppState> = capp_handle.state();
-        let mut visibility_receiver = match state.visibility_sender.lock() {
-            Ok(sender) => sender.subscribe(),
-            Err(_) => {
-                error!("visibility sender lock is poisoned");
-                return;
-            }
-        };
+        let mut visibility_receiver = state.visibility.clone();
 
         loop {
             let rinfo = visibility_receiver.changed().await;
 
             match rinfo {
                 Ok(_) => {
-                    let v = visibility_receiver.borrow_and_update();
-                    let _ = set_visibility(&capp_handle, *v);
+                    let visibility = visibility_receiver.current_and_update();
+                    let _ = set_visibility(&capp_handle, visibility);
                 }
                 Err(_) => {
                     debug!("visibility_receiver closed");

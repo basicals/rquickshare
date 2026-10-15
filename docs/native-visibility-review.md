@@ -97,16 +97,16 @@ shared transport lifecycle refactor. Alternative2 is retained as decision histor
    cancellation and expiry-generation contracts. Inventory affected branches and
    test interactions before writing regressions. Record any source-API break
    explicitly; do not preserve a second writable bypass as a compatibility shim.
-3. [ ] V2: implement owner-local controller and deterministic clock/deadline seam;
+3. [x] V2: implement owner-local controller and deterministic clock/deadline seam;
    wire the joined core lifetime. Verify independent instances, all three modes,
    deadline-before/at/after, renewal and superseding-command races, cancellation,
    failed initialization and restart. Real policy is the subject, not a mock.
-4. [ ] V3: remove expiry/write authority from mDNS; migrate mDNS/BLE policy reads,
+4. [x] V3: remove expiry/write authority from mDNS; migrate mDNS/BLE policy reads,
    NativeRuntime and legacy read subscriptions/commands as one coherent source
    change. Preserve settings replay and name-only-save behavior. Check expiry with
    an absent/failed transport through a controlled external adapter, without
    using the workstation's radios.
-5. [ ] V4: run affected core/native/legacy checks once, plus formatting/lint as
+5. [x] V4: run affected core/native/legacy checks once, plus formatting/lint as
    applicable. Record actual results, failures and corrections in this SSOT.
    Make atomic commits; do not rebuild an unchanged package just for this review.
 6. [ ] V5 after source verification: prepare the next uninstalled native candidate
@@ -144,6 +144,9 @@ changed and has-changed; callers cannot publish. Revision/deadline stay internal
 This intentionally removes RQS.visibility_sender. RQS.subscribe_visibility returns
 a reader; change_visibility returns an explicit error on revision exhaustion.
 Native and Tauri callers migrate together. Wire enum/schema2/Settings2 stay fixed.
+Move the unchanged Visibility enum/serde/TS/raw-value mapping into the policy
+module, preserving the public rqs_lib::Visibility path and serialized values.
+This removes the policy module's dependency on a transport-owned type definition.
 
 Construction and pre-start commands record mode without starting a timer/task.
 begin_startup synchronously activates the policy and establishes its deadline
@@ -152,6 +155,12 @@ The worker captures its failure guard before first poll: abandonment/panic hides
 policy and cancels the shared core lifetime. Normal cancellation clears running/
 deadline and retains current mode, so a later startup of a stopped Temporary
 owner gets a fresh minute. Failed startup joins the worker through existing stop.
+RQS Drop requests cancellation (including discovery) to prevent a dropped owner
+from orphaning its deadline/transports; explicit stop remains the awaited join
+barrier. Add one actual owner-drop lifecycle regression to the V1 inventory.
+Remove synchronous unregister acknowledgement waits from the async mDNS worker:
+use its existing channel's recv_async. A blocking recv on a single-thread runtime
+could otherwise stall the independent deadline task. No new timeout/retry policy.
 An unrelated transport exit does not own or cancel the timer. Wall-clock is not
 read. No claim about counting Linux suspend time is added.
 
@@ -179,3 +188,44 @@ transport-owned expiry and orphan workers. N1 enum parsing stays existing covera
 no new strings/input format. N6/N12 reuse settings store/replay/failure coverage;
 N11 is inapplicable (no billing). Complete product Mode B coverage is not claimed.
 Actual method counts/results will replace these planned estimates after execution.
+
+## V2/V3 source completion and measured development checks
+
+Implemented the private snapshot watch, read-only VisibilityReader, synchronous
+command admission and revision/deadline-checked expiry. begin_startup owns the
+guarded deadline worker before transport initialization. RQS Drop requests
+cancellation; stop remains the joined barrier. mDNS no longer holds a writer or
+timer; both BLE advertisers and legacy/native callers use the new seams. mDNS
+unregister acknowledgements now await asynchronously, so they cannot block a
+Tokio worker thread and starve the policy. Native admission happens before root
+capability adoption if the visibility command can fail. No writable compatibility
+shim, process-global timer, new wire method, schema or UI control was added.
+
+Ten new methods:8 policy and2 actual RQS lifecycle tests (the additional Drop
+regression is justified above). Primary non-overlapping risk attribution is N2=1,
+N3=1,N4=1,N5=2,N7=1,N8=1,N9=3. Positive, privacy and further boundary interactions
+overlap these counts; they are not extra methods or whole-product coverage.
+
+The first core library run passed603 methods (48.81s compile,7.56s execution).
+After the owner-drop regression and fallible-admission ordering change, the
+affected full library run passed604/0 in8.68s. Strict all-features/all-target core
+Clippy passed27.91s. Native GTK/private-broker/Xvfb run passed39/0 in0.57s with the
+same private GTK4/Layer Shell dependency root recorded in native-device-name.md.
+After replacing the two blocking mDNS acknowledgements, real binary integration
+tests passed: modern_protocol4/0 and native_daemon4/0 (0.00s/0.03s).
+
+Legacy Tauri bin tests passed10/0 in0.00s, preserving persistence-before-command
+and recovery behavior. Native all-target no-deps strict Clippy passed7.97s;
+its no-experimental core dependency reports9 existing unused/dead-code warnings,
+outside that no-deps lint scope. They were not suppressed or broadly cleaned up.
+Final source moves the unchanged wire enum into the core policy module and
+retains the public root re-export; affected visibility/export/settings/runtime
+filter passed11/0 in0.01s (593 filtered). Final all-features/all-target core strict
+Clippy passed13.18s. Nightly formatting checks passed for core/native/Tauri.
+The full604 run preceded the enum relocation and async unregister refinement;
+it is not claimed as a repeated final604 run. No ten-run loop or final Mode B gate.
+V5 package verification remains separate from these source checks.
+
+No physical discovery, suspend, installed services or release publication was
+tested. The existing bluer future-incompatibility warning remains an upstream
+dependency observation, not a failed strict lint or a new waiver.

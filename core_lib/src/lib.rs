@@ -4,7 +4,6 @@ extern crate log;
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 
 use anyhow::anyhow;
 use channel::ChannelMessage;
@@ -45,13 +44,14 @@ pub mod service;
 pub mod sessions;
 pub mod settings;
 mod utils;
+pub mod visibility;
 
 pub use hdl::{
-    EndpointInfo, ManagedEphemeralFile, OutboundPayload, State, Visibility,
-    MANAGED_EPHEMERAL_FILE_PREFIX,
+    EndpointInfo, ManagedEphemeralFile, OutboundPayload, State, MANAGED_EPHEMERAL_FILE_PREFIX,
 };
 pub use manager::SendInfo;
 pub use utils::DeviceType;
+pub use visibility::{Visibility, VisibilityError, VisibilityReader};
 
 pub mod sharing_nearby {
     include!(concat!(env!("OUT_DIR"), "/sharing.nearby.rs"));
@@ -81,9 +81,7 @@ pub struct RQS {
     // - can be cancelled while the ctoken is still active
     discovery_ctk: Option<CancellationToken>,
 
-    // Used to trigger a change in the mDNS visibility (and later on, BLE)
-    pub visibility_sender: Arc<Mutex<watch::Sender<Visibility>>>,
-    visibility_receiver: watch::Receiver<Visibility>,
+    visibility: visibility::VisibilityPolicy,
 
     // Only used to send the info "a nearby device is sharing"
     ble_sender: broadcast::Sender<()>,
@@ -105,6 +103,15 @@ impl Default for RQS {
     }
 }
 
+impl Drop for RQS {
+    fn drop(&mut self) {
+        self.stop_discovery();
+        if let Some(lifetime) = &self.ctoken {
+            lifetime.cancel();
+        }
+    }
+}
+
 impl RQS {
     pub fn new(
         visibility: Visibility,
@@ -114,17 +121,13 @@ impl RQS {
         let (message_sender, _) = broadcast::channel(50);
         let (ble_sender, _) = broadcast::channel(5);
 
-        // Define default visibility as per the args inside the new()
-        let (visibility_sender, visibility_receiver) = watch::channel(Visibility::Invisible);
-        let _ = visibility_sender.send(visibility);
         let (foreground_sender, foreground_receiver) = watch::channel(true);
 
         Self {
             tracker: None,
             ctoken: None,
             discovery_ctk: None,
-            visibility_sender: Arc::new(Mutex::new(visibility_sender)),
-            visibility_receiver,
+            visibility: visibility::VisibilityPolicy::new(visibility),
             ble_sender,
             foreground_sender,
             foreground_receiver,
@@ -174,6 +177,8 @@ impl RQS {
         }
         let tracker = TaskTracker::new();
         let ctoken = CancellationToken::new();
+        let visibility_worker = self.visibility.start(ctoken.clone())?;
+        tracker.spawn(visibility_worker);
         self.tracker = Some(tracker.clone());
         self.ctoken = Some(ctoken.clone());
         let guard = ctoken.clone().drop_guard();
@@ -257,8 +262,7 @@ impl RQS {
             binded_addr.port(),
             self.ble_sender.subscribe(),
             receiver_mdns_refresh_receiver,
-            self.visibility_sender.clone(),
-            self.visibility_receiver.clone(),
+            self.subscribe_visibility(),
         )?
         .with_identity(identity.subscribe(identity::ConsumerKind::Mdns)?);
         let ctk = ctoken.clone();
@@ -273,7 +277,7 @@ impl RQS {
                 identity.snapshot().name.as_str(),
             );
 
-            let visibility_rx = self.visibility_receiver.clone();
+            let visibility_rx = self.subscribe_visibility();
             let ctk = ctoken.clone();
             tracker.spawn(async move {
                 let Some(initialized) =
@@ -297,7 +301,7 @@ impl RQS {
             let (receiver_adv_refresh_sender, _) =
                 broadcast::channel::<crate::hdl::ReceiverAdvertisingRefresh>(8);
 
-            let visibility_rx = self.visibility_receiver.clone();
+            let visibility_rx = self.subscribe_visibility();
             let receiver_ctk = ctoken.clone();
             let advertiser_refresh_sender = receiver_adv_refresh_sender.clone();
             tracker.spawn(async move {
@@ -384,11 +388,13 @@ impl RQS {
         }
     }
 
-    pub fn change_visibility(&mut self, nv: Visibility) {
-        match self.visibility_sender.lock() {
-            Ok(sender) => sender.send_modify(|state| *state = nv),
-            Err(_) => error!("visibility sender lock is poisoned"),
-        }
+    /// An explicit Temporary command renews its window, including the same mode.
+    pub fn change_visibility(&mut self, mode: Visibility) -> Result<(), VisibilityError> {
+        self.visibility.set(mode, true)
+    }
+
+    pub fn subscribe_visibility(&self) -> VisibilityReader {
+        self.visibility.subscribe()
     }
 
     pub fn set_foreground(&self, foreground: bool) {

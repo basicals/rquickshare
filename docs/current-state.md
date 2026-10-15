@@ -36,8 +36,9 @@ and a verified uninstalled native4 package. The next scoped analysis is
 [temporary visibility ownership](native-visibility-review.md): mDNS currently
 owns expiry, so its failure can leave Bluetooth temporarily visible indefinitely;
 a stale tick can also overwrite a newer mode command. Core-owned policy is
-recommended; the substantial source-API/lifecycle refactor awaits user selection.
-No visibility production code has changed. Continue installed/physical acceptance
+selected by the user. The core controller, read-only transport/shell migration
+and lifecycle regressions are being implemented/verified under that contract.
+Native4 remains the last verified package until V5 finishes. Continue installed/physical acceptance
 separately; do not restart the already completed name slice.
 
 ## Implemented source and remaining acceptance

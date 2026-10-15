@@ -13,7 +13,7 @@ use crate::service::settings_service::{
 struct Server {
     stop: CancellationToken,
     task: JoinHandle<Result<(), BusError>>,
-    visibility: Arc<Mutex<tokio::sync::watch::Sender<crate::Visibility>>>,
+    visibility: crate::visibility::VisibilityPolicy,
 }
 impl Server {
     fn start(bus: SelectionBus) -> Self {
@@ -26,7 +26,7 @@ impl Server {
         let stop = CancellationToken::new();
         let end = stop.clone();
         let fixture = crate::service::runtime::tests::fixture_with_identity(identity);
-        let visibility = crate::service::runtime::tests::visibility_sender(&fixture);
+        let visibility = crate::service::runtime::tests::visibility_policy(&fixture);
         let task = tokio::spawn(async move {
             // Capture the whole fixture: its receiver/discovery owners must outlive the runtime borrow.
             let mut fixture = fixture;
@@ -157,16 +157,15 @@ async fn given_name_save_waiting_for_consumers_when_other_client_reads_then_bus_
             .await
             .unwrap();
         assert_eq!(
-            *server.visibility.lock().unwrap().borrow(),
+            server.visibility.subscribe().current(),
             crate::Visibility::Temporarily
         );
         server
             .visibility
-            .lock()
-            .unwrap()
-            .send_modify(|value| *value = crate::Visibility::Invisible);
-        let mut visibility = server.visibility.lock().unwrap().subscribe();
-        visibility.borrow_and_update();
+            .set(crate::Visibility::Invisible, true)
+            .unwrap();
+        let mut visibility = server.visibility.subscribe();
+        visibility.current_and_update();
         let mut only_name = intent(&temporary, 4);
         only_name.visibility = 2;
         only_name.device_name = "After expiry".into();
@@ -183,13 +182,13 @@ async fn given_name_save_waiting_for_consumers_when_other_client_reads_then_bus_
         let current = mdns.snapshot();
         assert_eq!(current.name.as_str(), "After expiry");
         assert!(!visibility.has_changed().unwrap());
-        assert_eq!(*visibility.borrow(), crate::Visibility::Invisible);
+        assert_eq!(visibility.current(), crate::Visibility::Invisible);
         mdns.acknowledge(current.revision).unwrap();
         gatt.acknowledge(current.revision).unwrap();
         let (_, saved) = save.await.unwrap();
         assert_eq!(saved.unwrap().name_status, 2);
         assert!(!visibility.has_changed().unwrap());
-        assert_eq!(*visibility.borrow(), crate::Visibility::Invisible);
+        assert_eq!(visibility.current(), crate::Visibility::Invisible);
         server.finish().await;
     })
     .await;
@@ -258,7 +257,7 @@ async fn given_failed_name_consumer_when_saving_or_rejecting_invalid_name_then_s
         assert_eq!(saved.revision, 2);
         assert_eq!(saved.name_status, 3);
         assert_eq!(
-            *server.visibility.lock().unwrap().borrow(),
+            server.visibility.subscribe().current(),
             crate::Visibility::Visible
         );
         for value in [

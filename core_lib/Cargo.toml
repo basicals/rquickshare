@@ -60,6 +60,7 @@ uuid = "1.15"
 prost-build = "0.13"
 
 [dev-dependencies]
+tokio = { version = "1.43", features = ["test-util"] }
 tempfile = "3.0"
 
 [features]

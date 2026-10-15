@@ -1,4 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use super::*;
 
@@ -6,6 +7,52 @@ async fn scenario(operation: impl Future<Output = ()>) {
     tokio::time::timeout(std::time::Duration::from_secs(5), operation)
         .await
         .expect("lifecycle scenario deadlocked");
+}
+
+#[tokio::test(start_paused = true)]
+async fn given_started_core_when_owner_is_dropped_then_cancellation_releases_all_tracked_workers() {
+    // Arrange
+    let mut core = RQS::new(Visibility::Temporarily, None, None);
+    let (tracker, token, guard) = core.begin_startup().unwrap();
+    let discovery = CancellationToken::new();
+    core.discovery_ctk = Some(discovery.clone());
+    guard.disarm();
+    // Act
+    drop(core);
+    // Assert
+    assert!(token.is_cancelled());
+    assert!(discovery.is_cancelled());
+    tracker.close();
+    tracker.wait().await;
+    assert!(tracker.is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn given_failed_discovery_task_when_core_window_expires_then_policy_survives_and_shutdown_joins(
+) {
+    // Arrange: actual core lifetime, no radio initialization.
+    let mut core = RQS::new(Visibility::Temporarily, None, None);
+    let (tracker, token, guard) = core.begin_startup().unwrap();
+    let mut reader = core.subscribe_visibility();
+    let failed = tracker.spawn(async { Err::<(), _>("controlled discovery failure") });
+    assert_eq!(failed.await.unwrap(), Err("controlled discovery failure"));
+    assert!(!token.is_cancelled());
+    // Act
+    tokio::time::advance(std::time::Duration::from_secs(60)).await;
+    reader.changed().await.unwrap();
+    // Assert
+    assert_eq!(reader.current(), Visibility::Invisible);
+    assert!(!token.is_cancelled());
+    guard.disarm();
+    core.stop().await;
+    assert!(tracker.is_closed() && tracker.is_empty());
+    assert!(token.is_cancelled());
+    let (next_tracker, next_token, next_guard) = core.begin_startup().unwrap();
+    assert_eq!(core.subscribe_visibility().current(), Visibility::Invisible);
+    next_guard.disarm();
+    core.stop().await;
+    assert!(next_token.is_cancelled());
+    assert!(next_tracker.is_empty());
 }
 
 #[tokio::test]

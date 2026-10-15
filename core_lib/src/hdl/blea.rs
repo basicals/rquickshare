@@ -3,11 +3,11 @@ use std::sync::Arc;
 use bluer::adv::{Advertisement, AdvertisementHandle};
 use bluer::UuidExt;
 use bytes::Bytes;
-use tokio::sync::{broadcast, watch};
+use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::hdl::mdns::Visibility;
+use crate::Visibility;
 
 const SERVICE_DATA: Bytes = Bytes::from_static(&[
     252, 18, 142, 1, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 191, 45, 91, 160, 225, 216, 117, 36, 202, 0,
@@ -18,13 +18,11 @@ const INNER_NAME: &str = "BleAdvertiser";
 #[derive(Debug, Clone)]
 pub struct BleAdvertiser {
     adapter: Arc<bluer::Adapter>,
-    visibility_receiver: watch::Receiver<Visibility>,
+    visibility_receiver: crate::VisibilityReader,
 }
 
 impl BleAdvertiser {
-    pub async fn new(
-        visibility_receiver: watch::Receiver<Visibility>,
-    ) -> Result<Self, anyhow::Error> {
+    pub async fn new(visibility_receiver: crate::VisibilityReader) -> Result<Self, anyhow::Error> {
         let session = bluer::Session::new().await?;
         let adapter = session.default_adapter().await?;
         adapter.set_powered(true).await?;
@@ -48,7 +46,7 @@ impl BleAdvertiser {
 
         let service_uuid = Uuid::from_u16(0xFE2C);
         let mut handle: Option<AdvertisementHandle> = None;
-        let mut visibility = *self.visibility_receiver.borrow_and_update();
+        let mut visibility = self.visibility_receiver.current_and_update();
 
         if Self::should_advertise(visibility) {
             handle = Some(
@@ -71,7 +69,7 @@ impl BleAdvertiser {
                         break;
                     }
 
-                    visibility = *self.visibility_receiver.borrow_and_update();
+                    visibility = self.visibility_receiver.current_and_update();
                     debug!("{INNER_NAME}: visibility changed: {visibility:?}");
 
                     if Self::should_advertise(visibility) {
@@ -306,13 +304,13 @@ pub enum ReceiverAdvertisingRefresh {
 #[derive(Debug, Clone)]
 pub struct ReceiverAdvertiser {
     adapter: Arc<bluer::Adapter>,
-    visibility_receiver: watch::Receiver<Visibility>,
+    visibility_receiver: crate::VisibilityReader,
     refresh_sender: broadcast::Sender<ReceiverAdvertisingRefresh>,
 }
 
 impl ReceiverAdvertiser {
     pub async fn new(
-        visibility_receiver: watch::Receiver<Visibility>,
+        visibility_receiver: crate::VisibilityReader,
         refresh_sender: broadcast::Sender<ReceiverAdvertisingRefresh>,
     ) -> Result<Self, anyhow::Error> {
         let session = bluer::Session::new().await?;
@@ -348,7 +346,7 @@ impl ReceiverAdvertiser {
         );
 
         loop {
-            let visibility = *self.visibility_receiver.borrow_and_update();
+            let visibility = self.visibility_receiver.current_and_update();
             if BleAdvertiser::should_advertise(visibility) && handle.is_none() {
                 // Keep the on-air packet legacy-sized: advertise only the 0xFEF3
                 // service UUID and serve the full Nearby receiver advertisement
@@ -395,7 +393,7 @@ impl ReceiverAdvertiser {
                 refresh = refresh_receiver.recv() => {
                     match refresh {
                         Ok(ReceiverAdvertisingRefresh::Immediate) => {
-                            let visibility = *self.visibility_receiver.borrow();
+                            let visibility = self.visibility_receiver.current();
                             if Self::should_refresh(visibility, handle.is_some()) {
                                 debug!("{RX_INNER_NAME}: immediate advertising refresh requested");
                                 deferred_refresh_deadline = None;
@@ -403,7 +401,7 @@ impl ReceiverAdvertiser {
                             }
                         }
                         Ok(ReceiverAdvertisingRefresh::Deferred) | Err(broadcast::error::RecvError::Lagged(_)) => {
-                            let visibility = *self.visibility_receiver.borrow();
+                            let visibility = self.visibility_receiver.current();
                             if Self::should_refresh(visibility, handle.is_some()) {
                                 deferred_refresh_deadline = Some(
                                     tokio::time::Instant::now()
@@ -422,7 +420,7 @@ impl ReceiverAdvertiser {
                         tokio::time::Instant::now() + std::time::Duration::from_secs(86_400)
                     })
                 ), if deferred_refresh_deadline.is_some() => {
-                    let visibility = *self.visibility_receiver.borrow();
+                    let visibility = self.visibility_receiver.current();
                     deferred_refresh_deadline = None;
                     if Self::should_refresh(visibility, handle.is_some()) {
                         debug!("{RX_INNER_NAME}: applying deferred advertising refresh");

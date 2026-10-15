@@ -29,7 +29,8 @@ fn apply_visibility(
     persist: impl FnOnce() -> Result<(), String>,
 ) -> Result<(), String> {
     persist()?;
-    rqs.change_visibility(visibility);
+    rqs.change_visibility(visibility)
+        .map_err(|error| error.to_string())?;
     recovered.store(false, Ordering::Release);
     Ok(())
 }
@@ -38,11 +39,7 @@ fn apply_visibility(
 pub fn get_receiving_status(
     state: tauri::State<'_, AppState>,
 ) -> Result<(Visibility, bool), String> {
-    let sender = state
-        .visibility_sender
-        .lock()
-        .map_err(|_| "RQuickShare state lock is poisoned".to_owned())?;
-    let visibility = *sender.borrow();
+    let visibility = state.visibility.current();
     Ok((
         visibility,
         state.visibility_recovered.load(Ordering::Acquire),
@@ -64,10 +61,7 @@ mod tests {
         });
         // Assert
         assert_eq!(result, Err("write failed".into()));
-        assert_eq!(
-            *core.visibility_sender.lock().unwrap().borrow(),
-            Visibility::Invisible
-        );
+        assert_eq!(core.subscribe_visibility().current(), Visibility::Invisible);
         assert!(warning.load(Ordering::Acquire));
     }
 
@@ -82,16 +76,16 @@ mod tests {
             // Arrange
             let mut core = RQS::new(Visibility::Invisible, None, None);
             let warning = AtomicBool::new(true);
-            let sender = core.visibility_sender.clone();
+            let visibility_reader = core.subscribe_visibility();
             // Act
             apply_visibility(&mut core, &warning, visibility, || {
-                assert_eq!(*sender.lock().unwrap().borrow(), Visibility::Invisible);
+                assert_eq!(visibility_reader.current(), Visibility::Invisible);
                 assert!(warning.load(Ordering::Acquire));
                 Ok(())
             })
             .unwrap();
             // Assert
-            assert_eq!(*core.visibility_sender.lock().unwrap().borrow(), visibility);
+            assert_eq!(core.subscribe_visibility().current(), visibility);
             assert!(!warning.load(Ordering::Acquire));
         }
     }

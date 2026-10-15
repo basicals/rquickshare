@@ -9,10 +9,8 @@ use crate::file_source::{OpenedFile, SelectionLimits};
 use crate::managed::{acknowledge_release, OutboundJob, OutboundReceiver};
 use crate::sessions::{consent_command, SessionLease};
 
-pub(crate) fn visibility_sender(
-    fixture: &Fixture,
-) -> std::sync::Arc<std::sync::Mutex<tokio::sync::watch::Sender<crate::Visibility>>> {
-    fixture.runtime.core.visibility_sender.clone()
+pub(crate) fn visibility_policy(fixture: &Fixture) -> crate::visibility::VisibilityPolicy {
+    fixture.runtime.core.visibility.clone()
 }
 
 pub(crate) struct Fixture {
@@ -48,8 +46,8 @@ fn given_temporary_visibility_when_only_name_changes_then_no_visibility_event_ca
     use crate::service::native_settings::{CardMode, Values};
     use crate::service::settings_service::RootUpdate;
     let mut fixture = fixture();
-    let mut visibility = fixture.runtime.core.visibility_receiver.clone();
-    visibility.borrow_and_update();
+    let mut visibility = fixture.runtime.core.subscribe_visibility();
+    visibility.current_and_update();
     let mut values = Values {
         visibility: 2,
         port: None,
@@ -62,7 +60,7 @@ fn given_temporary_visibility_when_only_name_changes_then_no_visibility_event_ca
         .apply_live_settings(&values, RootUpdate::Retain, true));
     assert!(visibility.has_changed().unwrap());
     assert_eq!(
-        *visibility.borrow_and_update(),
+        visibility.current_and_update(),
         crate::Visibility::Temporarily
     );
     values.device_name = Some(crate::identity::DeviceName::new("Renamed").unwrap());
@@ -70,33 +68,31 @@ fn given_temporary_visibility_when_only_name_changes_then_no_visibility_event_ca
         .runtime
         .apply_live_settings(&values, RootUpdate::Retain, true));
     assert!(!visibility.has_changed().unwrap());
-    assert_eq!(*visibility.borrow(), crate::Visibility::Temporarily);
+    assert_eq!(visibility.current(), crate::Visibility::Temporarily);
     fixture
         .runtime
         .core
-        .visibility_sender
-        .lock()
-        .unwrap()
-        .send_modify(|state| *state = crate::Visibility::Invisible);
-    visibility.borrow_and_update();
+        .change_visibility(crate::Visibility::Invisible)
+        .unwrap();
+    visibility.current_and_update();
     assert!(fixture
         .runtime
         .apply_live_settings(&values, RootUpdate::Retain, false));
     assert!(!visibility.has_changed().unwrap());
-    assert_eq!(*visibility.borrow(), crate::Visibility::Invisible);
+    assert_eq!(visibility.current(), crate::Visibility::Invisible);
     values.visibility = 0;
     assert!(fixture
         .runtime
         .apply_live_settings(&values, RootUpdate::Retain, true));
     assert!(visibility.has_changed().unwrap());
-    assert_eq!(*visibility.borrow_and_update(), crate::Visibility::Visible);
+    assert_eq!(visibility.current_and_update(), crate::Visibility::Visible);
     values.visibility = 1;
     assert!(fixture
         .runtime
         .apply_live_settings(&values, RootUpdate::Retain, true));
     assert!(visibility.has_changed().unwrap());
     assert_eq!(
-        *visibility.borrow_and_update(),
+        visibility.current_and_update(),
         crate::Visibility::Invisible
     );
 }

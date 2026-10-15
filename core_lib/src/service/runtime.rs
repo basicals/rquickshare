@@ -152,13 +152,14 @@ impl NativeRuntime {
         {
             return false;
         }
-        let Ok(sender) = self.core.visibility_sender.lock() else {
-            return false;
-        };
         let Some(visibility) = crate::Visibility::try_from_raw_value(values.visibility.into())
         else {
             return false;
         };
+        // Admit the fallible policy command before adopting a new root capability.
+        if apply_visibility && self.core.visibility.set(visibility, false).is_err() {
+            return false;
+        }
         match root {
             super::settings_service::RootUpdate::Retain => (),
             super::settings_service::RootUpdate::Default => {
@@ -167,16 +168,6 @@ impl NativeRuntime {
             super::settings_service::RootUpdate::Replace(directory) => {
                 self.core.receive_policy.set_directory(Some(directory))
             }
-        }
-        if apply_visibility {
-            sender.send_if_modified(|state| {
-                if *state == visibility {
-                    false
-                } else {
-                    *state = visibility;
-                    true
-                }
-            });
         }
         true
     }
