@@ -27,13 +27,13 @@ errors are suppressed. Mounted-file presence is not proof of completed cloud syn
 2. [x] B2: focused pure archive/path/tamper/refusal tests plus real protected GPG
    encryption/decryption/restore/non-release signature/revocation integration.
    No domain mocks; test-only Pinentry injection, no ambient GPG or cloud fixture.
-3. [ ] B3: create actual encrypted backup on private local disk; verify decryption,
+3. [x] B3: create actual encrypted backup on private local disk; verify decryption,
    restoration, exact primary/subkey protection and non-release signature. This
    requires archive-password entry and original key-password entry in Pinentry.
 4. [ ] B4: copy ciphertext/receipt/checksum only to the selected ArcVault. Verify
    direct remote metadata and fresh downloaded ciphertext SHA256/size; record
    quota/blocking outcomes honestly. Never claim cloud success from mount cache.
-5. [ ] B5: SSOT/atomic commits, operator restore instructions and source exports.
+5. [x] B5: SSOT/atomic commits, operator restore instructions and source exports.
 
 Rollback code/receipt commits independently. Preserve active signing profiles.
 Unsent staging can be removed explicitly; never silently delete active keys or
@@ -149,3 +149,54 @@ verified ArcVault folder, without replacing existing files. For cloud acceptance
 read metadata and download fresh bytes directly through the existing rclone remote,
 compare exact SHA256/size; no remote plaintext or new share permission. Keep the
 verified local ciphertext if remote quota prevents completed upload/readback.
+
+## B3 actual local recovery verification / B4 preflight
+
+Actual encrypted backup created successfully with user system Pinentry. Primary
+6D8854762CF0C86881138A56695A0888D09FA616 and signing subkey
+1F5150D98D94C43109FBA2503E7DE744C1014357 match the existing release identity.
+Protected profiles, non-release signature and revocation verification all passed.
+Ciphertext20559 bytes, SHA256
+a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.
+Verified local output: ~/.rquickshare-signing/recovery-drive-2026-10-15.
+All crypto/recovery profiles were task-owned and removed/closed; active custody
+was not overwritten or revoked. No release was signed/published.
+
+Direct rclone folder metadata is still unavailable: HTTP403/rateLimitExceeded,
+not a confirmed storage-capacity or authentication failure. Existing mount remains
+available. Do not repeat this failed preflight in a tight loop or change auth/config.
+Ground the folder once through exact-name connector metadata if possible; otherwise
+use the already observed user-provided mount. Copy only four ciphertext/public
+artifacts with exclusive no-overwrite creation. Namespace sidecar/receipt/RESTORE
+names using the ciphertext stem, so generic names cannot collide with unrelated
+ArcVault data. Attempt one bounded fresh remote readback after writing; if quota
+continues, record mounted copy/cloud-unverified, not durable cloud success.
+
+## Actual mounted copy and remaining cloud acceptance
+
+Four exact encrypted/public artifacts were created exclusively under the existing
+ArcVault path, with content-addressed project-prefixed names; no other files were
+replaced/read or sharing/config/mount changed. flush/fsync and readback from the
+mount succeeded for all four sizes/SHA256. These observations may use the existing
+VFS cache and are explicitly not cloud persistence acceptance. Independent rclone
+cat after copying still failed HTTP403/rateLimitExceeded on the first artifact;
+no repeated read attempts for the other three files.
+
+Public result: docs/evidence/native-signing-backup-2026-10-15.json. The encrypted
+backup itself/private profiles/passwords never enter Git or source/chat exports.
+The backup's receipt.json describes local verification and correctly retains
+cloud_copy_verified=false; separate cloud evidence must establish persistence.
+
+Drive connector exact-name folder search also returned no items. Browser fallback
+reaches Google sign-in with no existing authenticated session; showed that page
+and requested user-owned sign-in to the account containing ArcVault. No credentials
+were read/typed by the agent, no new OAuth permissions/sharing were granted. Only
+that login tab is retained as a handoff. Once signed in, locate the actual folder,
+download the ciphertext through the authorized page, compare exact20559 bytes/
+SHA256 above, and verify the other three public artifacts. Do not re-encrypt,
+repeat key generation or overwrite existing files just to retry cloud readback.
+
+B1/B2/B3 complete, B4 mounted copy complete but independent cloud acceptance
+pending quota relief or user browser sign-in. B5 current source/evidence/operator
+handoff complete. No production APT release signature/publication, trust enrollment
+or native installed/Google peer claim. Existing distribution route remains intact.

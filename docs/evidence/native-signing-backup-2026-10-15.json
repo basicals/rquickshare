@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "primary_fingerprint": "6D8854762CF0C86881138A56695A0888D09FA616",
+  "ciphertext_sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf",
+  "destination": "/home/morozhenko/morozhenko/secrets/ArcVault",
+  "mounted_copy_verified": true,
+  "direct_cloud_readback_verified": false,
+  "artifacts": [
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+      "size": 20559,
+      "sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "size": 181,
+      "sha256": "461cde6503d936ae07b23b4d25300e259a3fe04c5b8bff3e7fe99ff9f1765e51"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.receipt.json",
+      "size": 585,
+      "sha256": "a504f9165efec62cde5259892c00fd482f4a2ee12cab6f5a0d3c3f215d7ad6ac"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.RESTORE.md",
+      "size": 983,
+      "sha256": "12b088b72eff7a7357618ec911bb5772778fb29352e503d11cd083d849c0f733"
+    }
+  ],
+  "remote_error": {
+    "returncode": 1,
+    "HTTP_status": [
+      "403"
+    ],
+    "provider_reasons": [
+      "rateLimitExceeded"
+    ]
+  },
+  "direct_remote_artifacts_verified": [],
+  "local_restoration_verified": true,
+  "local_revocation_verified": true,
+  "release_signed": false,
+  "browser_readback_status": "requires user Google Drive sign-in"
+}

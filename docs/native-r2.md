@@ -4,8 +4,10 @@
 additional host/VM/token. Protected local certification/signing profiles and
 operator initialization are implemented/tested in [local signing](native-local-signing.md).
 Earlier separate-host requirements below are superseded. Production keys are now
-initialized and real subkey/gpgv verification passed; recovery-copy destination,
-release approval and actual publication acceptance remain open.
+initialized and real subkey/gpgv verification passed. Recovery destination is the
+existing Google Drive ArcVault; encrypted backup/local restore/mounted copy passed,
+independent cloud readback remains pending (native-signing-backup.md). Release
+approval and actual publication acceptance remain open.
 
 2026-10-14 current checkpoint: user selected
 https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.

@@ -3,8 +3,10 @@
 Current production checkpoint: same-PC keys have been initialized through user
 Pinentry and verified by an actual non-release subkey signature/gpgv check.
 Primary6D8854762CF0C86881138A56695A0888D09FA616. Both dedicated agents are closed.
-Default private root is ~/.rquickshare-signing. Recovery destination and release
-approval/publication remain open; earlier pending-initialization notes are history.
+Default private root is ~/.rquickshare-signing. Encrypted recovery was created,
+restored/verified and copied to the selected existing Google Drive ArcVault mount;
+independent cloud readback is pending (native-signing-backup.md). Release approval/
+publication remain open; earlier pending-initialization notes are history.
 
 2026-10-14. Mode A. Direct dev. User explicitly rejected additional machines/VMs/
 hardware and selected the existing Linux PC. This supersedes the separate-host
