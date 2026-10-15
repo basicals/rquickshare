@@ -3,7 +3,8 @@
 2026-10-15. Mode A; direct dev. Scope: read-only primary-source research after the
 completed native7 PairedKey foundation. Guide: /home/morozhenko/.codex/AGENTS.md
 sections3/3.1/11/13. No login, credential read, account API request, installation
-or runtime change. Significant account-access/product direction selection pending.
+or runtime change in the review. The user selected option1: supported authorization
+only; continue independent parity with manual consent.
 
 ## Findings and exact boundaries
 
@@ -76,7 +77,7 @@ Recommend1 for quality, clear authority and maintenance, even though it leaves
 an important parity gap. The existence of a working-looking third-party sign-in
 path is insufficient to silently grant the application broader account access.
 Option2 is a material product/security tradeoff, not a routine implementation
-detail. User selection is required before dependent implementation.
+detail. The user selected option1 on2026-10-15; option2 is not authorized.
 
 Neither option authorizes reading existing Google/Drive/browser credentials,
 reusing unrelated app client IDs, entering credentials through chat, changing
@@ -90,9 +91,10 @@ and offline fixtures can be prepared first with no real credentials or requests.
 1. [x] P0: inspect Google source/developer docs and the independent provider's
    exact source/authorization; record receipts, supported-versus-experimental
    distinction, options, limitations and rollback before code.
-2. [ ] P1 after selection: if1, mark account acquisition as a known external
+2. [x] P1 after selection: option1 selected; account acquisition is a known external
    dependency and analyze the next independent sharing slice before freezing its
-   material UX/security contract. Do not implement an inert account toggle.
+   material UX/security contract. No inert account toggle. The next scoped
+   prerequisite is [bounded byte ingress](native-byte-ingress.md).
 3. [ ] P2 only if2: freeze process/client ownership, fixed endpoint/auth identity,
    least credential exposure, secret store failure/lock/logout/revoke semantics,
    bounded HTTP/page/certificate limits, replay/refresh/cache/clock/rotation and

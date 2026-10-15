@@ -3,7 +3,7 @@
   "date": "2026-10-15",
   "mode": "A",
   "source_commit": "75383dee42d1a85dd00f688b9a4940953e6d6233",
-  "status": "significant-provider-choice-pending",
+  "status": "supported-authorization-only-selected",
   "official_reference_revision": "d128b5fca30b3fa8d4642f8c75dd9e314e090e74",
   "independent_provider": {
     "repository": "https://github.com/scottydev40/scotty-mydevices",
@@ -103,5 +103,12 @@
   "native7_rebuilt": false,
   "installed": false,
   "release_signed": false,
-  "published": false
+  "published": false,
+  "user_selection": {
+    "option": 1,
+    "date": "2026-10-15",
+    "account_integration_deferred": true,
+    "continue_independent_parity": true,
+    "unofficial_provider_authorized": false
+  }
 }
