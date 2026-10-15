@@ -28,33 +28,40 @@
     }
   ],
   "remote_error": {
-    "returncode": 1,
-    "HTTP_status": [
-      "403"
-    ],
-    "provider_reasons": [
-      "rateLimitExceeded"
-    ]
+    "returncode": 3,
+    "HTTP_status": [],
+    "provider_reasons": [],
+    "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256"
   },
-  "direct_remote_artifacts_verified": [],
+  "direct_remote_artifacts_verified": [
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+      "size": 20559,
+      "sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf",
+      "verified_at_utc": "2026-10-15T11:22:40.756212+00:00",
+      "method": "direct rclone cat; existing remote; no FUSE cache"
+    }
+  ],
   "local_restoration_verified": true,
   "local_revocation_verified": true,
   "release_signed": false,
   "browser_readback_status": "not performed; user declined browser access; do not request sign-in",
   "latest_direct_readback": {
-    "checked_at_utc": "2026-10-15T06:23:15.334006+00:00",
+    "checked_at_utc": "2026-10-15T11:22:40.756212+00:00",
     "method": "direct rclone cat; existing remote; no FUSE cache",
-    "verified": [],
+    "verified": [
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+        "size": 20559,
+        "sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf"
+      }
+    ],
     "status": "remote_error",
-    "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
-    "returncode": 1,
-    "HTTP_status": [
-      "403"
-    ],
-    "provider_reasons": [
-      "rateLimitExceeded"
-    ],
-    "completed_at_utc": "2026-10-15T06:23:15.674891+00:00"
+    "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+    "returncode": 3,
+    "HTTP_status": [],
+    "provider_reasons": [],
+    "completed_at_utc": "2026-10-15T11:22:57.004668+00:00"
   },
   "quota_followup": {
     "automation_id": "rquickshare-arcvault",
@@ -138,5 +145,6 @@
     "same_mount_and_cli_executable": true,
     "mount_backend_overrides_present": false,
     "interpretation": "All four files have Dirty=false and cached remote MD5 fingerprints matching local originals; consistent with completed mount writeback, but not an independent fresh cloud download."
-  }
+  },
+  "direct_cloud_ciphertext_readback_verified": true
 }

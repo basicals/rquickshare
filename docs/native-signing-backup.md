@@ -7,6 +7,12 @@ and same-PC custody remain unchanged. Read native-local-signing.md,
 native-signing-recovery-review.md, local signing code and the agent guide.
 Google Drive skill read; no document-format skill applies to encrypted binary data.
 
+Current checkpoint: the encrypted recovery archive itself was downloaded directly
+from Drive on 2026-10-15T11:22:40Z with exact20559 bytes/SHA256, matching the already
+restored local ciphertext. Three public sidecars still await independent readback;
+the first sidecar attempt returned rclone exit3 without a classified HTTP/provider
+reason. Full four-file acceptance remains open; do not redownload verified archive.
+
 ## Destination observations and ownership
 
 Exact local folder exists: /home/morozhenko/morozhenko/secrets/ArcVault, canonical,
@@ -277,3 +283,20 @@ the recorded recovery integrity check. No authentication claim relies on MD5.
 References:
 https://rclone.org/commands/rclone_mount/#vfs-file-caching
 https://raw.githubusercontent.com/rclone/rclone/v1.75.1/vfs/vfscache/item.go
+
+### First successful independent archive readback
+
+2026-10-15T11:22:40Z scheduled attempt used direct rclone cat against the exact
+ciphertext path, bypassing the mount cache. Download succeeded; exact20559 bytes
+and SHA256 a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf
+match the locally created/restored archive. This independently establishes that
+the encrypted recovery payload reached Drive and could be downloaded intact.
+No new unlock/restore is needed for byte-identical ciphertext already verified.
+
+The subsequent .tar.gpg.sha256 sidecar read failed with exit3, with no classified
+HTTP/provider reason in the sanitized result. Do not infer quota relief for all
+requests or claim a confirmed missing/corrupt file from that result alone. Stop
+this run at that failure; receipt/instructions were not requested. Preserve all
+local/cloud originals, record the verified archive and failure, and continue only
+the three unverified sidecars on later hourly runs. No uploads or replacements.
+The user was notified about the successful payload verification and new error.

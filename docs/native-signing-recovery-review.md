@@ -2,7 +2,8 @@
 
 2026-10-15 selected: existing Google Drive ArcVault at the user-provided mounted
 secrets path. Encrypted recovery/local restore/mounted-copy checks now passed;
-independent cloud readback awaits quota relief with an hourly thread follow-up.
+independent cloud ciphertext download now matches the restored local archive.
+Three public sidecars still await readback with an hourly thread follow-up.
 The user declined browser access; use only the existing rclone remote. R2 options below
 are history; current facts/plan: native-signing-backup.md.
 
