@@ -1,5 +1,8 @@
 # Same-PC signing recovery destination review
 
+2026-10-15 selected: existing Google Drive ArcVault at the user-provided mounted
+secrets path. R2 options below are history; current plan: native-signing-backup.md.
+
 2026-10-14. Mode A. User confirmed local Pinentry; real local key initialization
 and non-release challenge verification succeeded in native-local-signing.md.
 No extra machine/VM/token is needed or proposed. Current key material exists only
