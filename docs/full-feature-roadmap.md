@@ -1,24 +1,11 @@
 # Full Quick Share roadmap
 
-2026-10-14 custody update: user selected the existing Linux workstation; no
-additional host/VM/token. Protected local certification/signing profiles and
-operator initialization are implemented/tested in [local signing](native-local-signing.md).
-Earlier separate-host requirements below are superseded. Production keys are now
-initialized and real subkey/gpgv verification passed. Recovery destination is the
-existing Google Drive ArcVault; encrypted backup/local restore/mounted copy passed,
-independent cloud readback remains pending (native-signing-backup.md). Release
-approval and actual publication acceptance remain open.
+Current implementation, selected distribution/signing bindings and remaining gates:
+[current state](current-state.md). Dated checkpoints below retain historical observations.
 
-2026-10-14 current checkpoint: user selected
-https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
-A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
-See [shared-prefix route SSOT](native-download-route.md) for current deployment/check status;
-earlier domain options/pending-choice notes below are historical. Isolated signer
-host and real public primary fingerprint still gate signed publication/enrollment.
+_Last updated: 2026-10-15_
 
-_Last updated: 2026-10-14_
-
-The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, pending UX choice, initial compatibility matrix and migration stages.
+The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, initial compatibility matrix and migration history. Current choices and implementation gates are indexed in current-state.md.
 
 Implemented capability markers below describe existing core/legacy source and
 scoped checks; they do not establish native GTK feature parity or current-package
@@ -37,12 +24,12 @@ packaging are implemented in [native-package.md](native-package.md), with instal
 lifecycle acceptance open. Selected opt-in login-start (daemon plus hidden-card
 tray) is implemented in [native-autostart.md](native-autostart.md). Signed native APT
 staging/trust/bootstrap tooling is implemented in [native-apt.md](native-apt.md);
-R2 and isolated outside-CI signing are selected, with a dedicated private bucket
-and checked local publication/approval tooling in [native-r2.md](native-r2.md).
-Production prefix routing is deployed and checked in native-download-route.md. Concrete
-signing custody/identity and installed updates remain pending; see
-native-signer-custody-review.md for the next decision. Account/QR
-capabilities still require their own work. Latest state: [product-direction.md](product-direction.md).
+R2 publication and outside-CI signing on the existing Linux workstation are selected;
+private-bucket publication/approval tooling is in [native-r2.md](native-r2.md).
+Production prefix routing and real signing identity are ready; exact release
+approval, scoped publisher access, signed public APT and installed updates remain
+open. Account/QR capabilities still require their own work. Next product decision:
+[custom device-name lifecycle](native-device-name-review.md).
 
 ## Product principles
 

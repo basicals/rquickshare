@@ -1,5 +1,9 @@
 # Product direction: native desktop and Google Quick Share parity
 
+Current implementation and next decision: [current state](current-state.md) and
+[custom device-name review](native-device-name-review.md). The dated checkpoints
+below are historical; later selections supersede earlier pending-choice claims.
+
 ## 2026-10-14: private R2 bucket and external signing handoff prepared
 
 User selected Cloudflare R2 and isolated signing outside CI. Dedicated private
@@ -503,15 +507,15 @@ The target is the Google Quick Share capability surface, mapped by platform/vers
 |---|---|---|
 | Nearby file/image/video/document transfer | Implemented; dated Pixel evidence exists | Current Android and Google Windows bidirectional matrix |
 | Multiple files and folder hierarchy | Implemented; current folder smoke open | Peer tree/bytes/collision verification |
-| Clipboard/text/link sharing | Helpers/UI implemented; REMOTE_COPY emitted | Text state-machine tests and actual peer clipboard semantics |
+| Clipboard/text/link sharing | Native explicit text/clipboard flow and scoped state-machine checks implemented; REMOTE_COPY emitted | Current native package and actual Google peer clipboard semantics |
 | Sender/receiver names and pairing PIN | Basic metadata present; custom name pending | Consistent editable identity and peer PIN validation UX |
-| Background receive, progress/cancel, request actions | Implemented partially in Tauri; hardware lifecycle gaps remain | Native service/client lifecycle and synchronized peer outcomes |
+| Background receive, progress/cancel, request actions | Native daemon/card/notification contracts implemented | Installed lifecycle and synchronized physical peer outcomes |
 | Everyone/temporary/hidden visibility | Partial local modes | Google-compatible timing, restoration and authenticated identity modes |
 | Google Account, Contacts, Your devices, own-device auto-accept | Not implemented | Identity/certificate/service feasibility, secure credentials and real peers; required parity work |
 | Google-compatible nearby QR | Proto field alone | Actual Google handshake, encode/decode and Android camera/Quick Share flow |
 | Multiple recipients/queueing | Bounded core concurrency/FIFO foundation implemented; native recipient UX/policy pending | Independent recipient state; bounded parallelism only where supported |
 | Discovery and transport combinations | BLE/GATT and Wi-Fi LAN implemented | Per-platform transport inventory, network-isolation/direct-link scenarios and measured cold discovery |
-| Desktop share integration | User requested context-menu sending; not implemented | Dolphin service-menu adapter first for the target KDE environment, shared recipient flow, then other desktop adapters; accessibility and package checks |
+| Desktop share integration | Dolphin service-menu assets, descriptor ingress and shared recipient flow implemented | Installed Dolphin discovery/multi-selection/errors, accessibility; other desktop adapters |
 | Google cross-platform AirDrop/Apple paths | Not implemented | Separate transport/backend feasibility and physical peer matrix |
 | Google's encrypted cloud QR to Apple browsers | Not implemented | Google service access/identity/limits feasibility; a custom server is not equivalent |
 | Device-dependent recent features, including tap-to-share | Not inventoried | Platform/hardware applicability and current official-source inventory |
@@ -535,4 +539,4 @@ Additional protocol capabilities already in the roadmap (previews, resume/hash i
 5. **P4 — close Google parity gaps in vertical slices.** Each feature receives protocol research, branch/negative/interaction inventory, deterministic tests and real Google peer acceptance. Account/QR/Apple/service dependencies are release blockers for claiming full parity, not optional tasks silently dropped from the goal. Keep transport and UI changes separable.
 6. **P5 — release acceptance.** Complete core/service/native-client tests, ten consecutive stability runs, package/install checks and the physical compatibility matrix on the final implementation. Publish only capabilities with evidence; promote `master` only under the existing release policy.
 
-These milestones are not time estimates. The user has answered the material UX and descriptor choices; the offline file/core implementation has started the migration. The daemon/API/UI are still pending. Continue within the approved direction, documenting concrete contracts before implementation and asking only for new significant decisions. Do not use the completed Tauri maintenance checks as native-shell verification.
+These milestones are not time estimates. Native daemon/API/UI and major migration slices now have implementations; installed and physical peer acceptance remains open. Use current-state.md for the live checkpoint rather than earlier pending-stage summaries. Continue within the approved direction, document concrete contracts before implementation, and ask only for new significant decisions. Tauri maintenance evidence does not establish native-shell acceptance.

@@ -1,26 +1,13 @@
 # Native signed APT distribution
 
-2026-10-14 custody update: user selected the existing Linux workstation; no
-additional host/VM/token. Protected local certification/signing profiles and
-operator initialization are implemented/tested in [local signing](native-local-signing.md).
-Earlier separate-host requirements below are superseded. Production keys are now
-initialized and real subkey/gpgv verification passed. Recovery destination is the
-existing Google Drive ArcVault; encrypted backup/local restore/mounted copy passed,
-independent cloud readback remains pending (native-signing-backup.md). Release
-approval and actual publication acceptance remain open.
+Current implementation, selected distribution/signing bindings and remaining gates:
+[current state](current-state.md). Dated checkpoints below retain historical observations.
 
-2026-10-14 current checkpoint: user selected
-https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
-A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
-See [shared-prefix route SSOT](native-download-route.md) for current deployment/check status;
-earlier domain options/pending-choice notes below are historical. Isolated signer
-host and real public primary fingerprint still gate signed publication/enrollment.
-
-Current follow-up: the user selected Cloudflare R2 and isolated outside-CI signing.
-[native-r2.md](native-r2.md) records the created private bucket, checked conditional
-publisher, public request/approval handoff, By-Hash:force bootstrap and actual
-HTTP APT projection checks. Production domain routing/signing identity remain
-unbound; earlier U1–U4 measurements below are preserved without repeated checks.
+Current follow-up: R2 storage, prefix routing and same-PC signing identity are
+selected and initialized. [native-r2.md](native-r2.md) records the conditional
+publisher and request/approval contracts; [current state](current-state.md) records
+remaining release approval/publication gates. Earlier U1–U4 measurements below
+are preserved without repeated checks.
 
 2026-10-14. Mode A. User selected1 in native-update-review.md: a dedicated signed
 native APT channel, system package-manager ownership. Guide

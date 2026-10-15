@@ -1,13 +1,7 @@
 # Shared download hostname, isolated rQuickShare APT prefix
 
-2026-10-14 custody update: user selected the existing Linux workstation; no
-additional host/VM/token. Protected local certification/signing profiles and
-operator initialization are implemented/tested in [local signing](native-local-signing.md).
-Earlier separate-host requirements below are superseded. Production keys are now
-initialized and real subkey/gpgv verification passed. Recovery destination is the
-existing Google Drive ArcVault; encrypted backup/local restore/mounted copy passed,
-independent cloud readback remains pending (native-signing-backup.md). Release
-approval and actual publication acceptance remain open.
+Current implementation, selected distribution/signing bindings and remaining gates:
+[current state](current-state.md). Dated checkpoints below retain historical observations.
 
 2026-10-14. Mode A. User selected the exact production base URI
 https://download.morozhenko.com/dist/rQuickShare/ (case sensitive), superseding the

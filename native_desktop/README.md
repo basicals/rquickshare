@@ -1,20 +1,7 @@
 # Native development shell
 
-2026-10-14 custody update: user selected the existing Linux workstation; no
-additional host/VM/token. Protected local certification/signing profiles and
-operator initialization are implemented/tested in [local signing](../docs/native-local-signing.md).
-Earlier separate-host requirements below are superseded. Production keys are now
-initialized and real subkey/gpgv verification passed. Recovery destination is the
-existing Google Drive ArcVault; encrypted backup/local restore/mounted copy passed,
-independent cloud readback remains pending (native-signing-backup.md). Release
-approval and actual publication acceptance remain open.
-
-2026-10-14 current checkpoint: user selected
-https://download.morozhenko.com/dist/rQuickShare/ (exact case) for production APT.
-A narrow read-only Worker keeps the dedicated bucket separate from Picturix.
-See [shared-prefix route SSOT](../docs/native-download-route.md) for current deployment/check status;
-earlier domain options/pending-choice notes below are historical. Isolated signer
-host and real public primary fingerprint still gate signed publication/enrollment.
+Current implementation, selected distribution/signing bindings and remaining gates:
+[current state](../docs/current-state.md). Dated checkpoints below retain historical observations.
 
 The tray now exports a standard DBusMenu with Open, file/folder/text/image selection, incoming/
 transfer navigation, Compact/Full, Settings, Reconnect, Hide and Quit. It contains
