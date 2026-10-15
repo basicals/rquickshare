@@ -7,11 +7,12 @@ and same-PC custody remain unchanged. Read native-local-signing.md,
 native-signing-recovery-review.md, local signing code and the agent guide.
 Google Drive skill read; no document-format skill applies to encrypted binary data.
 
-Current checkpoint: the encrypted recovery archive itself was downloaded directly
-from Drive on 2026-10-15T11:22:40Z with exact20559 bytes/SHA256, matching the already
-restored local ciphertext. Three public sidecars still await independent readback;
-the first sidecar attempt returned rclone exit3 without a classified HTTP/provider
-reason. Full four-file acceptance remains open; do not redownload verified archive.
+Current checkpoint: all four artifacts have independent direct Drive readback with
+exact recorded size/SHA256. Ciphertext matched the already restored local archive
+at11:22:40Z; the three public sidecars matched on2026-10-15 at13:25:25–13:25:52Z.
+The app confirmed deletion of the hourly follow-up. B1–B5 are complete; the quota
+failures and partial observations below are historical. No repeat download/unlock
+or further scheduled Drive request is needed.
 
 ## Destination observations and ownership
 
@@ -22,8 +23,9 @@ morozhenko:secrets/ArcVault. Only scoped recovery filenames may be written there
 Do not read unrelated secret files, alter mount/config/auth/sharing or create a new
 ArcVault folder. Drive connector folder searches ArcVault/vault returned no items;
 use the user-provided existing mount/remote, not guessed connector folder IDs.
-Direct rclone metadata preflight currently reports quota/rate errors; raw backend
-errors are suppressed. Mounted-file presence is not proof of completed cloud sync.
+Earlier direct rclone preflight reported quota/rate errors; raw backend errors were
+suppressed. Mounted presence was not treated as completed cloud sync; direct
+content readback now confirms all four artifacts.
 
 ## Plan before code
 
@@ -36,7 +38,7 @@ errors are suppressed. Mounted-file presence is not proof of completed cloud syn
 3. [x] B3: create actual encrypted backup on private local disk; verify decryption,
    restoration, exact primary/subkey protection and non-release signature. This
    requires archive-password entry and original key-password entry in Pinentry.
-4. [ ] B4: copy ciphertext/receipt/checksum only to the selected ArcVault. Verify
+4. [x] B4: copy ciphertext/receipt/checksum only to the selected ArcVault. Verify
    direct remote metadata and fresh downloaded ciphertext SHA256/size; record
    quota/blocking outcomes honestly. Never claim cloud success from mount cache.
 5. [x] B5: SSOT/atomic commits, operator restore instructions and source exports.
@@ -348,3 +350,29 @@ sidecars, may immutably recreate a confirmed missing one, stops on quota, and do
 not repeat the checksum copy just because readback is quota-blocked. It also uses
 the most recent attempt timestamp so immediate user-requested retries do not
 cause an early scheduled request. No new automation or background process.
+
+### Completed independent cloud verification
+
+2026-10-15T13:25:25Z–13:25:52Z: one sequential readback of only the three still
+unverified public sidecars succeeded through direct rclone cat, bypassing FUSE.
+No repair/upload was needed in this run. .tar.gpg.sha256 matched181 bytes/SHA256
+461cde6503d936ae07b23b4d25300e259a3fe04c5b8bff3e7fe99ff9f1765e51;
+.receipt.json matched585 bytes/SHA256
+a504f9165efec62cde5259892c00fd482f4a2ee12cab6f5a0d3c3f215d7ad6ac;
+.RESTORE.md matched983 bytes/SHA256
+12b088b72eff7a7357618ec911bb5772778fb29352e503d11cd083d849c0f733.
+
+Together with the already verified20559-byte ciphertext readback, all four exact
+filenames/sizes/SHA256 now match the original recovery artifacts. Public evidence
+marks direct_cloud_readback_verified=true. Original local decryption/protected-role
+restoration/non-release signature/revocation checks apply to these identical bytes;
+no second Pinentry or active-custody mutation occurred. Historical local receipt's
+cloud_copy_verified=false remains unchanged because it describes local creation,
+not this later independently recorded cloud verification.
+
+The app confirmed deletion of heartbeat rquickshare-arcvault after successful
+acceptance; no further scheduled checks. User/browser credentials were never
+requested again, and no sharing/auth/config/mount or source key material changed.
+All owned terminal subprocesses exited. B4 complete. Release approval/publication
+and the independent device-name design choice remain open; backup completion
+does not approve signing or establish installed/Google peer compatibility.

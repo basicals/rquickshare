@@ -26,8 +26,9 @@ entry links and explicit historical labels. Rollback is a documentation-only
 commit; no runtime, saved schema, key custody, remote object or package changes.
 
 Measured documentation check: seven entry points and21 relevant local links passed;
-partial-cloud claims agree with existing JSON evidence (archive verified, sidecars
-pending), and the device-name review explicitly gates implementation on selection.
+at that checkpoint archive verification passed and sidecars were still pending.
+All four cloud artifacts are now verified as recorded below and in JSON evidence.
+The device-name review explicitly gates implementation on selection.
 Whitespace check passed. No production code changed or unaffected checks repeated.
 Current stop point: user choice1/2 in native-device-name-review.md. After selection,
 freeze its exact migration/IPC/validation/apply contracts before implementing.
@@ -41,7 +42,7 @@ freeze its exact migration/IPC/validation/apply contracts before implementing.
 | Settings | Daemon-owned transactional native store, migration/backup/recovery and secondary GTK editor implemented | Real installed migration/recovery; custom display name still absent |
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
 | Distribution | Verified uninstalled Ubuntu26.04 amd64 native2 Debian package; unsigned APT staging, signer/publisher tooling and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
-| Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and independent cloud archive download passed | Three public recovery sidecar readbacks remain quota-blocked; hourly follow-up active |
+| Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
 | Further parity | Modern wire fields and folder support exist | Custom name, temporary visibility, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
 
 Feature contracts and measured checks: [product history](product-direction.md),
@@ -68,10 +69,10 @@ non-release evidence are committed; private profiles/passwords/ciphertext are no
 Recovery archive direct download matched20559 bytes and SHA256
 a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.
 It is the same ciphertext whose local restoration/signature/revocation checks
-passed. Full four-file cloud acceptance remains open: .sha256/receipt/instructions
-are not independently verified. Existing read-only hourly follow-up may immutably
-repair a confirmed absent public sidecar under the user's later authorization.
-Keep exact changing recovery evidence in native-signing-backup.md and its JSON.
+passed. The .sha256/receipt/instructions were independently downloaded and verified
+on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The app
+confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
+repair observations remain in native-signing-backup.md and its JSON.
 
 No production APT release has been signed/published. Existing native2 package SHA256
 5821ad8c85556b603461876b7c6a5484c01048feb2dbf4e741c04058880ec3c7 remains
