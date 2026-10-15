@@ -10,6 +10,7 @@ use hmac::{Hmac, Mac};
 use libaes::{Cipher, AES_256_KEY_LEN};
 use p256::ecdh::diffie_hellman;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use p256::elliptic_curve::zeroize::{Zeroize, Zeroizing};
 use p256::{EncodedPoint, PublicKey};
 use prost::Message;
 use rand::Rng;
@@ -43,8 +44,7 @@ use crate::securemessage::{
     SecureMessage, SigScheme,
 };
 use crate::sharing_nearby::{
-    file_metadata, paired_key_result_frame, text_metadata, FileMetadata, IntroductionFrame,
-    TextMetadata,
+    file_metadata, text_metadata, FileMetadata, IntroductionFrame, TextMetadata,
 };
 use crate::utils::{
     encode_point, gen_ecdsa_keypair, gen_random, hkdf_extract_expand, normalize_p256_coordinate,
@@ -563,6 +563,7 @@ pub struct OutboundRequest {
     sender: Sender<ChannelMessage>,
     receiver: Option<Receiver<ChannelMessage>>,
     session: Option<crate::sessions::SessionLease>,
+    authentication: crate::peer_authentication::PeerAuthentication,
     payload: OutboundPayload,
     text_payload_id: Option<i64>,
     cleanup_files: Vec<ManagedEphemeralFile>,
@@ -661,6 +662,9 @@ impl OutboundRequest {
             sender,
             receiver: Some(receiver),
             session: None,
+            authentication: crate::peer_authentication::PeerAuthentication::anonymous(
+                crate::peer_authentication::Role::Sender,
+            ),
             payload,
             text_payload_id: None,
             cleanup_files,
@@ -1024,11 +1028,7 @@ impl OutboundRequest {
             version: Some(sharing_nearby::frame::Version::V1.into()),
             v1: Some(sharing_nearby::V1Frame {
                 r#type: Some(sharing_nearby::v1_frame::FrameType::PairedKeyEncryption.into()),
-                paired_key_encryption: Some(sharing_nearby::PairedKeyEncryptionFrame {
-                    secret_id_hash: Some(gen_random(6)),
-                    signed_data: Some(gen_random(72)),
-                    ..Default::default()
-                }),
+                paired_key_encryption: Some(self.authentication.outgoing_frame()?),
                 ..Default::default()
             }),
         };
@@ -1249,22 +1249,27 @@ impl OutboundRequest {
         &mut self,
         v1_frame: &sharing_nearby::V1Frame,
     ) -> Result<(), anyhow::Error> {
-        if v1_frame.paired_key_encryption.is_none() {
-            return Err(anyhow!("Missing required fields"));
-        }
+        let proof = v1_frame
+            .paired_key_encryption
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing paired-key proof"))?;
+        let outcome = self.authentication.verify(proof);
 
         let paired_result = sharing_nearby::Frame {
             version: Some(sharing_nearby::frame::Version::V1.into()),
             v1: Some(sharing_nearby::V1Frame {
                 r#type: Some(sharing_nearby::v1_frame::FrameType::PairedKeyResult.into()),
                 paired_key_result: Some(sharing_nearby::PairedKeyResultFrame {
-                    status: Some(paired_key_result_frame::Status::Unable.into()),
+                    status: Some(outcome.wire()),
                 }),
                 ..Default::default()
             }),
         };
 
         self.send_encrypted_frame(&paired_result).await?;
+        if outcome == crate::peer_authentication::Outcome::Fail {
+            return Err(crate::peer_authentication::AuthenticationError.into());
+        }
 
         Ok(())
     }
@@ -1273,9 +1278,11 @@ impl OutboundRequest {
         &mut self,
         v1_frame: &sharing_nearby::V1Frame,
     ) -> Result<(), anyhow::Error> {
-        if v1_frame.paired_key_result.is_none() {
-            return Err(anyhow!("Missing required fields"));
-        }
+        let result = v1_frame
+            .paired_key_result
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing paired-key result"))?;
+        self.authentication.finish(result.status)?;
 
         let prepared_files = match &self.payload {
             OutboundPayload::Files(files) | OutboundPayload::EphemeralFiles(files) => {
@@ -1700,7 +1707,13 @@ impl OutboundRequest {
         let auth_label = "UKEY2 v1 auth".as_bytes();
         let next_label = "UKEY2 v1 next".as_bytes();
 
-        let auth_string = hkdf_extract_expand(auth_label, &derived_secret, &ukey_info, 32)?;
+        let mut auth_string = Zeroizing::new(hkdf_extract_expand(
+            auth_label,
+            &derived_secret,
+            &ukey_info,
+            32,
+        )?);
+        self.authentication.bind_token(&auth_string)?;
         let next_secret = hkdf_extract_expand(next_label, &derived_secret, &ukey_info, 32)?;
 
         let salt_hex = "82AA55A0D397F88346CA1CEE8D3909B95F13FA7DEB1D4AB38376B8256DA85510";
@@ -1736,6 +1749,7 @@ impl OutboundRequest {
         )
         .await;
 
+        auth_string.zeroize();
         debug!("Pairing verification code prepared");
 
         Ok(())
@@ -2095,6 +2109,117 @@ mod security_tests {
             sharing_nearby::V1Frame {
                 paired_key_result: Some(sharing_nearby::PairedKeyResultFrame::default()),
                 ..Default::default()
+            }
+        }
+
+        #[tokio::test]
+        async fn given_paired_key_proofs_and_remote_results_when_sending_then_failure_cannot_emit_introduction_or_file_bytes(
+        ) {
+            use crate::peer_authentication::{tests::known_fixture, Role};
+            for kind in ["anonymous", "known", "bad-signature", "oversize"] {
+                for status in [None, Some(0), Some(1), Some(2), Some(3), Some(4)] {
+                    // Arrange
+                    let file = tempfile::NamedTempFile::new().unwrap();
+                    std::fs::write(file.path(), b"private-file-body").unwrap();
+                    let (mut request, mut peer) =
+                        native_request(selection(file.path(), "file.txt")).await;
+                    request.state.state = State::SentPairedKeyEncryption;
+                    let (authentication, mut proof) = known_fixture(Role::Sender);
+                    if kind != "anonymous" {
+                        request.authentication = authentication;
+                    }
+                    if kind == "bad-signature" {
+                        proof.signed_data = Some(vec![0; 72]);
+                    }
+                    if kind == "oversize" {
+                        proof.signed_data = Some(vec![0; 73]);
+                    }
+                    let frame = sharing_nearby::Frame {
+                        v1: Some(sharing_nearby::V1Frame {
+                            paired_key_encryption: Some(proof),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    };
+                    // Act / Assert
+                    let rejected_proof = matches!(kind, "bad-signature" | "oversize");
+                    assert_eq!(
+                        request.process_transfer_setup(&frame).await.is_err(),
+                        rejected_proof
+                    );
+                    let reply = read_native_frame(&mut peer, 1).await;
+                    let body = reply
+                        .v1
+                        .unwrap()
+                        .payload_transfer
+                        .unwrap()
+                        .payload_chunk
+                        .unwrap()
+                        .body
+                        .unwrap();
+                    let reply = sharing_nearby::Frame::decode(body.as_slice()).unwrap();
+                    assert_eq!(
+                        reply.v1.unwrap().paired_key_result.unwrap().status,
+                        Some(if rejected_proof {
+                            2
+                        } else if kind == "known" {
+                            1
+                        } else {
+                            3
+                        })
+                    );
+                    read_native_frame(&mut peer, 2).await;
+                    if rejected_proof {
+                        assert_eq!(request.state.state, State::SentPairedKeyEncryption);
+                    } else {
+                        let result = sharing_nearby::Frame {
+                            v1: Some(sharing_nearby::V1Frame {
+                                paired_key_result: Some(sharing_nearby::PairedKeyResultFrame {
+                                    status,
+                                }),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        };
+                        assert_eq!(
+                            request.process_transfer_setup(&result).await.is_err(),
+                            status == Some(2)
+                        );
+                        if status == Some(2) {
+                            assert_eq!(request.state.state, State::SentPairedKeyResult);
+                        } else {
+                            assert_eq!(request.state.state, State::SentIntroduction);
+                            let intro = read_native_frame(&mut peer, 3).await;
+                            let body = intro
+                                .v1
+                                .unwrap()
+                                .payload_transfer
+                                .unwrap()
+                                .payload_chunk
+                                .unwrap()
+                                .body
+                                .unwrap();
+                            let intro = sharing_nearby::Frame::decode(body.as_slice())
+                                .unwrap()
+                                .v1
+                                .unwrap()
+                                .introduction
+                                .unwrap();
+                            assert_eq!(intro.file_metadata.len(), 1);
+                            assert_eq!(intro.file_metadata[0].name(), "file.txt");
+                            read_native_frame(&mut peer, 4).await;
+                        }
+                    }
+                    assert_eq!(
+                        request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                        0
+                    );
+                    let mut next = [0];
+                    assert_eq!(
+                        peer.try_read(&mut next).unwrap_err().kind(),
+                        std::io::ErrorKind::WouldBlock
+                    );
+                }
             }
         }
 

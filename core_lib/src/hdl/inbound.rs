@@ -9,6 +9,7 @@ use hmac::{Hmac, Mac};
 use libaes::{Cipher, AES_256_KEY_LEN};
 use p256::ecdh::diffie_hellman;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use p256::elliptic_curve::zeroize::{Zeroize, Zeroizing};
 use p256::{EncodedPoint, PublicKey};
 use prost::Message;
 use rand::Rng;
@@ -35,9 +36,7 @@ use crate::securemessage::{
     EcP256PublicKey, EncScheme, GenericPublicKey, Header, HeaderAndBody, PublicKeyType,
     SecureMessage, SigScheme,
 };
-use crate::sharing_nearby::{
-    paired_key_result_frame, text_metadata, wifi_credentials_metadata::SecurityType,
-};
+use crate::sharing_nearby::{text_metadata, wifi_credentials_metadata::SecurityType};
 use crate::utils::{
     encode_point, gen_ecdsa_keypair, gen_random, hkdf_extract_expand, normalize_p256_coordinate,
     stream_read_exact, to_four_digit_string, DeviceType, RemoteDeviceInfo,
@@ -500,6 +499,7 @@ pub struct InboundRequest<S = TcpStream> {
     sender: Sender<ChannelMessage>,
     receiver: Option<Receiver<ChannelMessage>>,
     session: Option<crate::sessions::SessionLease>,
+    authentication: crate::peer_authentication::PeerAuthentication,
     bandwidth_upgrade_enabled: bool,
     bwu_pending: bool,
     peer_endpoint_id: Option<String>,
@@ -526,6 +526,9 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             sender,
             receiver: Some(receiver),
             session: None,
+            authentication: crate::peer_authentication::PeerAuthentication::anonymous(
+                crate::peer_authentication::Role::Receiver,
+            ),
             bandwidth_upgrade_enabled: false,
             bwu_pending: false,
             peer_endpoint_id: None,
@@ -1052,11 +1055,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             version: Some(sharing_nearby::frame::Version::V1.into()),
             v1: Some(sharing_nearby::V1Frame {
                 r#type: Some(sharing_nearby::v1_frame::FrameType::PairedKeyEncryption.into()),
-                paired_key_encryption: Some(sharing_nearby::PairedKeyEncryptionFrame {
-                    secret_id_hash: Some(gen_random(6)),
-                    signed_data: Some(gen_random(72)),
-                    ..Default::default()
-                }),
+                paired_key_encryption: Some(self.authentication.outgoing_frame()?),
                 ..Default::default()
             }),
         };
@@ -1520,33 +1519,40 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         &mut self,
         v1_frame: &sharing_nearby::V1Frame,
     ) -> Result<(), anyhow::Error> {
-        if v1_frame.paired_key_encryption.is_none() {
-            return Err(anyhow!("Missing required fields"));
-        }
+        let proof = v1_frame
+            .paired_key_encryption
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing paired-key proof"))?;
+        let outcome = self.authentication.verify(proof);
 
         let paired_result = sharing_nearby::Frame {
             version: Some(sharing_nearby::frame::Version::V1.into()),
             v1: Some(sharing_nearby::V1Frame {
                 r#type: Some(sharing_nearby::v1_frame::FrameType::PairedKeyResult.into()),
                 paired_key_result: Some(sharing_nearby::PairedKeyResultFrame {
-                    status: Some(paired_key_result_frame::Status::Unable.into()),
+                    status: Some(outcome.wire()),
                 }),
                 ..Default::default()
             }),
         };
 
         self.send_encrypted_frame(&paired_result).await?;
+        if outcome == crate::peer_authentication::Outcome::Fail {
+            return Err(crate::peer_authentication::AuthenticationError.into());
+        }
 
         Ok(())
     }
 
     async fn process_paired_key_result(
-        &self,
+        &mut self,
         v1_frame: &sharing_nearby::V1Frame,
     ) -> Result<(), anyhow::Error> {
-        if v1_frame.paired_key_result.is_none() {
-            return Err(anyhow!("Missing required fields"));
-        }
+        let result = v1_frame
+            .paired_key_result
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing paired-key result"))?;
+        self.authentication.finish(result.status)?;
 
         Ok(())
     }
@@ -1924,7 +1930,13 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         let auth_label = "UKEY2 v1 auth".as_bytes();
         let next_label = "UKEY2 v1 next".as_bytes();
 
-        let auth_string = hkdf_extract_expand(auth_label, &derived_secret, &ukey_info, 32)?;
+        let mut auth_string = Zeroizing::new(hkdf_extract_expand(
+            auth_label,
+            &derived_secret,
+            &ukey_info,
+            32,
+        )?);
+        self.authentication.bind_token(&auth_string)?;
         let next_secret = hkdf_extract_expand(next_label, &derived_secret, &ukey_info, 32)?;
 
         let salt_hex = "82AA55A0D397F88346CA1CEE8D3909B95F13FA7DEB1D4AB38376B8256DA85510";
@@ -1956,6 +1968,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         )
         .await;
 
+        auth_string.zeroize();
         debug!("Pairing verification code prepared");
 
         Ok(())
@@ -2367,6 +2380,118 @@ impl InboundRequest<crate::hdl::MigratableStream> {
 #[cfg(test)]
 mod security_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn given_paired_key_proofs_and_remote_results_when_receiving_then_actual_crypto_reply_precedes_any_consent(
+    ) {
+        use crate::peer_authentication::{tests::known_fixture, Role};
+        for kind in ["anonymous", "known", "bad-signature", "oversize"] {
+            for status in [None, Some(0), Some(1), Some(2), Some(3), Some(4)] {
+                // Arrange: real handler/framing/encryption over a controlled external stream.
+                let (socket, peer_socket) = tokio::io::duplex(8192);
+                let (sender, _) = tokio::sync::broadcast::channel(16);
+                let mut request =
+                    InboundRequest::new(socket, "auth-fixture".into(), sender.clone());
+                let mut peer = InboundRequest::new(peer_socket, "peer-fixture".into(), sender);
+                request.state.state = State::SentConnectionResponse;
+                request.state.encrypt_key = Some(vec![0x11; 32]);
+                request.state.send_hmac_key = Some(vec![0x22; 32]);
+                peer.state.decrypt_key = Some(vec![0x11; 32]);
+                peer.state.recv_hmac_key = Some(vec![0x22; 32]);
+                let (authentication, mut proof) = known_fixture(Role::Receiver);
+                if kind != "anonymous" {
+                    request.authentication = authentication;
+                }
+                if kind == "bad-signature" {
+                    proof.signed_data = Some(vec![0; 72]);
+                }
+                if kind == "oversize" {
+                    proof.signed_data = Some(vec![0; 73]);
+                }
+                let frame = sharing_nearby::Frame {
+                    v1: Some(sharing_nearby::V1Frame {
+                        paired_key_encryption: Some(proof),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                };
+                // Act / Assert
+                let accepted = request.process_transfer_setup(&frame).await;
+                let rejected_proof = matches!(kind, "bad-signature" | "oversize");
+                assert_eq!(accepted.is_err(), rejected_proof);
+                let raw = read_plain_frame_from(&mut peer.socket).await.unwrap();
+                let secure = SecureMessage::decode(raw.as_slice()).unwrap();
+                let offline = peer.decrypt_secure_message(&secure).await.unwrap();
+                let body = offline
+                    .v1
+                    .unwrap()
+                    .payload_transfer
+                    .unwrap()
+                    .payload_chunk
+                    .unwrap()
+                    .body
+                    .unwrap();
+                let reply = sharing_nearby::Frame::decode(body.as_slice()).unwrap();
+                assert_eq!(
+                    reply.v1.unwrap().paired_key_result.unwrap().status,
+                    Some(if rejected_proof {
+                        2
+                    } else if kind == "known" {
+                        1
+                    } else {
+                        3
+                    })
+                );
+                let raw = read_plain_frame_from(&mut peer.socket).await.unwrap();
+                let secure = SecureMessage::decode(raw.as_slice()).unwrap();
+                let final_chunk = peer.decrypt_secure_message(&secure).await.unwrap();
+                assert_eq!(
+                    final_chunk
+                        .v1
+                        .unwrap()
+                        .payload_transfer
+                        .unwrap()
+                        .payload_chunk
+                        .unwrap()
+                        .flags,
+                    Some(1)
+                );
+                if rejected_proof {
+                    assert_eq!(request.state.state, State::SentConnectionResponse);
+                } else {
+                    assert_eq!(request.state.state, State::SentPairedKeyResult);
+                    let result = sharing_nearby::Frame {
+                        v1: Some(sharing_nearby::V1Frame {
+                            paired_key_result: Some(sharing_nearby::PairedKeyResultFrame {
+                                status,
+                            }),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    };
+                    assert_eq!(
+                        request.process_transfer_setup(&result).await.is_err(),
+                        status == Some(2)
+                    );
+                    assert_eq!(
+                        request.state.state,
+                        if status == Some(2) {
+                            State::SentPairedKeyResult
+                        } else {
+                            State::ReceivedPairedKeyResult
+                        }
+                    );
+                }
+                assert!(request.state.transferred_files.is_empty());
+                assert!(request.receive_root.is_none());
+                assert!(request.state.transfer_metadata.is_none());
+                let mut next = [0];
+                let read = tokio::io::AsyncReadExt::read(&mut peer.socket, &mut next);
+                tokio::pin!(read);
+                assert!(futures::poll!(read).is_pending());
+            }
+        }
+    }
 
     #[test]
     fn received_file_name_accepts_single_component() {

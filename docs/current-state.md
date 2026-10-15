@@ -46,8 +46,10 @@ separately; do not restart the already completed name slice.
 Next: [authenticated peer/trust review](native-trust-review.md). Current UKEY2
 keys are session-local; PairedKey is unverified and answers Unable. Recommend
 Google-protocol certificate verification/provider groundwork before any trust
-store or auto-accept. Significant security/protocol selection is pending. No
-trusted-device behavior/account access or production code changed in this review.
+store or auto-accept. User selected this option1; the bounded verifier and
+inbound/outbound PairedKey integration are in implementation/verification.
+Production certificate source stays explicitly empty; no trusted-device UI,
+account access or auto-accept is authorized or implemented by this foundation.
 
 ## Implemented source and remaining acceptance
 

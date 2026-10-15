@@ -97,17 +97,17 @@ new pairing/security/storage/recovery contracts before implementation.
    plan affected branches/negative interactions before code. Preserve existing
    wire tags and anonymous manual-PIN interoperability. Do not use untrusted
    CertificateInfo as a trusted provider or allow peer-declared Success to verify.
-3. [ ] T2: implement actual cryptographic verifier with injected certificate source
+3. [x] T2: implement actual cryptographic verifier with injected certificate source
    and clock, no account dependency/global key. Deterministic signatures/token
    fixtures: correct role/token/key; changed role/token/key/signature; malformed
    DER/keys; missing/expired/future certificate; token/hash length boundaries;
    optional signature; conflicting/unknown results; exact retries/no promotion.
    Raw token/private key/name/certificate metadata absent from Debug/log/IPC.
-4. [ ] T3: integrate selected verdict boundary in inbound/outbound state machines
+4. [x] T3: integrate selected verdict boundary in inbound/outbound state machines
    through owned session context. Stage changes only after exact behavior is
    documented; manual receipt and admitted-session invariants remain intact.
    Use duplex/loopback protocol fixtures, no live radio or private credentials.
-5. [ ] T4: research supported certificate acquisition/provenance/lifetime/rotation,
+5. [x] T4: research supported certificate acquisition/provenance/lifetime/rotation,
    document evidence and unknowns. Freeze the provider contract before real account
    access, import/enrollment or persistent trust. Do not build a nonfunctional
    Trusted-device toggle when the sender cannot be authenticated.
@@ -226,3 +226,91 @@ uses account/RPC-managed certificate download; those sources are researched,
 not authorization to invoke that backend. New public receipts extend the existing
 research JSON. Actual provider access/enrollment/rotation remains a later security
 decision; this foundation must not falsely advertise remembered Google devices.
+
+## T2/T3 implementation checkpoint and observed verification
+
+Implemented the private domain owner with immutable provider snapshot, explicit
+Unbound/Empty/Available/Unavailable source state, injected clock, bounded SPKI/
+certificate/DER/hash handling, zeroized retained tokens/secrets and redacted
+Debug. Known malformed/invalid/expired proof fails; missing identity stays Unable.
+Google's role-prefixed ECDSA-SHA256 and6-byte HKDF are used without new dependencies.
+Remote Success does not promote local Unable; Fail/rebinding/conflicting replay
+are absorbing. Final remote-result admission rechecks current peer/local validity.
+
+Both actual handlers retain the full derived token, construct their outgoing hash
+through the owner, send the verified signature result and reject Fail before
+Introduction. Existing native receipt/consent/storage gates are unchanged. No
+provider consumes peer CertificateInfo or network/account data in production.
+Production uses AnonymousSource; trusted certificate fixtures prove the crypto
+seam, not operational Google Account integration.
+
+The first affected10 domain methods passed in1.60s (605 filtered). Independent
+reference fixture contains a public deterministic test key's SPKI/signature from
+system OpenSSL and an HKDF expected value computed with Python stdlib; the
+temporary fixture signing-key file was deleted. It is not a production key or a
+claim of a Google-generated interoperability vector. Two additional real handler
+methods exercise encrypted PairedKey replies and actual state/Introduction gates
+over controlled streams. Full affected core execution is pending at this checkpoint.
+
+The integrated full core library run subsequently passed617/0 in21.37s. All12
+planned new methods are present (10 domain,2 handler); primary non-overlapping
+attribution: Positive1,N1=2,N2=1,N4=1,N7=5,N8=1,N10=1. Further positive/boundary/
+race/privacy/cancellation interactions overlap; these are not extra methods or
+whole-product coverage percentages. Strict core all-features/all-target Clippy
+passed27.82s with the existing upstream bluer future-incompatibility observation.
+Final review samples the injected clock once at result admission and zeroizes
+the temporary full-token derivation after PIN projection, as well as the retained
+token on drop. The affected domain check and compile/lint are repeated only for
+these final changes; the617 full run is not mislabeled as later final execution.
+
+## T4 provider research and remaining operational identity gate
+
+Read pinned `sharing/nearby_connections_manager_impl.cc`,
+`connections/implementation/encryption_runner.cc` and
+`sharing/certificates/nearby_share_certificate_manager_impl.cc`; exact9-file
+public-source receipts are in the research evidence. The encryption runner requests
+32 UKEY2 verification bytes and passes them as the raw authentication token. This
+matches the existing core derivation; the decimal PIN stays presentation only.
+
+The [Google certificate manager](https://github.com/google/nearby/blob/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/nearby_share_certificate_manager_impl.cc)
+uses account/device identity, managed certificate storage/schedulers and a
+certificate download client. It skips download without a logged-in account.
+This establishes a missing integration dependency; it does not establish a
+supported third-party authorization method or permission to call Google's service.
+The repository has no selected authorized account/provider credential, enrollment
+or authenticated rotation-link implementation. No request to that backend was
+made; only public source was read. It is not justified to build account UI or
+auto-accept on a self-asserted peer certificate at this stage.
+
+Selected boundary for this foundation: a private injected source supplies one
+already resolved peer certificate and at most9 local hash records, owned by the
+session snapshot. It never resolves by peer display name or accepts wire
+CertificateInfo. Production source is empty; this intentional limit is recorded
+in source/evidence, not hidden by a feature flag or represented as Google Account
+support. The verifier can check authentic certificate possession in fixtures;
+operational stock-peer identity requires a separately reviewed acquisition,
+authorization, storage/revocation and rotation contract with physical evidence.
+Provider research for the scoped foundation is complete; that later product/
+security decision remains open. Manual PIN/Accept remains the working default.
+
+## Final source verification and candidate plan
+
+After the clock-sampling correction,10 affected domain methods passed1.80s
+(607 filtered). Token derivation uses a Zeroizing guard so error/abandonment also
+clears the temporary bytes; successful PIN projection explicitly clears them
+before returning. Final real binary integrations passed modern_protocol4/0 in
+0.00s and native_daemon4/0 in0.06s. Final strict core all-features/all-target
+Clippy passed10.48s; nightly format and whitespace checks passed. No changes
+were needed to the lockfile, dependencies, protobuf/TS schema, IPC or GTK UI.
+Unchanged GTK/Tauri UI suites are not repeated; actual coupled daemon/GTK release
+compilation and offline package checks follow. No ten-run or physical-peer claim.
+
+Advance package revision to7 for the changed daemon at the same Rust version.
+After this source commit, build/verify the uninstalled native7 package with the
+existing private GTK4/Layer Shell root/shlibs metadata. Prepare a fresh unsigned
+APT and public unapproved signing request with exact source assertion; do not
+sign, install or publish. Native6 remains current until native7 actually passes.
+Record package/source/request hashes and metadata validity in new machine evidence,
+then export exact committed source/public artifacts with a receipt. Preserve all
+older candidates and backup artifacts. Do not use stale native2/native6 export
+helpers without adapting/verifying their exact version and feature assumptions.

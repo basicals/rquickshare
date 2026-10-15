@@ -13,7 +13,8 @@ auto-accept is separate from a local permission list. The recommended next slice
 is protocol authentication/provider groundwork, preserving manual consent until
 identity/provenance and permission gates exist. A separate rQuickShare-only pairing
 protocol is the alternative with distinct interoperability/security costs. User
-selection is pending; no auto-accept, enrollment, login or runtime change.
+selected option1: bounded certificate/token verifier and PairedKey integration
+are in progress. No auto-accept, enrollment or login is part of the foundation.
 
 ## 2026-10-15: temporary visibility ownership review prepared
 

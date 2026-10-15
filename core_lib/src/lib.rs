@@ -36,6 +36,7 @@ pub mod managed;
 mod manager;
 #[cfg(target_os = "linux")]
 pub mod memory_source;
+mod peer_authentication;
 #[cfg(target_os = "linux")]
 pub mod prepared_source;
 mod protocol;
