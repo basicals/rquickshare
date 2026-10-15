@@ -117,5 +117,14 @@
     "independently_approved": false,
     "source_provenance_attestation": false
   },
-  "owned_processes_closed": true
+  "owned_processes_closed": true,
+  "public_export": {
+    "source_commit": "8d4af939c6d85cba19509601262390976d86651e",
+    "source_zip_sha256": "bf1c88e896aa8990b47d7b117edb38690e1259d8916d2a25ac8901dd42bed1d7",
+    "source_tracked_files": 440,
+    "unsigned_repository_zip_sha256": "161cb49eea01da7fb452ddc6874cf665bca67c3eba4e542d1129258a539c2e07",
+    "signing_request_sha256": "551a9499ab5ee893cdc3cdd4ed6a58009cdaf0762428f3f3f1ebe6bca2f96821",
+    "verified": true,
+    "completion_docs_commit_is_later": true
+  }
 }

@@ -1,8 +1,8 @@
 # Temporary visibility: deadline ownership review
 
 2026-10-15. Mode A, direct dev. User selected option1 after the review. One core
-visibility owner and corrected native6 package are implemented/verified; final
-source export follows the evidence commit. No new duration/UX/storage contract. Guide:
+visibility owner, corrected native6 package and public handoff are complete.
+No new duration/UX/storage contract. Guide:
 /home/morozhenko/.codex/AGENTS.md, sections3/3.1/11.
 
 ## Current behavior and evidence
@@ -110,7 +110,7 @@ shared transport lifecycle refactor. Alternative2 is retained as decision histor
 5. [x] V4: run affected core/native/legacy checks once, plus formatting/lint as
    applicable. Record actual results, failures and corrections in this SSOT.
    Make atomic commits; do not rebuild an unchanged package just for this review.
-6. [ ] V5 after source verification: prepare the next uninstalled native candidate
+6. [x] V5 after source verification: prepare the next uninstalled native candidate
    and current handoff if binaries changed. Native4 remains the last measured
    artifact until a replacement is actually built and verified. No installation,
    signing, publication, Drive requests or physical-peer claim.
@@ -315,6 +315,19 @@ binary inputs since32fc64f. Preserve the old generic source ZIP before refreshin
 it. Record the exported source commit/ZIP hashes in the output receipt, then in a
 documentation-only completion commit; do not rebuild/re-export the immutable source
 ZIP just to include its own later verification record.
+
+V5 completed: exported440 tracked files from8d4af939c6d85cba19509601262390976d86651e
+to `outputs/rquickshare-native6-source.zip` and refreshed the generic source ZIP
+after preserving its previous bytes. CRC/inventory/selected exact source bytes,
+package/request digests and unchanged binary inputs since32fc64f passed. Source
+ZIP SHA256bf1c88e896aa8990b47d7b117edb38690e1259d8916d2a25ac8901dd42bed1d7;
+unsigned7-file APT ZIP SHA256
+161cb49eea01da7fb452ddc6874cf665bca67c3eba4e542d1129258a539c2e07.
+Exact public receipts, package/checksum, request, current docs and progress/readiness
+are in `/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs`.
+The final documentation-only completion commit is intentionally later than that
+immutable source ZIP; binary provenance remains32fc64f. All owned build/export
+commands finished; Terminal closed. No user services/authorization changed.
 
 No physical discovery, suspend, installed services or release publication was
 tested. The existing bluer future-incompatibility warning remains an upstream
