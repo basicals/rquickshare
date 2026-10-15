@@ -236,3 +236,44 @@ It retries only pending exact artifacts through the existing remote, stops at th
 first failure, stays quiet on unchanged quota failures, reports missing/mismatched
 data or successful acceptance, and removes itself after all four matches. No
 background terminal, busy loop, browser auth or unattended signing is involved.
+
+### Local mount diagnostics plan (2026-10-15)
+
+The user questioned whether local creation followed by moving would solve the
+quota failure. Local creation and exclusive mounted copying already happened.
+Mode A: inspect only existing mount cache settings and the four exact VFS metadata
+entries, compare the four local output artifacts with recorded evidence, and
+inspect scoped existing process logs if necessary. No remote calls, duplicate
+upload, moves, cache/config changes or interference with the user's mount process.
+The mount uses full VFS caching and a five-second write-back delay. Determine
+whether these specific uploads remain dirty/pending before suggesting any action;
+cached readability alone cannot establish cloud persistence. Record observations
+and retain all original files. Documentation-only rollback; no production changes.
+
+### Local mount diagnostic results
+
+All four original artifacts under ~/.rquickshare-signing/recovery-drive-2026-10-15
+still match recorded size/SHA256. Their exact VFS cache contents match too. All
+four existing metadata entries have Dirty=false and nonempty remote fingerprints;
+each fingerprint's MD5 matches its local original. This is consistent with
+completed mount writeback, not four pending uploads. It is stronger evidence than
+directory visibility, but remains a cached observation, not fresh independent
+cloud download acceptance. Public diagnostic values are recorded in the evidence.
+
+The mount and direct CLI use the same canonical existing config path and executable;
+no mount RCLONE_* environment or --drive-* backend overrides were observed. No
+different-config explanation was found. No backend requests, original/cache writes,
+mount restart or auth/config changes occurred during diagnostics. The existing
+hourly independent readback remains pending. Re-copying/moving would repeat the
+already completed local-create/mounted-copy workflow without addressing the read
+failure; preserve the original local recovery copy and existing destination files.
+
+Interpretation checked against upstream rclone1.75.1 vfscache/item.go: _dirty marks
+changed data needing writeback; successful _store clears Dirty. Upstream mount
+documentation explains full read/write disk buffering and remote size/modtime/hash
+fingerprints. MD5 here only compares the existing remote fingerprint; SHA256 is
+the recorded recovery integrity check. No authentication claim relies on MD5.
+
+References:
+https://rclone.org/commands/rclone_mount/#vfs-file-caching
+https://raw.githubusercontent.com/rclone/rclone/v1.75.1/vfs/vfscache/item.go

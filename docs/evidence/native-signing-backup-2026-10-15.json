@@ -63,5 +63,80 @@
     "status": "ACTIVE",
     "scope": "read-only existing remote; four exact artifacts; stop on first failure; no browser access",
     "completion": "remove automation after all four size/SHA256 matches"
+  },
+  "local_mount_diagnostics": {
+    "checked_at_utc": "2026-10-15T09:21:35.353338+00:00",
+    "method": "local-only original/cache comparison and exact VFS metadata; no Drive requests",
+    "mount_settings": {
+      "vfs_cache_mode": "full",
+      "vfs_write_back": "5s"
+    },
+    "artifacts": [
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.51390626+01:00",
+          "ATime": "2026-10-15T07:14:39.514702315+01:00",
+          "Size": 20559,
+          "Fingerprint": "20559,2026-10-15 06:14:39.513 +0000 UTC,ed966776dc9d1fba0066165a7f371e3b",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.515316657+01:00",
+          "ATime": "2026-10-15T07:14:39.515927078+01:00",
+          "Size": 181,
+          "Fingerprint": "181,2026-10-15 06:14:39.515 +0000 UTC,a6dc8f4b24635e1dbe852612281197e4",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.receipt.json",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.516460953+01:00",
+          "ATime": "2026-10-15T07:14:39.517065629+01:00",
+          "Size": 585,
+          "Fingerprint": "585,2026-10-15 06:14:39.516 +0000 UTC,12aa1163d978da37dd2f361739566e4d",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.RESTORE.md",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.517573996+01:00",
+          "ATime": "2026-10-15T07:14:39.518297182+01:00",
+          "Size": 983,
+          "Fingerprint": "983,2026-10-15 06:14:39.517 +0000 UTC,2ff74d94c4d2de9f75f4c448d247fc17",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      }
+    ],
+    "direct_cloud_readback_verified": false,
+    "same_mount_and_cli_config": true,
+    "same_mount_and_cli_executable": true,
+    "mount_backend_overrides_present": false,
+    "interpretation": "All four files have Dirty=false and cached remote MD5 fingerprints matching local originals; consistent with completed mount writeback, but not an independent fresh cloud download."
   }
 }
