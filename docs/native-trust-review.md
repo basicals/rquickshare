@@ -4,8 +4,8 @@
 authentication foundation and provider research. Guide:
 /home/morozhenko/.codex/AGENTS.md sections3,3.1,11,13. This selection does not
 authorize an auto-accept boundary, account access, enrollment or new pairing UX.
-T1–T4 and source checks are complete; native7 is verified offline. Public source/
-artifact handoff follows the evidence commit. Operational provider/identity and
+T1–T5, source checks and verified native7/public artifact handoff are complete.
+Operational provider/identity and
 trusted-device UI remain outside this completed foundation.
 
 ## Repository findings
@@ -114,7 +114,7 @@ new pairing/security/storage/recovery contracts before implementation.
    document evidence and unknowns. Freeze the provider contract before real account
    access, import/enrollment or persistent trust. Do not build a nonfunctional
    Trusted-device toggle when the sender cannot be authenticated.
-6. [ ] T5: run affected checks once, document observed counts/failures/limits and
+6. [x] T5: run affected checks once, document observed counts/failures/limits and
    atomic commits. New native package only after source behavior changes and
    verification; native6 remains current throughout this analysis. Physical
    Android/Google Windows acceptance stays explicitly open.
@@ -348,3 +348,16 @@ bytes, package/request digests and unchanged binary inputs sincec286e20. Preserv
 the older generic source ZIP before refreshing it. Store source/ZIP hashes in
 the output receipt and then a documentation-only completion commit; do not rebuild
 or replace the immutable source ZIP to include its own later verification record.
+
+T5 handoff completed:446 tracked files from70ea4c7b091a27b86efd560711f06b0906d597db,
+source ZIP SHA256af067aa44b133d85166cec4ef6229874bf0dea537cec3db4b0db55260e328ca6;
+unsigned APT ZIP SHA256
+70161d0904163d0f68e50a77921e836393ae9763f60299a789bbad0f7b56ce17.
+CRC/inventory/selected exact bytes, package/request digests and unchanged binary
+inputs sincec286e20 passed. Exported native7/checksum, immutable source ZIP,
+unsigned7-file APT, public unapproved request, docs and truthful progress/readiness
+to `/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs`.
+The older generic source ZIP was preserved before refresh. Completion docs are
+intentionally later than the immutable source ZIP; binary source staysc286e20.
+All owned commands/test brokers/build/export sessions ended; Terminal closed.
+No user services, authorization, account data or signing/recovery custody changed.

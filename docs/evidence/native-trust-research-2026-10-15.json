@@ -62,7 +62,7 @@
   "observed_date": "2026-10-15",
   "mode": "A",
   "local_source_commit": "386ed1a",
-  "status": "option1-selected-foundation-in-progress",
+  "status": "option1-foundation-complete-operational-provider-open",
   "primary_help": [
     {
       "url": "https://support.google.com/android/answer/13801258?hl=en",
@@ -74,5 +74,7 @@
   "physical_interoperability_tested": false,
   "crypto_implementation_tested": false,
   "release_signed": false,
-  "published": false
+  "published": false,
+  "implementation_evidence": "native-peer-authentication-2026-10-15.json",
+  "research_only": true
 }

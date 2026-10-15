@@ -50,7 +50,8 @@ Fail stops before Introduction. Twelve new methods, scoped checks and native7
 offline verification passed. Production certificate source is explicitly empty:
 operational acquisition/authorization/rotation and remembered trust remain open.
 No trusted-device UI, account access or auto-accept is implemented. Native7 public
-source/artifact export follows the evidence commit; do not claim Google Account
+source/artifact export is verified; exact receipt/hashes are in the contract and
+evidence. Do not claim Google Account
 or physical peer acceptance from the offline fixtures.
 
 ## Implemented source and remaining acceptance
