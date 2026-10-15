@@ -21,10 +21,10 @@ errors are suppressed. Mounted-file presence is not proof of completed cloud syn
 
 ## Plan before code
 
-1. [ ] B1: implement scripts/native_signer_backup.py with bounded fixed recovery
+1. [x] B1: implement scripts/native_signer_backup.py with bounded fixed recovery
    inventory/manifest, authenticated GPG symmetric encryption through system
    Pinentry, safe fresh-only restore and real temporary restoration checks.
-2. [ ] B2: focused pure archive/path/tamper/refusal tests plus real protected GPG
+2. [x] B2: focused pure archive/path/tamper/refusal tests plus real protected GPG
    encryption/decryption/restore/non-release signature/revocation integration.
    No domain mocks; test-only Pinentry injection, no ambient GPG or cloud fixture.
 3. [ ] B3: create actual encrypted backup on private local disk; verify decryption,
@@ -100,3 +100,52 @@ https://rclone.org/drive/
 https://rclone.org/commands/rclone_copyto/
 Installed rclone1.75.1 lsjson help and current GPG options are checked. Google Drive
 backend supports cloud metadata/content readback; FUSE cache is a separate layer.
+
+## B1/B2 implementation and measured checks
+
+Implemented create/verify/restore operator CLI, fixed six-file inventory plus
+canonical manifest, private atomic no-replace output, bounded in-memory TAR/GPG,
+restored protected-key proof and disposable revocation test. Crypto/restoration
+staging always lives beside the private source custody, never beside a potentially
+cloud-mounted final output. Ciphertext budget includes64KiB encryption overhead.
+
+Initial module discovery accidentally included an imported TestCase class:5 prior
+local-custody methods passed again and4 new backup methods passed; one new actual
+backup scenario failed an incorrect byte-equality expectation after unlocking.
+Total10 methods18.570s. Fixed import to module alias; loader now discovers exactly
+5 backup methods, so future native CI does not duplicate those prior methods.
+GPG legitimately rewraps its own protected private-file representation on first
+use. Restore now enforces exact bytes before GPG use, the exact real signature and
+KEYINFO protection after use; all other recovered files remain byte-identical.
+This replaces an invalid file-format assumption with stronger material/protection
+checks, not a relaxed identity assertion. Source profile bytes remain unchanged.
+
+Affected actual encrypt/decrypt/restore/tamper/wrong-password/wrong-primary/signature/
+revocation/cleanup scenario passed1/0 in13.749s. After fixing local-only secret
+staging, that affected scenario passed1/0 in12.668s. Expanded table-driven unsafe
+member/size/schema cases passed1/0 in4.999s. Other4 initially passing backup methods
+were not repeated. Syntax/CLI help/discovery-count/whitespace passed. No production
+key, live GPG profile, cloud object, mount or account config was changed by tests.
+
+Canonical TAR checks reject traversal/absolute/link/directory/FIFO/PAX/duplicates,
+malformed/truncated/extra bytes and changed digests; schema rejects bool/float/
+string aliases. Cancellation/oversize creates no ready backup. Concurrent output
+creation preserves foreign contents. Existing source agent is neither reused nor
+stopped. Development tests use owned TEST ONLY Pinentry and close their agents.
+
+## Production operation prepared
+
+Private local output (fresh only):
+~/.rquickshare-signing/recovery-drive-2026-10-15. Run create with system Pinentry;
+choose/retain an archive password, re-enter it to verify decryption, then enter the
+original key password to prove the restored signing subkey works. Passwords are
+not tool arguments/output. Initial production fingerprint remains
+6D8854762CF0C86881138A56695A0888D09FA616. Expected signing subkey remains
+1F5150D98D94C43109FBA2503E7DE744C1014357.
+
+Successful output contains only content-addressed ciphertext, SHA256 sidecar,
+public receipt and RESTORE.md. Copy those four exact artifacts to the already
+verified ArcVault folder, without replacing existing files. For cloud acceptance,
+read metadata and download fresh bytes directly through the existing rclone remote,
+compare exact SHA256/size; no remote plaintext or new share permission. Keep the
+verified local ciphertext if remote quota prevents completed upload/readback.
