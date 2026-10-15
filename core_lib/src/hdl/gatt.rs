@@ -1,3 +1,5 @@
+mod slot;
+
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -143,6 +145,7 @@ fn inbound_disconnected_message(id: &str, error: impl Into<String>) -> ChannelMe
 pub struct ReceiverGattServer {
     adapter: Arc<Adapter>,
     advertisement: Vec<u8>,
+    identity: Option<([u8; 4], crate::identity::IdentityConsumer)>,
     sender: Sender<ChannelMessage>,
     tcp_port: u16,
     bwu_router: BwuRouter,
@@ -153,6 +156,14 @@ pub struct ReceiverGattServer {
 }
 
 impl ReceiverGattServer {
+    pub(crate) fn with_identity(
+        mut self,
+        endpoint: [u8; 4],
+        identity: crate::identity::IdentityConsumer,
+    ) -> Self {
+        self.identity = Some((endpoint, identity));
+        self
+    }
     pub(crate) fn with_receive_policy(mut self, policy: crate::receive::ReceivePolicy) -> Self {
         self.receive_policy = policy;
         self
@@ -173,6 +184,7 @@ impl ReceiverGattServer {
         Ok(Self {
             adapter: Arc::new(adapter),
             advertisement,
+            identity: None,
             sender,
             tcp_port,
             bwu_router,
@@ -183,7 +195,7 @@ impl ReceiverGattServer {
         })
     }
 
-    pub async fn run(&self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
+    pub async fn run(mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
         if ctk.is_cancelled() {
             return Ok(());
         }
@@ -191,7 +203,22 @@ impl ReceiverGattServer {
         let slot0: Uuid = QS_ADV_SLOT0_UUID.parse()?;
         let weave_write: Uuid = QS_WEAVE_TO_PERIPHERAL.parse()?;
         let weave_notify: Uuid = QS_WEAVE_FROM_PERIPHERAL.parse()?;
-        let advertisement = self.advertisement.clone();
+        let mut identity = self.identity.take();
+        let mut initial_revision = 0;
+        if let Some((endpoint, consumer)) = identity.as_mut() {
+            let snapshot = consumer.snapshot();
+            initial_revision = snapshot.revision;
+            self.advertisement = super::receiver_service_data(
+                *endpoint,
+                crate::utils::DeviceType::Laptop as u8,
+                snapshot.name.as_str(),
+            );
+        }
+        let value = Arc::new(Mutex::new(slot::SlotValue::new(
+            self.advertisement.clone(),
+            identity.is_some(),
+        )));
+        let advertisement = value.clone();
         let deferred_slot0_advertising = slot0_deferred_advertising_enabled();
         #[cfg(debug_assertions)]
         info!(
@@ -232,11 +259,11 @@ impl ReceiverGattServer {
                                 let mdns_refresh_sender = slot_mdns_refresh_sender.clone();
                                 Box::pin(async move {
                                     let offset = usize::from(request.offset);
-                                    let response = if offset >= advertisement.len() {
-                                        Vec::new()
-                                    } else {
-                                        advertisement[offset..].to_vec()
-                                    };
+                                    let response = advertisement
+                                        .lock()
+                                        .await
+                                        .read(request.device_address, offset)
+                                        .ok_or(ReqError::Failed)?;
                                     trace!(
                                         "{INNER_NAME}: slot0 read offset={offset}, returned={} bytes",
                                         response.len()
@@ -364,15 +391,38 @@ impl ReceiverGattServer {
                 return Err(error.into());
             }
         };
-        let lifetime = tasks.lifetime();
-        tokio::select! {
-            _ = ctk.cancelled() => {},
-            _ = lifetime.cancelled() => {},
+        if let Some((_, consumer)) = identity.as_ref() {
+            if let Err(error) = consumer.acknowledge(initial_revision) {
+                drop(handle);
+                tasks.stop().await?;
+                return Err(error.into());
+            }
         }
+        let lifetime = tasks.lifetime();
+        let outcome: Result<(), anyhow::Error> = loop {
+            tokio::select! {
+                biased;
+                _ = ctk.cancelled() => break Ok(()),
+                _ = lifetime.cancelled() => break Ok(()),
+                changed = async {
+                    match identity.as_mut() {
+                        Some((_, consumer)) => consumer.changed().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    if let Err(error) = changed { break Err(error.into()); }
+                    if let Some((endpoint, consumer)) = identity.as_mut() {
+                        let snapshot = consumer.snapshot();
+                        value.lock().await.install(super::receiver_service_data(*endpoint, crate::utils::DeviceType::Laptop as u8, snapshot.name.as_str()));
+                        if let Err(error) = consumer.acknowledge(snapshot.revision) { break Err(error.into()); }
+                    }
+                }
+            }
+        };
         drop(handle);
         tasks.stop().await?;
         info!("{INNER_NAME}: stopped");
-        Ok(())
+        outcome
     }
 }
 

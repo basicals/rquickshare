@@ -1,5 +1,8 @@
 //! Protocol workers owned by the TCP manager's join barrier.
 
+#[cfg(test)]
+mod identity_tests;
+
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -53,6 +56,7 @@ pub(super) struct SessionContext<C> {
     connector: Arc<C>,
     sessions: Option<SessionHub>,
     receive_policy: crate::receive::ReceivePolicy,
+    identity: Option<crate::identity::IdentityPolicy>,
 }
 
 impl<C> Clone for SessionContext<C> {
@@ -63,6 +67,7 @@ impl<C> Clone for SessionContext<C> {
             connector: Arc::clone(&self.connector),
             sessions: self.sessions.clone(),
             receive_policy: self.receive_policy.clone(),
+            identity: self.identity.clone(),
         }
     }
 }
@@ -80,7 +85,16 @@ impl<C: Connector> SessionContext<C> {
             connector,
             sessions,
             receive_policy: crate::receive::ReceivePolicy::new(None),
+            identity: None,
         }
+    }
+
+    pub(super) fn with_identity(
+        mut self,
+        identity: Option<crate::identity::IdentityPolicy>,
+    ) -> Self {
+        self.identity = identity;
+        self
     }
 
     pub(super) fn with_receive_policy(mut self, policy: crate::receive::ReceivePolicy) -> Self {
@@ -137,6 +151,10 @@ impl<C: Connector> SessionContext<C> {
         info: SendInfo,
         session: &mut Option<SessionLease>,
     ) -> Result<(), anyhow::Error> {
+        let local_name = self
+            .identity
+            .as_ref()
+            .map(|identity| identity.snapshot().name);
         let Some(socket) =
             until_either_stops(token, cancellation, self.connector.connect(&info.addr)).await
         else {
@@ -157,6 +175,9 @@ impl<C: Connector> SessionContext<C> {
                 name: info.name,
             },
         )?;
+        if let Some(name) = local_name {
+            request = request.with_local_name(name);
+        }
         if let Some(session) = session.take() {
             request = request.attach_session(session);
         }

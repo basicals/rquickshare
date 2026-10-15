@@ -256,6 +256,7 @@ async fn managed_rig<C: Connector>(connector: C) -> (Running, ManagedSender) {
     let (sender, events) = broadcast::channel(128);
     let mut server = TcpServer {
         receive_policy: crate::receive::ReceivePolicy::new(None),
+        identity: None,
         endpoint_id: *b"MNGD",
         tcp_listener: TrackingListener { listener, accepted },
         connector: Arc::new(connector),

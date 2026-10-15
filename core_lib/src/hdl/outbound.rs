@@ -566,6 +566,7 @@ pub struct OutboundRequest {
     payload: OutboundPayload,
     text_payload_id: Option<i64>,
     cleanup_files: Vec<ManagedEphemeralFile>,
+    local_name: Option<crate::identity::DeviceName>,
 }
 
 impl Drop for OutboundRequest {
@@ -583,6 +584,11 @@ impl Drop for OutboundRequest {
 }
 
 impl OutboundRequest {
+    pub(crate) fn with_local_name(mut self, name: crate::identity::DeviceName) -> Self {
+        self.local_name = Some(name);
+        self
+    }
+
     pub fn new(
         endpoint_id: [u8; 4],
         socket: TcpStream,
@@ -658,6 +664,7 @@ impl OutboundRequest {
             payload,
             text_payload_id: None,
             cleanup_files,
+            local_name: None,
         })
     }
 
@@ -818,6 +825,15 @@ impl OutboundRequest {
     }
 
     pub async fn send_connection_request(&mut self) -> Result<(), anyhow::Error> {
+        if self.local_name.is_none() {
+            self.local_name = Some(crate::identity::DeviceName::new(
+                &sys_metrics::host::get_hostname()?,
+            )?);
+        }
+        let local_name = self
+            .local_name
+            .as_ref()
+            .ok_or_else(|| anyhow!("Local identity unavailable"))?;
         let request = location_nearby_connections::OfflineFrame {
             version: Some(location_nearby_connections::offline_frame::Version::V1.into()),
             v1: Some(location_nearby_connections::V1Frame {
@@ -826,10 +842,10 @@ impl OutboundRequest {
                 ),
                 connection_request: Some(location_nearby_connections::ConnectionRequestFrame {
                     endpoint_id: Some(String::from_utf8_lossy(&self.endpoint_id).to_string()),
-                    endpoint_name: Some(sys_metrics::host::get_hostname()?.into()),
+                    endpoint_name: Some(local_name.as_str().into()),
                     endpoint_info: Some(
                         RemoteDeviceInfo {
-                            name: sys_metrics::host::get_hostname()?,
+                            name: local_name.as_str().into(),
                             device_type: DeviceType::Laptop,
                         }
                         .serialize(),

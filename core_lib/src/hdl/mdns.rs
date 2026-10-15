@@ -62,9 +62,16 @@ pub struct MDnsServer {
     receiver_refresh_receiver: Receiver<()>,
     visibility_sender: Arc<Mutex<watch::Sender<Visibility>>>,
     visibility_receiver: watch::Receiver<Visibility>,
+    endpoint_id: [u8; 4],
+    identity: Option<crate::identity::IdentityConsumer>,
 }
 
 impl MDnsServer {
+    pub(crate) fn with_identity(mut self, identity: crate::identity::IdentityConsumer) -> Self {
+        self.identity = Some(identity);
+        self
+    }
+
     pub fn new(
         endpoint_id: [u8; 4],
         service_port: u16,
@@ -82,6 +89,8 @@ impl MDnsServer {
             receiver_refresh_receiver,
             visibility_sender,
             visibility_receiver,
+            endpoint_id,
+            identity: None,
         })
     }
 
@@ -93,12 +102,40 @@ impl MDnsServer {
         let mut visibility = *self.visibility_receiver.borrow();
         let mut interval = interval_at(Instant::now() + TICK_INTERVAL, TICK_INTERVAL);
         let mut receiver_refresh_open = true;
+        let mut identity = self.identity.take();
+        if let Some(consumer) = identity.as_mut() {
+            let snapshot = consumer.snapshot();
+            self.service_info = Self::renamed_service(
+                &self.service_info,
+                self.endpoint_id,
+                snapshot.name.as_str(),
+            )?;
+            if visibility != Visibility::Invisible {
+                self.daemon.register(self.service_info.clone())?;
+            }
+            consumer.acknowledge(snapshot.revision)?;
+        }
 
         loop {
             tokio::select! {
                 _ = ctk.cancelled() => {
                     info!("{INNER_NAME}: tracker cancelled, breaking");
                     break;
+                }
+                changed = async {
+                    match identity.as_mut() {
+                        Some(consumer) => consumer.changed().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    changed?;
+                    let consumer = identity.as_mut().ok_or_else(|| anyhow::anyhow!("Identity consumer unavailable"))?;
+                    let snapshot = consumer.snapshot();
+                    self.service_info = Self::renamed_service(&self.service_info, self.endpoint_id, snapshot.name.as_str())?;
+                    if visibility != Visibility::Invisible {
+                        self.daemon.register(self.service_info.clone())?;
+                    }
+                    consumer.acknowledge(snapshot.revision)?;
                 }
                 r = monitor.recv_async() => {
                     match r {
@@ -182,16 +219,39 @@ impl MDnsServer {
         service_port: u16,
         device_type: DeviceType,
     ) -> Result<ServiceInfo, anyhow::Error> {
-        let name = gen_mdns_name(endpoint_id);
         let hostname = sys_metrics::host::get_hostname()?;
-        info!("Broadcasting with: {hostname}");
-        let endpoint_info = gen_mdns_endpoint_info(device_type as u8, &hostname);
+        Self::named_service(endpoint_id, service_port, device_type, &hostname, &hostname)
+    }
+
+    fn renamed_service(
+        original: &ServiceInfo,
+        endpoint_id: [u8; 4],
+        display_name: &str,
+    ) -> Result<ServiceInfo, anyhow::Error> {
+        Self::named_service(
+            endpoint_id,
+            original.get_port(),
+            DeviceType::Laptop,
+            original.get_hostname(),
+            display_name,
+        )
+    }
+
+    fn named_service(
+        endpoint_id: [u8; 4],
+        service_port: u16,
+        device_type: DeviceType,
+        hostname: &str,
+        display_name: &str,
+    ) -> Result<ServiceInfo, anyhow::Error> {
+        let name = gen_mdns_name(endpoint_id);
+        let endpoint_info = gen_mdns_endpoint_info(device_type as u8, display_name);
 
         let properties = [("n", endpoint_info)];
         let si = ServiceInfo::new(
             "_FC9F5ED42C8A._tcp.local.",
             &name,
-            &hostname,
+            hostname,
             "",
             service_port,
             &properties[..],
@@ -205,6 +265,38 @@ impl MDnsServer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn given_display_name_change_when_service_is_rebuilt_then_dns_identity_and_endpoint_stay_fixed()
+    {
+        let endpoint = *b"TEST";
+        let original = MDnsServer::named_service(
+            endpoint,
+            2345,
+            DeviceType::Laptop,
+            "machine.local.",
+            "Original",
+        )
+        .unwrap();
+        let renamed = MDnsServer::renamed_service(&original, endpoint, "Рабочий ПК").unwrap();
+        assert_eq!(renamed.get_fullname(), original.get_fullname());
+        assert_eq!(renamed.get_hostname(), original.get_hostname());
+        assert_eq!(renamed.get_port(), original.get_port());
+        let value = renamed.get_properties().get("n").unwrap().val_str();
+        let (kind, name) = crate::utils::parse_mdns_endpoint_info(value).unwrap();
+        assert_eq!(kind, DeviceType::Laptop);
+        assert_eq!(name, "Рабочий ПК");
+        let max = "a".repeat(crate::identity::MAX_NAME_BYTES);
+        let maximum = MDnsServer::renamed_service(&original, endpoint, &max).unwrap();
+        assert_eq!(
+            crate::utils::parse_mdns_endpoint_info(
+                maximum.get_properties().get("n").unwrap().val_str()
+            )
+            .unwrap()
+            .1,
+            max
+        );
+    }
 
     #[test]
     fn receiver_refresh_ok_and_lagged_request_resend() {

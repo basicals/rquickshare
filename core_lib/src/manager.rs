@@ -206,9 +206,14 @@ pub(crate) struct TcpServer<L = TcpListener, C = TcpConnector> {
     connect_receiver: OutboundReceiver,
     bwu_router: BwuRouter,
     receive_policy: crate::receive::ReceivePolicy,
+    identity: Option<crate::identity::IdentityPolicy>,
 }
 
 impl TcpServer {
+    pub(crate) fn with_identity(mut self, identity: crate::identity::IdentityPolicy) -> Self {
+        self.identity = Some(identity);
+        self
+    }
     pub(crate) fn with_receive_policy(mut self, policy: crate::receive::ReceivePolicy) -> Self {
         self.receive_policy = policy;
         self
@@ -228,6 +233,7 @@ impl TcpServer {
             connect_receiver: connect_receiver.into(),
             bwu_router,
             receive_policy: crate::receive::ReceivePolicy::new(None),
+            identity: None,
         })
     }
 }
@@ -241,6 +247,7 @@ impl<L: AcceptSource, C: Connector> TcpServer<L, C> {
             self.connect_receiver.sessions(),
         )
         .with_receive_policy(self.receive_policy.clone())
+        .with_identity(self.identity.clone())
     }
 
     pub async fn run(&mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {

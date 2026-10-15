@@ -93,6 +93,8 @@ pub struct RQS {
 
     port_number: Option<u32>,
     receive_policy: receive::ReceivePolicy,
+    identity: Option<identity::IdentityPolicy>,
+    configured_name: Option<identity::DeviceName>,
 
     pub message_sender: broadcast::Sender<ChannelMessage>,
 }
@@ -128,6 +130,8 @@ impl RQS {
             foreground_receiver,
             port_number,
             receive_policy: receive::ReceivePolicy::new(download_path),
+            identity: None,
+            configured_name: None,
             message_sender,
         }
     }
@@ -192,6 +196,14 @@ impl RQS {
         tracker: &TaskTracker,
         ctoken: &CancellationToken,
     ) -> Result<broadcast::Receiver<()>, anyhow::Error> {
+        let fallback = identity::DeviceName::new(&sys_metrics::host::get_hostname()?)?;
+        let mut required = vec![identity::ConsumerKind::Mdns];
+        if cfg!(all(feature = "experimental", target_os = "linux")) {
+            required.push(identity::ConsumerKind::Gatt);
+        }
+        let identity = identity::IdentityPolicy::new(fallback, &required);
+        identity.set_override(self.configured_name.as_ref())?;
+        self.identity = Some(identity.clone());
         let endpoint_id: Vec<u8> = rand::rng().sample_iter(Alphanumeric).take(4).collect();
         let tcp_listener =
             TcpListener::bind(format!("0.0.0.0:{}", self.port_number.unwrap_or(0))).await?;
@@ -211,7 +223,8 @@ impl RQS {
             receiver,
             bwu_router.clone(),
         )?
-        .with_receive_policy(self.receive_policy.clone());
+        .with_receive_policy(self.receive_policy.clone())
+        .with_identity(identity.clone());
         let ctk = ctoken.clone();
         tracker.spawn(async move {
             let lifetime = ctk.clone();
@@ -246,18 +259,18 @@ impl RQS {
             receiver_mdns_refresh_receiver,
             self.visibility_sender.clone(),
             self.visibility_receiver.clone(),
-        )?;
+        )?
+        .with_identity(identity.subscribe(identity::ConsumerKind::Mdns)?);
         let ctk = ctoken.clone();
         tracker.spawn(async move { mdns.run(ctk).await });
 
         #[cfg(all(feature = "experimental", target_os = "linux"))]
         {
             let endpoint_id: [u8; 4] = endpoint_id[..4].try_into()?;
-            let hostname = sys_metrics::host::get_hostname()?;
             let receiver_advertisement = receiver_service_data(
                 endpoint_id,
                 crate::utils::DeviceType::Laptop as u8,
-                &hostname,
+                identity.snapshot().name.as_str(),
             );
 
             let visibility_rx = self.visibility_receiver.clone();
@@ -311,6 +324,7 @@ impl RQS {
             let gatt_bwu_router = bwu_router.clone();
             let gatt_tcp_port = binded_addr.port();
             let gatt_receive_policy = self.receive_policy.clone();
+            let gatt_identity = identity.subscribe(identity::ConsumerKind::Gatt)?;
             tracker.spawn(async move {
                 let initialized = tokio::select! {
                     biased;
@@ -327,7 +341,9 @@ impl RQS {
                 };
                 match initialized {
                     Ok(server) => {
-                        let server = server.with_receive_policy(gatt_receive_policy);
+                        let server = server
+                            .with_receive_policy(gatt_receive_policy)
+                            .with_identity(endpoint_id, gatt_identity);
                         if let Err(error) = server.run(gatt_ctk).await {
                             error!("ReceiverGattServer stopped with error: {error}");
                         }
@@ -393,6 +409,20 @@ impl RQS {
 
         self.ctoken = None;
         self.tracker = None;
+        self.identity = None;
+    }
+
+    pub fn set_device_name(
+        &mut self,
+        name: Option<identity::DeviceName>,
+    ) -> Result<Option<u64>, identity::IdentityError> {
+        let revision = self
+            .identity
+            .as_ref()
+            .map(|identity| identity.set_override(name.as_ref()))
+            .transpose()?;
+        self.configured_name = name;
+        Ok(revision)
     }
 
     // Setting None here will resume the default settings

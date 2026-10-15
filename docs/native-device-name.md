@@ -10,7 +10,7 @@ host-settings mutation, production signing/publishing, peer operation or push.
 1. [x] N1: validated/redacted name and injected owner-local revisioned identity
    with immutable snapshots and explicit consumer acknowledgements. Focused domain
    tests/inventory first, atomic independent commit.
-2. [ ] N2: inject identity into core/TCP admissions, immutable outbound handshake,
+2. [x] N2: inject identity into core/TCP admissions, immutable outbound handshake,
    live mDNS endpoint data and GATT slot0 provider. Preserve DNS host/endpoint IDs,
    crypto/PIN, discovery visibility and joined shutdown. Scoped contract checks.
 3. [ ] N3: schema2 native persistence with exact schema1 backup/migration, Settings2
@@ -70,6 +70,15 @@ or automatic repeated settings write. Retrying the exact save may reapply policy
 without changing its revision/receipt. Startup readiness must not claim successful
 name application solely because a transport task was spawned.
 
+N2 GATT long-read refinement before verification: retain at most32 peer-addressed
+immutable slot snapshots. Offset0 starts/replaces that peer's snapshot; later
+offsets read the retained bytes across renames, never splice generations. A new
+33rd peer evicts the oldest slot; its later continuation explicitly fails, while
+a new offset0 can retry. End-offset releases a slot. No timers, background tasks,
+unbounded peer history or logs of addresses. Legacy static-provider offsets retain
+their existing semantics. Four new N2 methods cover bounded eviction/offsets,
+generation coherence, real mDNS ServiceInfo data and actual gated TCP handshake.
+
 ## Frozen persistence/IPC/editor contract
 
 Native schema2 adds validated optional device_name. Strict schema1 has its original
@@ -128,3 +137,27 @@ future-incompatibility notice remains. Terminal exited; Terminal closed.
 N1 is an independent foundation only: no hostname reader, settings schema, IPC or
 GTK behavior changes yet. Continue N2 transport binding, then N3/N4; do not claim
 that core identity tests prove transport updates or Google peer compatibility.
+
+## N2 implementation and actual verification
+
+RQS now resolves one bounded fallback at transport start, owns optional configured
+override and its consumer lifecycle, and releases the policy after joined stop.
+TCP context snapshots identity before connect I/O; OutboundRequest retains that
+snapshot for both wire fields, including standalone fallback resolution once.
+mDNS updates endpoint data without changing DNS identity or the visibility timer;
+hidden policy stays hidden. GATT installs name-derived slot data atomically after
+service registration; bounded long reads preserve their own snapshots. Consumer
+failure is explicit and no radio/daemon restart is introduced.
+
+Initial compile found a test type mismatch: endpoint_name is wire bytes rather
+than String. Corrected the assertion to exact byte comparison without changing
+the expected name. One actual whole library run then passed588 methods in8.01s
+(build21.77s), including four new N2 methods and the six N1 methods. Broad core
+execution was appropriate because RQS/TCP/GATT integration spans every core owner;
+this is not ten repetitions or physical Google/BlueZ acceptance. Primary new N2
+categories N5=3,N7=1. Native binaries/GTK have not been checked for this slice yet.
+Nightly formatting passed. All subprocesses exited; Terminal closed.
+
+Current handoff: N2 source and domain/protocol checks are complete, but the name
+setter is not exposed by persisted settings/GTK until N3/N4. Existing signed
+publication and installed acceptance remain separate. No user daemon was started.
