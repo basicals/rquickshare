@@ -66,6 +66,8 @@ wrappers/session termination continue to own disconnect and recovery.
 4. [ ] B4 freeze the next real preview receive/display contract after establishing
    wire semantics and pre-consent decoder ownership. Persistent resume needs
    content identity, partial-storage/recovery and consent contracts separately.
+   [Decoder boundary review](native-preview-review.md) records alternatives;
+   a significant user selection is pending before dependent implementation.
 
 Risk: newly rejected malformed headers or excessive interleaving may expose peer
 quirks. Preserve standard framing fixtures and report real acceptance separately.
