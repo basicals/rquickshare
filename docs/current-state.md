@@ -54,6 +54,15 @@ source/artifact export is verified; exact receipt/hashes are in the contract and
 evidence. Do not claim Google Account
 or physical peer acceptance from the offline fixtures.
 
+[Certificate-provider review](native-certificate-provider-review.md) researched
+the next dependency. No supported third-party scope/client path was established.
+An independent optional Linux provider uses an explicitly unofficial master-token/
+Google Play services exchange, not normal desktop OAuth. Recommended next choice:
+keep supported authorization as the boundary and continue independent parity;
+alternative is a separately selected experimental account provider. Significant
+security/product selection pending; no sign-in, credentials, account API calls or
+production code changes in this review. Native7 remains current.
+
 ## Implemented source and remaining acceptance
 
 | Area | Current evidence | Remaining work |

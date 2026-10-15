@@ -4,6 +4,17 @@ Current implementation and active contract: [current state](current-state.md) an
 [temporary visibility review](native-visibility-review.md). The dated checkpoints
 below are historical; later selections supersede earlier pending-choice claims.
 
+## 2026-10-15: operational certificate authorization review prepared
+
+[Provider review](native-certificate-provider-review.md) found an independent
+Linux account bridge, but its own source documents unofficial master-token
+exchange identifying Google Play services. A supported rQuickShare OAuth/client/
+scope path remains unestablished; source availability is not operational access
+or stock-peer acceptance. Recommend retaining supported authorization as the
+boundary while advancing independent sharing parity. An isolated experimental
+account provider is a significant alternative requiring selection. No login,
+credential read, backend request, code change or native7 rebuild was performed.
+
 ## 2026-10-15: PairedKey authentication foundation implemented
 
 [Trust contract](native-trust-review.md) identified ephemeral handshake keys and
