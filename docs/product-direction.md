@@ -4,6 +4,17 @@ Current implementation and active contract: [current state](current-state.md) an
 [temporary visibility review](native-visibility-review.md). The dated checkpoints
 below are historical; later selections supersede earlier pending-choice claims.
 
+## 2026-10-15: authenticated peer identity/trust review prepared
+
+[Trust review](native-trust-review.md) confirms current handshake keys are
+ephemeral and PairedKey proof/result is not authenticated. Pinned public Google
+source uses certificate-based session-token verification; account-backed own-device
+auto-accept is separate from a local permission list. The recommended next slice
+is protocol authentication/provider groundwork, preserving manual consent until
+identity/provenance and permission gates exist. A separate rQuickShare-only pairing
+protocol is the alternative with distinct interoperability/security costs. User
+selection is pending; no auto-accept, enrollment, login or runtime change.
+
 ## 2026-10-15: temporary visibility ownership review prepared
 
 Source analysis found that a failed mDNS worker can abandon the only temporary
