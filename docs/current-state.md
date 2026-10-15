@@ -30,8 +30,10 @@ at that checkpoint archive verification passed and sidecars were still pending.
 All four cloud artifacts are now verified as recorded below and in JSON evidence.
 The device-name review explicitly gates implementation on selection.
 Whitespace check passed. No production code changed or unaffected checks repeated.
-Current stop point: user choice1/2 in native-device-name-review.md. After selection,
-freeze its exact migration/IPC/validation/apply contracts before implementing.
+The user subsequently requested continuing the recommended live-update option1.
+Contracts and in-progress stages are in native-device-name.md; N1 identity-policy
+foundation is implemented and scoped checks passed. Continue transport/settings/
+GTK integration; a user-facing custom-name feature is not complete yet.
 
 ## Implemented source and remaining acceptance
 
@@ -81,9 +83,10 @@ commits. Do not imply that a source commit assertion proves build provenance.
 
 ## Work that can proceed without physical peers
 
-1. Resolve the scoped [device-name design](native-device-name-review.md), then
-   implement owner-local identity consistently across settings, discovery and new
-   sessions with focused deterministic verification. This is the next product slice.
+1. Complete the selected [live device-name implementation](native-device-name.md):
+   owner-local identity, discovery/new sessions, settings and GTK integration with
+   focused deterministic verification. The foundation is implemented; remaining
+   integration stages are not complete.
 2. Prepare concrete unsigned release review/provenance and selected publisher
    credential handoff independently of desktop testing; do not bypass release
    approval or invent credentials to publish.

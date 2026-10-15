@@ -1,0 +1,130 @@
+# Owner-local live device name
+
+2026-10-15. Mode A, direct dev. User continuation after the recommended option1
+authorizes the live-update slice in native-device-name-review.md. Read the guide,
+native settings/recovery/runtime/transport code before this plan. No install,
+host-settings mutation, production signing/publishing, peer operation or push.
+
+## Stages and rollback, before implementation
+
+1. [x] N1: validated/redacted name and injected owner-local revisioned identity
+   with immutable snapshots and explicit consumer acknowledgements. Focused domain
+   tests/inventory first, atomic independent commit.
+2. [ ] N2: inject identity into core/TCP admissions, immutable outbound handshake,
+   live mDNS endpoint data and GATT slot0 provider. Preserve DNS host/endpoint IDs,
+   crypto/PIN, discovery visibility and joined shutdown. Scoped contract checks.
+3. [ ] N3: schema2 native persistence with exact schema1 backup/migration, Settings2
+   service/client contract and live-apply receipt. Preserve write/replay/CAS/recovery.
+4. [ ] N4: secondary GTK name entry/default reset, typed validation and accurate
+   saved/applied/error presentation; update relevant docs/package source identity.
+5. [ ] N5: appropriate affected checks once, actual observations and remaining
+   hardware acceptance, atomic commits and recoverable handoff.
+
+Rollback UI/client before schema/service, then transport and identity foundations.
+Schema2 is not silently readable by an older binary: retain exact private schema1
+backup; never let rollback overwrite a newer incompatible document. No external
+configuration or release rollout is performed by this source change.
+
+## Frozen owner and name contract
+
+Name is presentation data, never authentication/trust. Optional override None uses
+the startup OS hostname; explicit names must be nonempty, no leading/trailing
+whitespace, no controls or bidi override/isolate controls, <=237 UTF-8 bytes.237 is
+the actual BLE receiver endpoint budget (255 minus18 fixed bytes); mDNS and peer
+handshake must use the same string instead of independent truncation. Preserve
+ordinary Unicode and internal spaces; no case folding/normalization/silent trim.
+Empty GTK entry/empty IPC override means restore automatic name. DNS hostname is
+resolved independently once for ServiceInfo and never set to the user display name.
+
+Each RQS owns one identity policy. It publishes monotonic revisions and immutable
+name snapshots; consumers cannot write settings or change another owner's name.
+Same effective name is idempotent. Updating the override still persists intent
+even when its resolved name equals the automatic value. No process-global state,
+ambient environment overrides, unbounded queue/history or name-bearing diagnostics.
+Debug output redacts names. Counter exhaustion refuses the update, never wraps.
+
+Session identity is snapshotted before outbound connection I/O, then retained for
+both ConnectionRequest fields throughout the session. Later updates affect only
+new admissions. Existing default/legacy standalone constructors retain OS-name
+behavior and resolve it once per handshake, not independently for the two fields.
+
+## Frozen live apply and failure contract
+
+mDNS and, where compiled, GATT name consumers explicitly register and acknowledge
+the exact revision installed locally. mDNS acceptance means local service info was
+updated and the library accepted registration when visible; no physical-peer claim.
+Hidden receiving stays hidden. Name updates must not reset temporary visibility.
+GATT slot0 reads use the current immutable name-derived data; BLE FEF3 advertising
+contains no human name and needs no unrelated radio restart. An ongoing offset
+read must not splice bytes from different revisions. Use a request-local coherent
+snapshot or conservatively retain consistent full-read semantics per read request.
+
+A dropped/failed consumer is unavailable, not implicitly acknowledged. Unsupported
+compiled-out transports are not required consumers. Apply waits on actual revision
+acknowledgement/failure and owned cancellation, without guessed sleeps/timeouts.
+The bus owner must retain cancellation and transfer processing while waiting:
+admit/track identity-apply work independently rather than blocking its event loop.
+Saved settings survive a partial consumer failure; return explicit not-applied
+state. No automatic daemon stop/restart, rollback of durable save, replayed transfer
+or automatic repeated settings write. Retrying the exact save may reapply policy
+without changing its revision/receipt. Startup readiness must not claim successful
+name application solely because a transport task was spawned.
+
+## Frozen persistence/IPC/editor contract
+
+Native schema2 adds validated optional device_name. Strict schema1 has its original
+exact fields; loading it yields automatic name. The first explicit save backs up
+its original bytes through the existing private bounded backup mechanism before
+writing schema2 with a new receipt/revision. Reads never migrate/write. Unknown,
+malformed or invalid names enter explicit recovery, never reset silently. Include
+raw name intent in retry fingerprint; a reused request ID with a changed name must
+conflict. Keep source-token/CAS, retained directory capability and durability rules.
+
+Settings2 replaces the unpublished Settings1 contract for the coordinated native
+client/service source. Version the D-Bus interface/XML rather than changing an
+existing struct signature under Settings1. Add saved override/effective name and
+name-apply status; empty wire override represents None. Keep prior scalar/root/
+port semantics. Exact typed bounds apply on both bus and SDK, redacted Debug.
+The editor has one name field with automatic-name placeholder and explicit Save;
+reset uses blank override, not an OS hostname mutation. No field in the tray card
+or consent flow. Show saved/pending/unavailable accurately; no claim another peer
+has already refreshed its device cache. Preserve ongoing sends, clipboard/source
+review and exact retry intent. No GTK direct file writes.
+
+## Scoped branch/interaction inventory before tests
+
+| Artifact | Branches and interacting states | Level / planned methods | Categories |
+|---|---|---|---|
+| DeviceName | valid Unicode/spaces; empty/whitespace/control/bidi;237/238 bytes; multibyte crossing budget; redacted Debug | table-driven domain2 | Positive,N1,N2,N7,N10 |
+| Identity policy | independent owners; initial/default/custom/reset; same-name replay; monotonic update/overflow; immutable old snapshots; consumer current/stale/wrong/future ack; dropped/failed consumer; pending/cancel/closed wait | domain4 | Positive,N1,N2,N4,N5,N7,N9,N10 |
+| Transport consumers/session | two handshake fields equal; update during connect retains admission name; mDNS DNS identity unchanged/visible/hidden/temporary/error; GATT coherent slot payload/offsets; consumer exit and joined cancellation | existing real protocol/worker fixtures + focused domain/integration4 | Positive,N3,N4,N5,N7,N9,N10 |
+| Schema2 store | exact schema1 backup and explicit migration; defaults/read-only; malformed/unknown/name invalid; retry changes name; source CAS and injected write failures | real store tables3 plus affected existing suites | Positive,N1,N2,N4,N5,N6,N7,N10,N12 |
+| Settings2 bus/client/runtime | actual isolated broker typed read/edit/retry; validation and wrong epoch; saved vs actual acknowledgement; unavailable consumers, cancellation and service shutdown; no transfer replay | isolated broker2 plus affected existing suites | Positive,N1,N3,N4,N5,N6,N7,N9,N10,N12 |
+| GTK editor | default/custom/reset/load/save; byte-invalid Unicode input; dirty/retry preservation; saved/pending/failed name status and closed/locked service | isolated GTK2 plus affected existing editor tests | Positive,N1,N2,N4,N5,N9,N10 |
+
+Counts are scoped Mode A estimates, refined against executable branches before
+each stage; do not duplicate unrelated complete suites. Real filesystem/protocol/
+identity logic, external IO seam only, no subject mocks or magic waits. Mutations
+to byte limits, name binding, generation equality, dropped-consumer checks, backup
+condition or receipt fingerprint must fail corresponding assertions. N8 has no
+time/calendar contract; N11 no entitlements. No final Mode B/full-parity claim.
+
+## N1 implementation and actual verification
+
+Added identity.rs:237-byte validated/redacted DeviceName with strict serde decoding;
+owner-local immutable snapshots and monotonic/idempotent overrides; fixed two-slot
+required-consumer acknowledgements; stale/future/duplicate registration rejection;
+RAII failure on consumer exit; condition-driven cancellation-safe waits. Old name
+snapshots and independent owners remain unchanged by a later rename. Public serde
+uses a bounded String without enabling extra dependency features.
+
+Six focused identity methods passed in one invocation (build38.65s, execution0.00s;
+578 unrelated library methods filtered, not executed). Primary categories N1=1,
+N10=1,N5=1,N4=1,N9=2; positive/boundary/interactions overlap these tables. All control
+and bidi override/isolate codepoint ranges are covered. Assertions check exact
+state/generation, not only success. Nightly formatting passed. Existing bluer
+future-incompatibility notice remains. Terminal exited; Terminal closed.
+
+N1 is an independent foundation only: no hostname reader, settings schema, IPC or
+GTK behavior changes yet. Continue N2 transport binding, then N3/N4; do not claim
+that core identity tests prove transport updates or Google peer compatibility.

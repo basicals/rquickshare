@@ -32,6 +32,7 @@ mod file_reader;
 #[cfg(target_os = "linux")]
 pub mod file_source;
 mod hdl;
+pub mod identity;
 pub mod managed;
 mod manager;
 #[cfg(target_os = "linux")]

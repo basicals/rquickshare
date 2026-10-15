@@ -1,9 +1,11 @@
 # Native custom device name: ownership and application review
 
-2026-10-15. Mode A, direct dev. Analysis only; user choice pending. This is the next
+2026-10-15. Mode A, direct dev. User requested continuing implementation after the
+recommended live-update proposal; option1 is selected. This is the next
 everyday parity item after the implemented native shell/settings/packaging slices.
 Read the agent guide, current-state.md, product-direction.md, native-settings.md
-and actual core/settings/transport code. No source/schema/API/runtime change yet.
+and actual core/settings/transport code. Implementation contract and progress:
+[native device name](native-device-name.md).
 
 ## Actual readers and invariants
 
