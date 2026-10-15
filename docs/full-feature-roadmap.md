@@ -104,6 +104,11 @@ open. Account/QR capabilities still require their own work. Latest completed sli
      package verified offline; installed KDE/Google checks remain separate.
 
 5. **Trusted devices / local auto-accept**
+   - [PairedKey authentication foundation](native-trust-review.md) implemented:
+     bounded role/token-bound signatures, certificate time/hash checks and Fail
+     gating; native7 verified offline. Production certificate provider is empty.
+     Certificate acquisition/provenance/rotation, persistent trust and auto-accept
+     remain unimplemented; offline crypto fixtures are not Google Account support.
    - Explicit local trust store keyed by stable peer identity material where available, not display name alone.
    - Per-device auto-accept toggle and revoke action.
    - Never auto-trust arbitrary "same name" peers.

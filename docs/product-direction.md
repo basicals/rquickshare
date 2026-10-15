@@ -4,17 +4,22 @@ Current implementation and active contract: [current state](current-state.md) an
 [temporary visibility review](native-visibility-review.md). The dated checkpoints
 below are historical; later selections supersede earlier pending-choice claims.
 
-## 2026-10-15: authenticated peer identity/trust review prepared
+## 2026-10-15: PairedKey authentication foundation implemented
 
-[Trust review](native-trust-review.md) confirms current handshake keys are
-ephemeral and PairedKey proof/result is not authenticated. Pinned public Google
+[Trust contract](native-trust-review.md) identified ephemeral handshake keys and
+previously unverified PairedKey proof/result. Pinned public Google
 source uses certificate-based session-token verification; account-backed own-device
 auto-accept is separate from a local permission list. The recommended next slice
 is protocol authentication/provider groundwork, preserving manual consent until
 identity/provenance and permission gates exist. A separate rQuickShare-only pairing
 protocol is the alternative with distinct interoperability/security costs. User
-selected option1: bounded certificate/token verifier and PairedKey integration
-are in progress. No auto-accept, enrollment or login is part of the foundation.
+selected option1: bounded role/token-bound P-256 signature/HKDF/certificate verifier
+and PairedKey integration are implemented. Explicit Fail now aborts before
+Introduction; anonymous peers keep PIN/manual consent. Twelve new methods and
+scoped checks passed; native7 package verified offline. Production certificate
+source stays empty pending authorized acquisition/rotation: no auto-accept,
+remembered trust, enrollment or login is part of the foundation. Exact source/
+artifact/test limits are in SSOT and native-peer-authentication evidence.
 
 ## 2026-10-15: temporary visibility ownership review prepared
 

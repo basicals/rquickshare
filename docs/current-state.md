@@ -43,23 +43,25 @@ unsigned-APT/request export is verified; exact provenance and hashes are in the
 visibility contract/evidence. Continue installed/physical acceptance
 separately; do not restart the already completed name slice.
 
-Next: [authenticated peer/trust review](native-trust-review.md). Current UKEY2
-keys are session-local; PairedKey is unverified and answers Unable. Recommend
-Google-protocol certificate verification/provider groundwork before any trust
-store or auto-accept. User selected this option1; the bounded verifier and
-inbound/outbound PairedKey integration are in implementation/verification.
-Production certificate source stays explicitly empty; no trusted-device UI,
-account access or auto-accept is authorized or implemented by this foundation.
+Next completed foundation: [authenticated peer/trust contract](native-trust-review.md).
+User selected option1. Bounded role/token-bound P-256 signature/HKDF/certificate
+verification and inbound/outbound PairedKey result gates are implemented; explicit
+Fail stops before Introduction. Twelve new methods, scoped checks and native7
+offline verification passed. Production certificate source is explicitly empty:
+operational acquisition/authorization/rotation and remembered trust remain open.
+No trusted-device UI, account access or auto-accept is implemented. Native7 public
+source/artifact export follows the evidence commit; do not claim Google Account
+or physical peer acceptance from the offline fixtures.
 
 ## Implemented source and remaining acceptance
 
 | Area | Current evidence | Remaining work |
 |---|---|---|
 | Native ownership | Rust daemon, authenticated typed D-Bus, GTK4 tray/card, Full/Compact, separate menu/notifications, core-owned temporary visibility and owned SDK cleanup implemented | Installed KDE/Wayland lifecycle, placement, lock/DND/focus/scale and physical visibility acceptance |
-| Sharing | File/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal implemented | Current native package with physical Android/Windows peers; no full compatibility signoff |
+| Sharing | File/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal and PairedKey authentication foundation implemented | Current native package with physical Android/Windows peers; operational certificate provider, no full compatibility signoff |
 | Settings | Daemon-owned schema2/Settings2 store, migration/backup/recovery, live device name and GTK editor implemented | Real installed migration/recovery and Google/KDE name refresh |
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
-| Distribution | Verified uninstalled Ubuntu26.04 amd64 native6 package, fresh unsigned APT and unapproved signing-review request; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
+| Distribution | Verified uninstalled Ubuntu26.04 amd64 native7 package, fresh unsigned APT and unapproved signing-review request; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
 | Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
 | Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Tray/current-visibility UX, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
 
@@ -92,23 +94,26 @@ on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The 
 confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
 repair observations remain in native-signing-backup.md and its JSON.
 
-No production APT release has been signed/published. Current native6 package SHA256
-5b4f07fc3546ac0dc493ed1d69740baae7c7b8c188d30eb4d61c30480a930692 was built
-from32fc64f99bfd37b382cd732eaa97ff31c863fe05 and verified offline. The current
-unsigned APT metadata expires2026-10-22T20:09:55Z; canonical first-release request
-551a9499ab5ee893cdc3cdd4ed6a58009cdaf0762428f3f3f1ebe6bca2f96821
+No production APT release has been signed/published. Current native7 package SHA256
+c426c29d8141d752b04943d2629eb8e1c1123ec3f99aebbd27e8b38c0cb465bf was built
+fromc286e206a3992bd0eee057c017a4cca3cbbe6576 and verified offline. The current
+unsigned APT metadata expires2026-10-22T21:21:09Z; canonical first-release request
+ab6fff2d380954f8a549484f78930292caa0b94afb43a054d963a3224643a323
 is unapproved. Exact artifact/source/check evidence is linked in
-native-visibility-review.md and evidence/native-visibility-2026-10-15.json.
-Native4 is the prior name checkpoint; intermediate native5 was superseded by
-explicit SDK shutdown. Prior artifacts remain preserved. Do not confuse a source-commit assertion with proof
+native-trust-review.md and evidence/native-peer-authentication-2026-10-15.json.
+Native6 is the prior visibility checkpoint, native4 the name checkpoint;
+intermediate native5 was superseded by explicit SDK shutdown. Prior artifacts
+remain preserved. Do not confuse a source-commit assertion with proof
 of build provenance or report later documentation-only commits as binary rebuilds.
 
 ## Work that can proceed without physical peers
 
 1. Continue the remaining parity slices after the completed live name and core
-   visibility policy: secure local trust, previews/resume, multi-recipient and
-   account/QR research. Freeze each significant contract before code; local trust
-   must remain distinct from Google account identity.
+   visibility policy and PairedKey verifier: authorized certificate provider/
+   rotation research, secure local trust, previews/resume, multi-recipient and
+   account/QR research. Freeze each significant contract before code; a crypto
+   verifier alone does not supply operational Google identity, and local trust
+   must remain distinct from Google account membership.
 2. Prepare concrete unsigned release review/provenance and selected publisher
    credential handoff independently of desktop testing; do not bypass release
    approval or invent credentials to publish.

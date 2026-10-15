@@ -4,6 +4,9 @@
 authentication foundation and provider research. Guide:
 /home/morozhenko/.codex/AGENTS.md sections3,3.1,11,13. This selection does not
 authorize an auto-accept boundary, account access, enrollment or new pairing UX.
+T1–T4 and source checks are complete; native7 is verified offline. Public source/
+artifact handoff follows the evidence commit. Operational provider/identity and
+trusted-device UI remain outside this completed foundation.
 
 ## Repository findings
 
@@ -131,7 +134,7 @@ the proposed offline foundation.
 
 ## Actual review verification
 
-Only read-only source/official documentation research and documentation changes
+At T0 only read-only source/official documentation research and documentation changes
 were performed. Public-source download sizes and SHA256 are recorded in evidence;
 not an executed interoperability or crypto test. Checked61 local links in the
 three changed documents, JSON and all5 pinned source sizes/digests. Whitespace
@@ -314,3 +317,34 @@ Record package/source/request hashes and metadata validity in new machine eviden
 then export exact committed source/public artifacts with a receipt. Preserve all
 older candidates and backup artifacts. Do not use stale native2/native6 export
 helpers without adapting/verifying their exact version and feature assumptions.
+
+## Native7 offline candidate and public review evidence
+
+Built fromc286e206a3992bd0eee057c017a4cca3cbbe6576, package revision7:
+`native_desktop/target/packages/rquickshare_0.11.5+native7_amd64.deb`,4661954 bytes,
+SHA256c426c29d8141d752b04943d2629eb8e1c1123ec3f99aebbd27e8b38c0cb465bf.
+Core release compilation3m29s; coupled GTK compilation1m16s. Exact allowed
+package paths, ownership/modes, assets, dependencies, extracted GUI/daemon help
+and isolated settings fixture passed. Ubuntu26.04 amd64 only. Existing9
+no-experimental core warnings and dpkg-shlibdeps usr-merge/diversion warnings
+remain observations; no unresolved libraries ignored or warnings suppressed.
+
+Unsigned snapshot `native_desktop/target/apt-unsigned-native7`:7 exact files,
+suite rquickshare-native-ubuntu26.04, created2026-10-15T21:21:09Z, valid until
+2026-10-22T21:21:09Z, package/index checks passed. No InRelease/Release.gpg.
+Public canonical `native_desktop/target/signing-request-native7/request.json`
+SHA256ab6fff2d380954f8a549484f78930292caa0b94afb43a054d963a3224643a323,
+source assertionc286e206a3992bd0eee057c017a4cca3cbbe6576, explicit first-release
+baseline assertion. This is not release approval, real empty-baseline verification
+or build attestation. No private signing profile, recovery archive or account
+credential was used; no signing/publishing/install performed. Recovery remains
+complete and unchanged; no Drive requests/automation were recreated.
+
+[Machine evidence](evidence/native-peer-authentication-2026-10-15.json) records
+actual scoped counts, invariants and candidate provenance. After committing this
+evidence, export exact tracked source, native7/checksum, unsigned7-file APT and
+public unapproved request to existing outputs. Verify CRC/inventory/selected source
+bytes, package/request digests and unchanged binary inputs sincec286e20. Preserve
+the older generic source ZIP before refreshing it. Store source/ZIP hashes in
+the output receipt and then a documentation-only completion commit; do not rebuild
+or replace the immutable source ZIP to include its own later verification record.
