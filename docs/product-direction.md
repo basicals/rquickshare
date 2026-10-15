@@ -1,6 +1,6 @@
 # Product direction: native desktop and Google Quick Share parity
 
-Current implementation and next decision: [current state](current-state.md) and
+Current implementation and active contract: [current state](current-state.md) and
 [temporary visibility review](native-visibility-review.md). The dated checkpoints
 below are historical; later selections supersede earlier pending-choice claims.
 
@@ -11,9 +11,15 @@ expiry timer while BLE still observes Temporary. A stale timer tick can also
 overwrite a newer mode/renewal. The review recommends one per-RQS core controller
 with generation-bound deadlines and read-only transport consumers. It records
 the alternative daemon-only ownership, proposed invariants, staged checks and
-rollback before code. The user selected option1; implementation/verification is
-in progress under the recorded contract. The current one-minute UI is preserved;
-native4 remains the last measured artifact until a replacement is verified.
+rollback before code. The user selected option1. Core-owned generation/deadline,
+read-only native/legacy/transport state and guarded lifetime are implemented.
+SDK inspection also exposed a missing ServiceDaemon shutdown; corrected source
+awaits SDK completion on success/error and requests cleanup on abandoned owners.
+Eleven new methods and scoped checks passed; final605 library inventory is not
+a claimed full605 run. Corrected native6 package verified offline; native5 remains
+an intermediate. The one-minute UI is preserved. Real KDE/Google/suspend checks,
+release approval/publication and remaining parity stay open. Exact observations
+and source/artifact provenance are in the linked visibility contract/evidence.
 
 ## 2026-10-15: live native device name and corrected visibility preservation
 

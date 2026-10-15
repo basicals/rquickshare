@@ -1,7 +1,8 @@
 # Temporary visibility: deadline ownership review
 
-2026-10-15. Mode A, direct dev. User selected option1 after the review. Implement
-one core visibility owner; no new duration/UX/storage contract. Guide:
+2026-10-15. Mode A, direct dev. User selected option1 after the review. One core
+visibility owner and corrected native6 package are implemented/verified; final
+source export follows the evidence commit. No new duration/UX/storage contract. Guide:
 /home/morozhenko/.codex/AGENTS.md, sections3/3.1/11.
 
 ## Current behavior and evidence
@@ -279,6 +280,41 @@ all-target Clippy passed17.40s; affected nightly formatting passed. The final
 slice adds11 methods, including this extra N3-attributed lifetime method. The605
 library inventory is not a claimed whole605 execution. Rebuild/verify native6
 from this corrected source; preserve all measured native5 bytes as intermediate.
+
+## Corrected native6 package and unsigned review artifacts
+
+Built/verified from32fc64f99bfd37b382cd732eaa97ff31c863fe05:
+`native_desktop/target/packages/rquickshare_0.11.5+native6_amd64.deb`,4643346 bytes,
+SHA2565b4f07fc3546ac0dc493ed1d69740baae7c7b8c188d30eb4d61c30480a930692.
+Core release compilation took3m49s, GTK2m02s. Exact allowed paths, ownership/modes,
+assets, dependencies, extracted GUI/daemon help and private settings fixture
+passed. Ubuntu26.04 amd64 only; no installed/24.04/ARM or physical-peer claim.
+Existing no-experimental warnings and dpkg-shlibdeps usr-merge/diversion warnings
+were emitted; unresolved dependencies were not ignored or suppressed.
+
+Unsigned snapshot `native_desktop/target/apt-unsigned-native6` passed its package/
+index checks,7 exact files, suite rquickshare-native-ubuntu26.04, created
+2026-10-15T20:09:55Z, valid until2026-10-22T20:09:55Z. No InRelease/Release.gpg.
+Public canonical request `native_desktop/target/signing-request-native6/request.json`
+SHA256551a9499ab5ee893cdc3cdd4ed6a58009cdaf0762428f3f3f1ebe6bca2f96821,
+source assertion32fc64f99bfd37b382cd732eaa97ff31c863fe05, explicit first-release
+baseline assertion. Request preparation does not independently establish an empty
+production baseline or prove build provenance. Exact request approval and scoped
+publisher credential are still missing; no production release was signed/published.
+
+[Machine evidence](evidence/native-visibility-2026-10-15.json) retains the measured
+scope, exact hashes and superseded native5. Recovery remains complete and untouched;
+the deleted Drive follow-up is not recreated. No private profile/ciphertext is
+part of this feature's Git or public artifacts.
+
+Final V5 step after committing this evidence: export exact tracked source of that
+documentation commit, native6 package/checksum, unsigned snapshot and public
+unapproved request to the existing workspace outputs directory. Verify ZIP CRC,
+tracked inventory, selected source bytes, package/request digests and unchanged
+binary inputs since32fc64f. Preserve the old generic source ZIP before refreshing
+it. Record the exported source commit/ZIP hashes in the output receipt, then in a
+documentation-only completion commit; do not rebuild/re-export the immutable source
+ZIP just to include its own later verification record.
 
 No physical discovery, suspend, installed services or release publication was
 tested. The existing bluer future-incompatibility warning remains an upstream

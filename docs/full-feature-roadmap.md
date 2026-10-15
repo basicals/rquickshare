@@ -111,6 +111,10 @@ open. Account/QR capabilities still require their own work. Latest completed sli
 
 6. **Visibility and desktop UX**
    - Everyone / temporary visibility / hidden semantics.
+   - Core-owned one-minute deadline, generation-safe expiry, read-only transport/
+     native/legacy consumers and owned mDNS SDK cleanup implemented; native6
+     verified offline. See [visibility contract](native-visibility-review.md).
+     Physical withdrawal/suspend and native quick-control UX remain acceptance/work.
    - Tray visibility controls.
    - Background notifications with Accept / Reject / Cancel where supported.
    - Dark/system theme.

@@ -36,22 +36,23 @@ and a verified uninstalled native4 package. The next scoped analysis is
 [temporary visibility ownership](native-visibility-review.md): mDNS currently
 owns expiry, so its failure can leave Bluetooth temporarily visible indefinitely;
 a stale tick can also overwrite a newer mode command. Core-owned policy is
-selected by the user. The core controller, read-only transport/shell migration
-and lifecycle regressions are being implemented/verified under that contract.
-Native4 remains the last verified package until V5 finishes. Continue installed/physical acceptance
+selected by the user and implemented: core-owned deadline, read-only transport/
+shell state, generation-safe expiry and owned mDNS SDK shutdown. Source checks
+and the corrected native6 uninstalled package passed. Final source export is the
+remaining V5 handoff command. Continue installed/physical acceptance
 separately; do not restart the already completed name slice.
 
 ## Implemented source and remaining acceptance
 
 | Area | Current evidence | Remaining work |
 |---|---|---|
-| Native ownership | Rust daemon, authenticated typed D-Bus, GTK4 tray/card, Full/Compact, separate menu and notifications implemented | Installed KDE/Wayland lifecycle, placement, lock/DND/focus/scale acceptance |
+| Native ownership | Rust daemon, authenticated typed D-Bus, GTK4 tray/card, Full/Compact, separate menu/notifications, core-owned temporary visibility and owned SDK cleanup implemented | Installed KDE/Wayland lifecycle, placement, lock/DND/focus/scale and physical visibility acceptance |
 | Sharing | File/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal implemented | Current native package with physical Android/Windows peers; no full compatibility signoff |
 | Settings | Daemon-owned schema2/Settings2 store, migration/backup/recovery, live device name and GTK editor implemented | Real installed migration/recovery and Google/KDE name refresh |
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
-| Distribution | Verified uninstalled Ubuntu26.04 amd64 native4 package, fresh unsigned APT and unapproved signing-review request; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
+| Distribution | Verified uninstalled Ubuntu26.04 amd64 native6 package, fresh unsigned APT and unapproved signing-review request; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
 | Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
-| Further parity | Modern wire fields, folder support and native live name exist | Temporary-visibility completeness, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
+| Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Tray/current-visibility UX, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
 
 Feature contracts and measured checks: [product history](product-direction.md),
 [settings](native-settings.md), [desktop ingress](native-desktop-ingress.md),
@@ -82,19 +83,21 @@ on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The 
 confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
 repair observations remain in native-signing-backup.md and its JSON.
 
-No production APT release has been signed/published. Current native4 package SHA256
-4a2ec4885e9a8b3fed67d1c778757cd7772b5740a5fd9d2eb0eda5479622a6ca was built
-from005c0f888caee21d9b01c5a0c0f955487a24b964 and verified offline. The current
-unsigned APT metadata expires2026-10-22T17:01:09Z; the canonical first-release
-review request is unapproved. Exact artifact/source/check evidence is linked in
-native-device-name.md. Prior native2 and superseded intermediate native3 bytes
-remain historical artifacts. Do not confuse a source-commit assertion with proof
+No production APT release has been signed/published. Current native6 package SHA256
+5b4f07fc3546ac0dc493ed1d69740baae7c7b8c188d30eb4d61c30480a930692 was built
+from32fc64f99bfd37b382cd732eaa97ff31c863fe05 and verified offline. The current
+unsigned APT metadata expires2026-10-22T20:09:55Z; canonical first-release request
+551a9499ab5ee893cdc3cdd4ed6a58009cdaf0762428f3f3f1ebe6bca2f96821
+is unapproved. Exact artifact/source/check evidence is linked in
+native-visibility-review.md and evidence/native-visibility-2026-10-15.json.
+Native4 is the prior name checkpoint; intermediate native5 was superseded by
+explicit SDK shutdown. Prior artifacts remain preserved. Do not confuse a source-commit assertion with proof
 of build provenance or report later documentation-only commits as binary rebuilds.
 
 ## Work that can proceed without physical peers
 
-1. Continue the remaining parity slices after the completed live name: temporary
-   visibility policy, secure local trust, previews/resume, multi-recipient and
+1. Continue the remaining parity slices after the completed live name and core
+   visibility policy: secure local trust, previews/resume, multi-recipient and
    account/QR research. Freeze each significant contract before code; local trust
    must remain distinct from Google account identity.
 2. Prepare concrete unsigned release review/provenance and selected publisher
