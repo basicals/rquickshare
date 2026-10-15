@@ -57,7 +57,15 @@ impl fmt::Display for BusError {
 impl std::error::Error for BusError {}
 
 type NameApply = std::pin::Pin<
-    Box<dyn std::future::Future<Output = (tokio::sync::oneshot::Sender<bool>, bool)> + Send + Sync>,
+    Box<
+        dyn std::future::Future<
+                Output = (
+                    tokio::sync::oneshot::Sender<super::settings_service::ApplyReceipt>,
+                    super::settings_service::ApplyReceipt,
+                ),
+            > + Send
+            + Sync,
+    >,
 >;
 
 /// One pump and one serial state owner, plus at most one joined filesystem worker.
@@ -318,7 +326,7 @@ impl SelectionBus {
                     }
                 } => {
                     let request = request.ok_or(BusError::Transport)?;
-                    let applied = runtime.apply_live_settings(&request.values, request.root);
+                    let applied = runtime.apply_live_settings(&request.values, request.root, request.apply_visibility);
                     if applied { self.visibility_recovered = false; }
                     if applied {
                         if let Some(identity) = runtime.identity_policy() {
@@ -326,12 +334,12 @@ impl SelectionBus {
                             let lifetime = stop.clone();
                             self.name_apply = Some(Box::pin(async move {
                                 let applied = identity.wait_applied(revision, &lifetime).await.is_ok();
-                                (request.reply, applied)
+                                (request.reply, super::settings_service::ApplyReceipt { policy_applied: true, name_applied: applied })
                             }));
                         } else {
-                            let _ = request.reply.send(request.values.device_name.is_none());
+                            let _ = request.reply.send(super::settings_service::ApplyReceipt { policy_applied: true, name_applied: request.values.device_name.is_none() });
                         }
-                    } else { let _ = request.reply.send(false); }
+                    } else { let _ = request.reply.send(super::settings_service::ApplyReceipt::default()); }
                 }
                 result = async {
                     match self.name_apply.as_mut() {

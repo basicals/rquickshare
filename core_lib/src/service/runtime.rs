@@ -140,6 +140,7 @@ impl NativeRuntime {
         &mut self,
         values: &super::native_settings::Values,
         root: super::settings_service::RootUpdate,
+        apply_visibility: bool,
     ) -> bool {
         if !self.started || values.validate().is_err() {
             return false;
@@ -167,7 +168,16 @@ impl NativeRuntime {
                 self.core.receive_policy.set_directory(Some(directory))
             }
         }
-        sender.send_modify(|state| *state = visibility);
+        if apply_visibility {
+            sender.send_if_modified(|state| {
+                if *state == visibility {
+                    false
+                } else {
+                    *state = visibility;
+                    true
+                }
+            });
+        }
         true
     }
     /// Prepare synchronously, subscribing before transports can create sessions.

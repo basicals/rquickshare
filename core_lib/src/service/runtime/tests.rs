@@ -9,6 +9,12 @@ use crate::file_source::{OpenedFile, SelectionLimits};
 use crate::managed::{acknowledge_release, OutboundJob, OutboundReceiver};
 use crate::sessions::{consent_command, SessionLease};
 
+pub(crate) fn visibility_sender(
+    fixture: &Fixture,
+) -> std::sync::Arc<std::sync::Mutex<tokio::sync::watch::Sender<crate::Visibility>>> {
+    fixture.runtime.core.visibility_sender.clone()
+}
+
 pub(crate) struct Fixture {
     pub(crate) runtime: NativeRuntime,
     receiver: OutboundReceiver,
@@ -35,6 +41,64 @@ pub(crate) fn fixture_with_identity(identity: Option<crate::identity::IdentityPo
     let mut fixture = fixture();
     fixture.runtime.core.identity = identity;
     fixture
+}
+
+#[test]
+fn given_temporary_visibility_when_only_name_changes_then_no_visibility_event_can_reset_expiry() {
+    use crate::service::native_settings::{CardMode, Values};
+    use crate::service::settings_service::RootUpdate;
+    let mut fixture = fixture();
+    let mut visibility = fixture.runtime.core.visibility_receiver.clone();
+    visibility.borrow_and_update();
+    let mut values = Values {
+        visibility: 2,
+        port: None,
+        card_mode: CardMode::Compact,
+        directory: None,
+        device_name: None,
+    };
+    assert!(fixture
+        .runtime
+        .apply_live_settings(&values, RootUpdate::Retain, true));
+    assert!(visibility.has_changed().unwrap());
+    assert_eq!(
+        *visibility.borrow_and_update(),
+        crate::Visibility::Temporarily
+    );
+    values.device_name = Some(crate::identity::DeviceName::new("Renamed").unwrap());
+    assert!(fixture
+        .runtime
+        .apply_live_settings(&values, RootUpdate::Retain, true));
+    assert!(!visibility.has_changed().unwrap());
+    assert_eq!(*visibility.borrow(), crate::Visibility::Temporarily);
+    fixture
+        .runtime
+        .core
+        .visibility_sender
+        .lock()
+        .unwrap()
+        .send_modify(|state| *state = crate::Visibility::Invisible);
+    visibility.borrow_and_update();
+    assert!(fixture
+        .runtime
+        .apply_live_settings(&values, RootUpdate::Retain, false));
+    assert!(!visibility.has_changed().unwrap());
+    assert_eq!(*visibility.borrow(), crate::Visibility::Invisible);
+    values.visibility = 0;
+    assert!(fixture
+        .runtime
+        .apply_live_settings(&values, RootUpdate::Retain, true));
+    assert!(visibility.has_changed().unwrap());
+    assert_eq!(*visibility.borrow_and_update(), crate::Visibility::Visible);
+    values.visibility = 1;
+    assert!(fixture
+        .runtime
+        .apply_live_settings(&values, RootUpdate::Retain, true));
+    assert!(visibility.has_changed().unwrap());
+    assert_eq!(
+        *visibility.borrow_and_update(),
+        crate::Visibility::Invisible
+    );
 }
 
 #[tokio::test]

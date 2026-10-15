@@ -274,3 +274,67 @@ Native package revision is3 so coupled Settings2 GUI/daemon replace native2 thro
 one package. Next build that release from the committed source, verify offline,
 stage unsigned APT and a public canonical signing request for review only. Request
 preparation does not approve its digest, sign a release or prove build provenance.
+
+## Final privacy regression found during package review
+
+The in-progress native3 build is an intermediate candidate, not approved for
+promotion. Code review found existing apply_live_settings sends a visibility watch
+notification even when visibility is unchanged. Therefore a name-only Save while
+Temporarily visible could reset mDNS's60-second interval, despite the identity
+consumer itself correctly preserving it. Fix the root notification contract:
+publish visibility only on an actual value transition. Initial/changed visibility
+still notifies; a same-value settings/name save must not extend temporary exposure.
+
+After the owned in-progress build exits, change only that publication and add one
+deterministic runtime/watch regression: initial temporary transition notifies,
+rename with unchanged visibility does not, a subsequent hidden transition does.
+No clock sleeps or radio test is needed to prove the reset trigger is absent.
+Recheck the affected regression and core strict lint once, advance the final
+package revision to4, and build a distinct corrected artifact. Keep the measured
+native3 intermediate provenance; do not silently replace its bytes/request.
+
+The same review also covers an already expired window: saved visibility can still
+be Temporarily while the live watch has expired to Hidden. Comparing only the
+watch value is insufficient. The settings writer must track the last accepted
+visibility configuration separately from that ephemeral live state. Reapply it
+only when the saved configuration changes (or has not been accepted). A name-only
+save/retry must neither extend an active window nor reopen an expired one.
+
+Use an internal two-part apply receipt: core receive-root/visibility policy accepted,
+and identity consumers acknowledged. This avoids losing accepted root/visibility
+bookkeeping merely because an independent name consumer failed. The existing
+global saved/applied/error projection remains truthful; no Settings2 wire/schema
+change. Extend the actual broker test to expire the owned watch, save only a new
+name, acknowledge consumers and assert Hidden stays unchanged. No new user choice,
+public transient command, timeout, storage field or radio operation is introduced.
+
+The expanded runtime regression passed, then six settings broker cases exposed a
+test-fixture lifetime error: moving fixture creation outside the spawned closure
+for visibility observation captured only its runtime field; its retained outbound
+receiver/discovery owners dropped early, correctly reporting DaemonChanged. Move
+the whole fixture into the closure before borrowing runtime. Do not weaken client
+identity/liveness assertions or add retries. Recheck the affected seven-case
+settings module and strict core lint; unchanged runtime regression need not repeat.
+
+After that fixture fix the seven settings cases and core lint passed. A final
+transport guard now reads the authoritative visibility watch for name publication,
+not the mDNS loop's possibly stale cached value while an expiry event is pending.
+The existing mDNS identity method checks unconsumed Hidden/Visible watch changes.
+The failed-consumer broker method additionally renames an already adopted receive
+root and changes visibility through Retain: partial name failure must preserve
+the live directory capability, not try reopening its obsolete display path.
+Recheck those two strengthened methods and affected lint before the final build.
+
+Corrected privacy/policy checks passed: expanded runtime1/0; settings broker7/0
+after the fixture capture fix; final strengthened mDNS1/0 and failed-consumer/root
+retention1/0, plus strict core all-target lint. No assertions were weakened.
+The partial-policy receipt preserves retained receive authority even after its
+display path is renamed, and name-only saves cannot reopen expired visibility.
+
+Intermediate native3 release build and offline package verification succeeded
+(core optimized100s, native28.72s); unsigned APT staging succeeded. Public request
+preparation correctly refused the missing explicit first-release/previous flag
+before creating a request. No signature or publication occurred. Keep native3
+as superseded local evidence only. Final native4 request preparation explicitly
+asserts first-release for operator review; authenticated publisher state must still
+confirm the empty baseline, and the request digest is not automatically approved.

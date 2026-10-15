@@ -236,10 +236,16 @@ pub(super) enum RootUpdate {
     Default,
     Replace(Directory),
 }
+#[derive(Clone, Copy, Default)]
+pub(super) struct ApplyReceipt {
+    pub policy_applied: bool,
+    pub name_applied: bool,
+}
 pub(super) struct Apply {
     pub values: Values,
     pub root: RootUpdate,
-    pub reply: oneshot::Sender<bool>,
+    pub apply_visibility: bool,
+    pub reply: oneshot::Sender<ApplyReceipt>,
 }
 pub(super) enum Command {
     Save(Edit, Message),
@@ -314,6 +320,12 @@ impl SettingsOwner {
             .filter(|_| running)
             .and_then(|snapshot| snapshot.values.as_ref())
             .and_then(|values| values.directory.clone());
+        let active_visibility = initial
+            .as_ref()
+            .ok()
+            .filter(|_| running)
+            .and_then(|snapshot| snapshot.values.as_ref())
+            .map(|values| values.visibility);
         view.available = true;
         view.running = running;
         match initial {
@@ -340,6 +352,7 @@ impl SettingsOwner {
                 identity: identity.clone(),
                 running_port,
                 active_directory,
+                active_visibility,
                 connection,
                 stop: stop.clone(),
                 outstanding: outstanding.clone(),
@@ -416,6 +429,7 @@ struct Writer<I> {
     identity: IdentitySource,
     running_port: i32,
     active_directory: Option<super::native_settings::DirectoryRecord>,
+    active_visibility: Option<u8>,
     connection: Connection,
     stop: CancellationToken,
     outstanding: Arc<AtomicUsize>,
@@ -515,25 +529,31 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
                     let running = self.view().running;
                     if save && running {
                         let (reply, receive) = oneshot::channel();
-                        let applied = if let (Some(values), Ok(root)) =
+                        let receipt = if let (Some(values), Ok(root)) =
                             (snapshot.values.clone(), root)
                         {
-                            tokio::select! { biased; _ = self.stop.cancelled() => false, result = async {
-                                self.apply.send(Apply { values, root, reply }).await.map_err(|_| ())?;
+                            let apply_visibility =
+                                self.active_visibility != Some(values.visibility);
+                            tokio::select! { biased; _ = self.stop.cancelled() => ApplyReceipt::default(), result = async {
+                                self.apply.send(Apply { values, root, apply_visibility, reply }).await.map_err(|_| ())?;
                                 receive.await.map_err(|_| ())
-                            } => result.unwrap_or(false) }
+                            } => result.unwrap_or_default() }
                         } else {
-                            false
+                            ApplyReceipt::default()
                         };
-                        let mut view = self
-                            .view
-                            .lock()
-                            .unwrap_or_else(|poison| poison.into_inner());
-                        if applied {
+                        if receipt.policy_applied {
                             self.active_directory = snapshot
                                 .values
                                 .as_ref()
                                 .and_then(|values| values.directory.clone());
+                            self.active_visibility =
+                                snapshot.values.as_ref().map(|values| values.visibility);
+                        }
+                        let mut view = self
+                            .view
+                            .lock()
+                            .unwrap_or_else(|poison| poison.into_inner());
+                        if receipt.policy_applied && receipt.name_applied {
                             view.applied_live_revision = snapshot.base.revision;
                             view.visibility_recovered = false;
                         } else {

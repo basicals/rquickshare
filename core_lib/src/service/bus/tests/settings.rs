@@ -13,6 +13,7 @@ use crate::service::settings_service::{
 struct Server {
     stop: CancellationToken,
     task: JoinHandle<Result<(), BusError>>,
+    visibility: Arc<Mutex<tokio::sync::watch::Sender<crate::Visibility>>>,
 }
 impl Server {
     fn start(bus: SelectionBus) -> Self {
@@ -24,8 +25,11 @@ impl Server {
     ) -> Self {
         let stop = CancellationToken::new();
         let end = stop.clone();
+        let fixture = crate::service::runtime::tests::fixture_with_identity(identity);
+        let visibility = crate::service::runtime::tests::visibility_sender(&fixture);
         let task = tokio::spawn(async move {
-            let mut fixture = crate::service::runtime::tests::fixture_with_identity(identity);
+            // Capture the whole fixture: its receiver/discovery owners must outlive the runtime borrow.
+            let mut fixture = fixture;
             let outcome = bus.run_started(&mut fixture.runtime, end).await;
             let shutdown = fixture.runtime.shutdown().await.map_err(BusError::Runtime);
             bus.disconnect_clients(fixture.runtime.selection_coordinator())
@@ -33,7 +37,11 @@ impl Server {
             bus.close_connection().await;
             outcome.and(shutdown)
         });
-        Self { stop, task }
+        Self {
+            stop,
+            task,
+            visibility,
+        }
     }
     async fn finish(self) {
         self.stop.cancel();
@@ -134,11 +142,54 @@ async fn given_name_save_waiting_for_consumers_when_other_client_reads_then_bus_
         assert_eq!(current.name.as_str(), "Automatic");
         mdns.acknowledge(current.revision).unwrap();
         gatt.acknowledge(current.revision).unwrap();
-        let (_, result) = save.await.unwrap();
+        let (mut client, result) = save.await.unwrap();
         let saved = result.unwrap();
         assert!(saved.device_name.is_empty());
         assert_eq!(saved.resolved_name, "Automatic");
         assert_eq!(saved.name_status, 2);
+        let mut temporary = intent(&saved, 3);
+        temporary.visibility = 2;
+        let temporary = client
+            .save_settings(SettingsEdit {
+                intent: temporary,
+                directory: None,
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            *server.visibility.lock().unwrap().borrow(),
+            crate::Visibility::Temporarily
+        );
+        server
+            .visibility
+            .lock()
+            .unwrap()
+            .send_modify(|value| *value = crate::Visibility::Invisible);
+        let mut visibility = server.visibility.lock().unwrap().subscribe();
+        visibility.borrow_and_update();
+        let mut only_name = intent(&temporary, 4);
+        only_name.visibility = 2;
+        only_name.device_name = "After expiry".into();
+        let save = tokio::spawn(async move {
+            let saved = client
+                .save_settings(SettingsEdit {
+                    intent: only_name,
+                    directory: None,
+                })
+                .await;
+            (client, saved)
+        });
+        mdns.changed().await.unwrap();
+        let current = mdns.snapshot();
+        assert_eq!(current.name.as_str(), "After expiry");
+        assert!(!visibility.has_changed().unwrap());
+        assert_eq!(*visibility.borrow(), crate::Visibility::Invisible);
+        mdns.acknowledge(current.revision).unwrap();
+        gatt.acknowledge(current.revision).unwrap();
+        let (_, saved) = save.await.unwrap();
+        assert_eq!(saved.unwrap().name_status, 2);
+        assert!(!visibility.has_changed().unwrap());
+        assert_eq!(*visibility.borrow(), crate::Visibility::Invisible);
         server.finish().await;
     })
     .await;
@@ -172,10 +223,13 @@ async fn given_failed_name_consumer_when_saving_or_rejecting_invalid_name_then_s
         assert_eq!(before.name_status, 3);
         let mut edit = intent(&before, 1);
         edit.device_name = "Saved name".into();
+        let root = directory.path().join("receive-root");
+        std::fs::create_dir(&root).unwrap();
+        edit.directory = 2;
         let saved = client
             .save_settings(SettingsEdit {
                 intent: edit,
-                directory: None,
+                directory: Some(File::open(&root).unwrap()),
             })
             .await
             .unwrap();
@@ -189,6 +243,24 @@ async fn given_failed_name_consumer_when_saving_or_rejecting_invalid_name_then_s
         mdns.changed().await.unwrap();
         let current = mdns.snapshot();
         mdns.acknowledge(current.revision).unwrap();
+        // A failed name consumer must not discard the already-adopted root capability.
+        std::fs::rename(&root, directory.path().join("moved-root")).unwrap();
+        let mut retained = intent(&saved, 2);
+        retained.directory = 0;
+        retained.visibility = 0;
+        let saved = client
+            .save_settings(SettingsEdit {
+                intent: retained,
+                directory: None,
+            })
+            .await
+            .unwrap();
+        assert_eq!(saved.revision, 2);
+        assert_eq!(saved.name_status, 3);
+        assert_eq!(
+            *server.visibility.lock().unwrap().borrow(),
+            crate::Visibility::Visible
+        );
         for value in [
             " Name",
             "Name ",
@@ -197,7 +269,7 @@ async fn given_failed_name_consumer_when_saving_or_rejecting_invalid_name_then_s
             &"a".repeat(238),
             &"é".repeat(119),
         ] {
-            let mut edit = intent(&saved, 2);
+            let mut edit = intent(&saved, 3);
             edit.device_name = value.into();
             assert!(matches!(
                 client

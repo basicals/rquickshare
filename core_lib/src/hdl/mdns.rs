@@ -67,6 +67,10 @@ pub struct MDnsServer {
 }
 
 impl MDnsServer {
+    fn identity_visible(visibility: &watch::Receiver<Visibility>) -> bool {
+        *visibility.borrow() != Visibility::Invisible
+    }
+
     pub(crate) fn with_identity(mut self, identity: crate::identity::IdentityConsumer) -> Self {
         self.identity = Some(identity);
         self
@@ -110,7 +114,7 @@ impl MDnsServer {
                 self.endpoint_id,
                 snapshot.name.as_str(),
             )?;
-            if visibility != Visibility::Invisible {
+            if Self::identity_visible(&self.visibility_receiver) {
                 self.daemon.register(self.service_info.clone())?;
             }
             consumer.acknowledge(snapshot.revision)?;
@@ -132,7 +136,7 @@ impl MDnsServer {
                     let consumer = identity.as_mut().ok_or_else(|| anyhow::anyhow!("Identity consumer unavailable"))?;
                     let snapshot = consumer.snapshot();
                     self.service_info = Self::renamed_service(&self.service_info, self.endpoint_id, snapshot.name.as_str())?;
-                    if visibility != Visibility::Invisible {
+                    if Self::identity_visible(&self.visibility_receiver) {
                         self.daemon.register(self.service_info.clone())?;
                     }
                     consumer.acknowledge(snapshot.revision)?;
@@ -269,6 +273,13 @@ mod tests {
     #[test]
     fn given_display_name_change_when_service_is_rebuilt_then_dns_identity_and_endpoint_stay_fixed()
     {
+        let (sender, receiver) = watch::channel(Visibility::Temporarily);
+        assert!(MDnsServer::identity_visible(&receiver));
+        sender.send(Visibility::Invisible).unwrap();
+        assert!(receiver.has_changed().unwrap());
+        assert!(!MDnsServer::identity_visible(&receiver));
+        sender.send(Visibility::Visible).unwrap();
+        assert!(MDnsServer::identity_visible(&receiver));
         let endpoint = *b"TEST";
         let original = MDnsServer::named_service(
             endpoint,

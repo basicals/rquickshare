@@ -9,7 +9,7 @@ libraries/tools installed:
 
 ```sh
 python3 scripts/native_deb.py build
-python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native3_amd64.deb
+python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native4_amd64.deb
 ```
 
 Default artifacts contain locked release binaries. `build --profile dev` explicitly
@@ -69,10 +69,11 @@ The native CI artifact is explicitly unsigned; no production key, repository URI
 enrollment or publication is configured by a build. See docs/native-apt.md in the
 source tree for signing/promotion commands, tests and remaining production binding.
 
-Native3 adds a daemon-owned live device name with Settings2 and schema2 migration.
+Native4 adds a daemon-owned live device name with Settings2 and schema2 migration,
+including preservation of temporary-visibility expiry on a name-only save.
 Settings changes preserve a private exact schema1 backup; normal name edits apply
 without restarting sharing and ongoing sessions retain their admitted name. Upgrade
-GUI and daemon together through this package. Earlier native2 artifacts retain
+GUI and daemon together through this package. Earlier native2/native3 artifacts retain
 their recorded bytes/provenance and are not overwritten. This source change alone
 does not publish/install a package or enroll APT trust.
 
