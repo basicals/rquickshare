@@ -4,6 +4,22 @@ Current implementation and next decision: [current state](current-state.md) and
 [custom device-name review](native-device-name-review.md). The dated checkpoints
 below are historical; later selections supersede earlier pending-choice claims.
 
+## 2026-10-15: live native device name and corrected visibility preservation
+
+[Native device name](native-device-name.md) implements selected option1: owner-local
+revisioned identity, current mDNS/GATT data, immutable outbound session snapshots,
+schema1 backup/schema2 migration, Settings2 and the secondary GTK editor. Saved and
+acknowledged application are distinct; a failed name consumer preserves already
+accepted receive-root/visibility policy. Name-only saves neither extend temporary
+visibility nor reopen it after expiry. DNS hostname, PIN/crypto and trust stay separate.
+
+Seventeen new methods and scoped existing checks passed; exact overlapping suite
+counts and corrected fixture failures are recorded in SSOT/evidence. Corrected
+native4 release package verified uninstalled, fresh unsigned APT and an unapproved
+public first-release signing request prepared. No private key use, installation,
+publication or real Google/KDE acceptance. Continue remaining parity work from
+current-state.md; earlier custom-name-pending entries below are historical.
+
 ## 2026-10-14: private R2 bucket and external signing handoff prepared
 
 User selected Cloudflare R2 and isolated signing outside CI. Dedicated private
@@ -508,7 +524,7 @@ The target is the Google Quick Share capability surface, mapped by platform/vers
 | Nearby file/image/video/document transfer | Implemented; dated Pixel evidence exists | Current Android and Google Windows bidirectional matrix |
 | Multiple files and folder hierarchy | Implemented; current folder smoke open | Peer tree/bytes/collision verification |
 | Clipboard/text/link sharing | Native explicit text/clipboard flow and scoped state-machine checks implemented; REMOTE_COPY emitted | Current native package and actual Google peer clipboard semantics |
-| Sender/receiver names and pairing PIN | Basic metadata present; custom name pending | Consistent editable identity and peer PIN validation UX |
+| Sender/receiver names and pairing PIN | Native editable live name, per-session snapshots and PIN review implemented | Actual Google name refresh, hidden/temporary behavior and PIN validation with current native package |
 | Background receive, progress/cancel, request actions | Native daemon/card/notification contracts implemented | Installed lifecycle and synchronized physical peer outcomes |
 | Everyone/temporary/hidden visibility | Partial local modes | Google-compatible timing, restoration and authenticated identity modes |
 | Google Account, Contacts, Your devices, own-device auto-accept | Not implemented | Identity/certificate/service feasibility, secure credentials and real peers; required parity work |

@@ -1,5 +1,11 @@
 # Owner-local live device name
 
+Current checkpoint: N1–N5 implemented and verified in scoped development checks.
+Final uninstalled native4 package and unsigned APT/signing-review artifacts are
+ready. Binary source005c0f888caee21d9b01c5a0c0f955487a24b964; later documentation
+commits do not imply a different binary build. Public machine evidence:
+evidence/native-device-name-2026-10-15.json. Physical Google/KDE acceptance remains.
+
 2026-10-15. Mode A, direct dev. User continuation after the recommended option1
 authorizes the live-update slice in native-device-name-review.md. Read the guide,
 native settings/recovery/runtime/transport code before this plan. No install,
@@ -17,7 +23,7 @@ host-settings mutation, production signing/publishing, peer operation or push.
    service/client contract and live-apply receipt. Preserve write/replay/CAS/recovery.
 4. [x] N4: secondary GTK name entry/default reset, typed validation and accurate
    saved/applied/error presentation; update relevant docs/package source identity.
-5. [ ] N5: appropriate affected checks once, actual observations and remaining
+5. [x] N5: appropriate affected checks once, actual observations and remaining
    hardware acceptance, atomic commits and recoverable handoff.
 
 Rollback UI/client before schema/service, then transport and identity foundations.
@@ -338,3 +344,40 @@ before creating a request. No signature or publication occurred. Keep native3
 as superseded local evidence only. Final native4 request preparation explicitly
 asserts first-release for operator review; authenticated publisher state must still
 confirm the empty baseline, and the request digest is not automatically approved.
+
+## Final artifact and continuation checkpoint
+
+Actual native4 optimized build succeeded (core101s, native29.51s), and the Debian
+verifier passed exact payload/assets/owner/mode/dependencies plus extracted GUI/
+daemon help and isolated settings check without installation or user-bus access.
+rquickshare_0.11.5+native4_amd64.deb:4636458 bytes, SHA256
+4a2ec4885e9a8b3fed67d1c778757cd7772b5740a5fd9d2eb0eda5479622a6ca.
+This is an Ubuntu26.04 amd64 artifact, not Ubuntu24.04/ARM acceptance.
+
+Fresh unsigned APT is native_desktop/target/apt-unsigned-native4, suite
+rquickshare-native-ubuntu26.04, Date2026-10-15T17:01:09Z and Valid-Until
+2026-10-22T17:01:09Z. Public first-release review request is
+native_desktop/target/signing-request-native4/request.json, SHA256
+9634b5d0abcb560378c6949c0fb4815c1739e5b07e236245ee0d2cc033a8853d.
+Both bind the exact binary source commit above; request is unapproved and unsigned,
+not a provenance attestation or permission to publish. Keep prior artifacts intact.
+
+Seventeen new test methods across stages protect identity bounds/redaction,
+generation/consumer ownership, transport snapshots, schema migration/replay,
+service progress/failure, GUI status and temporary-visibility privacy. Stage counts
+overlap existing suites: do not sum588/270/39 as unique tests or claim a whole594
+final run. Expanded existing write-failure/GTK/broker cases retain their original
+assertions. No Mode B stability, physical radio, Google peer or installed acceptance.
+
+Remaining installed checks: actual KDE/Wayland name entry, live mDNS/GATT refresh,
+hidden/temporary receiving, admitted transfers retaining their old name, default
+reset, schema1 migration and package upgrade/restart lifecycle. Remaining product
+gaps are indexed in current-state.md; no account/trust/QR/preview/resume feature was
+silently added. Signing/publisher access and final release approval stay separate.
+
+Export the final committed HEAD with git archive over core_lib/native_desktop/docs/
+scripts/infra/native-download/BUILD/LICENSE/native CI, excluding untracked targets,
+profiles and backup data by construction. Record source ZIP HEAD/hash/inventory in
+the output progress receipt, separately from the binary source commit above. Copy
+native4 package/checksum, unsigned APT and public signing request with byte checks;
+no private signing profile, password or recovery ciphertext belongs in outputs.

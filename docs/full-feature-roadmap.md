@@ -28,8 +28,8 @@ R2 publication and outside-CI signing on the existing Linux workstation are sele
 private-bucket publication/approval tooling is in [native-r2.md](native-r2.md).
 Production prefix routing and real signing identity are ready; exact release
 approval, scoped publisher access, signed public APT and installed updates remain
-open. Account/QR capabilities still require their own work. Next product decision:
-[custom device-name lifecycle](native-device-name-review.md).
+open. Account/QR capabilities still require their own work. Latest completed slice:
+[live native device name](native-device-name.md).
 
 ## Product principles
 
@@ -93,10 +93,15 @@ open. Account/QR capabilities still require their own work. Next product decisio
    - Never follow a received symlink out of the download root; canonical/root-boundary checks remain mandatory before file creation.
    - Tests cover nested folders, duplicate/root collisions, mixed files + folders, symlink inputs, empty folders, Windows-style separators, malformed parent paths and transactional failure.
 
-4. **Custom device name**
+4. **Custom device name — native implementation complete; real peer acceptance open**
    - Persist a validated display name.
    - Update mDNS endpoint info and outbound connection metadata without restart.
    - Keep the DNS hostname independent from the human-readable device name.
+   - Native schema2/Settings2, live mDNS/GATT acknowledgements, immutable admitted
+     session names and GTK default/reset are implemented in [native-device-name.md](native-device-name.md).
+   - Name-only saves preserve active/expired temporary visibility and accepted
+     receive-directory capabilities after a partial discovery failure. Native4
+     package verified offline; installed KDE/Google checks remain separate.
 
 5. **Trusted devices / local auto-accept**
    - Explicit local trust store keyed by stable peer identity material where available, not display name alone.

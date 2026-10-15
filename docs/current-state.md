@@ -31,9 +31,9 @@ All four cloud artifacts are now verified as recorded below and in JSON evidence
 The device-name review explicitly gates implementation on selection.
 Whitespace check passed. No production code changed or unaffected checks repeated.
 The user subsequently requested continuing the recommended live-update option1.
-Contracts and in-progress stages are in native-device-name.md; N1 identity-policy
-foundation is implemented and scoped checks passed. Continue transport/settings/
-GTK integration; a user-facing custom-name feature is not complete yet.
+[Live device name](native-device-name.md) N1–N5 are complete in source, scoped checks
+and a verified uninstalled native4 package. Continue the remaining parity gaps and
+installed/physical acceptance; do not restart the already completed name slice.
 
 ## Implemented source and remaining acceptance
 
@@ -41,11 +41,11 @@ GTK integration; a user-facing custom-name feature is not complete yet.
 |---|---|---|
 | Native ownership | Rust daemon, authenticated typed D-Bus, GTK4 tray/card, Full/Compact, separate menu and notifications implemented | Installed KDE/Wayland lifecycle, placement, lock/DND/focus/scale acceptance |
 | Sharing | File/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal implemented | Current native package with physical Android/Windows peers; no full compatibility signoff |
-| Settings | Daemon-owned transactional native store, migration/backup/recovery and secondary GTK editor implemented | Real installed migration/recovery; custom display name still absent |
+| Settings | Daemon-owned schema2/Settings2 store, migration/backup/recovery, live device name and GTK editor implemented | Real installed migration/recovery and Google/KDE name refresh |
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
-| Distribution | Verified uninstalled Ubuntu26.04 amd64 native2 Debian package; unsigned APT staging, signer/publisher tooling and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
+| Distribution | Verified uninstalled Ubuntu26.04 amd64 native4 package, fresh unsigned APT and unapproved signing-review request; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
 | Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
-| Further parity | Modern wire fields and folder support exist | Custom name, temporary visibility, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
+| Further parity | Modern wire fields, folder support and native live name exist | Temporary-visibility completeness, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
 
 Feature contracts and measured checks: [product history](product-direction.md),
 [settings](native-settings.md), [desktop ingress](native-desktop-ingress.md),
@@ -76,17 +76,21 @@ on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The 
 confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
 repair observations remain in native-signing-backup.md and its JSON.
 
-No production APT release has been signed/published. Existing native2 package SHA256
-5821ad8c85556b603461876b7c6a5484c01048feb2dbf4e741c04058880ec3c7 remains
-the measured artifact, not a package rebuilt from later documentation/signing-tool
-commits. Do not imply that a source commit assertion proves build provenance.
+No production APT release has been signed/published. Current native4 package SHA256
+4a2ec4885e9a8b3fed67d1c778757cd7772b5740a5fd9d2eb0eda5479622a6ca was built
+from005c0f888caee21d9b01c5a0c0f955487a24b964 and verified offline. The current
+unsigned APT metadata expires2026-10-22T17:01:09Z; the canonical first-release
+review request is unapproved. Exact artifact/source/check evidence is linked in
+native-device-name.md. Prior native2 and superseded intermediate native3 bytes
+remain historical artifacts. Do not confuse a source-commit assertion with proof
+of build provenance or report later documentation-only commits as binary rebuilds.
 
 ## Work that can proceed without physical peers
 
-1. Complete the selected [live device-name implementation](native-device-name.md):
-   owner-local identity, discovery/new sessions, settings and GTK integration with
-   focused deterministic verification. The foundation is implemented; remaining
-   integration stages are not complete.
+1. Continue the remaining parity slices after the completed live name: temporary
+   visibility policy, secure local trust, previews/resume, multi-recipient and
+   account/QR research. Freeze each significant contract before code; local trust
+   must remain distinct from Google account identity.
 2. Prepare concrete unsigned release review/provenance and selected publisher
    credential handoff independently of desktop testing; do not bypass release
    approval or invent credentials to publish.

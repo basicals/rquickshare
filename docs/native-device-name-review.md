@@ -1,5 +1,10 @@
 # Native custom device name: ownership and application review
 
+Current status: option1 is implemented through N1–N5; native4 offline verification
+passed. The analysis/options below describe the pre-implementation decision.
+Actual contracts, artifacts, checks and remaining physical acceptance are in
+[native-device-name.md](native-device-name.md).
+
 2026-10-15. Mode A, direct dev. User requested continuing implementation after the
 recommended live-update proposal; option1 is selected. This is the next
 everyday parity item after the implemented native shell/settings/packaging slices.
@@ -7,7 +12,7 @@ Read the agent guide, current-state.md, product-direction.md, native-settings.md
 and actual core/settings/transport code. Implementation contract and progress:
 [native device name](native-device-name.md).
 
-## Actual readers and invariants
+## Pre-implementation readers and invariants
 
 - Native Values/StartupSettings and Settings1 edits have visibility, port, directory
   and card mode, but no custom name. GTK cannot edit or report such a value.

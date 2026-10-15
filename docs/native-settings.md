@@ -2,8 +2,8 @@
 
 Current extension: [live device name](native-device-name.md) introduces native
 schema2 and the coordinated Settings2 interface with exact schema1 backup/migration.
-N3 persistence/service integration is implemented and scoped checks passed; GTK
-name editing is N4. The schema1/Settings1 contracts and dated checks below describe
+N1–N5 including GTK name editing are implemented; scoped checks and the native4
+uninstalled package passed. The schema1/Settings1 contracts and dated checks below describe
 the original implementation and remain historical where this extension supersedes them.
 
 2026-10-13. Mode A. User selected 1/A from native-settings-review.md. Guide:
