@@ -1,8 +1,8 @@
 # Temporary visibility: deadline ownership review
 
-2026-10-15. Mode A, direct dev. Analysis complete; significant ownership/source-API
-selection pending. No production code, settings, package or live radio changes in
-this review. Guide: /home/morozhenko/.codex/AGENTS.md, sections3/3.1/11.
+2026-10-15. Mode A, direct dev. User selected option1 after the review. Implement
+one core visibility owner; no new duration/UX/storage contract. Guide:
+/home/morozhenko/.codex/AGENTS.md, sections3/3.1/11.
 
 ## Current behavior and evidence
 
@@ -57,11 +57,10 @@ core discovery policy shared by independently failing transports; neither a
 transport worker nor an individual shell should be its authority. Option2 can be
 made coherent, but duplicates an invariant that applies to all entrypoints.
 
-This exceeds the authorized small internal-fix category: the public Rust write
-seam and shared transport lifecycle change. Obtain the user's selection before
-implementation. The prepared review is not selection or implementation evidence.
+The user selected option1, authorizing the scoped public Rust write seam and
+shared transport lifecycle refactor. Alternative2 is retained as decision history.
 
-## Proposed option1 contract to freeze after selection
+## Selected option1 contract
 
 - Keep the existing enum values, 60-second mode and settings schema2/Settings2.
   No new duration selector, account mode, tray UX, persisted deadline or IPC
@@ -93,8 +92,8 @@ implementation. The prepared review is not selection or implementation evidence.
 ## Staged plan, risks and rollback
 
 1. [x] V0: inspect writers, consumers, failures and lifecycle; record alternatives
-   and update the continuation index before code. Selection remains pending.
-2. [ ] V1 after selection: freeze exact controller commands/read views, startup,
+   and update the continuation index before code. User selected option1.
+2. [x] V1: freeze exact controller commands/read views, startup,
    cancellation and expiry-generation contracts. Inventory affected branches and
    test interactions before writing regressions. Record any source-API break
    explicitly; do not preserve a second writable bypass as a compatibility shim.
@@ -134,3 +133,49 @@ Local documentation links in the three changed documents were checked for existi
 targets; whitespace checked with `git diff --check`. No continuously running
 terminal, watcher or service is required. All owned command invocations completed
 and their sessions closed (Terminal closed).
+
+## V1 implementation contract and regression inventory (before code)
+
+Use one private watch of immutable snapshots (mode, revision, optional monotonic
+deadline, running flag) per policy. Its sender is the sole synchronized mutation
+point; no separate writable mode watch or process-global state. Public
+VisibilityReader wraps only a receiver and exposes current/current-and-update,
+changed and has-changed; callers cannot publish. Revision/deadline stay internal.
+This intentionally removes RQS.visibility_sender. RQS.subscribe_visibility returns
+a reader; change_visibility returns an explicit error on revision exhaustion.
+Native and Tauri callers migrate together. Wire enum/schema2/Settings2 stay fixed.
+
+Construction and pre-start commands record mode without starting a timer/task.
+begin_startup synchronously activates the policy and establishes its deadline
+before transport initialization, then spawns its future in the existing tracker.
+The worker captures its failure guard before first poll: abandonment/panic hides
+policy and cancels the shared core lifetime. Normal cancellation clears running/
+deadline and retains current mode, so a later startup of a stopped Temporary
+owner gets a fresh minute. Failed startup joins the worker through existing stop.
+An unrelated transport exit does not own or cancel the timer. Wall-clock is not
+read. No claim about counting Linux suspend time is added.
+
+Explicit commands renew same-mode Temporary; accepted native config changes use
+an idempotent mode command and retain the existing apply_visibility gate. Same
+mode has no event in that path. Settings exact retries are not new commands. All
+updates and expiry compare/update under the same watch write lock. Expiry checks
+running, Temporary, revision, deadline and current monotonic time. Revision
+exhaustion rejects the command and publishes Hidden with no deadline; it cannot
+wrap to a stale generation. Existing transfers are untouched.
+
+| Artifact | Planned branches and interactions | Level / new methods | Categories |
+|---|---|---|---|
+| Policy admission/read view | all3 modes before start, independent owners, explicit same-mode renewal versus idempotent config, closed reader, revision exhaustion | unit / 3 | Positive,N1,N2,N4,N5,N7 |
+| Deadline transition | before/at/after deadline; stale Temporary renewal/Visible/Hidden generation; inactive/no-deadline guards | deterministic unit / 2 | Positive,N2,N4,N5,N8,N10 |
+| Owned worker | activation before first poll, expiry with no discovery worker, failed external task, normal cancellation, unpolled/polled abandonment, restart, duplicate start | paused-clock unit / 3 | Positive,N3,N5,N8,N9,N10 |
+| RQS lifecycle | actual begin_startup/stop, partial-startup failure, current Temporary restart, duplicate run guard, joined cancellation | existing lifecycle suite + 1 | Positive,N3,N4,N5,N9 |
+| Consumers and settings | latest state before refresh/rename, native name-only-save and exact replay preserve expiry, legacy persistence-before-command/read-only subscriptions | existing mDNS/BLE/runtime/private-broker/Tauri checks | Positive,N4,N5,N6,N7,N9,N10,N12 |
+
+Tests use real policy with explicit instants for pure expiry and Tokio's paused
+clock for owned worker integration (dev-only test-util feature). No real sleeps,
+workstation radios, mutable domain mocks or new remote calls. Assertions must
+kill missing generation/at-boundary checks, same-mode renewals on config edits,
+transport-owned expiry and orphan workers. N1 enum parsing stays existing coverage;
+no new strings/input format. N6/N12 reuse settings store/replay/failure coverage;
+N11 is inapplicable (no billing). Complete product Mode B coverage is not claimed.
+Actual method counts/results will replace these planned estimates after execution.
