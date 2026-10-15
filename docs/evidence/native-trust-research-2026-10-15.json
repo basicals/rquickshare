@@ -32,13 +32,37 @@
       "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/proto/wire_format.proto",
       "bytes": 14260,
       "sha256": "7aaa49b27abe3d28ea8cceb7e9be2db53583c2ee65ae6598166b86e0e23325cd"
+    },
+    {
+      "path": "sharing/certificates/common.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/common.cc",
+      "bytes": 4397,
+      "sha256": "a80eb38846555eed05544bfcee23059a5fcb5961f2bdb9caccabb186096d7ea0"
+    },
+    {
+      "path": "sharing/nearby_connections_manager_impl.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/nearby_connections_manager_impl.cc",
+      "bytes": 36808,
+      "sha256": "cd1e9688b3c95d5c0a08e83ba87868654de7d4f2d60004419a1f2f03d64c95ad"
+    },
+    {
+      "path": "connections/implementation/encryption_runner.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/connections/implementation/encryption_runner.cc",
+      "bytes": 14098,
+      "sha256": "565f3ff4134f5e46cb448f1aa0a023e65b6391bd24c51f06f704b0c95c87c941"
+    },
+    {
+      "path": "sharing/certificates/nearby_share_certificate_manager_impl.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/nearby_share_certificate_manager_impl.cc",
+      "bytes": 40889,
+      "sha256": "7b692793df8da32c4446e2c8cf317baa01de741680465ec20f4fae546665fc66"
     }
   ],
   "schema": 1,
   "observed_date": "2026-10-15",
   "mode": "A",
   "local_source_commit": "386ed1a",
-  "status": "security-protocol-choice-pending",
+  "status": "option1-selected-foundation-in-progress",
   "primary_help": [
     {
       "url": "https://support.google.com/android/answer/13801258?hl=en",

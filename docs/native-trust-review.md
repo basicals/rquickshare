@@ -1,9 +1,9 @@
 # Authenticated peer identity and trusted devices review
 
-2026-10-15. Mode A, direct dev. Analysis/research complete; significant security/
-protocol selection pending. Guide: /home/morozhenko/.codex/AGENTS.md sections3,
-3.1,11,13. No production authentication, consent, persistence or UI change in
-this review. Generic continuation does not authorize an auto-accept boundary.
+2026-10-15. Mode A, direct dev. User selected option1: Google-protocol
+authentication foundation and provider research. Guide:
+/home/morozhenko/.codex/AGENTS.md sections3,3.1,11,13. This selection does not
+authorize an auto-accept boundary, account access, enrollment or new pairing UX.
 
 ## Repository findings
 
@@ -92,7 +92,7 @@ new pairing/security/storage/recovery contracts before implementation.
 1. [x] T0: inspect core session identity, PairedKey handling, consent boundary and
    primary Google source. Record exact pinned source digests, alternatives,
    unknowns and rollback. No unaffected tests/package rebuild for this review.
-2. [ ] T1 for option1: freeze a bounded typed full-token/certificate/verdict model,
+2. [x] T1 for option1: freeze a bounded typed full-token/certificate/verdict model,
    role-specific verification and anonymous-versus-authentication-failure rules;
    plan affected branches/negative interactions before code. Preserve existing
    wire tags and anonymous manual-PIN interoperability. Do not use untrusted
@@ -138,3 +138,91 @@ three changed documents, JSON and all5 pinned source sizes/digests. Whitespace
 checked using git diff --cached --check. Source tree was clean on dev at start.
 Owned research commands exited; no watcher or background service needed.
 Terminal closed. No unaffected Rust/GTK/package checks repeated.
+
+## T1 frozen foundation contract (before code)
+
+Implement a private `peer_authentication` domain module, injected per admitted
+request. It has separate full32-byte SessionToken, resolved PeerCertificate,
+local certificate hash material and Success/Unable/Fail outcomes. No new public
+Rust/IPC enrollment endpoint or persisted private key. Production CertificateSource
+is explicitly empty until a supported, user-authorized provider is designed;
+offline fixtures inject trusted material through the same domain seam. Raw
+CertificateInfo/device names/endpoints never populate that source. No test-only
+bypass, global store or network call from the verifier.
+
+- Capture the full UKEY2 auth token once after key derivation, separate from the
+  displayed PIN. Reject wrong token length and rebinding. Use redacted Debug and
+  zeroize token/certificate secret material on drop using existing dependencies.
+  A missing token can never verify a peer. Existing direct Introduction fixtures
+  without a prior handshake may remain Unable, never Success.
+- Snapshot the injected source once per token binding, with provider errors
+  distinguishable from missing peer identity. Unavailable source permits only
+  anonymous/manual flow. Malformed known credentials fail closed; do not silently
+  drop a known invalid certificate to become anonymous. Inject the clock rather
+  than read it inside crypto primitives. Clock failure cannot verify identity.
+- Peer key is bounded DER SubjectPublicKeyInfo P-256 (at most128 bytes), parsed
+  using existing p256 ECDSA-SHA256. Validate not-before < not-after and checked
+  interval arithmetic. Public certificate validity uses Google's30-minute skew
+  tolerance, inclusive lower/exclusive upper. Local certificate hash material
+  uses its exact half-open interval. Expired/future known peer identity is Fail;
+  no renewable cached Success across time changes or repeated verification.
+- Signature verifies the opposite role prefix (sender01 / receiver02) plus the
+  full token. Primary or optional DER signature may prove the same resolved peer
+  key; optional proof never changes key identity. Both at most72 bytes; hash at
+  most6 bytes. Unknown-peer random fallback remains Unable. Known invalid/missing
+  signature is Fail. Unsupported QR/provisioning remains outside authentication;
+  no interpretation or trust promotion from those fields.
+- Certificate token hash is6-byte HKDF-SHA256 with token as input, certificate
+  secret as salt and empty info (not HMAC-only). Use constant-time comparison.
+  At most9 local32-byte secret records (bounded source snapshot, no private
+  signing key) allow a received hash to prove knowledge of local certificate
+  material. Missing/expired local material yields Unable; it never substitutes
+  for remote signature proof. The secret_id_hash alone does not identify sender.
+- Keep signature outcome distinct from combined verification. Send the signature
+  outcome in PairedKeyResult; combine local hash proof, signature proof and remote
+  result with absorbing Fail and non-upgrading Unable. Self-asserted remote
+  Success never upgrades local Unable. Status0/missing/unknown/provisioning is
+  Unable, Fail2 aborts, Success1/Unable3 map directly. No protobuf additions.
+- Explicit Fail or bounded/malformed authentication input aborts before inbound
+  Introduction/consent or outbound Introduction/payload. Ordinary anonymous peers
+  continue manual consent and PIN. This deliberately fixes ignored remote Fail,
+  within the selected protocol-authentication behavior. No automatic Accept.
+- Same-frame replay remains idempotent but rechecks certificate validity/current
+  clock. A conflicting repeated proof/result fails; keep only one bounded digest
+  and result, not a history. Rebinding never resets a failed result. A rejected
+  proof cannot be replaced by later success to regain admission.
+- Outgoing signed_data stays Google's random72-byte unknown-local fallback: this
+  slice creates no local signing identity. With valid resolved peer material,
+  outgoing hash binds to that peer certificate/token; otherwise random6-byte
+  fallback. Actual stock-peer verification is still unproven. Source certificate
+  fingerprints must not be exposed/logged as account or physical-device identity.
+
+### Planned scoped verification inventory
+
+| Artifact | Branches/interactions | Level / new methods | Categories |
+|---|---|---|---|
+| SessionToken/source snapshot | length0/31/32/33, token rebind, source once/error/empty, independent contexts, no token | unit / 2 | Positive,N1,N2,N4,N5,N7,N10 |
+| Certificate material / validity | bounded SPKI/truncated/wrong curve/point/trailing bytes, invalid intervals/overflow, lower/upper tolerance boundaries, clock unavailable, local max9/10, secret lengths31/32/33 | unit / 2 | Positive,N1,N2,N6,N7,N8 |
+| Signature verifier | both roles, token/key/role mutation, malformed DER/scalars/trailing bytes, primary/optional valid/invalid/absent/oversize combinations, unknown identity | actual P-256 crypto / 3 | Positive,N1,N2,N4,N7,N10 |
+| Hash / result combination | independent fixed HKDF vector, wrong token/secret/hash/length, local time bounds, all Success/Unable/Fail combinations, absent/unknown remote result, failure absorbing, conflicting/replayed proof/result and expired replay | unit / 3 | Positive,N1,N2,N4,N5,N7,N8 |
+| Handler integration | actual encrypted inbound/outbound PairedKey result and reject-before-Introduction; anonymous Success/Unable/default still manual; token captured by full TCP/duplex handshakes | real loopback/duplex / 2 + existing suites | Positive,N3,N4,N7,N9,N10 |
+
+Estimate12 new table-driven methods, refined if independent invariants require
+more. Use deterministic fixture keys/signatures and injected time/source; real
+verifier/handlers are subjects. No live credentials/radios. Assertions kill role/
+token substitution, omitted certificate bounds, Fail downgrade, remote-Success
+promotion, open interval mistakes, ignored provider failure and replay resets.
+N11 inapplicable (no billing); N12 no new storage, existing receive/settings fault
+tests remain; N9/N3 use existing owned cancellation/stream-failure suites. Full
+product Mode B coverage or ten-run stability is not part of this development slice.
+
+### Additional primary evidence
+
+The pinned Google `connections/implementation/encryption_runner.cc` obtains the
+raw authentication token from UKEY2 verification bytes; this confirms using the
+full auth derivation, not the displayed decimal PIN. `certificates/common.cc`
+defines HKDF hash and time tolerance. `nearby_share_certificate_manager_impl.cc`
+uses account/RPC-managed certificate download; those sources are researched,
+not authorization to invoke that backend. New public receipts extend the existing
+research JSON. Actual provider access/enrollment/rotation remains a later security
+decision; this foundation must not falsely advertise remembered Google devices.
