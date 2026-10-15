@@ -1,8 +1,9 @@
 # Preview receive/display: decoder boundary review
 
 2026-10-15. Mode A, dev. Preceding bounded byte reassembly is implemented; this
-document is a review, not preview support. Agent guide sections3/3.1 require a
-user choice because parsing peer images before consent changes a security boundary.
+document is the continuation SSOT, not a Google-preview compatibility claim.
+The user selected option1 (sandboxed Glycin decoder) on2026-10-15. The significant
+decoder-boundary decision is complete; do not ask for it again.
 
 ## Current state and missing contracts
 
@@ -47,9 +48,9 @@ must be resolved from the actual supported target before implementing the adapte
 
 1. [x] P0: inspect existing ingress, native metadata/consent boundaries and primary
    references; fix the independently authorized unbounded reassembly prerequisite.
-2. [ ] P1: record user selection. Freeze concrete decoder/package ownership,
+2. [x] P1: option1 selected. Freeze concrete decoder/package ownership,
    bounded byte/pixel/format/concurrency/resource lifecycle and native IPC/Full/
-   Compact behavior before dependent code. No implementation while unselected.
+   Compact behavior before dependent code. See the frozen first slice below.
 3. [ ] P2: establish canonical preview payload encoding/mapping/order using a
    specification or public/physical fixture; document provenance and unknowns.
    Do not block useful offline sandbox/IPC work on unavailable hardware, but
@@ -66,4 +67,84 @@ integrity, lifetime, interruption/recovery and peer response negotiation are not
 established. No seeking to a peer-supplied offset or filename/size equality shortcut.
 
 Rollback of this review is documentation only. No decoder, process, dependency,
-IPC/settings field, image acceptance or preview UI was enabled. User choice pending.
+IPC/settings field or peer image acceptance was enabled by the review itself.
+
+## P1 frozen first implementation slice: offline native decoder boundary
+
+Analysis: the native Rust/GTK stack uses glib/gio0.22; Glycin4.0.0 uses matching
+0.22 and Rust>=1.93 (local stable1.99). The host has Glycin2.1.0, loaders in the
+2+ protocol directory and Bubblewrap. These observations do not yet prove that
+our sandboxed decoder starts or that a Google peer sends compatible image bytes.
+Pinned crate source was inspected, not executed during analysis.
+
+Glycin's default pool retains loaders for30s and its address-space limit is a
+host-memory heuristic, up to roughly16GiB. Neither is our intended per-preview
+budget. Therefore use a separately owned private helper process rather than run
+the Glycin coordinator in GTK. A helper hard resource ceiling also applies to
+descendants; Glycin's attempted raise cannot exceed the inherited hard ceiling.
+Keep explicit Bwrap, no base-directory exposure and no unsandboxed fallback.
+
+Scope and stages before any code:
+
+1. [ ] D1: add a private rquickshare-preview-helper binary and shared bounded
+   binary pixel protocol. It reads encoded stdin only, writes pixels only on
+   success, receives no path/account/session/receive-directory authority, and
+   never initializes GTK. The helper uses a fresh Glycin pool, zero retention,
+   max1 parallel operation and explicit Bwrap. No global pool.
+2. [ ] D2: add the native async subprocess adapter with explicit executable
+   dependency, one-operation admission/no queue, cancellation and deadline,
+   bounded concurrent stdin/stdout, kill-on-drop fallback and explicit kill/reap
+   on failed/cancelled/timed-out operations. Never manage unrelated processes.
+3. [ ] D3: exercise the actual adapter in existing developer --preview incoming
+   mode with a tracked harmless synthetic PNG. Full mode can show the decoded
+   thumbnail; Compact retains its current metadata/actions. This is an offline
+   review fixture, not peer ingress, consent or Google image mapping. Stale/closed
+   panels discard results and cancel their operation. Decoder failure leaves the
+   existing metadata card usable without a picture.
+4. [ ] D4: package the private helper under /usr/libexec, resolve it relative to
+   the installed executable's known prefix (never peer/PATH input), include its
+   ELF/runtime dependencies and require Bubblewrap/Glycin image loaders. Update
+   exact offline package inventory/help checks and documentation. Preserve all
+   native7 immutable artifacts; increment revision only for a new candidate.
+5. [ ] D5: run focused checks once, record real sandbox success/failure separately
+   from deterministic policy/transport tests, update evidence/current state and
+   atomic commits. If real sandbox cannot start, never disable it to green a test.
+   No installation, credentials, cloud/peer request, signing or publication.
+
+Frozen bounds (internal defensive policy; not wire negotiation): encoded input
+1..=256KiB; admit PNG/JPEG magic only; source dimensions1..=2048 each; decode only
+one frame, never an animation loop; preview longest edge<=256 with preserved aspect
+ratio; tightly packed straight RGBA8,<=262144 output bytes plus16-byte header.
+Validate dimensions, format, stride, body size and exact EOF independently in the
+parent. No encoded image reaches GTK texture constructors. Ignore/reject unsupported
+content without opening URLs, materializing received files or touching clipboard.
+
+Helper hard ceilings:512MiB address space per process,5 CPU seconds per process,
+128 descriptors and core dumps disabled. Parent operation deadline10s includes
+startup/IO/exit; this is a resource deadline, not a synchronization sleep. Glycin
+decode limits add a5s stage timeout and2048 dimensions. Parent helper environment
+is explicit/clean with system PATH/data directories, no inherited secrets or
+user loader/config overrides. Stdout protocol only; stderr not surfaced/logged.
+Budgets are per operation/process, not a global memory/cumulative CPU guarantee.
+
+Pixel protocol is private local helper IPC, never a Quick Share wire extension:
+8-byte magic/version RQSP/1, big-endian u32 width/height, then exact width*height*4
+bytes. Invalid/truncated/extra data, unsuccessful helper exit or unavailable
+sandbox yields no image. The native adapter uses only validated pixels.
+
+Expected scoped verification (Mode A, before tests):7 domain methods for input
+admission/signatures/boundaries, dimensions/aspect scaling, frame stride/format/
+length validation, protocol magic/version/truncation/extra bytes, exact pixels,
+redacted Debug and resource policy;3 adapter methods for real helper PNG pixels,
+pre-cancel/busy/missing helper, and process cancellation/oversized/truncated output
+using only external process fixtures. Actual decoder is never mocked. Existing
+GTK preview/safety/close tests protect UI lifecycle; add one fixture UI assertion
+if needed. Categories Positive,N1,N2,N3,N4,N5,N7,N9,N10,N12 (spawn/pipe failures).
+N6 applies to malformed/versioned helper output; N8/N11 not applicable (no clock
+dates/billing). No ten repetitions or blanket repository coverage claim.
+
+Risks: sandbox/package environment availability, helper lifecycle and untrusted
+pixel metadata. Rollback each native implementation commit together with its
+dependency/packaging changes; no stored schema, protocol or remote state exists.
+Wire ingestion, native daemon preview IPC, production card binding and outgoing
+previews remain a subsequent compatible slice gated on concrete payload semantics.
