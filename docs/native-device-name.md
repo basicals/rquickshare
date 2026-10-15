@@ -15,7 +15,7 @@ host-settings mutation, production signing/publishing, peer operation or push.
    crypto/PIN, discovery visibility and joined shutdown. Scoped contract checks.
 3. [x] N3: schema2 native persistence with exact schema1 backup/migration, Settings2
    service/client contract and live-apply receipt. Preserve write/replay/CAS/recovery.
-4. [ ] N4: secondary GTK name entry/default reset, typed validation and accurate
+4. [x] N4: secondary GTK name entry/default reset, typed validation and accurate
    saved/applied/error presentation; update relevant docs/package source identity.
 5. [ ] N5: appropriate affected checks once, actual observations and remaining
    hardware acceptance, atomic commits and recoverable handoff.
@@ -205,3 +205,72 @@ Nightly format passed; subprocesses exited (Terminal closed). No whole593 run,
 new real desktop service, physical Bluetooth or Google acceptance claim.
 
 Continue N4 editor integration and N5 affected native/binary/lint/package checks.
+
+## N4 editor refinement before code
+
+Add Device name entry with Automatic computer name placeholder and a plain-text
+resolved-name hint. Empty input resets the override on explicit Save; no OS rename.
+Do not set a truncating character limit on Entry: validate the shared UTF-8 byte
+contract and reject invalid input rather than saving its prefix. The existing
+dirty/load/retry/sensitivity lifecycle also owns this field. Name edits are disabled
+while a save is pending or the editor lacks write authority. Readiness0/1/2/3 and
+error4 must not all render Saved and applied. Retain the existing bounded-height
+scrollable secondary settings body so all controls remain reachable as the extra
+field increases content height. No tray-card/window sizing or flow changes.
+
+Verification includes one new pure status table and the existing isolated GTK
+editor method extended with actual Entry values/default/custom/long Unicode/dirty
+binding checks. Together with N3 real broker Save/Reset tests, avoid duplicating
+daemon validation through a mock settings owner or adding a per-field E2E suite.
+
+## Final verification and package plan before execution
+
+N4 GTK run initially stopped at pkg-config: host development GTK4 is not installed.
+Recovered the previous task-private sysroot location from successful Cargo GTK
+fingerprints, rather than installing host packages or inventing another SDK.
+Existing root: /home/morozhenko/Documents/Codex/2026-10-12/new-chat/work/gtk-native/root.
+Set PKG_CONFIG_SYSROOT_DIR to that root, PKG_CONFIG_PATH to its
+usr/lib/x86_64-linux-gnu/pkgconfig, and LD_LIBRARY_PATH to its library directory.
+Observed private GTK4 version4.22.4 and Layer Shell1.3.0. These are local verification
+inputs, not committed runtime search paths. All39 native methods then passed in
+one isolated broker/Xvfb run, including the new name-status table and extended
+actual editor method. Captured /tmp/rqs-device-name-settings.png and inspected it;
+the existing620px scrolling body fits the new entry. Removed unwanted selection
+from the informational name hint; recheck only that affected GTK method once.
+
+Final source review also keeps the identity read guard across acknowledgement
+inspection so concurrent publication cannot produce a mixed-generation applied
+answer, and shares the receiver byte budget with BLE encoding instead of copying
+237 in unrelated modules. Recheck the affected identity methods and lint once.
+
+Next: strict core/native lint, existing native binary integrations, affected GTK
+method and format/diff checks. Increment native package revision to3 before a real
+release build because the GTK/daemon wire contract changes together. Build/verify
+the uninstalled Debian package with the existing explicit private library metadata,
+prepare a fresh unsigned APT snapshot and export the exact committed source plus
+new package/checksum. Preserve older artifacts and their provenance; do not replace
+published version bytes, sign/publish, enroll APT or run user services. Record the
+binary source commit separately from later documentation-only export commits.
+
+## N4 and final source checks observed
+
+N4 adds the actual secondary name entry, automatic reset via blank+Save, shared
+validation without GTK truncation, plain-text resolved hint, dirty/load/retry and
+write-readiness binding. Pending/unavailable name application cannot render Saved
+and applied. Existing bounded scrolling/window layout remains. Native run39/0
+passed0.54s after restoring the private dependency environment (build41.80s).
+The informational-hint selection adjustment was rechecked only through the affected
+actual GTK method:1/0 in0.45s. Screenshot inspected; no real clipboard/portal/tray.
+
+Final affected identity6/0 passed after the atomic-read/central-budget correction;
+core all-features/all-target strict Clippy passed; native all-target no-deps strict
+Clippy passed with the private sysroot. Native-daemon4 plus modern-protocol4 binary
+integrations passed. Package Python5/0 in1.076s, core/native nightly format and
+whitespace checks passed. These are development observations, no ten-run/final
+Mode B or physical acceptance claim. Exact stage timings remain above. All owned
+test processes/brokers/displays exited; Terminal closed.
+
+Native package revision is3 so coupled Settings2 GUI/daemon replace native2 through
+one package. Next build that release from the committed source, verify offline,
+stage unsigned APT and a public canonical signing request for review only. Request
+preparation does not approve its digest, sign a release or prove build provenance.

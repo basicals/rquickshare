@@ -12,7 +12,7 @@ opens the card; direct ContextMenu opens its existing popover. See
 checks. Physical Plasma menu rendering and placement/focus remain acceptance gates.
 
 Settings now supports explicit Save/import, source conflict recovery, retry,
-visibility, optional port, locally acquired receive-directory FD, and persistent
+visibility, live device name, optional port, locally acquired receive-directory FD, and persistent
 Full/Compact. The daemon is sole writer of a private native file; the original
 Tauri file remains intact with an exact private backup on import. See
 [native-settings.md](../docs/native-settings.md) for the authoritative contract.

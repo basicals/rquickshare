@@ -9,7 +9,7 @@ libraries/tools installed:
 
 ```sh
 python3 scripts/native_deb.py build
-python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native2_amd64.deb
+python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native3_amd64.deb
 ```
 
 Default artifacts contain locked release binaries. `build --profile dev` explicitly
@@ -68,6 +68,13 @@ metadata expires after seven days and must be refreshed/resigned before expiry.
 The native CI artifact is explicitly unsigned; no production key, repository URI,
 enrollment or publication is configured by a build. See docs/native-apt.md in the
 source tree for signing/promotion commands, tests and remaining production binding.
+
+Native3 adds a daemon-owned live device name with Settings2 and schema2 migration.
+Settings changes preserve a private exact schema1 backup; normal name edits apply
+without restarting sharing and ongoing sessions retain their admitted name. Upgrade
+GUI and daemon together through this package. Earlier native2 artifacts retain
+their recorded bytes/provenance and are not overwritten. This source change alone
+does not publish/install a package or enroll APT trust.
 
 Dolphin uses `rquickshare send -- %U`, 1..256 local files/folders as separate arguments.
 Acquisition is all-or-nothing; preparation preserves existing source and requires

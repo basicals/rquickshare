@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
-pub const MAX_NAME_BYTES: usize = 237;
+pub const MAX_NAME_BYTES: usize = u8::MAX as usize - 18;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IdentityError {
@@ -152,15 +152,15 @@ impl IdentityPolicy {
         })
     }
     pub fn applied(&self, revision: u64) -> Result<bool, IdentityError> {
-        let current = self.current.borrow().revision;
-        if revision == 0 || revision > current {
+        let current = self.current.borrow();
+        if revision == 0 || revision > current.revision {
             return Err(IdentityError::Consumer);
         }
-        if revision < current {
+        if revision < current.revision {
             return Err(IdentityError::Superseded);
         }
         let states = self.acknowledgements.borrow();
-        if states.iter().any(|state| *state == Ack::Failed) {
+        if states.contains(&Ack::Failed) {
             return Err(IdentityError::Unavailable);
         }
         Ok(states

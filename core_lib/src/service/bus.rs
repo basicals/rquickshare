@@ -56,12 +56,12 @@ impl fmt::Display for BusError {
 }
 impl std::error::Error for BusError {}
 
-/// One pump and one serial state owner, plus at most one joined filesystem worker.
-/// Call `run` or `close` to join cleanup. Drop only requests cancellation.
 type NameApply = std::pin::Pin<
     Box<dyn std::future::Future<Output = (tokio::sync::oneshot::Sender<bool>, bool)> + Send + Sync>,
 >;
 
+/// One pump and one serial state owner, plus at most one joined filesystem worker.
+/// Call `run` or `close` to join cleanup. Drop only requests cancellation.
 pub struct SelectionBus {
     connection: Option<Connection>,
     inbox: mpsc::Receiver<Message>,

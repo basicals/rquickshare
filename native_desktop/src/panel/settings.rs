@@ -12,6 +12,8 @@ pub(super) struct Editor {
     panel: Weak<Panel>,
     base: RefCell<Option<SettingsView>>,
     visibility: gtk::DropDown,
+    name: gtk::Entry,
+    name_hint: gtk::Label,
     port: gtk::Entry,
     appearance: gtk::DropDown,
     directory: gtk::Label,
@@ -72,11 +74,14 @@ fn status(view: &SettingsView) -> &'static str {
         1 => "Cannot read settings. Restore access, then reload saved values.",
         2 => "Saved settings are damaged or unavailable. Review values and confirm replacement.",
         3 => "Save outcome is uncertain. Retry the same save before making another edit.",
-        4 => "Settings could not be applied. Review the receive folder and port, then restart the saved service.",
+        4 if view.name_status == 3 => "Saved, but discovery could not confirm the device name. Reload to check, or restart sharing when idle.",
+        4 => "Settings could not be applied. Review the receive folder, device name and port, then restart sharing when idle.",
         _ if view.visibility_recovered => "Saved visibility is invalid. Receiving is hidden; choose a visibility and save.",
         _ if view.source == 0 => "Defaults loaded. Save to keep your settings.",
         _ if view.source == 1 => "Existing settings loaded. Save to import them; the original file is preserved.",
         _ if !view.running => "Saved. Service is stopped; start the saved service when ready.",
+        _ if view.name_status == 1 => "Saved name is not yet confirmed by discovery. Save to apply, or reload to check.",
+        _ if view.name_status == 3 => "Discovery could not confirm the device name. Reload to check, or restart sharing when idle.",
         _ if view.applied_live_revision != view.revision => "Saved values differ from the live policy. Save to apply them.",
         _ if view.restart_required => "Saved. Visibility and receive folder applied; restart required for the port.",
         _ => "Saved and applied.",
@@ -137,6 +142,12 @@ impl Editor {
                 "Hidden",
                 "Visible for one minute",
             ]),
+            name: gtk::Entry::builder()
+                .placeholder_text("Automatic computer name")
+                .build(),
+            name_hint: label(
+                "Leave empty to use the computer name. Save applies changes to new connections.",
+            ),
             port: gtk::Entry::builder()
                 .placeholder_text("Automatic")
                 .input_purpose(gtk::InputPurpose::Digits)
@@ -172,6 +183,13 @@ impl Editor {
             .appearance
             .set_selected(u32::from(panel.mode() == Mode::Full));
         editor.visibility.set_selected(0);
+        editor.name_hint.set_selectable(false);
+        let name_title = label("Device name");
+        name_title.set_selectable(false);
+        name_title.set_mnemonic_widget(Some(&editor.name));
+        content.append(&name_title);
+        content.append(&editor.name);
+        content.append(&editor.name_hint);
         for (title, widget) in [
             (
                 "Visibility",
@@ -289,6 +307,12 @@ impl Editor {
             }
         });
         let weak = Rc::downgrade(&editor);
+        editor.name.connect_changed(move |_| {
+            if let Some(editor) = weak.upgrade() {
+                editor.changed();
+            }
+        });
+        let weak = Rc::downgrade(&editor);
         editor.recover.connect_toggled(move |_| {
             if let Some(editor) = weak.upgrade() {
                 editor.changed();
@@ -350,17 +374,32 @@ impl Editor {
             self.changed();
         }
     }
+    fn name_input(&self) -> Result<String, ()> {
+        let text = self.name.text();
+        if !text.is_empty() {
+            rqs_lib::identity::DeviceName::new(text.as_str()).map_err(|_| ())?;
+        }
+        Ok(text.to_string())
+    }
     fn changed(&self) {
         if self.loading.get() {
             return;
         }
         self.dirty.set(true);
-        self.status
-            .set_text("Unsaved changes. Mode preview is temporary until Save.");
+        self.status.set_text(if self.name_input().is_err() {
+            "Device name is too long or contains unsupported characters or surrounding spaces. Leave empty for the automatic name."
+        } else { "Unsaved changes. Mode preview is temporary until Save." });
         self.refresh();
     }
     fn load(&self, view: SettingsView, appearance: bool) {
         self.loading.set(true);
+        self.name.set_text(&view.device_name);
+        self.name_hint.set_text(&if view.resolved_name.is_empty() {
+            "Leave empty to use the computer name. Save applies changes to new connections."
+                .to_owned()
+        } else {
+            format!("Name for new connections: {}", view.resolved_name)
+        });
         self.visibility.set_selected(u32::from(view.visibility) + 1);
         self.port.set_text(&if view.port < 0 {
             String::new()
@@ -447,6 +486,7 @@ impl Editor {
             ready
                 && writable
                 && selected_visibility(self.visibility.selected()).is_ok()
+                && self.name_input().is_ok()
                 && !model.state.settings_pending
                 && (!damaged || self.recover.is_active()),
         );
@@ -462,6 +502,7 @@ impl Editor {
         );
         for widget in [
             self.visibility.clone().upcast::<gtk::Widget>(),
+            self.name.clone().upcast(),
             self.port.clone().upcast(),
             self.choose.clone().upcast(),
             self.default.clone().upcast(),
@@ -598,6 +639,10 @@ impl Editor {
                         .set_text("Port must be empty or an integer from 0 to 65535.");
                     return;
                 };
+                let Ok(device_name) = self.name_input() else {
+                    self.status.set_text("Device name is too long or contains unsupported characters or surrounding spaces. Leave empty for the automatic name.");
+                    return;
+                };
                 let Some(base) = self.base.borrow().clone() else {
                     return;
                 };
@@ -625,7 +670,7 @@ impl Editor {
                         card_mode: self.appearance.selected() as u8,
                         directory: self.directory_intent.get(),
                         recover: self.recover.is_active(),
-                        device_name: base.device_name,
+                        device_name,
                     },
                     directory,
                 })
@@ -790,11 +835,58 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     assert!(!editor.recover.is_visible());
     assert!(!editor.save.is_sensitive());
     panel.model.borrow_mut().automatic = false;
+    let mut named = editor.base.borrow().clone().unwrap();
+    named.device_name = "Рабочий ПК".into();
+    named.resolved_name = "Рабочий ПК".into();
+    named.name_status = 2;
+    editor.load(named.clone(), true);
+    assert_eq!(editor.name.text(), "Рабочий ПК");
+    assert_eq!(editor.name_input().unwrap(), "Рабочий ПК");
+    assert!(editor.name_hint.text().contains("Рабочий ПК"));
+    assert!(!editor.is_dirty());
+    editor.name.set_text("");
+    assert!(editor.name_input().unwrap().is_empty());
+    assert!(editor.is_dirty());
+    let long = "é".repeat(119);
+    editor.name.set_text(&long);
+    assert_eq!(editor.name.text(), long);
+    assert!(editor.name_input().is_err());
+    assert!(!editor.save.is_sensitive());
+    editor.load(named, true);
+    assert_eq!(editor.name.text(), "Рабочий ПК");
+    assert!(!editor.is_dirty());
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn given_saved_name_apply_states_when_presented_then_only_acknowledged_name_is_claimed_applied()
+    {
+        let mut view = SettingsView::unavailable(1);
+        view.available = true;
+        view.configured = true;
+        view.source = 2;
+        view.running = true;
+        view.revision = 2;
+        view.applied_live_revision = 2;
+        view.resolved_name = "Automatic".into();
+        view.name_status = 2;
+        assert_eq!(status(&view), "Saved and applied.");
+        for state in [1, 3] {
+            let mut pending = view.clone();
+            pending.name_status = state;
+            assert_ne!(status(&pending), "Saved and applied.");
+            if state == 3 {
+                pending.error = 4;
+                assert!(status(&pending).contains("discovery"));
+                assert_ne!(status(&pending), "Saved and applied.");
+            }
+        }
+        view.running = false;
+        view.name_status = 0;
+        assert_ne!(status(&view), "Saved and applied.");
+    }
     #[test]
     fn given_unavailable_corrupt_unapplied_or_uncertain_settings_when_presented_then_no_saved_and_applied_claim_is_fabricated(
     ) {

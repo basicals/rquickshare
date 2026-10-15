@@ -265,9 +265,8 @@ pub fn receiver_service_data(endpoint_id: [u8; 4], device_type: u8, device_name:
     let identity: [u8; 16] = rand::random();
     endpoint_info.extend_from_slice(&identity);
 
-    const ENDPOINT_INFO_FIXED_BYTES: usize = 18;
     const MAX_ENDPOINT_INFO_BYTES: usize = u8::MAX as usize;
-    const MAX_RECEIVER_NAME_BYTES: usize = MAX_ENDPOINT_INFO_BYTES - ENDPOINT_INFO_FIXED_BYTES;
+    const MAX_RECEIVER_NAME_BYTES: usize = crate::identity::MAX_NAME_BYTES;
 
     let name = device_name.as_bytes();
     let mut name_len = name.len().min(MAX_RECEIVER_NAME_BYTES);
