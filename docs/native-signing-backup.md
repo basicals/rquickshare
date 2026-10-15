@@ -187,16 +187,52 @@ backup itself/private profiles/passwords never enter Git or source/chat exports.
 The backup's receipt.json describes local verification and correctly retains
 cloud_copy_verified=false; separate cloud evidence must establish persistence.
 
-Drive connector exact-name folder search also returned no items. Browser fallback
-reaches Google sign-in with no existing authenticated session; showed that page
-and requested user-owned sign-in to the account containing ArcVault. No credentials
-were read/typed by the agent, no new OAuth permissions/sharing were granted. Only
-that login tab is retained as a handoff. Once signed in, locate the actual folder,
-download the ciphertext through the authorized page, compare exact20559 bytes/
-SHA256 above, and verify the other three public artifacts. Do not re-encrypt,
-repeat key generation or overwrite existing files just to retry cloud readback.
+Drive connector exact-name folder search also returned no items. A browser fallback
+previously reached Google sign-in; the user declined browser access. No credentials
+were read/typed by the agent, no new OAuth permissions/sharing were granted. A
+subsequent attempt to close the task-created login tab reported that it no longer
+belonged to the browser session; closure was not confirmed and no other tabs were
+touched. Do not request browser access again. Do not re-encrypt, repeat key
+generation or overwrite existing files just to retry cloud readback.
 
 B1/B2/B3 complete, B4 mounted copy complete but independent cloud acceptance
-pending quota relief or user browser sign-in. B5 current source/evidence/operator
+pending quota relief. B5 current source/evidence/operator
 handoff complete. No production APT release signature/publication, trust enrollment
 or native installed/Google peer claim. Existing distribution route remains intact.
+
+## Quota recovery readback plan (2026-10-15)
+
+The user declined browser access, then explicitly requested waiting for quota
+recovery and independently checking the saved backup. Browser sign-in is no longer
+an available fallback. Use only the existing rclone remote, read-only, scoped to
+the four filenames already recorded in the public evidence. No auth/config/mount
+changes, unrelated secret reads, uploads, replacement or deletion.
+
+1. Attempt one bounded sequential direct readback after the elapsed overnight
+   interval. Disable application/low-level retries, limit request rate, cap each
+   output at expected size plus one byte, and compare exact size/SHA256 against
+   the previously recorded local-copy evidence. Never print payloads/raw errors.
+2. Stop immediately on quota failure or mismatch. If quota still blocks access,
+   schedule a thread follow-up no more often than hourly; do not poll in a loop.
+   Retry only unverified artifacts and stay quiet on unchanged quota failures.
+3. Record actual results and timestamps in public evidence. Only mark independent
+   cloud acceptance complete after all four files match. Existing local restore
+   and revocation verification remain valid; downloading identical ciphertext
+   needs no repeated Pinentry/unlock or another restore run.
+4. Stop the follow-up after successful verification, notify the user, and commit
+   the result on dev. Changes are limited to documentation/evidence; no production
+   code or architecture changes. Rollback the documentation commit independently;
+   preserve all existing key custody and backup files regardless of outcome.
+
+### Actual retry and scheduled continuation
+
+2026-10-15T06:23:15Z: one direct bounded rclone cat attempt on the ciphertext
+returned HTTP403/rateLimitExceeded in under one second. Zero cloud artifacts
+verified; no requests for the remaining three files, no local backup changes.
+This does not establish the cause or reset time of the provider restriction.
+
+Created active hourly thread heartbeat rquickshare-arcvault using the app scheduler.
+It retries only pending exact artifacts through the existing remote, stops at the
+first failure, stays quiet on unchanged quota failures, reports missing/mismatched
+data or successful acceptance, and removes itself after all four matches. No
+background terminal, busy loop, browser auth or unattended signing is involved.

@@ -40,5 +40,28 @@
   "local_restoration_verified": true,
   "local_revocation_verified": true,
   "release_signed": false,
-  "browser_readback_status": "requires user Google Drive sign-in"
+  "browser_readback_status": "not performed; user declined browser access; do not request sign-in",
+  "latest_direct_readback": {
+    "checked_at_utc": "2026-10-15T06:23:15.334006+00:00",
+    "method": "direct rclone cat; existing remote; no FUSE cache",
+    "verified": [],
+    "status": "remote_error",
+    "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+    "returncode": 1,
+    "HTTP_status": [
+      "403"
+    ],
+    "provider_reasons": [
+      "rateLimitExceeded"
+    ],
+    "completed_at_utc": "2026-10-15T06:23:15.674891+00:00"
+  },
+  "quota_followup": {
+    "automation_id": "rquickshare-arcvault",
+    "kind": "thread heartbeat",
+    "interval": "hourly",
+    "status": "ACTIVE",
+    "scope": "read-only existing remote; four exact artifacts; stop on first failure; no browser access",
+    "completion": "remove automation after all four size/SHA256 matches"
+  }
 }
