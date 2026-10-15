@@ -28,9 +28,13 @@
     }
   ],
   "remote_error": {
-    "returncode": 3,
-    "HTTP_status": [],
-    "provider_reasons": [],
+    "returncode": 1,
+    "HTTP_status": [
+      "403"
+    ],
+    "provider_reasons": [
+      "rateLimitExceeded"
+    ],
     "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256"
   },
   "direct_remote_artifacts_verified": [
@@ -47,21 +51,20 @@
   "release_signed": false,
   "browser_readback_status": "not performed; user declined browser access; do not request sign-in",
   "latest_direct_readback": {
-    "checked_at_utc": "2026-10-15T11:22:40.756212+00:00",
-    "method": "direct rclone cat; existing remote; no FUSE cache",
-    "verified": [
-      {
-        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
-        "size": 20559,
-        "sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf"
-      }
-    ],
+    "checked_at_utc": "2026-10-15T11:59:53.416154+00:00",
+    "method": "direct rclone cat after user-authorized immutable sidecar copy; no FUSE cache",
+    "verified": [],
     "status": "remote_error",
     "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
-    "returncode": 3,
-    "HTTP_status": [],
-    "provider_reasons": [],
-    "completed_at_utc": "2026-10-15T11:22:57.004668+00:00"
+    "returncode": 1,
+    "HTTP_status": [
+      "403"
+    ],
+    "provider_reasons": [
+      "rateLimitExceeded"
+    ],
+    "error_classes": [],
+    "completed_at_utc": "2026-10-15T11:59:58.643009+00:00"
   },
   "quota_followup": {
     "automation_id": "rquickshare-arcvault",
@@ -146,5 +149,50 @@
     "mount_backend_overrides_present": false,
     "interpretation": "All four files have Dirty=false and cached remote MD5 fingerprints matching local originals; consistent with completed mount writeback, but not an independent fresh cloud download."
   },
-  "direct_cloud_ciphertext_readback_verified": true
+  "direct_cloud_ciphertext_readback_verified": true,
+  "sidecar_repair": {
+    "user_authorized": true,
+    "initial_read_retry": {
+      "checked_at_utc": "2026-10-15T11:58:51.012458+00:00",
+      "method": "user-requested direct rclone cat retry; no FUSE cache",
+      "verified": [],
+      "status": "remote_error",
+      "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "returncode": 1,
+      "HTTP_status": [
+        "403"
+      ],
+      "provider_reasons": [
+        "rateLimitExceeded"
+      ],
+      "error_classes": [],
+      "completed_at_utc": "2026-10-15T11:58:58.280737+00:00"
+    },
+    "immutable_copy": {
+      "checked_at_utc": "2026-10-15T11:59:31.779156+00:00",
+      "operation": "user-authorized immutable sidecar repair copy",
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "status": "immutable_copy_completed_needs_readback",
+      "cloud_readback_verified": false,
+      "returncode": 0,
+      "completed_at_utc": "2026-10-15T11:59:37.424080+00:00"
+    },
+    "readback": {
+      "checked_at_utc": "2026-10-15T11:59:53.416154+00:00",
+      "method": "direct rclone cat after user-authorized immutable sidecar copy; no FUSE cache",
+      "verified": [],
+      "status": "remote_error",
+      "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "returncode": 1,
+      "HTTP_status": [
+        "403"
+      ],
+      "provider_reasons": [
+        "rateLimitExceeded"
+      ],
+      "error_classes": [],
+      "completed_at_utc": "2026-10-15T11:59:58.643009+00:00"
+    },
+    "interpretation": "Immutable copy command succeeded; this may preserve an equal existing object or create an absent object. No upload-versus-skip assertion; fresh verification still blocked by quota."
+  }
 }

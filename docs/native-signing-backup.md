@@ -300,3 +300,51 @@ this run at that failure; receipt/instructions were not requested. Preserve all
 local/cloud originals, record the verified archive and failure, and continue only
 the three unverified sidecars on later hourly runs. No uploads or replacements.
 The user was notified about the successful payload verification and new error.
+
+### User-authorized sidecar retry and repair plan
+
+2026-10-15: the user explicitly requested an immediate retry of the three public
+sidecars and recreation/upload if absent. This supersedes the read-only restriction
+only for those three exact names; the verified ciphertext must not be modified or
+downloaded again. Keep the same archive identity, encryption, public receipt and
+restore instructions. No new backup/key generation or authentication changes.
+
+1. Validate the three existing local public originals against the recorded sizes
+   and SHA256, then retry direct cloud reads once sequentially with the existing
+   bounds/rate limits. Classify errors without printing backend error text.
+2. If a file is genuinely absent, stage its exact verified original locally under
+   its cloud filename and upload only that path, preserving existing equal files.
+   Re-download the repaired file and check size/SHA256. Quota/auth failures are
+   not evidence of absence: stop instead of blindly overwriting or looping.
+3. Record each completed check/repair. When all four artifacts are verified,
+   mark B4 complete, remove the hourly follow-up and commit public evidence/docs.
+   Preserve local originals and cloud ciphertext on every outcome. No production
+   code changes; documentation rollback does not remove any backup artifacts.
+
+The immediate sidecar read retry at11:58:51Z again returned403/rateLimitExceeded,
+so absence is not established. The user's requested repair may attempt one
+bounded immutable copy of the exact validated local sidecar: this can create a
+missing file or preserve an equal existing file, but must refuse conflicting
+contents. Stop at quota/error without trying the other two uploads. Never force
+overwrite, delete, or infer successful persistence without fresh readback.
+
+### User-authorized repair observations
+
+The checksum original was validated against181 bytes/SHA256, staged locally under
+the exact cloud filename in a fresh private temporary directory, and supplied to
+one bounded rclone copyto --immutable --no-traverse. At11:59:37Z the operation
+completed with exit0. This can represent a successful create or preservation of
+an equal existing object; the result does not distinguish upload from skip.
+Temporary public staging was removed, all original copies preserved.
+
+Post-copy direct checksum readback at11:59:53Z still returned403/rateLimitExceeded.
+No further sidecar reads/uploads were attempted in this run. Neither sidecar
+absence nor completed cloud readback is claimed. The independently verified
+ciphertext remains valid; all three public sidecars remain unverified.
+
+Updated the existing hourly heartbeat (same ID/schedule/thread) with the user's
+limited sidecar-repair authorization and current progress. It reads only pending
+sidecars, may immutably recreate a confirmed missing one, stops on quota, and does
+not repeat the checksum copy just because readback is quota-blocked. It also uses
+the most recent attempt timestamp so immediate user-requested retries do not
+cause an early scheduled request. No new automation or background process.
