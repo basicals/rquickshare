@@ -119,6 +119,7 @@ pub struct Values {
     pub visibility: u8,
     pub port: Option<u16>,
     pub card_mode: CardMode,
+    pub device_name: Option<crate::identity::DeviceName>,
     pub directory: Option<DirectoryRecord>,
 }
 impl Values {
@@ -139,6 +140,7 @@ impl Values {
             visibility_recovered: false,
             port: self.port.map(u32::from),
             download_path: self.directory.as_ref().map(DirectoryRecord::path),
+            device_name: self.device_name.clone(),
         })
     }
 }
@@ -169,6 +171,48 @@ struct Document {
     values: Values,
     receipt: Receipt,
 }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LegacyValues {
+    visibility: u8,
+    port: Option<u16>,
+    card_mode: CardMode,
+    directory: Option<DirectoryRecord>,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LegacyDocument {
+    schema: u32,
+    revision: u64,
+    values: LegacyValues,
+    receipt: Receipt,
+}
+fn decode_document(raw: &[u8]) -> Option<Document> {
+    let version = serde_json::from_slice::<serde_json::Value>(raw)
+        .ok()?
+        .get("schema")?
+        .as_u64()?;
+    match version {
+        1 => {
+            let old: LegacyDocument = serde_json::from_slice(raw).ok()?;
+            Some(Document {
+                schema: old.schema,
+                revision: old.revision,
+                receipt: old.receipt,
+                values: Values {
+                    visibility: old.values.visibility,
+                    port: old.values.port,
+                    card_mode: old.values.card_mode,
+                    directory: old.values.directory,
+                    device_name: None,
+                },
+            })
+        }
+        2 => serde_json::from_slice(raw).ok(),
+        _ => None,
+    }
+}
+
 #[derive(Clone)]
 pub struct Snapshot {
     pub base: Base,
@@ -176,6 +220,7 @@ pub struct Snapshot {
     pub values: Option<Values>,
     pub visibility_recovered: bool,
     raw: Option<Vec<u8>>,
+    schema: u32,
     receipt: Option<Receipt>,
 }
 impl Snapshot {
@@ -198,6 +243,7 @@ pub struct Edit {
     pub port: Option<u16>,
     pub card_mode: CardMode,
     pub directory: DirectoryIntent,
+    pub device_name: Option<crate::identity::DeviceName>,
     pub recover: bool,
 }
 
@@ -249,15 +295,13 @@ impl<I: PersistenceIo> Store<I> {
     fn load_at(&self, directory: Option<&File>) -> Result<Snapshot> {
         if let Some(directory) = directory {
             if let Some(raw) = read_at(directory, FILE)? {
-                let parsed = serde_json::from_slice::<Document>(&raw)
-                    .ok()
-                    .filter(|document| {
-                        document.schema == 1
-                            && document.revision > 0
-                            && document.values.validate().is_ok()
-                            && valid_id(&document.receipt.request)
-                            && valid_hash(&document.receipt.fingerprint)
-                    });
+                let parsed = decode_document(&raw).filter(|document| {
+                    matches!(document.schema, 1 | 2)
+                        && document.revision > 0
+                        && document.values.validate().is_ok()
+                        && valid_id(&document.receipt.request)
+                        && valid_hash(&document.receipt.fingerprint)
+                });
                 let token = hash(&[b"native", &raw]);
                 return Ok(match parsed {
                     Some(document) => Snapshot {
@@ -269,6 +313,7 @@ impl<I: PersistenceIo> Store<I> {
                         values: Some(document.values),
                         visibility_recovered: false,
                         raw: Some(raw),
+                        schema: document.schema,
                         receipt: Some(document.receipt),
                     },
                     None => Snapshot {
@@ -277,6 +322,7 @@ impl<I: PersistenceIo> Store<I> {
                         values: None,
                         visibility_recovered: false,
                         raw: Some(raw),
+                        schema: 0,
                         receipt: None,
                     },
                 });
@@ -319,6 +365,7 @@ impl<I: PersistenceIo> Store<I> {
                 visibility: settings.visibility as u8,
                 port: settings.port.map(|port| port as u16),
                 card_mode: CardMode::Compact,
+                device_name: None,
                 directory,
             })
         });
@@ -328,6 +375,7 @@ impl<I: PersistenceIo> Store<I> {
             values,
             visibility_recovered,
             raw,
+            schema: 0,
             receipt: None,
         })
     }
@@ -352,6 +400,7 @@ impl<I: PersistenceIo> Store<I> {
             edit.visibility,
             edit.port,
             edit.card_mode,
+            &edit.device_name,
             intent,
             identity,
             edit.recover,
@@ -380,6 +429,7 @@ impl<I: PersistenceIo> Store<I> {
             visibility: edit.visibility,
             port: edit.port,
             card_mode: edit.card_mode,
+            device_name: edit.device_name,
             directory: if intent == 0 {
                 current
                     .values
@@ -392,7 +442,7 @@ impl<I: PersistenceIo> Store<I> {
             },
         };
         values.validate()?;
-        if current.source != Source::Native || current.values.is_none() {
+        if current.source != Source::Native || current.values.is_none() || current.schema == 1 {
             if let Some(raw) = &current.raw {
                 self.backup(&directory, raw)?;
             }
@@ -403,7 +453,7 @@ impl<I: PersistenceIo> Store<I> {
             .checked_add(1)
             .ok_or(StoreError::Capacity)?;
         let document = Document {
-            schema: 1,
+            schema: 2,
             revision,
             values,
             receipt: Receipt {
@@ -429,6 +479,7 @@ impl<I: PersistenceIo> Store<I> {
             values: Some(document.values),
             visibility_recovered: false,
             raw: Some(bytes),
+            schema: 2,
             receipt: Some(document.receipt),
         })
     }

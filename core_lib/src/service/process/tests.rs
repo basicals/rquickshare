@@ -32,6 +32,7 @@ fn given_native_settings_check_when_missing_corrupt_or_directory_identity_change
             visibility: 1,
             port: Some(0),
             card_mode: CardMode::Compact,
+            device_name: None,
             directory: DirectoryIntent::Replace(File::open(&selected).unwrap()),
             recover: false,
         })
@@ -137,6 +138,7 @@ async fn given_corrupt_native_config_when_repaired_and_explicitly_restarted_then
             visibility: 1,
             port: occupied.local_addr().unwrap().port().into(),
             card_mode: 0,
+            device_name: String::new(),
             directory: 1,
             recover: true,
         };

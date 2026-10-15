@@ -105,6 +105,9 @@ impl IdentityPolicy {
     pub fn snapshot(&self) -> IdentitySnapshot {
         self.current.borrow().clone()
     }
+    pub fn resolve_override(&self, value: Option<&DeviceName>) -> DeviceName {
+        value.unwrap_or(&self.fallback).clone()
+    }
     pub fn set_override(&self, value: Option<&DeviceName>) -> Result<u64, IdentityError> {
         let name = value.unwrap_or(&self.fallback);
         let mut result = Err(IdentityError::Exhausted);

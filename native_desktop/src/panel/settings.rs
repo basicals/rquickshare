@@ -625,6 +625,7 @@ impl Editor {
                         card_mode: self.appearance.selected() as u8,
                         directory: self.directory_intent.get(),
                         recover: self.recover.is_active(),
+                        device_name: base.device_name,
                     },
                     directory,
                 })

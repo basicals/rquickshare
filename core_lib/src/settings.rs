@@ -33,6 +33,7 @@ pub struct StartupSettings {
     pub visibility_recovered: bool,
     pub port: Option<u32>,
     pub download_path: Option<PathBuf>,
+    pub device_name: Option<crate::identity::DeviceName>,
 }
 
 impl Default for StartupSettings {
@@ -42,6 +43,7 @@ impl Default for StartupSettings {
             visibility_recovered: false,
             port: None,
             download_path: None,
+            device_name: None,
         }
     }
 }
@@ -85,6 +87,7 @@ impl StartupSettings {
             visibility_recovered,
             port,
             download_path,
+            device_name: None,
         })
     }
 

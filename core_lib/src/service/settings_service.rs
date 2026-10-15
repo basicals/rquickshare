@@ -1,4 +1,4 @@
-//! Bounded settings writer and typed Settings1 projection, separate from transfers.
+//! Bounded settings writer and typed Settings2 projection, separate from transfers.
 use std::fs::File;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -15,7 +15,7 @@ use super::native_settings::{
 };
 use crate::receive::Directory;
 
-pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Settings1";
+pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Settings2";
 pub const ERROR_PREFIX: &str = "io.github.morozhenko_apps.RQuickShare.Settings.Error.";
 
 #[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Type)]
@@ -38,6 +38,10 @@ pub struct SettingsView {
     /// 4 saved but live apply unavailable. Never contains raw diagnostics.
     pub error: u8,
     pub last_request: String,
+    pub device_name: String,
+    pub resolved_name: String,
+    /// 0 no live identity, 1 pending, 2 locally applied, 3 unavailable.
+    pub name_status: u8,
 }
 impl std::fmt::Debug for SettingsView {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -68,6 +72,9 @@ impl SettingsView {
             restart_required: false,
             error: 0,
             last_request: String::new(),
+            device_name: String::new(),
+            resolved_name: String::new(),
+            name_status: 0,
         }
     }
     pub fn base(&self) -> Base {
@@ -82,6 +89,10 @@ impl SettingsView {
             && self.visibility <= 2
             && (-1..=65535).contains(&self.port)
             && self.card_mode <= 1
+            && valid_name(&self.device_name)
+            && valid_name(&self.resolved_name)
+            && self.name_status <= 3
+            && (self.name_status == 0 || !self.resolved_name.is_empty())
             && self.directory_display.len() <= 12288
             && !self.directory_display.contains('\0')
             && self.error <= 4
@@ -104,6 +115,11 @@ impl SettingsView {
         self.last_request = snapshot.last_request().unwrap_or_default().into();
         self.error = if snapshot.values.is_some() { 0 } else { 2 };
         if let Some(values) = &snapshot.values {
+            self.device_name = values
+                .device_name
+                .as_ref()
+                .map(|name| name.as_str().to_owned())
+                .unwrap_or_default();
             self.visibility = values.visibility;
             self.port = values.port.map_or(-1, i32::from);
             self.card_mode = u8::from(values.card_mode == CardMode::Full);
@@ -131,7 +147,7 @@ fn effective_port(port: i32) -> i32 {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Type)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize, Type)]
 pub struct SaveIntent {
     pub epoch: String,
     pub revision: u64,
@@ -143,6 +159,18 @@ pub struct SaveIntent {
     /// 0 retain, 1 default, 2 replace with exactly one directory FD.
     pub directory: u8,
     pub recover: bool,
+    pub device_name: String,
+}
+impl std::fmt::Debug for SaveIntent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SaveIntent")
+            .field("revision", &self.revision)
+            .field("device_name", &"[redacted]")
+            .finish_non_exhaustive()
+    }
+}
+fn valid_name(value: &str) -> bool {
+    value.is_empty() || crate::identity::DeviceName::new(value).is_ok()
 }
 impl SaveIntent {
     pub fn valid(&self, epoch: u128) -> bool {
@@ -153,6 +181,7 @@ impl SaveIntent {
             && (-1..=65535).contains(&self.port)
             && self.card_mode <= 1
             && self.directory <= 2
+            && valid_name(&self.device_name)
     }
     pub fn edit(self, file: Option<File>) -> Result<Edit, StoreError> {
         let epoch = u128::from_str_radix(&self.epoch, 16).map_err(|_| StoreError::InvalidInput)?;
@@ -183,6 +212,14 @@ impl SaveIntent {
                 CardMode::Full
             },
             directory,
+            device_name: if self.device_name.is_empty() {
+                None
+            } else {
+                Some(
+                    crate::identity::DeviceName::new(&self.device_name)
+                        .map_err(|_| StoreError::InvalidInput)?,
+                )
+            },
             recover: self.recover,
         })
     }
@@ -209,10 +246,44 @@ pub(super) enum Command {
     Reload(Message),
 }
 
+type IdentitySource = Arc<Mutex<Option<crate::identity::IdentityPolicy>>>;
+fn project_name(mut view: SettingsView, identity: &IdentitySource) -> SettingsView {
+    let identity = identity
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner())
+        .clone();
+    if let Some(identity) = identity.filter(|_| view.running) {
+        let current = identity.snapshot();
+        view.resolved_name = current.name.as_str().to_owned();
+        let configured = if view.device_name.is_empty() {
+            None
+        } else {
+            crate::identity::DeviceName::new(&view.device_name).ok()
+        };
+        view.name_status = if identity.resolve_override(configured.as_ref()) != current.name {
+            1
+        } else {
+            match identity.applied(current.revision) {
+                Ok(true) => 2,
+                Ok(false) => 1,
+                Err(_) => 3,
+            }
+        };
+        if view.name_status != 2 {
+            view.applied_live_revision = 0;
+            if view.name_status == 3 && view.error == 0 {
+                view.error = 4;
+            }
+        }
+    }
+    view
+}
+
 pub(super) struct SettingsOwner {
     commands: Option<mpsc::Sender<Command>>,
     pub apply: mpsc::Receiver<Apply>,
     view: Arc<Mutex<SettingsView>>,
+    identity: IdentitySource,
     stop: CancellationToken,
     task: Option<JoinHandle<()>>,
     outstanding: Arc<AtomicUsize>,
@@ -255,6 +326,7 @@ impl SettingsOwner {
             Err(_) => view.error = 1,
         }
         let view = Arc::new(Mutex::new(view));
+        let identity = Arc::new(Mutex::new(None));
         let (commands, requests) = mpsc::channel(8);
         let (apply_sender, apply) = mpsc::channel(1);
         let stop = CancellationToken::new();
@@ -265,6 +337,7 @@ impl SettingsOwner {
                 requests,
                 apply: apply_sender,
                 view: view.clone(),
+                identity: identity.clone(),
                 running_port,
                 active_directory,
                 connection,
@@ -277,16 +350,25 @@ impl SettingsOwner {
             commands: Some(commands),
             apply,
             view,
+            identity,
             stop,
             task: Some(task),
             outstanding,
         }
     }
     pub fn view(&self) -> SettingsView {
-        self.view
+        let view = self
+            .view
             .lock()
             .unwrap_or_else(|poison| poison.into_inner())
-            .clone()
+            .clone();
+        project_name(view, &self.identity)
+    }
+    pub fn bind_identity(&self, identity: Option<crate::identity::IdentityPolicy>) {
+        *self
+            .identity
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner()) = identity;
     }
     pub fn submit(&self, command: Command) -> Result<(), super::Error> {
         let commands = self.commands.as_ref().ok_or(super::Error::NotRunning)?;
@@ -331,6 +413,7 @@ struct Writer<I> {
     requests: mpsc::Receiver<Command>,
     apply: mpsc::Sender<Apply>,
     view: Arc<Mutex<SettingsView>>,
+    identity: IdentitySource,
     running_port: i32,
     active_directory: Option<super::native_settings::DirectoryRecord>,
     connection: Connection,
@@ -339,10 +422,12 @@ struct Writer<I> {
 }
 impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
     fn view(&self) -> SettingsView {
-        self.view
+        let view = self
+            .view
             .lock()
             .unwrap_or_else(|poison| poison.into_inner())
-            .clone()
+            .clone();
+        project_name(view, &self.identity)
     }
     async fn run(mut self) {
         loop {

@@ -1,5 +1,11 @@
 # Daemon-owned native settings and receive-directory authority
 
+Current extension: [live device name](native-device-name.md) introduces native
+schema2 and the coordinated Settings2 interface with exact schema1 backup/migration.
+N3 persistence/service integration is implemented and scoped checks passed; GTK
+name editing is N4. The schema1/Settings1 contracts and dated checks below describe
+the original implementation and remain historical where this extension supersedes them.
+
 2026-10-13. Mode A. User selected 1/A from native-settings-review.md. Guide:
 /home/morozhenko/.codex/AGENTS.md. Direct dev commits; no install/live migration/push.
 The accepted scope includes transactional native persistence, typed service/client

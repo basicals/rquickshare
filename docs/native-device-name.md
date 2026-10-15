@@ -13,7 +13,7 @@ host-settings mutation, production signing/publishing, peer operation or push.
 2. [x] N2: inject identity into core/TCP admissions, immutable outbound handshake,
    live mDNS endpoint data and GATT slot0 provider. Preserve DNS host/endpoint IDs,
    crypto/PIN, discovery visibility and joined shutdown. Scoped contract checks.
-3. [ ] N3: schema2 native persistence with exact schema1 backup/migration, Settings2
+3. [x] N3: schema2 native persistence with exact schema1 backup/migration, Settings2
    service/client contract and live-apply receipt. Preserve write/replay/CAS/recovery.
 4. [ ] N4: secondary GTK name entry/default reset, typed validation and accurate
    saved/applied/error presentation; update relevant docs/package source identity.
@@ -100,6 +100,19 @@ or consent flow. Show saved/pending/unavailable accurately; no claim another pee
 has already refreshed its device cache. Preserve ongoing sends, clipboard/source
 review and exact retry intent. No GTK direct file writes.
 
+N3 wire refinement before code: append saved device_name override(s), current
+resolved_name(s) and name_status(y) to SettingsView; status0 has no live identity,
+1 is saved/current or consumer-ack pending,2 locally applied,3 consumer unavailable.
+Append device_name(s) to SaveIntent. Empty override means None. Interface signatures
+are (sbybtsyiysbtbbysssy) and (stssyiyybs); interface name is Settings2. A name is
+not presented as applied when its saved resolved value differs from the current
+policy. Read/Reload project fresh consumer state; Save acknowledgement waits for
+the admitted generation through a bus-owned cancellation-safe future, while the
+main bus continues transfer/control processing. No extra task/timer or repeated
+write is introduced. Existing error codes0..4 retain their meaning. Schema1
+parsing has a separate strict original value shape; schema2 stores typed optional
+DeviceName and explicitly saves a backup before replacing schema1 bytes.
+
 ## Scoped branch/interaction inventory before tests
 
 | Artifact | Branches and interacting states | Level / planned methods | Categories |
@@ -161,3 +174,34 @@ Nightly formatting passed. All subprocesses exited; Terminal closed.
 Current handoff: N2 source and domain/protocol checks are complete, but the name
 setter is not exposed by persisted settings/GTK until N3/N4. Existing signed
 publication and installed acceptance remain separate. No user daemon was started.
+
+## N3 implementation and actual verification
+
+Schema2 adds typed optional DeviceName; a strict separate original schema1 decoder
+preserves automatic naming and original bytes. First explicit schema1 save backs
+up those bytes before replacement; name intent participates in replay fingerprint.
+Startup applies the saved override to its RQS before transport start. Old source
+and unrelated settings/root/port/durability behavior remain intact.
+
+Settings2/interface XML/signatures now carry override/resolved name and actual
+consumer status. Owner/Writer projections inspect the injected owner-local policy;
+startup task creation is not name-application success. A bus-owned bounded apply
+future leaves transfer/control processing live until acknowledgement/failure;
+close drops it and joins the existing settings writer. Save response preserves
+durable saved state on partial failure. GTK temporarily preserves the loaded name
+on other setting edits until N4 adds the editable field.
+
+First compilation identified that SelectionBus's existing borrowed async methods
+need Sync; its new erased future initially specified only Send. Added the actual
+Sync future bound/type alias, without an extra task, global lock or unsafe marker.
+Then270 affected service methods passed in6.47s (build25.48s,323 filtered), including
+five new methods: N6=2,N4=1,N5=1,N3=1 primary categories. Existing injected write/
+sync/rename failure cases now also assert exact Before/After name preservation.
+Actual isolated broker proves another client can read during pending name apply,
+only the exact two consumer acknowledgements finish it, reset returns automatic
+name, and a failed consumer preserves saved/error state. Name/serde bounds and
+strict old-shape migration reject malformed data. Signature assertions/XML match.
+Nightly format passed; subprocesses exited (Terminal closed). No whole593 run,
+new real desktop service, physical Bluetooth or Google acceptance claim.
+
+Continue N4 editor integration and N5 affected native/binary/lint/package checks.

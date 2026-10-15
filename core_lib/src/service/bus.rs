@@ -58,6 +58,10 @@ impl std::error::Error for BusError {}
 
 /// One pump and one serial state owner, plus at most one joined filesystem worker.
 /// Call `run` or `close` to join cleanup. Drop only requests cancellation.
+type NameApply = std::pin::Pin<
+    Box<dyn std::future::Future<Output = (tokio::sync::oneshot::Sender<bool>, bool)> + Send + Sync>,
+>;
+
 pub struct SelectionBus {
     connection: Option<Connection>,
     inbox: mpsc::Receiver<Message>,
@@ -75,6 +79,7 @@ pub struct SelectionBus {
     uid: u32,
     wakeup: Option<super::wakeup::Wakeup>,
     settings: Option<super::settings_service::SettingsOwner>,
+    name_apply: Option<NameApply>,
     configuration_only: bool,
     pending_restart: Option<Message>,
     restart_requested: bool,
@@ -155,6 +160,7 @@ impl SelectionBus {
             visibility_recovered: false,
             uid,
             settings: None,
+            name_apply: None,
             configuration_only: false,
             pending_restart: None,
             restart_requested: false,
@@ -297,6 +303,9 @@ impl SelectionBus {
     ) -> Result<(), BusError> {
         let failure = self.failed.clone();
         self.configuration_only = runtime.is_configuration_only();
+        if let Some(settings) = self.settings.as_ref() {
+            settings.bind_identity(runtime.identity_policy());
+        }
         loop {
             tokio::select! {
                 _ = stop.cancelled() => return Ok(()),
@@ -311,7 +320,28 @@ impl SelectionBus {
                     let request = request.ok_or(BusError::Transport)?;
                     let applied = runtime.apply_live_settings(&request.values, request.root);
                     if applied { self.visibility_recovered = false; }
-                    let _ = request.reply.send(applied);
+                    if applied {
+                        if let Some(identity) = runtime.identity_policy() {
+                            let revision = identity.snapshot().revision;
+                            let lifetime = stop.clone();
+                            self.name_apply = Some(Box::pin(async move {
+                                let applied = identity.wait_applied(revision, &lifetime).await.is_ok();
+                                (request.reply, applied)
+                            }));
+                        } else {
+                            let _ = request.reply.send(request.values.device_name.is_none());
+                        }
+                    } else { let _ = request.reply.send(false); }
+                }
+                result = async {
+                    match self.name_apply.as_mut() {
+                        Some(work) => work.await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    self.name_apply = None;
+                    let (reply, applied) = result;
+                    let _ = reply.send(applied);
                 }
                 result = files::next(&mut self.file_job) => {
                     tokio::select! {
@@ -381,6 +411,7 @@ impl SelectionBus {
     }
 
     async fn close_connection(&mut self) {
+        self.name_apply.take();
         if self.closed.is_cancelled() {
             return;
         }

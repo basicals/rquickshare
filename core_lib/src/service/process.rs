@@ -158,7 +158,10 @@ pub async fn serve_native_settings(
             .unwrap_or(-1);
         let runtime = match prepared {
             Ok((settings, root)) => {
-                let core = RQS::new(settings.visibility, settings.port, settings.download_path);
+                let mut core = RQS::new(settings.visibility, settings.port, settings.download_path);
+                core.set_device_name(settings.device_name).map_err(|_| {
+                    ProcessError::NativeSettings(super::native_settings::StoreError::InvalidInput)
+                })?;
                 core.receive_policy.set_directory(root);
                 core.set_foreground(false);
                 NativeRuntime::new(epoch, Limits::default(), core)
@@ -458,7 +461,10 @@ pub async fn serve(
             return Ok(());
         }
     }
-    let core = RQS::new(settings.visibility, settings.port, settings.download_path);
+    let mut core = RQS::new(settings.visibility, settings.port, settings.download_path);
+    core.set_device_name(settings.device_name).map_err(|_| {
+        ProcessError::NativeSettings(super::native_settings::StoreError::InvalidInput)
+    })?;
     core.set_foreground(false);
     let mut runtime = match NativeRuntime::new(epoch, Limits::default(), core) {
         Ok(runtime) => runtime,

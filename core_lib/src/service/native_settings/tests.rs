@@ -3,6 +3,126 @@ use std::os::unix::fs::{symlink, PermissionsExt};
 
 use super::*;
 
+#[test]
+fn given_schema_one_when_name_is_explicitly_saved_then_original_bytes_are_backed_up_before_schema_two(
+) {
+    let f = Fixture::new();
+    let first = f.store.save(f.edit(&f.store.load().unwrap(), 1)).unwrap();
+    let mut old: serde_json::Value = serde_json::from_slice(&f.bytes()).unwrap();
+    old["schema"] = serde_json::json!(1);
+    old["values"].as_object_mut().unwrap().remove("device_name");
+    let bytes = serde_json::to_vec(&old).unwrap();
+    std::fs::write(f.store.directory.join(FILE), &bytes).unwrap();
+    let before = f.store.load().unwrap();
+    assert_eq!(before.schema, 1);
+    assert_eq!(before.base.revision, first.base.revision);
+    assert!(before.values.as_ref().unwrap().device_name.is_none());
+    assert_eq!(f.bytes(), bytes);
+    let mut edit = f.edit(&before, 2);
+    edit.device_name = Some(crate::identity::DeviceName::new("Рабочий ПК").unwrap());
+    let saved = f.store.save(edit).unwrap();
+    assert_eq!(saved.schema, 2);
+    assert_eq!(saved.base.revision, 2);
+    assert_eq!(
+        saved
+            .values
+            .as_ref()
+            .unwrap()
+            .device_name
+            .as_ref()
+            .unwrap()
+            .as_str(),
+        "Рабочий ПК"
+    );
+    assert_eq!(
+        std::fs::read(
+            f.store
+                .directory
+                .join(format!("backup-{}.json", hash(&[&bytes])))
+        )
+        .unwrap(),
+        bytes
+    );
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&f.bytes()).unwrap()["schema"],
+        2
+    );
+    old["values"]["device_name"] = serde_json::Value::Null;
+    let injected = serde_json::to_vec(&old).unwrap();
+    std::fs::write(f.store.directory.join(FILE), &injected).unwrap();
+    assert!(f.store.load().unwrap().values.is_none());
+    assert_eq!(f.bytes(), injected);
+}
+
+#[test]
+fn given_named_save_when_retried_changed_or_reset_then_receipt_binds_name_without_extra_revision() {
+    for value in ["Laptop", "Рабочий ПК", &format!("{}a", "é".repeat(118))] {
+        let f = Fixture::new();
+        let before = f.store.load().unwrap();
+        let edit = || {
+            let mut edit = f.edit(&before, 1);
+            edit.device_name = Some(crate::identity::DeviceName::new(value).unwrap());
+            edit
+        };
+        let saved = f.store.save(edit()).unwrap();
+        let bytes = f.bytes();
+        assert_eq!(f.store.save(edit()).unwrap().base, saved.base);
+        assert_eq!(f.bytes(), bytes);
+        let mut changed = edit();
+        changed.device_name = None;
+        assert!(matches!(
+            f.store.save(changed),
+            Err(StoreError::ReplayConflict)
+        ));
+        assert_eq!(f.bytes(), bytes);
+        assert_eq!(
+            f.store
+                .load()
+                .unwrap()
+                .values
+                .unwrap()
+                .device_name
+                .unwrap()
+                .as_str(),
+            value
+        );
+        let reset = f.store.save(f.edit(&saved, 2)).unwrap();
+        assert_eq!(reset.base.revision, 2);
+        assert!(reset.values.unwrap().device_name.is_none());
+    }
+}
+
+#[test]
+fn given_invalid_persisted_name_when_loaded_then_explicit_recovery_preserves_corrupt_bytes() {
+    let f = Fixture::new();
+    f.store.save(f.edit(&f.store.load().unwrap(), 1)).unwrap();
+    let original: serde_json::Value = serde_json::from_slice(&f.bytes()).unwrap();
+    for value in [
+        serde_json::json!(""),
+        serde_json::json!(" trailing "),
+        serde_json::json!("a\n"),
+        serde_json::json!("a\u{202e}b"),
+        serde_json::json!("a".repeat(238)),
+        serde_json::json!("é".repeat(119)),
+        serde_json::json!(false),
+        serde_json::json!(1),
+        serde_json::json!([]),
+        serde_json::json!({}),
+    ] {
+        let mut document = original.clone();
+        document["values"]["device_name"] = value;
+        let bytes = serde_json::to_vec(&document).unwrap();
+        std::fs::write(f.store.directory.join(FILE), &bytes).unwrap();
+        let bad = f.store.load().unwrap();
+        assert!(bad.values.is_none());
+        assert!(matches!(
+            f.store.save(f.edit(&bad, 2)),
+            Err(StoreError::RecoveryRequired)
+        ));
+        assert_eq!(f.bytes(), bytes);
+    }
+}
+
 struct Fixture {
     root: tempfile::TempDir,
     store: Store,
@@ -20,6 +140,7 @@ impl Fixture {
             visibility: 1,
             port: Some(0),
             card_mode: CardMode::Full,
+            device_name: None,
             directory: DirectoryIntent::Default,
             recover: false,
         }
@@ -176,7 +297,7 @@ fn given_corrupt_schema_or_values_when_recovered_then_explicit_replacement_backs
         cases.push(serde_json::to_vec(&changed).unwrap());
     }
     for (pointer, value) in [
-        ("/schema", serde_json::json!(2)),
+        ("/schema", serde_json::json!(3)),
         ("/revision", serde_json::json!(0)),
         ("/values/visibility", serde_json::json!(3)),
         ("/values/port", serde_json::json!(65536)),
@@ -449,7 +570,14 @@ fn given_write_sync_or_rename_failure_when_committing_then_precommit_preserves_o
     for step in 0..4 {
         // Arrange
         let f = Fixture::new();
-        let first = f.store.save(f.edit(&f.store.load().unwrap(), 1)).unwrap();
+        let mut initial = f.edit(&f.store.load().unwrap(), 1);
+        initial.device_name = Some(crate::identity::DeviceName::new("Before").unwrap());
+        let first = f.store.save(initial).unwrap();
+        let named_edit = || {
+            let mut edit = f.edit(&first, 2);
+            edit.device_name = Some(crate::identity::DeviceName::new("After").unwrap());
+            edit
+        };
         let old = f.bytes();
         let store = Store::with_io(
             f.store.directory.clone(),
@@ -459,7 +587,7 @@ fn given_write_sync_or_rename_failure_when_committing_then_precommit_preserves_o
             },
         );
         // Act
-        let result = store.save(f.edit(&first, 2));
+        let result = store.save(named_edit());
         // Assert
         if step < 3 {
             assert!(matches!(result, Err(StoreError::Write)));
@@ -470,12 +598,23 @@ fn given_write_sync_or_rename_failure_when_committing_then_precommit_preserves_o
             assert_ne!(f.bytes(), old);
             assert_eq!(store.load().unwrap().base.revision, 2);
             assert!(matches!(
-                store.save(f.edit(&first, 2)),
+                store.save(named_edit()),
                 Err(StoreError::Indeterminate)
             ));
         }
+        assert_eq!(
+            store
+                .load()
+                .unwrap()
+                .values
+                .unwrap()
+                .device_name
+                .unwrap()
+                .as_str(),
+            if step < 3 { "Before" } else { "After" }
+        );
         store.io.fail.set(None);
-        assert_eq!(store.save(f.edit(&first, 2)).unwrap().base.revision, 2);
+        assert_eq!(store.save(named_edit()).unwrap().base.revision, 2);
         assert_eq!(
             std::fs::read_dir(&store.directory)
                 .unwrap()

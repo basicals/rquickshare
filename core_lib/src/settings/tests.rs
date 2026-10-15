@@ -22,7 +22,8 @@ fn given_existing_settings_when_parsed_then_valid_preferences_and_fresh_defaults
                 visibility: expected,
                 visibility_recovered: false,
                 port: Some(32100),
-                download_path: Some("/tmp/Received files".into())
+                download_path: Some("/tmp/Received files".into()),
+                device_name: None
             }
         );
         assert_eq!(Visibility::from_raw_value(raw), expected);

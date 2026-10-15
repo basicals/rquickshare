@@ -31,6 +31,12 @@ pub(crate) fn fixture() -> Fixture {
     }
 }
 
+pub(crate) fn fixture_with_identity(identity: Option<crate::identity::IdentityPolicy>) -> Fixture {
+    let mut fixture = fixture();
+    fixture.runtime.core.identity = identity;
+    fixture
+}
+
 #[tokio::test]
 async fn given_preparation_active_lease_or_unproven_state_when_restarting_then_busy_owner_keeps_admission_and_idle_owner_closes_it(
 ) {

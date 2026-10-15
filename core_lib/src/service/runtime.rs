@@ -132,12 +132,23 @@ impl NativeRuntime {
         }
         self.sender.sessions().close_if_idle() == Ok(true)
     }
+    pub(super) fn identity_policy(&self) -> Option<crate::identity::IdentityPolicy> {
+        self.core.identity.clone()
+    }
+
     pub(super) fn apply_live_settings(
         &mut self,
         values: &super::native_settings::Values,
         root: super::settings_service::RootUpdate,
     ) -> bool {
         if !self.started || values.validate().is_err() {
+            return false;
+        }
+        if self
+            .core
+            .set_device_name(values.device_name.clone())
+            .is_err()
+        {
             return false;
         }
         let Ok(sender) = self.core.visibility_sender.lock() else {

@@ -1,18 +1,18 @@
 <node>
-  <interface name="io.github.morozhenko_apps.RQuickShare.Settings1">
+  <interface name="io.github.morozhenko_apps.RQuickShare.Settings2">
     <method name="Restart">
       <arg name="epoch" type="s" direction="in"/>
     </method>
     <method name="Read">
-      <arg name="settings" type="(sbybtsyiysbtbbys)" direction="out"/>
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
     </method>
     <method name="Reload">
-      <arg name="settings" type="(sbybtsyiysbtbbys)" direction="out"/>
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
     </method>
     <method name="Save">
-      <arg name="intent" type="(stssyiyyb)" direction="in"/>
+      <arg name="intent" type="(stssyiyybs)" direction="in"/>
       <arg name="directory" type="ah" direction="in"/>
-      <arg name="settings" type="(sbybtsyiysbtbbys)" direction="out"/>
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
     </method>
     <signal name="SettingsChanged">
       <arg name="epoch" type="s"/>
