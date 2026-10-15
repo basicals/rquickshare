@@ -23,6 +23,7 @@ use crate::hdl::BleListener;
 use crate::hdl::MDnsServer;
 use crate::manager::TcpServer;
 
+mod byte_payload;
 pub mod channel;
 #[cfg(target_os = "linux")]
 pub mod clipboard_image;

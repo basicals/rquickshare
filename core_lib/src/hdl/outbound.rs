@@ -1106,54 +1106,8 @@ impl OutboundRequest {
                 match header.r#type() {
                     payload_header::PayloadType::Bytes => {
                         info!("Processing PayloadType::Bytes");
-                        let payload_id = header.id();
 
-                        let declared_size = checked_payload_buffer_size(header.total_size())?;
-
-                        self.state
-                            .payload_buffers
-                            .entry(payload_id)
-                            .or_insert_with(|| Vec::with_capacity(declared_size));
-
-                        // Get the current length of the buffer, if it exists, without holding a mutable borrow.
-                        let buffer_len = self
-                            .state
-                            .payload_buffers
-                            .get(&payload_id)
-                            .ok_or_else(|| anyhow!("Missing payload buffer for {payload_id}"))?
-                            .len();
-                        if chunk.offset() != buffer_len as i64 {
-                            self.state.payload_buffers.remove(&payload_id);
-                            return Err(anyhow!(
-                                "Unexpected chunk offset: {}, expected: {}",
-                                chunk.offset(),
-                                buffer_len
-                            ));
-                        }
-
-                        let body_len = chunk.body().len();
-                        let new_len = buffer_len
-                            .checked_add(body_len)
-                            .ok_or_else(|| anyhow!("Byte payload size overflow"))?;
-                        if new_len > declared_size {
-                            self.state.payload_buffers.remove(&payload_id);
-                            return Err(anyhow!(
-                                "Byte payload exceeds declared size: {new_len} > {declared_size}"
-                            ));
-                        }
-
-                        let buffer = self
-                            .state
-                            .payload_buffers
-                            .get_mut(&payload_id)
-                            .ok_or_else(|| anyhow!("Missing payload buffer for {payload_id}"))?;
-                        if let Some(body) = &chunk.body {
-                            buffer.extend(body);
-                        }
-
-                        if (chunk.flags() & 1) == 1 {
-                            debug!("Chunk flags & 1 == 1 ?? End of data ??");
-
+                        if let Some(buffer) = self.state.byte_payloads.push(header, chunk)? {
                             let innner_frame = sharing_nearby::Frame::decode(buffer.as_slice())?;
                             self.process_transfer_setup(&innner_frame).await?;
                         }
@@ -1987,6 +1941,107 @@ impl OutboundRequest {
 #[cfg(test)]
 mod security_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn given_encrypted_outbound_byte_chunks_when_routed_then_completion_releases_buffers_and_limits_apply(
+    ) {
+        use tokio::io::AsyncReadExt;
+
+        use crate::byte_payload::tests::frame;
+
+        async fn deliver(
+            request: &mut OutboundRequest,
+            peer: &mut OutboundRequest,
+            frame: OfflineFrame,
+        ) -> Result<(), anyhow::Error> {
+            peer.encrypt_and_send(&frame).await?;
+            let length = request.socket.read_u32().await?;
+            request._handle(length.to_be_bytes()).await
+        }
+
+        for scenario in ["complete", "short", "budget"] {
+            // Arrange: actual TCP/framing/AES/HMAC/sequence processing with fixture keys.
+            let (mut request, peer_socket) = test_request(vec![]).await;
+            let original_metadata = serde_json::to_value(&request.state.transfer_metadata).unwrap();
+            let (sender, _events) = tokio::sync::broadcast::channel(16);
+            let mut peer = OutboundRequest::new(
+                [1, 2, 3, 4],
+                peer_socket,
+                "bytes-peer".into(),
+                sender,
+                OutboundPayload::Files(vec![]),
+                RemoteDeviceInfo {
+                    name: "Fixture".into(),
+                    device_type: DeviceType::Phone,
+                },
+            )
+            .unwrap();
+            for state in [&mut request.state, &mut peer.state] {
+                state.encryption_done = true;
+                state.encrypt_key = Some(vec![0x11; 32]);
+                state.decrypt_key = Some(vec![0x11; 32]);
+                state.send_hmac_key = Some(vec![0x22; 32]);
+                state.recv_hmac_key = Some(vec![0x22; 32]);
+            }
+            let cancel = sharing_nearby::Frame {
+                v1: Some(sharing_nearby::V1Frame {
+                    r#type: Some(sharing_nearby::v1_frame::FrameType::Cancel.into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+            .encode_to_vec();
+            // Act / Assert
+            if scenario == "budget" {
+                deliver(
+                    &mut request,
+                    &mut peer,
+                    frame(1, SANE_FRAME_LENGTH as usize, 0, b"", false),
+                )
+                .await
+                .unwrap();
+                let error = deliver(&mut request, &mut peer, frame(2, 1, 0, b"", false))
+                    .await
+                    .unwrap_err();
+                assert_eq!(error.to_string(), "Byte payload reservation limit exceeded");
+                assert_eq!(request.state.state, State::Initial);
+            } else {
+                deliver(
+                    &mut request,
+                    &mut peer,
+                    frame(1, cancel.len(), 0, &cancel[..1], false),
+                )
+                .await
+                .unwrap();
+                assert_eq!(request.state.state, State::Initial);
+                assert!(!request.state.byte_payloads.is_empty());
+                let body = if scenario == "complete" {
+                    &cancel[1..]
+                } else {
+                    &cancel[1..cancel.len() - 1]
+                };
+                let error = deliver(
+                    &mut request,
+                    &mut peer,
+                    frame(1, cancel.len(), 1, body, true),
+                )
+                .await
+                .unwrap_err();
+                if scenario == "complete" {
+                    assert!(error.is::<crate::errors::AppError>());
+                    assert_eq!(request.state.state, State::Cancelled);
+                } else {
+                    assert_eq!(error.to_string(), "Byte payload is incomplete");
+                    assert_eq!(request.state.state, State::Initial);
+                }
+            }
+            assert!(request.state.byte_payloads.is_empty());
+            assert_eq!(
+                serde_json::to_value(&request.state.transfer_metadata).unwrap(),
+                original_metadata
+            );
+        }
+    }
 
     #[cfg(target_os = "linux")]
     mod opened_sources {

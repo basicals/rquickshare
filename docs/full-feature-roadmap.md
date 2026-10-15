@@ -129,6 +129,8 @@ open. Account/QR capabilities still require their own work. Latest completed sli
 ### Phase 2 — advanced protocol features
 
 7. **Preview payloads**
+   - Prerequisite [bounded byte ingress](native-byte-ingress.md) implemented;
+     this does not yet receive/display or advertise preview images.
    - Generate bounded image/video/file previews.
    - Advertise preview payload ids.
    - Receive/display previews before consent when peer supplies them.

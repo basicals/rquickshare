@@ -96,7 +96,7 @@ pub struct InnerState {
     // pub text_payload_id: i64,
     // pub text_is_url: bool,
     // pub wifi_ssid: Option<String>,
-    pub payload_buffers: HashMap<i64, Vec<u8>>,
+    pub(crate) byte_payloads: crate::byte_payload::BytePayloads,
 }
 
 #[derive(Debug, Clone)]

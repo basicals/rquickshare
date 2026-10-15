@@ -60,8 +60,10 @@ An independent optional Linux provider uses an explicitly unofficial master-toke
 Google Play services exchange, not normal desktop OAuth. The user selected option1:
 supported authorization only; continue independent parity. No sign-in, credentials
 or account API calls. Native7 remains the latest measured package. The next scoped
-prerequisite is [bounded byte ingress](native-byte-ingress.md): both handlers have
-unbounded incomplete-payload maps; outbound also retains completed buffers.
+prerequisite [bounded byte ingress](native-byte-ingress.md) is implemented: both
+handlers now share request-owned16-payload/5MiB reservation limits, stable headers,
+exact completion and release-before-dispatch. Nine new methods and scoped checks
+passed as documented; this source change is newer than the native7 package/archive.
 Preview decoding/UI and persistent resume contracts remain open.
 
 ## Implemented source and remaining acceptance

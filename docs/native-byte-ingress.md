@@ -56,10 +56,10 @@ wrappers/session termination continue to own disconnect and recovery.
 
 1. [x] B1 analysis: inspect both real handlers, native text consent, protocol
    limits, source references and agent guide; record user option1 and this plan.
-2. [ ] B2 implement the private bounded assembler and replace both duplicated
+2. [x] B2 implement the private bounded assembler and replace both duplicated
    maps/loops. Preserve text validation and setup dispatch. No protocol/schema
    or dependency change. This is the one logical production commit.
-3. [ ] B3 add the scoped verification inventory below, run core checks once,
+3. [x] B3 add the scoped verification inventory below, run core checks once,
    record actual results and limitations, update current state/evidence and
    commit. Do not rebuild/sign/publish a package in this prerequisite slice;
    native7 remains the last measured binary, explicitly behind this source.
@@ -100,5 +100,33 @@ No blanket branch/coverage or physical interoperability claim.
 
 ## Actual verification
 
-Pending implementation. Research commands exited; no watcher/terminal retained.
-Terminal closed.
+Implemented in core_lib/src/byte_payload.rs and both real handlers. Removed both
+duplicated loops and outbound completed-buffer retention. No dependency, lock,
+wire model, native IPC or UI changes. Existing inbound setup/text assertions now
+check all assembler ownership is released, stronger than checking one absent id.
+
+- Whole core library:626 tests,624 passed/2 failed in25.42s. Both failures were
+  new fixture defects: inbound constructor expects encrypted replies but the
+  fixture omitted send keys; outbound preparation already owns metadata and
+  the fixture incorrectly expected None. Neither was a production assertion
+  weakened to accommodate a bug. Corrected explicit keys and compare original
+  outbound metadata exactly after processing.
+- Affected rerun only:2 real-handler methods passed,0 failed,624 filtered out,
+  0.01s. Production changes after the whole run only removed one unused local;
+  seven new domain methods and617 existing methods passed in the whole run.
+  No claim of a separate green626-test final run or ten-run stability gate.
+- Core all-features/all-targets Clippy with -D warnings passed in23.43s.
+  Existing bluer0.17.3 future-incompatibility notice remains; no suppression.
+- Nightly format check and diff whitespace passed. No unaffected GTK/Tauri
+  suite, package build, physical peer, installation, signing or publication.
+
+Nine new methods by primary category: Positive1,N1=2,N2=2,N4=1,N7=2,N10=1.
+Categories overlap in the inventory; primary counts sum to9. Both real-handler
+methods also reject short final chunks before Cancel dispatch and preserve
+preexisting/no consent metadata. Manual mutation review checks count/aggregate,
+stable size, exact offsets/final length, release and redacted diagnostics against
+their assertions; no mutation runner, blanket coverage or allocator-OOM claim.
+
+Owned test/Clippy processes exited; no watcher or terminal retained.
+Terminal closed. Native7 remains the last measured package and immutable source
+archive; this source fix is newer and is not represented as included in native7.

@@ -1172,55 +1172,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                             }
                         }
 
-                        self.state
-                            .payload_buffers
-                            .entry(payload_id)
-                            .or_insert_with(|| Vec::with_capacity(declared_size));
-
-                        // Get the current length of the buffer, if it exists, without holding a mutable borrow.
-                        let buffer_len = self
-                            .state
-                            .payload_buffers
-                            .get(&payload_id)
-                            .ok_or_else(|| anyhow!("Missing payload buffer for {payload_id}"))?
-                            .len();
-                        if chunk.offset() != buffer_len as i64 {
-                            self.state.payload_buffers.remove(&payload_id);
-                            return Err(anyhow!(
-                                "Unexpected chunk offset: {}, expected: {}",
-                                chunk.offset(),
-                                buffer_len
-                            ));
-                        }
-
-                        let body_len = chunk.body().len();
-                        let new_len = buffer_len
-                            .checked_add(body_len)
-                            .ok_or_else(|| anyhow!("Byte payload size overflow"))?;
-                        if new_len > declared_size {
-                            self.state.payload_buffers.remove(&payload_id);
-                            return Err(anyhow!(
-                                "Byte payload exceeds declared size: {new_len} > {declared_size}"
-                            ));
-                        }
-
-                        let buffer = self
-                            .state
-                            .payload_buffers
-                            .get_mut(&payload_id)
-                            .ok_or_else(|| anyhow!("Missing payload buffer for {payload_id}"))?;
-                        if let Some(body) = &chunk.body {
-                            buffer.extend(body);
-                        }
-
-                        if (chunk.flags() & 1) == 1 {
-                            debug!("Chunk flags & 1 == 1 ?? End of data ??");
-
-                            let buffer =
-                                self.state.payload_buffers.remove(&payload_id).ok_or_else(
-                                    || anyhow!("Missing completed payload buffer for {payload_id}"),
-                                )?;
-
+                        if let Some(buffer) = self.state.byte_payloads.push(header, chunk)? {
                             let matching_text_payload =
                                 self.state.text_payload.clone().filter(|text_payload| {
                                     text_payload.get_i64_value() == payload_id
@@ -2382,6 +2334,66 @@ mod security_tests {
     use super::*;
 
     #[tokio::test]
+    async fn given_inbound_byte_chunks_when_routed_then_completion_is_exact_and_reservations_are_bounded(
+    ) {
+        use crate::byte_payload::tests::frame;
+        for scenario in ["complete", "short", "budget"] {
+            // Arrange: real handler, retained peer and no filesystem side effects.
+            let (socket, _peer) = tokio::io::duplex(4096);
+            let (sender, _events) = tokio::sync::broadcast::channel(16);
+            let mut request = InboundRequest::new(socket, "bytes-fixture".into(), sender);
+            request.state.encrypt_key = Some(vec![0x11; 32]);
+            request.state.send_hmac_key = Some(vec![0x22; 32]);
+            let cancel = sharing_nearby::Frame {
+                v1: Some(sharing_nearby::V1Frame {
+                    r#type: Some(sharing_nearby::v1_frame::FrameType::Cancel.into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+            .encode_to_vec();
+            // Act / Assert
+            if scenario == "budget" {
+                request
+                    .process_offline_frame(frame(1, SANE_FRAME_LENGTH as usize, 0, b"", false))
+                    .await
+                    .unwrap();
+                let error = request
+                    .process_offline_frame(frame(2, 1, 0, b"", false))
+                    .await
+                    .unwrap_err();
+                assert_eq!(error.to_string(), "Byte payload reservation limit exceeded");
+                assert_eq!(request.state.state, State::Initial);
+            } else {
+                request
+                    .process_offline_frame(frame(1, cancel.len(), 0, &cancel[..1], false))
+                    .await
+                    .unwrap();
+                assert_eq!(request.state.state, State::Initial);
+                assert!(!request.state.byte_payloads.is_empty());
+                let body = if scenario == "complete" {
+                    &cancel[1..]
+                } else {
+                    &cancel[1..cancel.len() - 1]
+                };
+                let error = request
+                    .process_offline_frame(frame(1, cancel.len(), 1, body, true))
+                    .await
+                    .unwrap_err();
+                if scenario == "complete" {
+                    assert!(error.is::<crate::errors::AppError>(), "{error:?}");
+                    assert_eq!(request.state.state, State::Cancelled);
+                } else {
+                    assert_eq!(error.to_string(), "Byte payload is incomplete");
+                    assert_eq!(request.state.state, State::Initial);
+                }
+            }
+            assert!(request.state.byte_payloads.is_empty());
+            assert!(request.state.transfer_metadata.is_none());
+        }
+    }
+
+    #[tokio::test]
     async fn given_paired_key_proofs_and_remote_results_when_receiving_then_actual_crypto_reply_precedes_any_consent(
     ) {
         use crate::peer_authentication::{tests::known_fixture, Role};
@@ -3347,7 +3359,7 @@ mod security_tests {
                 let error = result.unwrap_err();
                 assert!(error.is::<crate::errors::AppError>(), "{error:?}");
             }
-            assert!(request.state.payload_buffers.is_empty());
+            assert!(request.state.byte_payloads.is_empty());
         }
     }
 
@@ -3491,10 +3503,7 @@ mod security_tests {
             request.state.text_payload,
             Some(TextPayloadInfo::Text(id)) if id == text_payload_id
         ));
-        assert!(!request
-            .state
-            .payload_buffers
-            .contains_key(&setup_payload_id));
+        assert!(request.state.byte_payloads.is_empty());
     }
 
     #[tokio::test]
