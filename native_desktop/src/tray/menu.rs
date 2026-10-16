@@ -8,9 +8,7 @@ pub(super) const PATH: &str = "/Menu";
 #[cfg(test)]
 pub(super) const INTERFACE: &str = "com.canonical.dbusmenu";
 const MAX_PROPERTIES: usize = 16;
-const ROWS: [i32; 22] = [
-    1, 12, 18, 19, 20, 21, 2, 3, 16, 17, 4, 5, 13, 6, 7, 14, 8, 22, 9, 10, 15, 11,
-];
+const ROWS: [i32; 15] = [1, 23, 2, 12, 4, 5, 13, 18, 19, 20, 14, 8, 22, 15, 11];
 pub type Layout = (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>);
 type Properties = Vec<(i32, HashMap<String, OwnedValue>)>;
 
@@ -35,6 +33,7 @@ pub enum Action {
     Temporary = 20,
     RetryVisibility = 21,
     About = 22,
+    Receive = 23,
 }
 impl Action {
     pub fn from_id(id: i32) -> Option<Self> {
@@ -57,12 +56,14 @@ impl Action {
             20 => Self::Temporary,
             21 => Self::RetryVisibility,
             22 => Self::About,
+            23 => Self::Receive,
             _ => return None,
         })
     }
     pub fn label(self) -> &'static str {
         match self {
             Self::Open => "Open card",
+            Self::Receive => "Receive files",
             Self::Files => "Send files…",
             Self::Text => "Send text…",
             Self::Image => "Send image…",
@@ -72,7 +73,7 @@ impl Action {
             Self::RetryVisibility => "Retry visibility change",
             Self::Folder => "Send a folder…",
             Self::Incoming => "Incoming requests",
-            Self::Transfers => "Transfers",
+            Self::Transfers => "Active transfers",
             Self::Compact => "Compact view",
             Self::Full => "Full view",
             Self::Settings => "Settings…",
@@ -85,7 +86,8 @@ impl Action {
     pub fn name(self) -> Option<&'static str> {
         match self {
             Self::Open | Self::Compact | Self::Full => None,
-            Self::Files => Some("files"),
+            Self::Files => Some("send"),
+            Self::Receive => Some("receive"),
             Self::Text => Some("send-text"),
             Self::Image => Some("send-image"),
             Self::Visible | Self::Hidden | Self::Temporary => Some("visibility"),
@@ -107,6 +109,9 @@ impl Action {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Projection {
+    pub card_visible: bool,
+    pub incoming: u16,
+    pub active: u16,
     pub enabled: u32,
     pub full: bool,
     pub visibility: Option<u8>,
@@ -122,6 +127,9 @@ impl Default for State {
         Self {
             revision: 1,
             projection: Projection {
+                card_visible: false,
+                incoming: 0,
+                active: 0,
                 enabled: 0,
                 full: false,
                 visibility: None,
@@ -161,7 +169,7 @@ fn invalid() -> fdo::Error {
     fdo::Error::InvalidArgs("Invalid menu request".into())
 }
 fn known(id: i32) -> bool {
-    (0..=22).contains(&id)
+    id == 0 || ROWS.contains(&id)
 }
 fn validate_properties(names: &[String]) -> fdo::Result<()> {
     if names.len() > MAX_PROPERTIES
@@ -183,7 +191,13 @@ fn properties(id: i32, state: State, names: &[String]) -> HashMap<String, OwnedV
     if id == 0 {
         put("children-display", OwnedValue::from(Str::from("submenu")));
     } else if let Some(action) = Action::from_id(id) {
-        put("label", OwnedValue::from(Str::from(action.label())));
+        let label = match action {
+            Action::Open if state.projection.card_visible => "Hide card".to_owned(),
+            Action::Incoming => format!("Incoming requests ({})", state.projection.incoming),
+            Action::Transfers => format!("Active transfers ({})", state.projection.active),
+            _ => action.label().to_owned(),
+        };
+        put("label", OwnedValue::from(Str::from(label)));
         put(
             "enabled",
             OwnedValue::from(state.projection.enabled & action.bit() != 0),
@@ -290,7 +304,7 @@ impl Menu {
         }
         validate_properties(&property_names)?;
         let ids = if ids.is_empty() {
-            (0..=22).collect()
+            std::iter::once(0).chain(ROWS).collect()
         } else {
             ids
         };

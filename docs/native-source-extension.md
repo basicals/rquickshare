@@ -53,9 +53,9 @@ gate continues to exclude conflicting CLI/dialog work.
 
 - [x] E1: coordinator atomic extension and ordered ledger, exact kind/fingerprint.
 - [x] E2: bus allowlist/decoder/XML and SDK mutation/recovery/controller support.
-- [ ] E3: GTK acquisition supports optional extension target and Add file/folder
+- [x] E3: GTK acquisition supports optional extension target and Add file/folder
   source controls under the same gate/readiness guards. Main mockup layout follows.
-- [ ] E4: scoped real-resource checks once; record failures and actual results.
+- [x] E4: scoped real-resource checks once; record failures and actual results.
   Core tests: aggregate contents, old transfer snapshot unchanged, old token
   retired/new token unique, exact replay/changed intent/retired sequence; duplicate
   names, count/byte/handle/memory limits, empty/text/aborted/committed deltas,

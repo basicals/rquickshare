@@ -45,7 +45,7 @@ or GUI workers, including reconnect. No shell/direct-child fallback is provided.
 Both Type=exec services join shutdown and belong to the graphical session. GUI
 Quit leaves daemon work alone; an external blocked IO may delay joined shutdown.
 
-Settings > Start at sign-in > Apply login start explicitly enables only the
+Settings > General > Start at sign-in > OK explicitly enables only the
 package desktop unit for future graphical sessions. It pulls in the daemon and
 starts the tray with the card hidden. The default is disabled. Disabling future
 startup never stops current services or transfers. This setting reads actual

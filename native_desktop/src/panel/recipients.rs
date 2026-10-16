@@ -76,6 +76,7 @@ impl Panel {
             .count();
         self.box_widget("recipients").set_visible(
             model.mode == Mode::Full
+                && (has_source || !model.recipients.is_empty())
                 && self.pages.visible_child_name().as_deref() == Some("nearby"),
         );
         self.text(

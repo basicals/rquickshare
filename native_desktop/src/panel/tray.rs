@@ -13,9 +13,10 @@ impl Panel {
             && !model.preview
             && ((!self.layer && !model.safety_active) || model.safety.manual_allowed());
         let mut enabled = 0;
-        for id in (1..=11).chain(16..=22) {
+        for id in [1, 2, 4, 5, 8, 11, 18, 19, 20, 22, 23] {
             let action = Action::from_id(id).expect("fixed tray action");
-            let cleanup = matches!(action, Action::Hide | Action::Quit);
+            let cleanup =
+                action == Action::Quit || (action == Action::Open && self.window.is_visible());
             let allowed = !model.closing
                 && (cleanup || safe)
                 && action.name().is_none_or(|name| {
@@ -28,6 +29,35 @@ impl Panel {
             }
         }
         Projection {
+            card_visible: self.window.is_visible(),
+            incoming: model
+                .state
+                .view
+                .as_ref()
+                .map(|view| {
+                    view.transfers
+                        .iter()
+                        .filter(|transfer| {
+                            transfer.direction == Direction::Inbound
+                                && transfer.phase == Phase::AwaitingConsent
+                        })
+                        .count() as u16
+                })
+                .unwrap_or(0),
+            active: model
+                .state
+                .view
+                .as_ref()
+                .map(|view| {
+                    view.transfers
+                        .iter()
+                        .filter(|transfer| {
+                            !transfer.phase.is_terminal()
+                                && transfer.phase != Phase::AwaitingConsent
+                        })
+                        .count() as u16
+                })
+                .unwrap_or(0),
             enabled,
             full: model.mode == Mode::Full,
             visibility: model
@@ -48,8 +78,10 @@ impl Panel {
             return false;
         }
         match action {
+            Action::Open if self.window.is_visible() => self.hide(),
             Action::Open => {
                 self.mark_manual();
+                self.pages.set_visible_child_name("nearby");
                 self.model.borrow_mut().manual_requested = true;
                 self.present_surface();
             }
@@ -71,7 +103,8 @@ impl Panel {
                 self.actions
                     .activate_action("visibility", Some(&mode.to_variant()));
             }
-            Action::Files
+            Action::Receive
+            | Action::Files
             | Action::Folder
             | Action::Text
             | Action::Image
@@ -128,8 +161,8 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     panel.render();
     let full = panel.tray_projection();
     assert_ne!(full.enabled & Action::Settings.bit(), 0);
-    assert_ne!(full.enabled & Action::Text.bit(), 0);
-    assert_ne!(full.enabled & Action::Image.bit(), 0);
+    assert_eq!(full.enabled & Action::Text.bit(), 0);
+    assert_eq!(full.enabled & Action::Image.bit(), 0);
     assert_ne!(full.enabled & Action::Files.bit(), 0); // Presentation projection; no service handle exists.
     let settings = rqs_lib::service::client::settings::SettingsView {
         epoch: format!("{:032x}", 1),
@@ -193,9 +226,8 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         model.state.visibility.as_mut().unwrap().running = true;
     }
     panel.render();
-    panel.tray_action(Action::Compact);
-    assert_eq!(panel.mode(), Mode::Compact);
-    panel.tray_action(Action::Full);
+    panel.set_mode(Mode::Full);
+    assert!(!panel.tray_action(Action::Compact));
     assert_eq!(panel.mode(), Mode::Full);
     panel.tray_action(Action::Settings);
     assert!(panel.settings.borrow().as_ref().unwrap().is_visible());
@@ -208,7 +240,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         closed: false,
     });
     let locked = panel.tray_projection();
-    assert_eq!(locked.enabled, Action::Hide.bit() | Action::Quit.bit());
+    assert_eq!(locked.enabled, Action::Quit.bit());
     panel.tray_action(Action::Compact);
     assert_eq!(panel.mode(), Mode::Full);
     assert!(!panel.tray_context((1, 1)));
@@ -221,7 +253,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         inhibited: Some(false),
         closed: false,
     });
-    assert_ne!(panel.tray_projection().enabled & Action::Text.bit(), 0);
+    assert_eq!(panel.tray_projection().enabled & Action::Text.bit(), 0);
     assert_ne!(panel.tray_projection().enabled & Action::Files.bit(), 0);
     assert!(panel.tray_context((1, 1)));
     panel.context.popdown();

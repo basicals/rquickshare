@@ -61,6 +61,9 @@ impl Panel {
         model.manual_requested = false;
         self.context.popdown();
         self.window.set_visible(false);
+        drop(model);
+        self.sending.popdown();
+        self.sync_tray_menu();
     }
     pub fn safety_update(self: &Rc<Self>, safety: crate::desktop_guard::SafetyState) {
         {
@@ -183,12 +186,7 @@ impl Panel {
                     model.mode == Mode::Full
                 };
                 if full {
-                    self.pages
-                        .set_visible_child_name(if notice.phase == Phase::AwaitingConsent {
-                            "incoming"
-                        } else {
-                            "transfers"
-                        });
+                    self.pages.set_visible_child_name("nearby");
                 }
                 self.render();
                 if !self.present_surface() {

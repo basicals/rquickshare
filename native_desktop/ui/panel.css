@@ -16,3 +16,10 @@ window.rqs-card-window { background: transparent; border: none; box-shadow: none
 .verification-code { font-size: 26px; font-weight: 600; padding: 5px 0; }
 .footer-note { font-size: 11px; }
 .rqs-card-body stackswitcher button { min-width: 70px; }
+.device-status { font-size: 10px; font-weight: bold; border-radius: 8px; min-width: 12px; background-color: @theme_bg_color; }
+.device-status.success { color: @success_color; }
+.device-status.warning { color: @warning_color; }
+.device-status.error { color: @error_color; }
+
+.device-status.accent { color: @theme_selected_bg_color; }
+.quick-action { min-height: 64px; padding: 8px; }

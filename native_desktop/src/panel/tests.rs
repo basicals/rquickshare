@@ -63,6 +63,18 @@ fn labels(widget: &impl IsA<gtk::Widget>) -> Vec<gtk::Label> {
     found
 }
 
+fn expand_details(widget: &impl IsA<gtk::Widget>) {
+    let widget = widget.as_ref();
+    if let Some(expander) = widget.downcast_ref::<gtk::Expander>() {
+        expander.set_expanded(true);
+    }
+    let mut next = widget.first_child();
+    while let Some(child) = next {
+        expand_details(&child);
+        next = child.next_sibling();
+    }
+}
+
 #[test]
 fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_inert_manifest_is_complete_plain_text_and_close_hides(
 ) {
@@ -88,7 +100,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.box_widget("compact").get_visible());
     assert!(!panel.pages.get_visible());
     assert!(!panel.box_widget("source").get_visible());
-    for id in ["menu", "badge", "visibility"] {
+    for id in ["menu", "badge", "visibility", "tabs"] {
         assert!(panel.builder.object::<gtk::Widget>(id).is_none(), "{id}");
     }
     assert!(panel.window.has_css_class("rqs-card-window"));
@@ -217,8 +229,18 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .map(|label| label.text().to_string())
         .collect::<Vec<_>>()
         .join(" ");
-    assert!(compact_text.contains("Code: 4821"));
-    assert!(compact_text.contains("1 file · 12345 bytes"));
+    assert_eq!(panel.box_widget("compact").observe_children().n_items(), 4);
+    for action in ["Receive", "Send", "Hide", "Full view"] {
+        assert!(compact_text.contains(action));
+    }
+    assert!(!compact_text.contains("Code: 4821"));
+    expand_details(&panel.box_widget("incoming"));
+    let reviewed = labels(&panel.box_widget("incoming"))
+        .iter()
+        .map(|label| label.text().to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(reviewed.contains("Code: 4821") && reviewed.contains("Example.pdf"));
     assert!(!compact_text.contains("Example.pdf"));
     panel.actions.activate_action("settings", None);
     let settings = panel.settings.borrow().as_ref().unwrap().clone();
@@ -238,7 +260,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(about.is_visible());
     let appearance = panel.appearance.borrow().as_ref().unwrap().clone();
     appearance.set_selected(1);
-    assert_eq!(panel.model.borrow().mode, Mode::Full);
+    assert_eq!(panel.model.borrow().mode, Mode::Compact); // Settings edit is staged until OK.
     settings::verify_editor_smoke(panel.settings_owner.borrow().as_ref().unwrap());
     assert!(labels(&panel.box_widget("incoming"))
         .iter()
@@ -256,16 +278,9 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.set_mode(Mode::Compact);
     assert_eq!(appearance.selected(), 0);
     panel.set_mode(Mode::Full);
-    assert!(!panel.box_widget("source").get_visible());
-    assert!(!panel.box_widget("recipients").get_visible());
-    panel.pages.set_visible_child_name("nearby");
-    assert!(panel.box_widget("source").get_visible());
-    assert!(panel.box_widget("recipients").get_visible());
-    panel.pages.set_visible_child_name("incoming");
-    assert!(!panel.box_widget("source").get_visible());
-    assert!(!panel.box_widget("recipients").get_visible());
-    panel.pages.set_visible_child_name("transfers");
-    assert!(!panel.box_widget("recipients").get_visible());
+    assert!(panel.pages.get_visible()); // Full content stays configured while Cancel hides its parent.
+    assert!(panel.builder.object::<gtk::Widget>("tabs").is_none());
+    assert_eq!(panel.pages.visible_child_name().as_deref(), Some("nearby"));
     panel.pages.set_visible_child_name("incoming");
     panel.set_mode(Mode::Compact);
     settings.close();
@@ -285,7 +300,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     });
     assert_eq!(
         panel.pages.visible_child_name().as_deref(),
-        Some("incoming")
+        Some("nearby") // The mockup keeps requests in the single device list.
     );
     panel.window.present();
     assert!(panel.window.is_visible());

@@ -41,7 +41,7 @@ it does not authorize transport restarts while active work exists.
 
 - [x] U1: inspect guides, settings/source/controller/placement/menu owners; record
   native15 limitations, pending choices and rollback here.
-- [ ] U2: obtain the significant source-extension decision and resolve what the
+- [x] U2: obtain the significant source-extension decision and resolve what the
   single File tray entry contains. No production implementation before answers.
 - [ ] U3: header drag on the existing surface with bounded monitor-relative
   geometry, preserving lock/consent/focus and tray reactivation placement. Record
@@ -149,20 +149,20 @@ made clear; no new durable history store is included in this layout slice.
 2. [x] M2: resolve Receive semantics, conflicting tray appearance entries and
    the still-pending additive source owner choice. These are concrete behavior/
    API questions; implementation remains stopped until the user's response.
-3. [ ] M3: freeze a presentation model for one keyed vertical list. Remove main
+3. [x] M3: freeze a presentation model for one keyed vertical list. Remove main
    StackSwitcher tabs and repeated Nearby/Available labels and branding. Header
    contains Settings, one hide/close control and view toggle, with a drag region.
    Keep bounded lists and existing source/recipient explicit multi-send behavior.
    Inline request/transfer actions expand exact code/manifest/progress/cancel/
    saved-file details without navigating to redundant tabs or losing state.
    Do not turn a decorative row Receive button into unchecked consent.
-4. [ ] M4: Compact has exactly Receive, Send, Hide and Full view actions; no
+4. [x] M4: Compact has exactly Receive, Send, Hide and Full view actions; no
    Settings shortcut. A request requiring review opens the full/details surface,
    keeping consent explicit. Status dots overlay device icons, occupy no separate
    status column, and have tooltip/accessibility descriptions. Unavailable,
    pending, active, completed and failed states must not rely on color alone;
    critical errors and PIN remain readable in details.
-5. [ ] M5: shorten tray/context to Receive, Send files, incoming requests/active
+5. [x] M5: shorten tray/context to Receive, Send files, incoming requests/active
    transfers with actual counts, the existing three live visibility choices,
    Settings, About and Quit, plus the previously requested single Open/Hide if
    retained after clarification. Remove routine Reconnect, duplicate image
@@ -170,7 +170,7 @@ made clear; no new durable history store is included in this layout slice.
    menu entries follow the pending conflict resolution; no theme/icon redesign.
    Sending entry can expose file/folder/text choices within the sending surface,
    preserving essential existing capabilities without a separate Image command.
-6. [ ] M6: replace the narrow scrolling Settings column with a separate wider
+6. [x] M6: replace the narrow scrolling Settings column with a separate wider
    window, branded header and left navigation/right content. Use populated
    sections for General, Receiving, Advanced and About (last); do not add an
    empty Transfers category solely to imitate the image. Existing fields only:
@@ -271,3 +271,82 @@ origins/size boundaries. Settings state checks cover native/login success, parti
 failure, uncertainty, close inhibition and retry/readback. Renderer review checks
 actual compact/full/request/settings sections and theme-relative rounded styling.
 Each check runs once after its source changes; failures trigger affected reruns.
+
+## Implementation checkpoint before final verification
+
+The source/SDK extension is committed as228785e with scoped core checks in its
+own SSOT. Native acquisition and mockup widgets are implemented but not installed.
+Main navigation now opens the single combined list and expands exact request/
+active rows; there are no user-visible tabs or name-based identity joins. Five
+recent terminal results are retained in the list, plus any result still exposing
+received content/partial files. Four Compact actions, icon-overlay status with
+accessible descriptions, header-only bounded movement and shortened tray are
+implemented. Tray Open/Hide projects actual visibility and counts actual state;
+an event-driven idle publication avoids borrowing GTK's model reentrantly while
+visibility changes. No elapsed-time polling or automatic operation replay.
+
+Settings has four populated sidebar pages and deferred fields/OK/Cancel. The
+initial40-method native run passed39 and found an obsolete no-Choose-files label
+assertion on a hidden source button; the button is now consistently Add files.
+Affected GTK runs then exposed obsolete immediate appearance-preview expectations
+and a lazy file-manifest assertion without expansion. These were updated to the
+approved staged-mode and explicit-detail contracts, keeping exact PIN/filename
+assertions after expanding the real manifest. Ten panel methods passed10/0 in0.60s.
+An optional actual-widget capture passed1/0 in0.77s and produced four760x389
+Settings section PNGs with no scroller. All four were visually inspected.
+
+Final review found that the old `load(view, true)` also applied appearance during
+Reload, despite the new staged edit policy. Before correction: make loading pure
+editor population, apply card mode only from an acknowledged Save/Retry or the
+existing authoritative daemon-state update. Reopening obtains current read-only
+settings and never treats a picker change as an apply. Hide routine recovery
+controls when healthy; retain them for actual errors/uncertainty. An unapplied,
+restart-required or unconfirmed-name save must keep Settings open and must not
+silently continue/close as fully applied. Then rerun only affected panel checks,
+native strict lint and final visual/package validation. Native15 remains installed.
+
+## Verified source milestone, native16 candidate not yet installed
+
+The new layout/source-acquisition/settings code is complete. The exported menu
+has15 entries including separators: one visibility-aware Open/Hide, Receive,
+Send, actual request/active counts, three visibility choices, Settings/About/Quit.
+No view choices, folder/image/text duplicates or routine Reconnect. Exceptional
+visibility retry remains contextual on the card, not a permanent tray item.
+The sending popover retains Files/Folder/Text/explicit Clipboard image capability;
+there is one entry button instead of the two isolated Files/Folder buttons.
+
+Compact uses four equally arranged icon/text quick actions; Full has Settings,
+view toggle and hide/close with a drag area. Status overlays distinguish available,
+unavailable, pending, sending, receiving, completed, cancelled and failure using
+shapes plus theme-relative color and descriptions, without another status column.
+Existing prepared sources expose Add files beside Clear. Real source changes use
+the committed daemon-owned extension; text sources cannot be extended as files.
+
+Settings uses a760px-wide natural-height window and General/Receiving/Advanced/
+About sidebar; the four observed sections fit760x389 without scrolling. Reload
+now only populates the editor; Save/Retry acknowledgements or the authoritative
+state update apply appearance. Cancel resets the draft; section changes preserve
+it. Controls/close are blocked while admitted work runs. Native unapplied/uncertain/
+restart-required outcomes keep the window open; login errors require explicit
+readback before another write. Existing daemon CAS/directory/recovery and systemd
+ownership remain unchanged. No login-start write occurred during development.
+
+Native checks: the full41-method suite passed41/0 in0.72s before the final helper/
+readback changes; the final affected panel suite passed11/0 in0.90s, including the
+single real GTK smoke and two new geometry/status mapping methods. Earlier
+post-change failures were stale separate-page/immediate-preview/lazy-manifest
+expectations and one helper double-borrow compile error; updated assertions check
+the approved single list and staged editing while retaining exact code/manifest,
+lock/hide, batch-send and recovery checks. No assertion was weakened to accept a
+production defect. Geometry checks clamp all boundary positions; physical Wayland
+dragging remains an explicit acceptance gate. Strict native all-target/no-deps
+Clippy and formatting/whitespace run after final code. The same nine existing
+core dependency warnings remain visible; no suppression or unrelated cleanup.
+
+Observed debug frames: Compact420x141 and Full devices420x341 in the isolated
+renderer, with transparent rounded corners. The incoming fixture was then moved
+to the same expandable-row builder used by production, avoiding a visual claim
+from the old separate Incoming page. Original decoder fixture remains isolated
+historical code; no production thumbnail routing was added. Final package release
+frames and installed checks follow; these debug observations are not KDE signoff.
+All owned one-shot checks/renderers exited: Terminal closed. Native15 still runs.

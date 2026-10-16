@@ -68,7 +68,111 @@ fn arrange(container: &gtk::Box, desired: &[gtk::Box]) {
         previous = Some(row.clone().upcast());
     }
 }
+#[derive(Clone, Copy)]
+enum Badge {
+    Available,
+    Unavailable,
+    Transfer(Phase),
+}
+fn badge_style(badge: Badge) -> (&'static str, &'static str) {
+    match badge {
+        Badge::Available => ("●", "success"),
+        Badge::Unavailable | Badge::Transfer(Phase::Cancelled | Phase::Rejected) => {
+            ("−", "dim-label")
+        }
+        Badge::Transfer(Phase::Failed | Phase::Disconnected) => ("!", "error"),
+        Badge::Transfer(Phase::Finished) => ("✓", "success"),
+        Badge::Transfer(Phase::AwaitingConsent) => ("?", "warning"),
+        Badge::Transfer(Phase::Queued | Phase::CancelRequested) => ("…", "warning"),
+        Badge::Transfer(Phase::Sending) => ("↑", "accent"),
+        Badge::Transfer(Phase::Receiving) => ("↓", "accent"),
+        Badge::Transfer(Phase::Active) => ("●", "accent"),
+    }
+}
+fn device_icon(
+    kind: rqs_lib::service::client::state::DeviceKind,
+    status: &str,
+    badge: Badge,
+) -> gtk::Overlay {
+    use rqs_lib::service::client::state::DeviceKind;
+    let overlay = gtk::Overlay::new();
+    let image = gtk::Image::from_icon_name(match kind {
+        DeviceKind::Phone => "phone-symbolic",
+        DeviceKind::Tablet => "tablet-symbolic",
+        _ => "computer-symbolic",
+    });
+    image.set_pixel_size(28);
+    overlay.set_child(Some(&image));
+    let (symbol, class) = badge_style(badge);
+    let marker = gtk::Label::new(Some(symbol));
+    marker.add_css_class("device-status");
+    marker.add_css_class(class);
+    marker.set_halign(gtk::Align::End);
+    marker.set_valign(gtk::Align::End);
+    overlay.add_overlay(&marker);
+    overlay.set_tooltip_text(Some(status));
+    overlay.update_property(&[gtk::accessible::Property::Label(status)]);
+    overlay
+}
+pub(super) fn transfer_row(
+    sender: &str,
+    kind: rqs_lib::service::client::state::DeviceKind,
+    phase: Phase,
+    details: &gtk::Box,
+    expanded: bool,
+) -> gtk::Box {
+    let incoming = phase == Phase::AwaitingConsent;
+    let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let heading = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    heading.append(&device_icon(
+        kind,
+        phase_text(phase),
+        Badge::Transfer(phase),
+    ));
+    let title = label(if sender.is_empty() {
+        if incoming {
+            "Incoming request"
+        } else {
+            "Transfer"
+        }
+    } else {
+        sender
+    });
+    title.set_hexpand(true);
+    title.set_wrap(false);
+    title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    title.set_max_width_chars(24);
+    heading.append(&title);
+    let expander = gtk::Expander::new(None);
+    expander.set_widget_name("transfer-details");
+    expander.set_child(Some(details));
+    expander.set_expanded(expanded);
+    let review = gtk::Button::with_label(if incoming { "Receive" } else { "Details" });
+    let expanded = expander.clone();
+    review.connect_clicked(move |_| {
+        expanded.set_expanded(!expanded.is_expanded());
+    });
+    heading.append(&review);
+    expander.set_label_widget(Some(&heading));
+    root.append(&expander);
+    root
+}
 impl Panel {
+    pub(super) fn expand_transfer(&self, id: &str) {
+        if let Some(entry) = self
+            .rows
+            .borrow()
+            .entries
+            .get(&("nearby".to_owned(), id.to_owned()))
+        {
+            if let Some(expander) =
+                named(entry.root.upcast_ref(), "transfer-details").and_downcast::<gtk::Expander>()
+            {
+                expander.set_expanded(true);
+                expander.grab_focus();
+            }
+        }
+    }
     fn cached_transfer(
         self: &Rc<Self>,
         rows: &mut Rows,
@@ -85,25 +189,21 @@ impl Panel {
                 .is_some_and(|old| same_description(old, transfer))
         });
         if !reusable {
-            let full = page != "compact";
-            let root = if incoming {
-                self.incoming_card(transfer, ready, full)
+            let details = if incoming {
+                self.incoming_card(transfer, ready, true)
             } else {
-                self.transfer_card(transfer, ready, full)
+                self.transfer_card(transfer, ready, true)
             };
-            if !full {
-                let details = gtk::Button::with_label(if incoming {
-                    "Details and all requests"
-                } else {
-                    "All transfers"
-                });
-                details.set_action_name(Some(if incoming {
-                    "panel.incoming"
-                } else {
-                    "panel.transfers"
-                }));
-                root.append(&details);
-            }
+            let root = transfer_row(
+                transfer
+                    .recipient
+                    .as_deref()
+                    .unwrap_or(&transfer.details.sender),
+                transfer.details.device,
+                transfer.phase,
+                &details,
+                page == "incoming",
+            );
             rows.entries.insert(
                 key.clone(),
                 Entry {
@@ -166,16 +266,15 @@ impl Panel {
         view: &rqs_lib::service::client::state::StateView,
         selection: Option<rqs_lib::service::client::Selection>,
         ready: bool,
-        current: Option<&TransferView>,
+        _current: Option<&TransferView>,
         recipients: &BTreeMap<String, String>,
     ) {
         let mut rows = self.rows.borrow_mut();
         let mut used = BTreeSet::new();
-        let mut pages: BTreeMap<&str, Vec<gtk::Box>> =
-            ["nearby", "incoming", "transfers", "compact"]
-                .into_iter()
-                .map(|page| (page, vec![]))
-                .collect();
+        let mut pages: BTreeMap<&str, Vec<gtk::Box>> = ["nearby", "incoming", "transfers"]
+            .into_iter()
+            .map(|page| (page, vec![]))
+            .collect();
         let mut endpoints = view
             .endpoints
             .iter()
@@ -194,22 +293,47 @@ impl Panel {
                 .get(&key)
                 .is_none_or(|entry| entry.endpoint.as_ref() != Some(&projection))
             {
-                let root = card();
+                let root = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+                root.add_css_class("device-row");
+                let state = if projection.1 {
+                    Badge::Available
+                } else {
+                    Badge::Unavailable
+                };
+                root.append(&device_icon(
+                    rqs_lib::service::client::state::DeviceKind::Unknown,
+                    if projection.1 {
+                        "Nearby advertised device"
+                    } else {
+                        "Unavailable"
+                    },
+                    state,
+                ));
                 let choice = gtk::CheckButton::with_label(&projection.0);
+                choice.set_hexpand(true);
                 choice.set_widget_name("select-recipient");
+                if let Some(title) = choice.child().and_downcast::<gtk::Label>() {
+                    title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                    title.set_max_width_chars(24);
+                }
                 choice.set_active(selected);
+                let endpoint = id.clone();
                 let weak = Rc::downgrade(self);
                 choice.connect_toggled(move |choice| {
                     if let Some(panel) = weak.upgrade() {
-                        panel.choose_recipient(&id, choice.is_active());
+                        panel.choose_recipient(&endpoint, choice.is_active());
                     }
                 });
                 root.append(&choice);
-                root.append(&label(if projection.1 {
-                    "Nearby advertised device"
-                } else {
-                    "Unavailable · uncheck to remove"
-                }));
+                let send = gtk::Button::with_label("Send");
+                send.set_widget_name("send-device");
+                let weak = Rc::downgrade(self);
+                send.connect_clicked(move |_| {
+                    if let Some(panel) = weak.upgrade() {
+                        panel.send_to(&id);
+                    }
+                });
+                root.append(&send);
                 rows.entries.insert(
                     key.clone(),
                     Entry {
@@ -230,34 +354,45 @@ impl Panel {
                         || (projection.1
                             && recipients.len() < rqs_lib::service::batch::RECIPIENTS)),
             );
+            if let Some(send) = named(root.upcast_ref(), "send-device") {
+                send.set_sensitive(ready && projection.1);
+            }
             pages.get_mut("nearby").unwrap().push(root);
             used.insert(key);
         }
+        let recent: BTreeSet<_> = view
+            .transfers
+            .iter()
+            .rev()
+            .filter(|transfer| transfer.phase.is_terminal())
+            .take(5)
+            .map(|transfer| transfer.transfer.id())
+            .collect();
         for transfer in &view.transfers {
-            for page in ["incoming", "transfers"] {
+            if transfer.phase.is_terminal()
+                && !recent.contains(transfer.transfer.id())
+                && transfer.completed_files.is_empty()
+                && transfer.content_revision.is_none()
+            {
+                continue;
+            }
+            for page in ["nearby", "incoming", "transfers"] {
                 let incoming = transfer.direction == Direction::Inbound
                     && transfer.phase == Phase::AwaitingConsent;
-                if page == "incoming" && !incoming {
+                if (page == "incoming" && !incoming)
+                    || (page == "transfers" && transfer.phase.is_terminal())
+                {
                     continue;
                 }
-                let root =
-                    self.cached_transfer(&mut rows, page, transfer, ready, page == "incoming");
-                pages.get_mut(page).unwrap().push(root);
+                let root = self.cached_transfer(&mut rows, page, transfer, ready, incoming);
+                if page == "nearby" {
+                    pages.get_mut(page).unwrap().insert(0, root);
+                } else {
+                    pages.get_mut(page).unwrap().push(root);
+                }
                 used.insert((page.to_owned(), transfer.transfer.id().to_owned()));
             }
         }
-        if let Some(transfer) = current {
-            let incoming = transfer.direction == Direction::Inbound
-                && transfer.phase == Phase::AwaitingConsent;
-            let root = self.cached_transfer(&mut rows, "compact", transfer, ready, incoming);
-            pages.get_mut("compact").unwrap().push(root);
-            used.insert(("compact".into(), transfer.transfer.id().to_owned()));
-        }
-        let compact_summary = view
-            .sources
-            .first()
-            .map(|source| source_summary(source.kind, source.file_count, source.byte_count))
-            .unwrap_or_default();
         for (page, title) in [
             (
                 "nearby",
@@ -265,7 +400,6 @@ impl Panel {
             ),
             ("incoming", "No incoming requests"),
             ("transfers", "No transfers"),
-            ("compact", compact_summary.as_str()),
         ] {
             if pages[page].is_empty() {
                 let key = (
@@ -276,19 +410,6 @@ impl Panel {
                     let root = card();
                     if !title.is_empty() {
                         root.append(&label(title));
-                    }
-                    if page == "compact" {
-                        let button = gtk::Button::with_label(if selection.is_some() {
-                            "Choose recipients"
-                        } else {
-                            "Send files…"
-                        });
-                        button.set_action_name(Some(if selection.is_some() {
-                            "panel.nearby"
-                        } else {
-                            "panel.files"
-                        }));
-                        root.append(&button);
                     }
                     Entry {
                         root,
@@ -332,4 +453,30 @@ pub(super) fn verify_keyed_layout() {
     arrange(&container, std::slice::from_ref(&first));
     assert!(second.parent().is_none());
     assert_eq!(container.first_child(), Some(first.upcast()));
+}
+
+#[cfg(test)]
+mod badge_tests {
+    use super::*;
+    #[test]
+    fn given_each_transfer_and_discovery_state_when_badged_then_shape_and_color_distinguish_outcomes(
+    ) {
+        for (phase, expected) in [
+            (Phase::Queued, ("…", "warning")),
+            (Phase::Active, ("●", "accent")),
+            (Phase::AwaitingConsent, ("?", "warning")),
+            (Phase::Receiving, ("↓", "accent")),
+            (Phase::Sending, ("↑", "accent")),
+            (Phase::CancelRequested, ("…", "warning")),
+            (Phase::Finished, ("✓", "success")),
+            (Phase::Rejected, ("−", "dim-label")),
+            (Phase::Cancelled, ("−", "dim-label")),
+            (Phase::Failed, ("!", "error")),
+            (Phase::Disconnected, ("!", "error")),
+        ] {
+            assert_eq!(badge_style(Badge::Transfer(phase)), expected);
+        }
+        assert_eq!(badge_style(Badge::Available), ("●", "success"));
+        assert_eq!(badge_style(Badge::Unavailable), ("−", "dim-label"));
+    }
 }

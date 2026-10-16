@@ -1,18 +1,16 @@
 # Current implementation and continuation state
 
-Latest requested work (2026-10-16): [card/tray/settings usability follow-up](native-card-usability.md).
-Native15 remains installed. The user reported missing dragging, awkward source
-controls, no additive file selection, duplicated tray actions and a scrolling
-settings editor with inconsistent application timing. Analysis/plan is recorded;
-source-extension ownership and the consolidated File entry need the scoped
-decisions in that document before implementation. Existing native15 evidence
-remains historical verification, not acceptance of these newly reported issues.
-The subsequent attached mockup now specifies four-button Compact, one full
-device/request/transfer list with status overlays, and sidebar Settings in the
-existing theme. Its written corrections and actual identity/model limitations
-are recorded in the follow-up's Mockup steering section; Receive behavior and
-the conflicting tray appearance entries await clarification alongside source
-extension. No mockup redesign has been implemented or installed yet.
+Latest work (2026-10-16): [card/tray/settings mockup](native-card-usability.md)
+is implemented in source; native15 remains installed pending a distinct native16
+build/verification. The user selected Receive=request review or one-minute
+visibility, view switching only on the card and atomic daemon-owned Add files.
+[Source extension](native-source-extension.md) is committed with core/SDK checks.
+Compact has four actions; Full uses a single device/request/transfer list with
+status overlays and inline consent details, a movable header and no main tabs.
+Settings has branded sidebar sections and deferred OK/Cancel. Tray duplicates
+and routine Reconnect are removed. Source checks and renderer observations are
+recorded in the follow-up; current physical KDE/peer acceptance is still open.
+No paired identity or durable history is inferred from the mockup or device names.
 
 Updated2026-10-16. Mode A; direct dev, no branch/worktree/push. This is the current
 status index. Dated entries in other documents remain historical evidence; they

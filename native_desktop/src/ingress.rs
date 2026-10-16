@@ -172,6 +172,7 @@ impl Ingress {
         paths: Vec<PathBuf>,
         controller: PanelHandle,
         permit: PreparationPermit,
+        base: Option<rqs_lib::service::client::Selection>,
     ) {
         let mut task = self.task.lock().expect("ingress ownership");
         self.state.send_replace(IngressState {
@@ -189,7 +190,11 @@ impl Ingress {
             })
             .await;
             let failed = match source {
-                Ok(Ok(source)) => match controller.choose(source) {
+                Ok(Ok(source)) => match if let Some(base) = base {
+                    controller.extend(base, source)
+                } else {
+                    controller.choose(source)
+                } {
                     Ok(completion) => completion.wait().await.is_err(),
                     Err(_) => true,
                 },

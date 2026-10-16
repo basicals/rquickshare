@@ -22,6 +22,10 @@ pub(super) struct Editor {
     recover: gtk::CheckButton,
     status: gtk::Label,
     save: gtk::Button,
+    cancel: gtk::Button,
+    window: gtk::Window,
+    sections: gtk::Stack,
+    confirming: Cell<bool>,
     reload: gtk::Button,
     retry: gtk::Button,
     restart: gtk::Button,
@@ -68,7 +72,7 @@ fn selected_visibility(selected: u32) -> Result<u8, ()> {
 }
 fn status(view: &SettingsView) -> &'static str {
     if !view.available {
-        return "Service settings are unavailable. Appearance changes are temporary.";
+        return "Sharing settings are unavailable.";
     }
     match view.error {
         1 => "Cannot read settings. Restore access, then reload saved values.",
@@ -76,16 +80,28 @@ fn status(view: &SettingsView) -> &'static str {
         3 => "Save outcome is uncertain. Retry the same save before making another edit.",
         4 if view.name_status == 3 => "Saved, but discovery could not confirm the device name. Reload to check, or restart sharing when idle.",
         4 => "Settings could not be applied. Review the receive folder, device name and port, then restart sharing when idle.",
-        _ if view.visibility_recovered => "Saved visibility is invalid. Receiving is hidden; choose a visibility and save.",
-        _ if view.source == 0 => "Defaults loaded. Save to keep your settings.",
-        _ if view.source == 1 => "Existing settings loaded. Save to import them; the original file is preserved.",
+        _ if view.visibility_recovered => "Saved visibility is invalid. Receiving is hidden; choose a visibility and press OK.",
+        _ if view.source == 0 => "Defaults loaded. Press OK to keep your settings.",
+        _ if view.source == 1 => "Existing settings loaded. Press OK to import them; the original file is preserved.",
         _ if !view.running => "Saved. Service is stopped; start the saved service when ready.",
-        _ if view.name_status == 1 => "Saved name is not yet confirmed by discovery. Save to apply, or reload to check.",
+        _ if view.name_status == 1 => "Saved name is not yet confirmed by discovery. Press OK to apply, or reload to check.",
         _ if view.name_status == 3 => "Discovery could not confirm the device name. Reload to check, or restart sharing when idle.",
-        _ if view.applied_live_revision != view.revision => "Saved values differ from the live policy. Save to apply them.",
+        _ if view.applied_live_revision != view.revision => "Saved values differ from the live policy. Press OK to apply them.",
         _ if view.restart_required => "Saved. Visibility and receive folder applied; restart required for the port.",
         _ => "Saved and applied.",
     }
+}
+fn confirmation_applied(view: &SettingsView) -> bool {
+    view.available
+        && view.source == 2
+        && view.revision != 0
+        && !view.visibility_recovered
+        && view.configured
+        && view.running
+        && view.error == 0
+        && view.applied_live_revision == view.revision
+        && !view.restart_required
+        && !matches!(view.name_status, 1 | 3)
 }
 fn failure(error: ControllerError) -> &'static str {
     match error {
@@ -97,7 +113,7 @@ fn failure(error: ControllerError) -> &'static str {
         ControllerError::Client(ClientError::Settings(_)) => "Settings were not acknowledged. Check storage access and reload; no live change is claimed.",
         ControllerError::Client(ClientError::PendingOperation | ClientError::AcknowledgementPending) => "Finish or discard the pending operation before changing service settings.",
         ControllerError::Client(ClientError::Rejected(rqs_lib::service::Error::Busy)) | ControllerError::Busy => "Service is busy. Finish transfers or discard prepared files before restarting.",
-        ControllerError::Client(ClientError::DaemonChanged | ClientError::Transport | ClientError::Closed) | ControllerError::Closed => "Service connection lost. Reconnect to read its current settings.",
+        ControllerError::Client(ClientError::DaemonChanged | ClientError::Transport | ClientError::Closed) | ControllerError::Closed => "Sharing connection lost. Retry the connection from the card.",
         _ => "The settings action was not accepted. Review its state before retrying.",
     }
 }
@@ -125,8 +141,8 @@ impl Editor {
             .title("rQuickShare Settings")
             .transient_for(&panel.window)
             .application(&panel.window.application().unwrap())
-            .default_width(420)
-            .resizable(false)
+            .default_width(760)
+            .resizable(true)
             .build();
         let content = gtk::Box::new(gtk::Orientation::Vertical, 10);
         let about = gtk::Button::with_label("About rQuickShare");
@@ -137,11 +153,15 @@ impl Editor {
                 panel.show_about();
             }
         });
-        content.append(&about);
         content.set_margin_top(20);
         content.set_margin_bottom(20);
         content.set_margin_start(20);
         content.set_margin_end(20);
+        let pages = gtk::Stack::builder()
+            .transition_type(gtk::StackTransitionType::None)
+            .vhomogeneous(true)
+            .hexpand(true)
+            .build();
         let editor = Rc::new(Self {
             panel: Rc::downgrade(panel),
             base: RefCell::new(None),
@@ -155,7 +175,7 @@ impl Editor {
                 .placeholder_text("Automatic computer name")
                 .build(),
             name_hint: label(
-                "Leave empty to use the computer name. Save applies changes to new connections.",
+                "Leave empty to use the computer name. OK applies changes to new connections.",
             ),
             port: gtk::Entry::builder()
                 .placeholder_text("Automatic")
@@ -166,11 +186,15 @@ impl Editor {
             directory_intent: Cell::new(0),
             file: RefCell::new(None),
             recover: gtk::CheckButton::with_label("Back up and replace damaged settings"),
-            status: label("Service settings are unavailable. Appearance changes are temporary."),
-            save: gtk::Button::with_label("Save settings"),
+            status: label("Sharing settings are unavailable."),
+            save: gtk::Button::with_label("OK"),
+            cancel: gtk::Button::with_label("Cancel"),
+            window: window.clone(),
+            sections: pages.clone(),
+            confirming: Cell::new(false),
             reload: gtk::Button::with_label("Reload saved values"),
             retry: gtk::Button::with_label("Retry pending save"),
-            restart: gtk::Button::with_label("Start / restart saved service"),
+            restart: gtk::Button::with_label("Restart sharing"),
             choose: gtk::Button::with_label("Choose folder…"),
             default: gtk::Button::with_label("Use default"),
             dirty: Cell::new(false),
@@ -193,74 +217,91 @@ impl Editor {
             .set_selected(u32::from(panel.mode() == Mode::Full));
         editor.visibility.set_selected(0);
         editor.name_hint.set_selectable(false);
-        let name_title = label("Device name");
-        name_title.set_selectable(false);
-        name_title.set_mnemonic_widget(Some(&editor.name));
-        content.append(&name_title);
-        content.append(&editor.name);
-        content.append(&editor.name_hint);
-        for (title, widget) in [
-            (
-                "Visibility",
-                editor.visibility.clone().upcast::<gtk::Widget>(),
-            ),
-            (
-                "Port (empty or 0 = automatic)",
-                editor.port.clone().upcast(),
-            ),
-            ("Receive folder", editor.directory.clone().upcast()),
-        ] {
-            let title = label(title);
-            title.set_selectable(false);
-            title.set_mnemonic_widget(Some(&widget));
-            content.append(&title);
-            content.append(&widget);
-        }
-        let folder = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        folder.append(&editor.choose);
-        folder.append(&editor.default);
-        content.append(&folder);
-        let appearance_title = label("Card display mode");
-        appearance_title.set_selectable(false);
-        appearance_title.set_mnemonic_widget(Some(&editor.appearance));
-        content.append(&appearance_title);
-        content.append(&editor.appearance);
-        content.append(&label(
-            "Mode changes preview immediately. Save to keep them after closing the app.",
-        ));
-        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
-        content.append(&editor.login);
-        content.append(&label("Starts the daemon and tray with the card hidden. Applies to future sign-ins; active transfers keep running."));
-        let login_actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        login_actions.append(&editor.login_apply);
-        login_actions.append(&editor.login_reload);
-        content.append(&login_actions);
-        content.append(&editor.login_status);
-        content.append(&editor.recover);
-        content.append(&editor.status);
-        let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        actions.append(&editor.save);
-        actions.append(&editor.reload);
-        content.append(&actions);
-        content.append(&editor.retry);
-        content.append(&editor.restart);
-        content.append(&label(
-            "Finish active transfers or discard prepared files before restarting.",
-        ));
-        let reconnect = gtk::Button::with_label("Reconnect service");
-        content.append(&reconnect);
         editor.directory.set_wrap(false);
         editor
             .directory
             .set_ellipsize(gtk::pango::EllipsizeMode::Middle);
-        editor.directory.set_max_width_chars(40);
-        let scroll = gtk::ScrolledWindow::builder()
-            .hscrollbar_policy(gtk::PolicyType::Never)
-            .propagate_natural_height(true)
-            .max_content_height(620)
-            .child(&content)
-            .build();
-        window.set_child(Some(&scroll));
+        editor.directory.set_max_width_chars(44);
+        let brand = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+        let logo = gtk::Image::from_icon_name(crate::tray::ICON_NAME);
+        logo.set_pixel_size(32);
+        brand.append(&logo);
+        let title = label("rQuickShare");
+        title.add_css_class("title-2");
+        brand.append(&title);
+        content.append(&brand);
+        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        let navigation = gtk::StackSidebar::new();
+        navigation.set_stack(&pages);
+        navigation.set_size_request(160, -1);
+        let body = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+        body.append(&navigation);
+        body.append(&pages);
+        content.append(&body);
+        let section = || {
+            let column = gtk::Box::new(gtk::Orientation::Vertical, 12);
+            column.set_hexpand(true);
+            column
+        };
+        let field = |column: &gtk::Box, title: &str, widget: &gtk::Widget| {
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+            let caption = label(title);
+            caption.set_width_chars(14);
+            caption.set_selectable(false);
+            caption.set_mnemonic_widget(Some(widget));
+            widget.set_hexpand(true);
+            row.append(&caption);
+            row.append(widget);
+            column.append(&row);
+        };
+        let general = section();
+        field(&general, "Device name", editor.name.upcast_ref());
+        general.append(&editor.name_hint);
+        field(&general, "Card view", editor.appearance.upcast_ref());
+        general.append(&editor.login);
+        general.append(&label(
+            "Starts sharing and the tray at sign-in, with the card hidden.",
+        ));
+        general.append(&editor.login_status);
+        pages.add_titled(&general, Some("general"), "General");
+        let receiving = section();
+        field(&receiving, "Visibility", editor.visibility.upcast_ref());
+        field(&receiving, "Receive folder", editor.directory.upcast_ref());
+        let folder = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        folder.append(&editor.choose);
+        folder.append(&editor.default);
+        receiving.append(&folder);
+        receiving.append(&label("Each incoming transfer still requires your confirmation. Folder changes affect new requests."));
+        pages.add_titled(&receiving, Some("receiving"), "Receiving");
+        let advanced = section();
+        field(&advanced, "Port", editor.port.upcast_ref());
+        advanced.append(&label("Leave empty or use 0 for automatic selection. A changed port requires restarting sharing when idle."));
+        advanced.append(&editor.recover);
+        advanced.append(&editor.reload);
+        advanced.append(&editor.retry);
+        advanced.append(&editor.restart);
+        advanced.append(&editor.login_reload);
+        pages.add_titled(&advanced, Some("advanced"), "Advanced");
+        let information = section();
+        information.append(&label(&format!(
+            "rQuickShare {}",
+            env!("CARGO_PKG_VERSION")
+        )));
+        information.append(&label(
+            "Send and receive nearby files and text.
+GNU General Public License v3.0.",
+        ));
+        information.append(&about);
+        pages.add_titled(&information, Some("about"), "About");
+        content.append(&gtk::Separator::new(gtk::Orientation::Horizontal));
+        content.append(&editor.status);
+        let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        actions.set_halign(gtk::Align::End);
+        editor.save.add_css_class("suggested-action");
+        actions.append(&editor.cancel);
+        actions.append(&editor.save);
+        content.append(&actions);
+        window.set_child(Some(&content));
         panel.appearance.replace(Some(editor.appearance.clone()));
         panel.settings.replace(Some(window.clone()));
         panel.settings_owner.replace(Some(editor.clone()));
@@ -286,23 +327,14 @@ impl Editor {
             });
         }
         let weak = Rc::downgrade(&editor);
-        editor
-            .appearance
-            .connect_selected_notify(move |appearance| {
-                if let Some(editor) = weak.upgrade() {
-                    if editor.loading.get() || editor.closed.get() {
-                        return;
-                    }
-                    if let Some(panel) = editor.panel.upgrade() {
-                        panel.set_mode(if appearance.selected() == 1 {
-                            Mode::Full
-                        } else {
-                            Mode::Compact
-                        });
-                    }
-                    editor.changed();
+        editor.appearance.connect_selected_notify(move |_| {
+            if let Some(editor) = weak.upgrade() {
+                if editor.loading.get() || editor.closed.get() {
+                    return;
                 }
-            });
+                editor.changed();
+            }
+        });
         let weak = Rc::downgrade(&editor);
         editor.visibility.connect_selected_notify(move |_| {
             if let Some(editor) = weak.upgrade() {
@@ -328,7 +360,6 @@ impl Editor {
             }
         });
         for (button, operation) in [
-            (&editor.save, Operation::Save),
             (&editor.reload, Operation::Reload),
             (&editor.retry, Operation::Retry),
             (&editor.restart, Operation::Restart),
@@ -340,6 +371,18 @@ impl Editor {
                 }
             });
         }
+        let weak = Rc::downgrade(&editor);
+        editor.save.connect_clicked(move |_| {
+            if let Some(editor) = weak.upgrade() {
+                editor.confirm();
+            }
+        });
+        let weak = Rc::downgrade(&editor);
+        editor.cancel.connect_clicked(move |_| {
+            if let Some(editor) = weak.upgrade() {
+                editor.cancel_draft();
+            }
+        });
         let weak = Rc::downgrade(&editor);
         editor.choose.connect_clicked(move |_| {
             if let Some(editor) = weak.upgrade() {
@@ -355,20 +398,26 @@ impl Editor {
                 editor.changed();
             }
         });
-        let weak = Rc::downgrade(panel);
-        reconnect.connect_clicked(move |_| {
-            if let Some(panel) = weak.upgrade() {
-                panel.actions.activate_action("reconnect", None);
-            }
-        });
-        let weak = Rc::downgrade(panel);
-        window.connect_close_request(move |window| {
-            window.set_visible(false);
-            if let Some(panel) = weak.upgrade() {
-                panel.apply_presentation();
+        let weak = Rc::downgrade(&editor);
+        window.connect_close_request(move |_| {
+            if let Some(editor) = weak.upgrade() {
+                editor.cancel_draft();
             }
             glib::Propagation::Stop
         });
+        let keys = gtk::EventControllerKey::new();
+        let weak = Rc::downgrade(&editor);
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if key == gtk::gdk::Key::Escape {
+                if let Some(editor) = weak.upgrade() {
+                    editor.cancel_draft();
+                }
+                glib::Propagation::Stop
+            } else {
+                glib::Propagation::Proceed
+            }
+        });
+        window.add_controller(keys);
         editor.refresh();
         window.present();
     }
@@ -376,11 +425,91 @@ impl Editor {
         self.dirty.get()
     }
     pub fn sync_mode(&self, mode: Mode, manual: bool) {
+        if self.dirty.get() {
+            return;
+        }
         let loading = self.loading.replace(true);
         self.appearance.set_selected(u32::from(mode == Mode::Full));
         self.loading.set(loading);
-        if manual {
+        if manual
+            && self.window.is_visible()
+            && self
+                .base
+                .borrow()
+                .as_ref()
+                .is_none_or(|view| view.card_mode != u8::from(mode == Mode::Full))
+        {
             self.changed();
+        }
+    }
+    pub fn reopen(self: &Rc<Self>) {
+        if !self.window.is_visible() {
+            self.cancel_draft();
+            self.act(Operation::Reload);
+        }
+    }
+    fn needs_native_save(&self) -> bool {
+        self.dirty.get()
+            || self.base.borrow().as_ref().is_some_and(|view| {
+                view.available
+                    && (!view.configured
+                        || view.source != 2
+                        || matches!(view.error, 3 | 4)
+                        || (view.running && view.applied_live_revision != view.revision))
+            })
+    }
+    fn confirm(self: &Rc<Self>) {
+        self.refresh();
+        if !self.save.is_sensitive() {
+            return;
+        }
+        self.confirming.set(true);
+        if self.needs_native_save() {
+            self.act(Operation::Save);
+        } else {
+            self.finish_confirmation();
+        }
+    }
+    fn finish_confirmation(self: &Rc<Self>) {
+        self.refresh_login();
+        if self.login_dirty.get() {
+            if !self.login_apply.is_sensitive() {
+                self.confirming.set(false);
+                self.status.set_text(
+                    "Sign-in state changed or is unavailable. Reload it before confirming.",
+                );
+                self.refresh();
+                return;
+            }
+            self.login_action(true);
+        } else {
+            self.confirming.set(false);
+            self.window.set_visible(false);
+            if let Some(panel) = self.panel.upgrade() {
+                panel.apply_presentation();
+            }
+        }
+    }
+    fn cancel_draft(&self) {
+        if self.busy.get() || self.login_busy.get() {
+            return;
+        }
+        self.confirming.set(false);
+        self.login_dirty.set(false);
+        if let Some(panel) = self.panel.upgrade() {
+            let saved = panel.model.borrow().state.settings.clone();
+            if let Some(view) = saved {
+                self.load(view, false);
+            }
+            self.loading.set(true);
+            self.appearance
+                .set_selected(u32::from(panel.mode() == Mode::Full));
+            self.loading.set(false);
+            self.dirty.set(false);
+            self.file.borrow_mut().take();
+            self.refresh_login();
+            self.window.set_visible(false);
+            panel.apply_presentation();
         }
     }
     fn name_input(&self) -> Result<String, ()> {
@@ -397,14 +526,14 @@ impl Editor {
         self.dirty.set(true);
         self.status.set_text(if self.name_input().is_err() {
             "Device name is too long or contains unsupported characters or surrounding spaces. Leave empty for the automatic name."
-        } else { "Unsaved changes. Mode preview is temporary until Save." });
+        } else { "Changes will apply after OK." });
         self.refresh();
     }
     fn load(&self, view: SettingsView, appearance: bool) {
         self.loading.set(true);
         self.name.set_text(&view.device_name);
         self.name_hint.set_text(&if view.resolved_name.is_empty() {
-            "Leave empty to use the computer name. Save applies changes to new connections."
+            "Leave empty to use the computer name. OK applies changes to new connections."
                 .to_owned()
         } else {
             format!("Name for new connections: {}", view.resolved_name)
@@ -431,24 +560,12 @@ impl Editor {
         self.dirty
             .set(!appearance && self.appearance.selected() != u32::from(view.card_mode));
         self.status.set_text(if self.dirty.get() {
-            "Unsaved appearance change. Save to keep this mode."
+            "Card view will be saved after OK."
         } else {
             status(&view)
         });
         self.base.replace(Some(view));
         self.loading.set(false);
-        if appearance {
-            if let Some(panel) = self.panel.upgrade() {
-                panel.apply_mode(
-                    if self.appearance.selected() == 1 {
-                        Mode::Full
-                    } else {
-                        Mode::Compact
-                    },
-                    false,
-                );
-            }
-        }
         self.refresh();
     }
     pub fn refresh(&self) {
@@ -476,6 +593,7 @@ impl Editor {
         let ready = safe
             && available
             && !self.busy.get()
+            && !self.login_busy.get()
             && !model.waiting
             && !model.state.busy
             && !model.state.pending
@@ -492,18 +610,41 @@ impl Editor {
             .is_some_and(|view| view.available && !view.configured && view.error != 1);
         self.recover.set_visible(damaged);
         self.recover.set_sensitive(ready);
+        let native_ready = ready
+            && writable
+            && selected_visibility(self.visibility.selected()).is_ok()
+            && self.name_input().is_ok()
+            && parse_port(self.port.text().as_str()).is_ok()
+            && !model.state.settings_pending
+            && (!damaged || self.recover.is_active());
         self.save.set_sensitive(
-            ready
-                && writable
-                && selected_visibility(self.visibility.selected()).is_ok()
-                && self.name_input().is_ok()
-                && !model.state.settings_pending
-                && (!damaged || self.recover.is_active()),
+            !self.confirming.get()
+                && !self.busy.get()
+                && !self.login_busy.get()
+                && (!self.needs_native_save() || native_ready)
+                && (!self.login_dirty.get() || self.login_apply.is_sensitive()),
+        );
+        self.cancel
+            .set_sensitive(!self.busy.get() && !self.login_busy.get());
+        self.reload.set_visible(
+            !available
+                || base.as_ref().is_some_and(|view| view.error != 0)
+                || model.state.settings_pending
+                || matches!(model.state.error, Some(ClientError::Settings(_))),
         );
         self.reload.set_sensitive(ready);
         self.retry.set_visible(model.state.settings_pending);
         self.retry
             .set_sensitive(ready && model.state.settings_pending);
+        self.restart
+            .set_label(if latest.is_some_and(|view| view.running) {
+                "Restart sharing"
+            } else {
+                "Start sharing"
+            });
+        self.restart.set_visible(latest.is_some_and(|view| {
+            view.available && (!view.running || view.restart_required || view.error == 4)
+        }));
         self.restart.set_sensitive(
             ready
                 && !self.dirty.get()
@@ -519,10 +660,12 @@ impl Editor {
         ] {
             widget.set_sensitive(ready && writable && !model.state.settings_pending);
         }
-        self.appearance
-            .set_sensitive(safe && !self.busy.get() && !model.state.settings_pending);
+        self.appearance.set_sensitive(
+            safe && !self.busy.get() && !self.login_busy.get() && !model.state.settings_pending,
+        );
         if !available {
-            self.status.set_text("Service settings are unavailable. Appearance changes are temporary. Reconnect to save.");
+            self.status
+                .set_text("Sharing settings are unavailable. Retry the connection from the card.");
         }
     }
     pub fn refresh_login(&self) {
@@ -546,14 +689,19 @@ impl Editor {
                 self.login.set_active(enabled);
             }
         }
-        if view.enabled == Some(self.login.is_active()) {
+        if view.error.is_none() && view.enabled == Some(self.login.is_active()) {
             self.login_dirty.set(false);
         }
         self.login_loading.set(false);
-        let ready = safe && handle.is_some() && !view.busy && !self.login_busy.get();
-        self.login.set_sensitive(ready && view.enabled.is_some());
-        self.login_apply
-            .set_sensitive(ready && view.enabled.is_some() && self.login_dirty.get());
+        let ready =
+            safe && handle.is_some() && !view.busy && !self.login_busy.get() && !self.busy.get();
+        self.login
+            .set_sensitive(ready && view.enabled.is_some() && view.error.is_none());
+        self.login_apply.set_sensitive(
+            ready && view.enabled.is_some() && view.error.is_none() && self.login_dirty.get(),
+        );
+        self.login_reload
+            .set_visible(view.error.is_some() || view.enabled.is_none());
         self.login_reload.set_sensitive(ready);
         self.login_status
             .set_text(if self.login_busy.get() || view.busy {
@@ -561,7 +709,7 @@ impl Editor {
             } else if let Some(error) = view.error {
                 login_failure(error)
             } else if self.login_dirty.get() {
-                "Unsaved login choice. Apply it separately from service settings."
+                "Sign-in choice will apply after OK."
             } else if view.enabled == Some(true) {
                 "Daemon and tray will start at sign-in; the card stays hidden."
             } else if view.enabled == Some(false) {
@@ -597,12 +745,15 @@ impl Editor {
         let completion = match completion {
             Ok(completion) => completion,
             Err(error) => {
+                self.confirming.set(false);
+                self.login_dirty.set(true);
                 self.login_status.set_text(login_failure(error));
+                self.refresh();
                 return;
             }
         };
         self.login_busy.set(true);
-        self.refresh_login();
+        self.refresh();
         let weak = Rc::downgrade(self);
         self.login_task
             .replace(Some(glib::spawn_future_local(async move {
@@ -614,15 +765,20 @@ impl Editor {
                     }
                     editor.refresh_login();
                     if let Err(error) = result {
+                        editor.confirming.set(false);
                         editor.login_status.set_text(login_failure(error));
+                        editor.status.set_text("Sign-in change was not confirmed. Any acknowledged sharing settings remain saved.");
+                    } else if editor.confirming.get() {
+                        editor.finish_confirmation();
                     }
+                    editor.refresh();
                 }
             })));
     }
     fn act(self: &Rc<Self>, operation: Operation) {
         self.refresh();
         let enabled = match operation {
-            Operation::Save => self.save.is_sensitive(),
+            Operation::Save => self.confirming.get(),
             Operation::Reload => self.reload.is_sensitive(),
             Operation::Retry => self.retry.is_sensitive(),
             Operation::Restart => self.restart.is_sensitive(),
@@ -689,7 +845,9 @@ impl Editor {
         let completion = match completion {
             Ok(completion) => completion,
             Err(error) => {
+                self.confirming.set(false);
                 self.status.set_text(failure(error));
+                self.refresh();
                 return;
             }
         };
@@ -702,10 +860,23 @@ impl Editor {
             if let Some(editor) = weak.upgrade().filter(|editor| !editor.closed.get()) {
                 editor.busy.set(false);
                 match result {
-                    Ok(ActionResult::Settings(view)) => editor.load(view, true),
-                    Ok(_) if matches!(operation, Operation::Restart) => editor.status.set_text("Restart requested. Reconnect to read the new service state."),
-                    Ok(_) => editor.status.set_text("Settings acknowledgement was incomplete. Reload before making another edit."),
-                    Err(error) => editor.status.set_text(failure(error)),
+                    Ok(ActionResult::Settings(view)) => {
+                        let applied = confirmation_applied(&view);
+                        let card_mode = view.card_mode;
+                        editor.load(view, true);
+                        if matches!(operation, Operation::Save | Operation::Retry) {
+                            if let Some(panel) = editor.panel.upgrade() {
+                                panel.apply_mode(if card_mode == 1 { Mode::Full } else { Mode::Compact }, false);
+                            }
+                        }
+                        if editor.confirming.get() {
+                            if applied { editor.finish_confirmation(); }
+                            else { editor.confirming.set(false); editor.sections.set_visible_child_name("advanced"); }
+                        }
+                    },
+                    Ok(_) if matches!(operation, Operation::Restart) => editor.status.set_text("Sharing restart requested. Retry the connection from the card to read its state."),
+                    Ok(_) => { editor.confirming.set(false); editor.status.set_text("Settings acknowledgement was incomplete. Reload before making another edit."); },
+                    Err(error) => { editor.confirming.set(false); editor.status.set_text(failure(error)); },
                 }
                 editor.refresh();
             }
@@ -772,7 +943,8 @@ impl Editor {
 #[cfg(test)]
 pub(super) fn verify_editor_smoke(editor: &Editor) {
     // Run on the existing single GTK test thread; no real settings owner is connected.
-    assert!(!editor.save.is_sensitive());
+    assert!(!editor.save.is_sensitive()); // Staged edit has no connected writer.
+    assert!(editor.is_dirty());
     assert!(editor.login.is_inconsistent());
     assert!(!editor.login.is_sensitive());
     assert!(!editor.login_apply.is_sensitive());
@@ -787,36 +959,70 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
         assert!(output.is_absolute());
         let panel = editor.panel.upgrade().unwrap();
         let window = panel.settings.borrow().as_ref().unwrap().clone();
-        let captured = Rc::new(Cell::new(false));
-        let finished = captured.clone();
-        let success = Rc::new(Cell::new(false));
-        let saved = success.clone();
-        window.add_tick_callback(move |window, _| {
-            if window.width() <= 0 || window.height() <= 0 {
-                return glib::ControlFlow::Continue;
+        for page in ["general", "receiving", "advanced", "about"] {
+            editor.sections.set_visible_child_name(page);
+            window.queue_draw();
+            let captured = Rc::new(Cell::new(false));
+            let finished = captured.clone();
+            let success = Rc::new(Cell::new(false));
+            let saved = success.clone();
+            let page_output = output.with_file_name(format!(
+                "{}-{page}.png",
+                output.file_stem().unwrap().to_string_lossy()
+            ));
+            window.add_tick_callback(move |window, _| {
+                if window.width() <= 0 || window.height() <= 0 {
+                    return glib::ControlFlow::Continue;
+                }
+                let paintable = gtk::WidgetPaintable::new(Some(window));
+                let snapshot = gtk::Snapshot::new();
+                paintable.snapshot(&snapshot, window.width().into(), window.height().into());
+                let Some(node) = snapshot.to_node() else {
+                    return glib::ControlFlow::Continue;
+                };
+                if let Some(renderer) = window.renderer() {
+                    saved.set(
+                        renderer
+                            .render_texture(&node, None)
+                            .save_to_png(&page_output)
+                            .is_ok(),
+                    );
+                }
+                finished.set(true);
+                glib::ControlFlow::Break
+            });
+            while !captured.get() {
+                glib::MainContext::default().iteration(true);
             }
-            let paintable = gtk::WidgetPaintable::new(Some(window));
-            let snapshot = gtk::Snapshot::new();
-            paintable.snapshot(&snapshot, window.width().into(), window.height().into());
-            let Some(node) = snapshot.to_node() else {
-                return glib::ControlFlow::Continue;
-            };
-            if let Some(renderer) = window.renderer() {
-                saved.set(
-                    renderer
-                        .render_texture(&node, None)
-                        .save_to_png(&output)
-                        .is_ok(),
-                );
-            }
-            finished.set(true);
-            glib::ControlFlow::Break
-        });
-        while !captured.get() {
-            glib::MainContext::default().iteration(true);
+            assert!(success.get());
         }
-        assert!(success.get());
+        editor.sections.set_visible_child_name("general");
     }
+    let panel = editor.panel.upgrade().unwrap();
+    let before = panel.mode();
+    editor
+        .appearance
+        .set_selected(u32::from(before != Mode::Full));
+    assert_eq!(panel.mode(), before); // Editing never previews or applies a card mode.
+    assert!(editor.is_dirty());
+    let staged = editor.appearance.selected();
+    for section in ["receiving", "advanced", "about", "general"] {
+        editor.sections.set_visible_child_name(section);
+        assert_eq!(editor.appearance.selected(), staged);
+        assert_eq!(panel.mode(), before);
+    }
+    assert_eq!(editor.sections.pages().n_items(), 4);
+    assert!(!editor.save.is_sensitive()); // No daemon cannot acknowledge this edit.
+    editor.busy.set(true);
+    editor.cancel_draft();
+    assert!(editor.window.is_visible()); // An admitted operation cannot be closed midway.
+    editor.busy.set(false);
+    editor.cancel_draft();
+    assert!(!editor.window.is_visible());
+    assert!(!editor.is_dirty());
+    assert_eq!(panel.mode(), before);
+    editor.window.present();
+    assert!(editor.window.child().unwrap().is::<gtk::Box>());
     editor.port.set_text("655350");
     assert_eq!(editor.port.text(), "655350");
     assert_eq!(parse_port(editor.port.text().as_str()), Err(()));
@@ -840,10 +1046,10 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     panel.model.borrow_mut().automatic = true;
     editor.load(view, true);
     assert!(panel.model.borrow().automatic); // Loading preferences is not manual presentation intent.
-    assert_eq!(panel.mode(), Mode::Full);
+    assert_eq!(panel.mode(), before);
     assert!(!editor.is_dirty());
     assert!(!editor.recover.is_visible());
-    assert!(!editor.save.is_sensitive());
+    assert!(editor.save.is_sensitive()); // An unchanged acknowledged configuration needs no write.
     panel.model.borrow_mut().automatic = false;
     let mut named = editor.base.borrow().clone().unwrap();
     named.device_name = "Рабочий ПК".into();
@@ -865,6 +1071,8 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     editor.load(named, true);
     assert_eq!(editor.name.text(), "Рабочий ПК");
     assert!(!editor.is_dirty());
+    assert_eq!(panel.mode(), before);
+    panel.set_mode(Mode::Full);
 }
 
 #[cfg(test)]
@@ -887,6 +1095,7 @@ mod tests {
             let mut pending = view.clone();
             pending.name_status = state;
             assert_ne!(status(&pending), "Saved and applied.");
+            assert!(!confirmation_applied(&pending));
             if state == 3 {
                 pending.error = 4;
                 assert!(status(&pending).contains("discovery"));
@@ -910,6 +1119,7 @@ mod tests {
         applied.applied_live_revision = 2;
         // Act / Assert
         assert_eq!(status(&applied), "Saved and applied.");
+        assert!(confirmation_applied(&applied));
         for case in 0..9 {
             let mut view = applied.clone();
             match case {
@@ -922,6 +1132,7 @@ mod tests {
                 _ => unreachable!(),
             }
             assert_ne!(status(&view), "Saved and applied.", "{case}");
+            assert!(!confirmation_applied(&view), "{case}");
         }
         for error in [
             StoreError::Conflict,

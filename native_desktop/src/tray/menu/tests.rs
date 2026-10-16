@@ -8,7 +8,10 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
     // Arrange
     let state = State {
         projection: Projection {
-            enabled: 0x3f87ff,
+            card_visible: false,
+            incoming: 0,
+            active: 0,
+            enabled: 0x7fffff,
             full: false,
             visibility: None,
         },
@@ -21,11 +24,11 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
             layout(0, depth, &[], state).unwrap().2.len(),
             if depth == 0 { 0 } else { ROWS.len() }
         );
-        for id in 1..=22 {
+        for id in ROWS {
             assert!(layout(id, depth, &[], state).unwrap().2.is_empty());
         }
     }
-    for id in [-1, 23, i32::MAX] {
+    for id in [-1, 3, 6, 7, 9, 10, 16, 17, 24, i32::MAX] {
         assert!(layout(id, -1, &[], state).is_err());
     }
     assert!(layout(0, -2, &[], state).is_err());
@@ -40,9 +43,28 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
     ] {
         assert!(layout(0, 1, &names, state).is_err());
     }
-    let compact = i32::try_from(properties(6, state, &[]).remove("toggle-state").unwrap()).unwrap();
-    let full = i32::try_from(properties(7, state, &[]).remove("toggle-state").unwrap()).unwrap();
-    assert_eq!((compact, full), (1, 0));
+    for id in [3, 6, 7, 9, 10, 16, 17, 21] {
+        assert!(!ROWS.contains(&id));
+        assert!(checked_event(id, "clicked", state).is_err());
+    }
+    for visible in [false, true] {
+        let mut current = state;
+        current.projection.card_visible = visible;
+        current.projection.incoming = 2;
+        current.projection.active = 1;
+        assert_eq!(
+            String::try_from(properties(1, current, &[]).remove("label").unwrap()).unwrap(),
+            if visible { "Hide card" } else { "Open card" }
+        );
+        assert_eq!(
+            String::try_from(properties(4, current, &[]).remove("label").unwrap()).unwrap(),
+            "Incoming requests (2)"
+        );
+        assert_eq!(
+            String::try_from(properties(5, current, &[]).remove("label").unwrap()).unwrap(),
+            "Active transfers (1)"
+        );
+    }
     for mode in [None, Some(0), Some(1), Some(2)] {
         let mut current = state;
         current.projection.visibility = mode;
@@ -59,7 +81,7 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
         }
     }
     assert!(checked_event(0, "clicked", state).is_err());
-    for id in (1..=11).chain(16..=22) {
+    for id in ROWS.into_iter().filter(|id| Action::from_id(*id).is_some()) {
         assert_eq!(
             checked_event(id, "clicked", state).unwrap(),
             Action::from_id(id)
@@ -78,6 +100,9 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
     assert!(!updates.has_changed().unwrap());
     handle.state.send_modify(|state| state.revision = u32::MAX);
     handle.publish(Projection {
+        card_visible: false,
+        incoming: 0,
+        active: 0,
         enabled: 0,
         full: true,
         visibility: None,
@@ -94,7 +119,10 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
     let server = broker.connection().await;
     let (state, _) = watch::channel(State {
         projection: Projection {
-            enabled: 0x3f87ff,
+            card_visible: false,
+            incoming: 0,
+            active: 0,
+            enabled: 0x7fffff,
             full: true,
             visibility: None,
         },
@@ -130,7 +158,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .unwrap();
     assert_eq!(revision, 1);
     assert_eq!(tree.0, 0);
-    assert_eq!(tree.2.len(), 22);
+    assert_eq!(tree.2.len(), 15);
     let rows: Vec<i32> = tree
         .2
         .into_iter()
@@ -140,11 +168,15 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         })
         .collect();
     assert_eq!(rows, ROWS);
-    for id in (1..=11).chain(16..=22) {
+    for id in ROWS.into_iter().filter(|id| Action::from_id(*id).is_some()) {
         let label: OwnedValue = proxy.call("GetProperty", &(id, "label")).await.unwrap();
         assert_eq!(
             String::try_from(label).unwrap(),
-            Action::from_id(id).unwrap().label()
+            match id {
+                4 => "Incoming requests (0)",
+                5 => "Active transfers (0)",
+                _ => Action::from_id(id).unwrap().label(),
+            }
         );
     }
     let props: Properties = proxy
@@ -171,7 +203,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .await
         .unwrap();
     assert!(received.try_recv().is_err());
-    for action in [Action::Text, Action::Image, Action::About] {
+    for action in [Action::Receive, Action::Incoming, Action::About] {
         proxy
             .call::<_, _, ()>(
                 "Event",
@@ -206,7 +238,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
             "EventGroup",
             &vec![
                 (2i32, "clicked", OwnedValue::from(0i32), 0u32),
-                (7, "clicked", OwnedValue::from(0i32), 0),
+                (5, "clicked", OwnedValue::from(0i32), 0),
                 (8, "clicked", OwnedValue::from(0i32), 0),
             ],
         )
@@ -215,7 +247,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
     assert!(good.is_empty());
     assert_eq!(
         received.recv().await.unwrap(),
-        vec![Action::Files, Action::Full, Action::Settings]
+        vec![Action::Files, Action::Transfers, Action::Settings]
     );
     state.send_modify(|state| state.projection.enabled &= !Action::Files.bit());
     assert!(proxy
@@ -227,7 +259,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
             .call::<_, _, ()>(
                 "Event",
                 &(
-                    if case % 2 == 0 { 6i32 } else { 7 },
+                    if case % 2 == 0 { 1i32 } else { 8 },
                     "clicked",
                     OwnedValue::from(0i32),
                     0u32,
@@ -244,9 +276,9 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         assert_eq!(
             received.recv().await.unwrap(),
             vec![if case % 2 == 0 {
-                Action::Compact
+                Action::Open
             } else {
-                Action::Full
+                Action::Settings
             }]
         );
     }

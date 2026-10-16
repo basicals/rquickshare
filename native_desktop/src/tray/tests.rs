@@ -77,6 +77,9 @@ async fn given_private_kde_watcher_when_registered_activated_and_lost_then_lates
         .unwrap();
     let mut layouts = menu_proxy.receive_signal("LayoutUpdated").await.unwrap();
     tray.menu.publish(menu::Projection {
+        card_visible: false,
+        incoming: 0,
+        active: 0,
         enabled: 0x7ff,
         full: true,
         visibility: None,

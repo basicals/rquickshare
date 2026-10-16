@@ -41,6 +41,8 @@ impl Panel {
         });
         self.actions.add_action(&visibility);
         for name in [
+            "receive",
+            "send",
             "nearby",
             "incoming",
             "transfers",
@@ -70,8 +72,37 @@ impl Panel {
                 match name {
                     "nearby" | "incoming" | "transfers" => {
                         panel.set_mode(Mode::Full);
-                        panel.pages.set_visible_child_name(name);
+                        panel.pages.set_visible_child_name("nearby");
+                        panel.render();
+                        let ids = panel
+                            .model
+                            .borrow()
+                            .state
+                            .view
+                            .as_ref()
+                            .map(|view| {
+                                view.transfers
+                                    .iter()
+                                    .filter(|transfer| {
+                                        if name == "incoming" {
+                                            transfer.direction == Direction::Inbound
+                                                && transfer.phase == Phase::AwaitingConsent
+                                        } else {
+                                            !transfer.phase.is_terminal()
+                                        }
+                                    })
+                                    .map(|transfer| transfer.transfer.id().to_owned())
+                                    .collect::<Vec<_>>()
+                            })
+                            .unwrap_or_default();
+                        if name != "nearby" {
+                            for id in ids {
+                                panel.expand_transfer(&id);
+                            }
+                        }
                     }
+                    "receive" => panel.receive(),
+                    "send" => panel.show_sending(),
                     "send-text" => panel.show_composer(),
                     "send-image" => panel.show_image(),
                     "send-many" => panel.send_recipients(),
@@ -102,11 +133,16 @@ impl Panel {
             });
             self.actions.add_action(&action);
         }
+        let weak = Rc::downgrade(self);
+        self.window.connect_visible_notify(move |_| {
+            let weak = weak.clone();
+            glib::idle_add_local_once(move || {
+                if let Some(panel) = weak.upgrade() {
+                    panel.sync_tray_menu();
+                }
+            });
+        });
         let menu = gio::Menu::new();
-        let modes = gio::Menu::new();
-        modes.append(Some("Compact view"), Some("panel.mode::compact"));
-        modes.append(Some("Full view"), Some("panel.mode::full"));
-        menu.append_section(None, &modes);
         let visibility = gio::Menu::new();
         for (title, target) in [
             ("Visible", "visible"),
@@ -115,33 +151,17 @@ impl Panel {
         ] {
             visibility.append(Some(title), Some(&format!("panel.visibility::{target}")));
         }
-        visibility.append(
-            Some("Retry visibility change"),
-            Some("panel.visibility-retry"),
-        );
-        menu.append_section(Some("Discovery visibility"), &visibility);
         let navigation = gio::Menu::new();
         for (name, title) in [
-            ("files", "Send files…"),
-            ("folder", "Send a folder…"),
-            ("send-text", "Send text…"),
-            ("send-image", "Send image…"),
+            ("receive", "Receive files"),
+            ("send", "Send files…"),
             ("incoming", "Incoming requests"),
-            ("transfers", "Transfers"),
+            ("transfers", "Active transfers"),
         ] {
             navigation.append(Some(title), Some(&format!("panel.{name}")));
         }
         menu.append_section(None, &navigation);
-        let preparation = gio::Menu::new();
-        for (name, title) in [
-            ("discard", "Discard prepared files"),
-            ("recover", "Recover operation"),
-            ("abort", "Discard preparation"),
-        ] {
-            preparation.append(Some(title), Some(&format!("panel.{name}")));
-        }
-        preparation.append(Some("Reconnect service"), Some("panel.reconnect"));
-        menu.append_section(None, &preparation);
+        menu.append_section(Some("Discovery visibility"), &visibility);
         let secondary = gio::Menu::new();
         for (name, title) in [
             ("settings", "Settings…"),
@@ -152,6 +172,18 @@ impl Panel {
             secondary.append(Some(title), Some(&format!("panel.{name}")));
         }
         menu.append_section(None, &secondary);
+        let sending = gio::Menu::new();
+        for (name, title) in [
+            ("files", "Files…"),
+            ("folder", "Folder…"),
+            ("send-text", "Text or link…"),
+            ("send-image", "Clipboard image…"),
+        ] {
+            sending.append(Some(title), Some(&format!("panel.{name}")));
+        }
+        self.sending.set_menu_model(Some(&sending));
+        self.sending.set_parent(&self.box_widget("root"));
+        self.configure_movement();
         self.context.set_menu_model(Some(&menu));
         self.context.set_parent(&self.box_widget("root"));
         let gesture = gtk::GestureClick::new();
@@ -182,6 +214,82 @@ impl Panel {
             }
         });
     }
+    pub(super) fn receive(self: &Rc<Self>) {
+        let pending = self
+            .model
+            .borrow()
+            .state
+            .view
+            .as_ref()
+            .and_then(|view| {
+                view.transfers.iter().find(|transfer| {
+                    transfer.direction == Direction::Inbound
+                        && transfer.phase == Phase::AwaitingConsent
+                })
+            })
+            .map(|transfer| transfer.transfer.id().to_owned());
+        self.set_mode(Mode::Full);
+        self.pages.set_visible_child_name("nearby");
+        if pending.is_none() {
+            self.actions
+                .activate_action("visibility", Some(&"temporary".to_variant()));
+        }
+        self.render();
+        if let Some(id) = pending {
+            self.expand_transfer(&id);
+        }
+        self.present_surface();
+    }
+    pub(super) fn show_sending(self: &Rc<Self>) {
+        self.set_mode(Mode::Full);
+        self.pages.set_visible_child_name("nearby");
+        self.render();
+        self.present_surface();
+        if self
+            .model
+            .borrow()
+            .state
+            .view
+            .as_ref()
+            .is_none_or(|view| view.selections.is_empty())
+        {
+            self.sending
+                .set_pointing_to(Some(&gtk::gdk::Rectangle::new(14, 44, 1, 1)));
+            self.sending.popup();
+        }
+    }
+    pub(super) fn send_to(self: &Rc<Self>, endpoint: &str) {
+        let selection = {
+            let model = self.model.borrow();
+            if !controls_ready(
+                &model.state,
+                model.waiting
+                    || model.closing
+                    || model.ingress.busy
+                    || model.dialog.is_some()
+                    || *self.ingress.gate.subscribe().borrow()
+                    || (model.safety_active && !model.safety.manual_allowed()),
+            ) {
+                return;
+            }
+            let Some(view) = &model.state.view else {
+                return;
+            };
+            if !view.endpoints.iter().any(|peer| peer.id == endpoint) {
+                return;
+            }
+            view.selections.first().cloned()
+        };
+        if let Some(selection) = selection {
+            if let Some(handle) = &self.handle {
+                self.submit(|| handle.send_many(selection, vec![endpoint.to_owned()]));
+            }
+        } else {
+            self.model.borrow_mut().recipients.clear();
+            self.choose_recipient(endpoint, true);
+            self.show_sending();
+        }
+    }
     pub fn set_mode(self: &Rc<Self>, mode: Mode) {
         self.apply_mode(mode, true);
     }
@@ -207,7 +315,7 @@ impl Panel {
             appearance.set_selected(u32::from(mode == Mode::Full));
         }
         self.render();
-        if self.layer && self.window.is_visible() {
+        if self.layer && self.window.is_visible() && !self.model.borrow().dragged {
             let hint = self.model.borrow().last_hint;
             if let Some(hint) = hint {
                 self.show_at(hint);
@@ -223,6 +331,9 @@ impl Panel {
         }
         self.mark_manual();
         if let Some(window) = self.settings.borrow().as_ref() {
+            if let Some(editor) = self.settings_owner.borrow().as_ref() {
+                editor.reopen();
+            }
             window.present();
             return;
         }

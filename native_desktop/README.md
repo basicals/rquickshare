@@ -10,27 +10,36 @@ The original blue application icon is restored, and Settings/tray offer an owned
 About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
 checks and exact installed status.
 
-The tray now exports a standard DBusMenu with Open, file/folder/text/image selection, incoming/
-transfer navigation, Compact/Full, Settings/About, Reconnect, Hide and Quit. It contains
-fixed labels only. Actions share current GTK readiness and lock safety; no consent,
-implicit Send or daemon-stop action is exposed. Live visibility choices use the
-daemon-owned settings writer and exact retry contract. Primary click
-opens the card; direct ContextMenu opens its existing popover. See
-[native-tray-menu.md](../docs/native-tray-menu.md) for protocol/lifecycle and actual
-checks. Physical Plasma menu rendering and placement/focus remain acceptance gates.
+The native16 candidate follows the approved [UI mockup](../docs/native-card-usability.md):
+Compact has Receive, Send, Hide and Full view; Full has one keyed device/request/
+transfer list, icon-overlay statuses and inline code/manifest/progress actions.
+No main tabs or branding. The branded Settings window uses General, Receiving,
+Advanced and About sidebar sections, with shared Cancel/OK and no internal scroll.
+Editing never previews/applies values; switching sections preserves the draft.
 
-Settings now supports explicit Save/import, source conflict recovery, retry,
-visibility, live device name, optional port, locally acquired receive-directory FD, and persistent
-Full/Compact. The daemon is sole writer of a private native file; the original
-Tauri file remains intact with an exact private backup on import. See
-[native-settings.md](../docs/native-settings.md) for the authoritative contract.
-Mode menu changes preview temporarily until explicitly saved in Settings.
+The shortened tray offers a visibility-aware Open/Hide, Receive, one Send entry,
+actual incoming/active counts, three live visibility choices, Settings/About and
+Quit. Appearance stays on the card. Receive reviews a waiting request, otherwise
+requests one-minute visibility through the existing daemon owner; it never accepts.
+The Send surface offers files/folder/text/explicit clipboard image capture. Add
+files atomically extends an unsent file source in the daemon, preserving the base
+on failure and never auto-sending after chooser completion. See
+[source extension](../docs/native-source-extension.md). No remembered trust or
+persistent history is implied by discovered names or status icons.
+
+Settings OK saves validated native values, then requested login start. It closes
+only after acknowledged application; failures/uncertainty/restart-required state
+remain explicit. Cancel discards an unsubmitted draft, not admitted writes.
+The daemon is the sole native-settings writer; the original Tauri settings remain
+intact with exact private backup on import. Recovery actions are contextual in
+Advanced. See [settings](../docs/native-settings.md) and the superseding mockup
+contract. Physical KDE dragging/placement and real-peer checks remain separate.
 
 Corrupt configuration or failed transport startup keeps a Stopped settings service
 available for in-app repair. Save is distinct from guarded start/restart; prepared
 files/live transfers block restart. Reconnect reads the new generation without
 replaying source/send/save actions. Missing daemon or read-only `--settings PATH`
-override disables persistence and labels appearance temporary. No install/autostart
+override disables persistence. No install/autostart
 is implied; normal native startup uses the separate native store when present.
 
 Nearby now supports1..10 explicit recipient choices and one Send. The daemon
@@ -59,7 +68,7 @@ The private `rquickshare-preview-helper` binary is installed under `/usr/libexec
 It runs Glycin with explicit Bwrap and hard per-process resource limits. The GUI
 only receives bounded validated RGBA, with no unsandboxed fallback. Existing
 `--preview --preview-page incoming --preview-mode full` exercises a synthetic
-PNG through the real helper; Compact keeps metadata/actions. This local fixture
+PNG through the real helper; Compact keeps its four quick actions. This local fixture
 does not establish remote preview wire semantics or Google interoperability.
 See [preview contract](../docs/native-preview-review.md). Tests require building
 the helper first; real sandbox smoke must fail if the environment cannot enforce
@@ -75,7 +84,7 @@ Follow [native-package.md](../docs/native-package.md) and
 [native-daemon-startup.md](../docs/native-daemon-startup.md); do not start it beside
 an existing transport owner. Passive SDK connections and preview never activate it.
 Missing graphical/tray prerequisites fail explicitly. A missing/incompatible daemon
-enters a visible, non-preview unavailable state with explicit Reconnect. The panel
+enters a visible, non-preview unavailable state with a contextual Retry connection action. The panel
 stays hidden until tray activation, a CLI import or a safe pending daemon notice. Escape/close hides it; Quit closes local clients, not daemon work.
 
 To review the compiled widget source without connecting a daemon or tray:
@@ -123,7 +132,7 @@ backend and never retries source acquisition, preparation or Send.
 The public ingress contract and measured SDK checks are in
 [native-desktop-ingress.md](../docs/native-desktop-ingress.md).
 
-Custom card presentation now starts in Compact mode. Full keeps Nearby, Incoming
+Historical pre-native16 card presentation started in Compact mode. Full kept Nearby, Incoming
 and Transfers, with source controls on Nearby. The tray and right-click
 menus expose secondary actions; Settings persists Appearance and supported service
 values through the daemon's typed contract. No legacy persistent setting is overwritten. Full/Compact share
@@ -154,7 +163,7 @@ actual checks are in [native-notification-backend.md](../docs/native-notificatio
 No physical DND/lock/focus/monitor or installed-product acceptance is claimed.
 
 Received Text/URL shows advertised sender, verification code and byte count before
-Accept. In Full > Transfers, a retained completed incoming text offers Review text.
+Accept. A retained completed incoming text offers Review text in its expanded list row.
 The secondary window displays plain nonselectable text; only Copy replaces this
 clipboard, after fresh unlock/epoch/resource checks and GTK provider acknowledgement.
 Receipt/view/reconnect never copies or opens links. Lock/epoch change closes review;
@@ -164,7 +173,7 @@ new source/settings mutations. Outgoing preparation and URL opening
 remain separate capabilities. See [native-text.md](../docs/native-text.md) for contracts
 and exact actual observations; no installed Wayland/Google acceptance is implied.
 
-Send text… in the header/context/tray menu opens a private editor. Write text or
+Text or link… in the sending surface opens a private editor. Write text or
 explicitly Paste clipboard (1–128 KiB UTF-8, no NUL), review and Prepare text. Then
 choose a Nearby recipient and press Send. Preparation alone never sends. Existing
 prepared files/text must be discarded first. Clipboard capture is bounded, cancellable
@@ -182,8 +191,8 @@ Lock/epoch/close clears the local image; owned CPU work retains the preparation
 permit until completion. See [native-image.md](../docs/native-image.md).
 
 Memory-backed file descriptors must carry all immutable seals and fit32 MiB each/
-128 MiB aggregate in the daemon. Mutable tmpfs sources are rejected; ordinary disk
-sources retain their existing descriptor behavior. For automated disk-source tests
+128 MiB aggregate in the daemon. Named tmpfs files follow ordinary mutable-file rules; unsealed anonymous
+memory is rejected. Ordinary disk sources retain descriptor behavior. For automated disk-source tests
 on a host with tmpfs /tmp, set TMPDIR to a directory on a disk filesystem first.
 
 The native Debian builder is `python3 scripts/native_deb.py build` from the repository
@@ -194,8 +203,7 @@ is installed or service enabled by build/verification. See
 [packaging/README.md](packaging/README.md) for requirements and remaining acceptance.
 
 
-Completed incoming files now offer Show in folder per manifest entry under Full >
-Transfers. This uses the original completed transfer's collision-resolved result,
+Completed incoming files now offer Show in folder per manifest entry in its expanded list row. This uses the original completed transfer's collision-resolved result,
 not the current receive setting. The daemon retains bounded private receipts and
 opens a short-lived verified read-only descriptor on demand; the native client
 passes that descriptor to portal OpenDirectory after the explicit click. Rendering,
@@ -206,7 +214,7 @@ close owned pending work. Already accepted external actions cannot be retracted.
 See [native-reveal.md](../docs/native-reveal.md) for exact limits, ownership, actual
 checks and physical KDE selection/activation acceptance still required.
 
-Settings > Start at sign-in > Apply login start enables the vendor desktop user
+Settings > General > Start at sign-in > OK enables the vendor desktop user
 unit for future sessions: daemon and tray start with the card hidden. Default off.
 Disabling future startup leaves current services/transfers running. The setting
 reads actual systemd enablement and requires explicit Apply; Reload resolves

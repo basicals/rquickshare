@@ -25,6 +25,7 @@ mod compose;
 mod image;
 mod incoming_preview;
 mod menu;
+mod movement;
 mod presentation;
 mod recipients;
 mod reveal;
@@ -53,6 +54,7 @@ struct Model {
     manual_requested: bool,
     preview: bool,
     saved_mode: Option<u8>,
+    dragged: bool,
     recipients: BTreeMap<String, String>,
 }
 pub struct Panel {
@@ -86,6 +88,7 @@ pub struct Panel {
     style: gtk::CssProvider,
     tray_menu: RefCell<Option<crate::tray::menu::Handle>>,
     login: RefCell<Option<crate::login::Handle>>,
+    sending: gtk::PopoverMenu,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -322,7 +325,7 @@ impl Panel {
             &provider,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
-        let reconnect_button = gtk::Button::with_label("Reconnect service");
+        let reconnect_button = gtk::Button::with_label("Retry connection");
         reconnect_button.set_action_name(Some("panel.reconnect"));
         builder
             .object::<gtk::Box>("recovery")
@@ -367,6 +370,7 @@ impl Panel {
             style: provider,
             tray_menu: RefCell::new(None),
             login: RefCell::new(None),
+            sending: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -436,11 +440,19 @@ impl Panel {
         let weak = Rc::downgrade(&panel);
         panel.pages.connect_visible_child_name_notify(move |pages| {
             if let Some(panel) = weak.upgrade() {
-                let nearby = panel.model.borrow().mode == Mode::Full
+                let model = panel.model.borrow();
+                let nearby = model.mode == Mode::Full
                     && pages.visible_child_name().as_deref() == Some("nearby");
-                for id in ["source", "recipients"] {
-                    panel.box_widget(id).set_visible(nearby);
-                }
+                panel.box_widget("source").set_visible(nearby);
+                panel.box_widget("recipients").set_visible(
+                    nearby
+                        && (!model.recipients.is_empty()
+                            || model
+                                .state
+                                .view
+                                .as_ref()
+                                .is_some_and(|view| !view.selections.is_empty())),
+                );
             }
         });
         panel.render();
@@ -631,6 +643,7 @@ impl Panel {
         }
         self.appearance.borrow_mut().take();
         self.context.unparent();
+        self.sending.unparent();
         let mut model = self.model.borrow_mut();
         model.closing = true;
         model.recipients.clear();
@@ -700,6 +713,7 @@ impl Panel {
         self.completion.replace(Some(task));
     }
     fn choose(self: &Rc<Self>, folder: bool) {
+        let base;
         {
             let mut model = self.model.borrow_mut();
             if !controls_ready(
@@ -710,12 +724,12 @@ impl Panel {
                     || model.dialog.is_some()
                     || model.closing
                     || *self.ingress.gate.subscribe().borrow(),
-            ) || model
-                .state
-                .view
-                .as_ref()
-                .is_some_and(|view| !view.selections.is_empty())
-            {
+            ) || model.state.view.as_ref().is_some_and(|view| {
+                !view.selections.is_empty()
+                    && !view.sources.first().is_some_and(|source| {
+                        source.kind == rqs_lib::sessions::details::PayloadKind::Files
+                    })
+            }) {
                 return;
             }
             let Some(permit) = self.ingress.gate.try_acquire() else {
@@ -724,6 +738,12 @@ impl Panel {
             model.dialog_permit = Some(permit);
             model.dialog = Some(gio::Cancellable::new());
             model.notice = None;
+            base = model
+                .state
+                .view
+                .as_ref()
+                .and_then(|view| view.selections.first())
+                .cloned();
         }
         self.render();
         let dialog = gtk::FileDialog::new();
@@ -740,7 +760,13 @@ impl Panel {
                     let paths: Option<Vec<_>> = files.iter().map(gio::File::path).collect();
                     match (paths, panel.handle.clone(), permit) {
                         (Some(paths), Some(handle), Some(permit)) if !paths.is_empty() => {
-                            panel.ingress.start(&panel.runtime, paths, handle, permit);
+                            panel.ingress.start(
+                                &panel.runtime,
+                                paths,
+                                handle,
+                                permit,
+                                base.clone(),
+                            );
                         }
                         _ => panel.notice("Only local files and folders can be selected."),
                     }
@@ -793,14 +819,10 @@ impl Panel {
         let full = model.mode == Mode::Full;
         self.box_widget("source")
             .set_visible(full && self.pages.visible_child_name().as_deref() == Some("nearby"));
-        self.builder
-            .object::<gtk::StackSwitcher>("tabs")
-            .unwrap()
-            .set_visible(full);
+        self.box_widget("header").set_visible(full);
         self.pages.set_visible(full);
         self.box_widget("compact").set_visible(!full);
-        self.button("mode")
-            .set_label(if full { "Compact" } else { "Full" });
+        self.button("mode").set_icon_name("view-restore-symbolic");
         self.button("mode").set_tooltip_text(Some(if full {
             "Use compact card"
         } else {
@@ -856,17 +878,63 @@ impl Panel {
             .view
             .as_ref()
             .and_then(|view| view.selections.first().cloned());
+        let waiting_requests = model
+            .state
+            .view
+            .as_ref()
+            .map(|view| {
+                view.transfers
+                    .iter()
+                    .filter(|transfer| {
+                        transfer.direction == Direction::Inbound
+                            && transfer.phase == Phase::AwaitingConsent
+                    })
+                    .count()
+            })
+            .unwrap_or(0);
+        self.text(
+            "quick-receive-label",
+            &if waiting_requests == 0 {
+                "Receive".into()
+            } else {
+                format!("Receive ({waiting_requests})")
+            },
+        );
+        for (name, enabled) in [
+            ("send", ready),
+            (
+                "receive",
+                ready && (waiting_requests != 0 || visibility_action.is_enabled()),
+            ),
+        ] {
+            self.actions
+                .lookup_action(name)
+                .and_downcast::<gio::SimpleAction>()
+                .unwrap()
+                .set_enabled(enabled);
+        }
         let selected = selection.is_some();
+        let can_add = !selected
+            || model
+                .state
+                .view
+                .as_ref()
+                .and_then(|view| view.sources.first())
+                .is_some_and(|source| {
+                    source.kind == rqs_lib::sessions::details::PayloadKind::Files
+                });
         self.render_recipients(&model, selected);
-        self.button("files").set_sensitive(ready && !selected);
-        self.button("folder").set_sensitive(ready && !selected);
+        self.button("files").set_sensitive(ready && can_add);
+        self.button("folder").set_sensitive(ready && can_add);
         self.button("discard").set_sensitive(ready && selected);
-        self.button("files").set_visible(!selected);
-        self.button("folder").set_visible(!selected);
+        self.button("files").set_visible(selected && can_add);
+        self.button("send-entry").set_visible(!selected);
+        self.button("folder").set_visible(false);
+        self.button("files").set_label("Add files…");
         self.button("discard").set_visible(selected);
         for (name, enabled) in [
-            ("files", ready && !selected),
-            ("folder", ready && !selected),
+            ("files", ready && can_add),
+            ("folder", ready && can_add),
             ("send-text", ready && !selected),
             ("send-image", ready && !selected),
             ("discard", ready && selected),
@@ -1004,19 +1072,13 @@ impl Panel {
 
         let Some(view) = &model.state.view else {
             self.rows.borrow_mut().clear();
-            for id in ["nearby", "incoming", "transfers", "compact"] {
+            for id in ["nearby", "incoming", "transfers"] {
                 clear(&self.box_widget(id));
                 self.box_widget(id).append(&label(if preview {
                     "Preview only"
                 } else {
                     "Waiting for complete service state"
                 }));
-            }
-            if !preview {
-                let compact = self.box_widget("compact");
-                clear(&compact);
-                compact.append(&label("Transfer service unavailable"));
-                compact.append(&label("Reconnect starts a fresh client. Unsent preparation is released; choose files again."));
             }
             if let Some(page) = model.preview_page.as_deref() {
                 self.render_preview(page);
@@ -1036,6 +1098,7 @@ impl Panel {
             .measure(gtk::Orientation::Vertical, 420)
             .1
             .max(1);
+        self.clamp_moved_surface(height);
         self.window.set_default_size(420, height);
     }
     fn incoming_card(
@@ -1236,6 +1299,7 @@ impl Panel {
                 }
             }
             self.model.borrow_mut().last_hint = Some(point);
+            self.model.borrow_mut().dragged = false;
             let model = self.model.borrow();
             if !model.safety_active
                 || (model.safety.manual_allowed()
@@ -1247,6 +1311,8 @@ impl Panel {
             } else {
                 self.window.set_visible(false);
             }
+            drop(model);
+            self.sync_tray_menu();
             return true;
         }
         self.notice("Tray position is outside available monitors. Activate the tray icon again.");
@@ -1263,19 +1329,38 @@ impl Panel {
         self.model.borrow().preview_page.as_deref() != Some("incoming")
             || self.preview_image.finished()
     }
-    fn render_preview(&self, page: &str) {
+    fn render_preview(self: &Rc<Self>, page: &str) {
         self.pages.set_visible_child_name(page);
-        let nearby = self.box_widget("nearby");
-        clear(&nearby);
-        for name in ["Example phone", "Example laptop"] {
-            let row = card();
-            let choice = gtk::CheckButton::with_label(name);
-            choice.set_active(true);
-            choice.set_sensitive(false);
-            row.append(&choice);
-            row.append(&label("Nearby advertised device · preview"));
-            nearby.append(&row);
-        }
+        let fixture = rqs_lib::service::client::state::StateView {
+            epoch: 1,
+            revision: 1,
+            lifecycle: Lifecycle::Running,
+            synchronized: true,
+            resources: Default::default(),
+            sources: vec![],
+            selections: vec![],
+            transfers: vec![],
+            warnings: vec![],
+            notices: vec![],
+            endpoints: vec![
+                rqs_lib::service::client::state::Endpoint {
+                    id: "preview-phone".into(),
+                    name: "Example phone".into(),
+                },
+                rqs_lib::service::client::state::Endpoint {
+                    id: "preview-laptop".into(),
+                    name: "Example laptop".into(),
+                },
+            ],
+        };
+        let choices = fixture
+            .endpoints
+            .iter()
+            .map(|peer| (peer.id.clone(), peer.name.clone()))
+            .collect();
+        self.render_rows(&fixture, None, false, None, &choices);
+        self.box_widget("recipients")
+            .set_visible(self.mode() == Mode::Full && page == "nearby");
         self.text("recipient-summary", "2 selected · preview");
         self.button("send-many").set_label("Send to 2");
         let details = TransferDetails {
@@ -1304,6 +1389,26 @@ impl Panel {
         }
         row.append(&actions);
         incoming.append(&row);
+        if page == "incoming" {
+            let nearby = self.box_widget("nearby");
+            clear(&nearby);
+            let review = details_card(&details);
+            let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            for title in ["Decline", "Accept"] {
+                let button = gtk::Button::with_label(title);
+                button.set_sensitive(false);
+                buttons.append(&button);
+            }
+            review.append(&buttons);
+            nearby.append(&rows::transfer_row(
+                "Example phone",
+                rqs_lib::service::client::state::DeviceKind::Phone,
+                Phase::AwaitingConsent,
+                &review,
+                true,
+            ));
+        }
+
         let transfers = self.box_widget("transfers");
         clear(&transfers);
         for (recipient, status) in [
@@ -1318,39 +1423,9 @@ impl Panel {
             row.append(&cancel);
             transfers.append(&row);
         }
-        let compact = self.box_widget("compact");
-        clear(&compact);
-        match page {
-            "incoming" => {
-                let row = details_card_mode(&details, false);
-                let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-                for title in ["Decline", "Accept"] {
-                    let button = gtk::Button::with_label(title);
-                    button.set_sensitive(false);
-                    buttons.append(&button);
-                }
-                row.append(&buttons);
-                let all = gtk::Button::with_label("Details and all requests");
-                all.set_action_name(Some("panel.mode"));
-                all.set_action_target_value(Some(&"full".to_variant()));
-                row.append(&all);
-                compact.append(&row);
-            }
-            "transfers" => {
-                let row = card();
-                row.append(&label("Recipient: Example phone"));
-                row.append(&label("2048 / 12345 bytes locally sent"));
-                let cancel = gtk::Button::with_label("Cancel");
-                cancel.set_sensitive(false);
-                row.append(&cancel);
-                compact.append(&row);
-            }
-            _ => {
-                let send = gtk::Button::with_label("Send files…");
-                send.set_sensitive(false);
-                compact.append(&send);
-            }
-        }
+        self.pages.set_visible_child_name("nearby");
+        self.box_widget("source")
+            .set_visible(self.mode() == Mode::Full && page == "nearby");
         self.resize_to_content();
     }
 }
