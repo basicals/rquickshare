@@ -350,3 +350,30 @@ from the old separate Incoming page. Original decoder fixture remains isolated
 historical code; no production thumbnail routing was added. Final package release
 frames and installed checks follow; these debug observations are not KDE signoff.
 All owned one-shot checks/renderers exited: Terminal closed. Native15 still runs.
+
+## Native16 package/release visual gate
+
+Built from1a9d675d45196ba11e57b2261830bd882c39f011. The strict offline builder
+passed its14-file/owner/mode/asset/dependency/ELF/checksum/help/private-settings
+checks. Package:rquickshare_0.11.5+native16_amd64.deb,6,502,012 bytes, SHA256
+902748767e11c8e5c0307653c13e795737d13dc43364ed8e24dd25b1e4ea4ede.
+The native15 package remains unchanged for rollback. Native16 is not signed or
+published; no APT staging/request or key operation is implied.
+
+Actual release GUI renders passed: Compact420x141, Full devices420x341,
+Full inline incoming review420x349. All card corner alpha values are0. Reviewed
+the three release frames and the final four760x389 Settings sections; no parser/
+CSS/critical failure. Incoming release frame uses the production expandable-row
+builder, shows the exact fixture code/manifest and explicit Accept/Decline, with
+no payload thumbnail. Example records and the Preview-only status are inert
+renderer data; they are not discovered/paired physical peers. Receipt and hashes:
+native_desktop/target/mockup-native16-release/receipt.json.
+
+Next authorized local repair gate: verify exact native15 package/installed version
+and known service owners1925337/1925338, globally zero prepared-source resources,
+no nonterminal transfers, one own tray and no busy preparation. Only then join
+those idle services, upgrade the exact native16 package through system Pinentry/
+Polkit authorization, reload units without enablement and normal launch. Require
+all14 installed files to match, one tray with15 menu rows and unchanged login-start
+state. Stop if owners/work differ; never force-kill or interrupt active work.
+Physical KDE dragging/chooser/OK/Cancel acceptance remains separate after install.
