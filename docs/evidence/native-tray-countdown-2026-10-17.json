@@ -166,9 +166,16 @@
     "passed": true
   },
   "acceptance": {
-    "physical_primary_toggle_position_countdown_verified": false,
-    "physical_check_requested": true,
-    "native20_appearance": "explicit user acceptance, historical"
+    "physical_primary_toggle_position_countdown_verified": true,
+    "physical_check_requested": false,
+    "native20_appearance": "explicit user acceptance, historical",
+    "physical_observation": {
+      "local_date": "2026-10-17",
+      "installed_version": "0.11.5+native21",
+      "source": "explicit user reply to the native21 combined position/countdown check",
+      "result": "position is preserved and countdown works",
+      "scope": "requested same-session tray hide/reopen and visible countdown; no claim about all monitor topologies, natural expiry, peer interoperability or restart persistence"
+    }
   },
   "signed": false,
   "published": false,

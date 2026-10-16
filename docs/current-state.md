@@ -13,9 +13,10 @@ old tmpfs fixture-lifetime failures; all five passed after retaining their named
 sources, with production adoption/security gates unchanged. Strict core/native
 lint passed. Offline package verification,14 installed file comparisons, one
 15-row tray, actual SNI Activate hide/show roundtrip and Visibility2 read passed.
-Login start is off; current owned daemon/desktop PIDs2201915/2201916. Physical
-position/spinner/countdown inspection is requested and pending. The user accepted
-native20 panel appearance. Native20 rollback artifacts remain immutable. See
+Login start is off; current owned daemon/desktop PIDs2201915/2201916. The user confirmed native21 same-session position retention and working
+countdown on2026-10-17 after the requested tray hide/reopen check. The native20
+panel appearance was also accepted. Natural expiry, changed monitor topologies
+and current-package peer interoperability are not claimed by that confirmation. Native20 rollback artifacts remain immutable. See
 [card usability](native-card-usability.md) and
 [native21 evidence](evidence/native-tray-countdown-2026-10-17.json).
 The user selected Receive=request review or one-minute

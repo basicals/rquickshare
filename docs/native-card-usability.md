@@ -1017,3 +1017,18 @@ visibility. Actual screen coordinates were not measured. User physical position/
 spinner/countdown inspection is requested and pending. No user source was
 discarded or original removed. See [evidence](evidence/native-tray-countdown-2026-10-17.json).
 All owned checks exited: Terminal closed; the normal installed app stays running.
+
+Native21 physical acceptance: on2026-10-17 the user explicitly confirmed that the
+card position is preserved and countdown works in the requested same-session tray
+hide/reopen/expanded-Receive check. This completes this scoped UI slice. It does
+not establish every monitor topology, natural expiry, cross-process persistence,
+Android/Windows interoperability or full product release acceptance.
+
+Native21 immutable handoff:503 tracked files at
+b0a9cd1627116057305df65837db1289224b666c, source ZIP SHA-256
+c26614956d39d37ca8919e55ff1db536c44635453b25fb8c530fb38cbe0008a4. This source archive/export
+was made before the user confirmation and stays unchanged as a dated snapshot.
+Binary source remains15d8c5f5a9cf81f327d023c4d8fac1031ce75535; package SHA-256
+16486a5277b64362722a714e92590f9971ba7be20f38e227cc943a4ce318fc4b. Mutable current source/docs/
+installed receipts include the later physical acceptance. Native20 rollback
+artifacts remain unchanged. No signing, APT staging, publication or cloud calls.
