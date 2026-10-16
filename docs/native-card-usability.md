@@ -503,7 +503,7 @@ Layer Shell bottom anchor as the position owner instead of such corrections.
    and extend the existing GTK smoke for exact quick-action order. Run affected
    checks and strict native lint once, then inspect the final Compact frame.
    No full core suite or ten-run repetition; rerun only failures/affected changes.
-4. [ ] B4: commit source/docs, build/verify distinct native17 and preserve native16.
+4. [x] B4: commit source/docs, build/verify distinct native17 and preserve native16.
    Upgrade only after the existing known-owner/global-idle gate. Record14 actual
    installed files, one tray and unchanged login state; physical bottom alignment
    needs the user's KDE check. Update artifacts/evidence and continuation index.
@@ -539,3 +539,39 @@ closed desktop), zero global prepared sources/handles/bytes, no nonterminal
 transfers and the existing single-tray check. Native16 package remains unchanged.
 No user source is discarded; any occupied gate stops before service mutation.
 Build and rendering commands exited: Terminal closed.
+
+B4 installation observations: native17 replaced native16 after a fresh known-owner
+idle gate (zero global prepared sources, handles, bytes and active transfers). Apt
+completed successfully,14 actual installed regular files matched the package,
+and one active rquickshare tray exported the expected15 menu rows. Daemon/desktop
+PIDs2168586/2168587 are the new owned service owners; login start remains disabled.
+The user has been asked to check physical Full/Compact lower-edge alignment; no
+answer is recorded yet. Native16 user-confirmed dragging/Settings acceptance is
+historical and does not prove this geometry on native17. Terminal closed.
+
+## Native18 Receive follow-up — plan before code
+
+The user reports that Receive expands the Compact card even without pending
+requests. The selected contract was already explicit: review a pending request,
+otherwise request existing one-minute visibility. Current receive() calls
+set_mode(Full) unconditionally before branching, causing this regression. This
+is a scoped correction to the selected flow, not a new product decision.
+
+1. [ ] R1: move Full/list/review navigation exclusively into the pending-request
+   branch. With no request, preserve the current mode/page/position and dispatch
+   the same existing temporary visibility action. Keep presentation/safety and
+   daemon ownership/admission guards; never accept a request automatically.
+2. [ ] R2: extend the existing actual GTK smoke with an observed temporary action
+   activation and real receive() calls in Compact/Full and pending cases. Verify
+   exact one-minute target, no mode change without a request, review expansion
+   with a request, and no visibility request in that branch. Run the affected
+   smoke and strict native lint once; no unchanged core/full-suite repetition.
+3. [ ] R3: bump distinct native18, build/package verify, upgrade only through
+   known-owner/zero-preparation/nonterminal-transfer gates, then record installed
+   state and immutable handoff. Preserve native16/native17 rollback artifacts.
+
+Risk: a new incoming request can arrive after the UI observation; the daemon still
+requires explicit consent and the next Receive can open its review. No public
+API/schema/security-boundary changes. Rollback is the scoped source commit and
+previous immutable package when idle. Physical Receive/geometry checks remain
+separate from isolated GTK assertions.

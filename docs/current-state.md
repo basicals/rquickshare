@@ -1,17 +1,15 @@
 # Current implementation and continuation state
 
-Latest work (2026-10-16): [card/tray/settings mockup](native-card-usability.md)
-is implemented and native16 is now installed after the user exited the old GUI,
-releasing its414-byte preparation without deleting the original. The fresh idle
-gate passed; apt upgrade,14 installed-file comparisons, one real tray with15 rows,
-actual Open/Hide roundtrip and installed atomic source-extension/replay/no-Send
-smoke passed. Login start remains off. New owned service PIDs2139034/2139035.
-Native15 package/archive remain immutable rollback references. The user confirmed
-full-card dragging works on the installed KDE/Wayland session on2026-10-17.
-The user also confirmed staged Settings OK/Cancel on native16. Physical chooser
-and current-version peer acceptance remain open. The requested Compact action
-swap and shared Full/Compact bottom edge are being verified for native17; see
-the follow-up's Native17 plan. Native16 remains installed until its idle upgrade gate.
+Latest work (2026-10-17): native17 is installed and running, with Compact order
+Receive, Send, Full view, Hide and native Bottom anchoring across card resizing.
+All14 installed files and one active15-row tray match; login start remains off.
+Current owned daemon/desktop PIDs2168586/2168587. Physical bottom-edge alignment
+has been requested but not confirmed. Native16 user-confirmed dragging and staged
+Settings OK/Cancel remain historical evidence. The user then reported Receive
+incorrectly expanding Compact with no waiting request. The next scoped native18
+correction is documented before code in [card usability](native-card-usability.md):
+preserve the current view and request one-minute visibility unless a request
+needs review. Native17 remains installed until the idle native18 upgrade gate.
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.

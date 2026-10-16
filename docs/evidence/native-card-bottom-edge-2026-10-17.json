@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "scope": "compact-order-and-shared-bottom-edge",
+  "binary_source_commit": "f82993713fd13511431b7d831e60808f0f9c921f",
+  "package": {
+    "name": "rquickshare_0.11.5+native17_amd64.deb",
+    "bytes": 6508224,
+    "sha256": "cfaa4040b6e9382b7df875a8d052884c2bbebc6b1f3296d0ff8821f9f10fe5e8",
+    "offline_verified": true
+  },
+  "checks": {
+    "affected_panel": {
+      "passed": 12,
+      "failed": 0,
+      "seconds": 0.57
+    },
+    "strict_native_all_targets_no_deps_clippy": {
+      "passed": true,
+      "seconds": 1.85,
+      "existing_core_dependency_warnings": 9
+    },
+    "format_and_whitespace": true,
+    "core_rerun": false,
+    "ten_repetitions": false
+  },
+  "compact_frame": {
+    "width": 420,
+    "height": 141,
+    "corner_alpha": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "sha256": "86cd0afb9b7c644cd0dca53ee2b6eb8733974d344a5476997f49183ecf73fe8e",
+    "inert_release_preview": true,
+    "order": [
+      "Receive",
+      "Send",
+      "Full view",
+      "Hide"
+    ]
+  },
+  "installation": {
+    "observed_at": "2026-10-16T23:13:03.537288+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native16",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2139034"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2139035"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 34,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "terminal_history_count": 0,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native17",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2168586"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2168587"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "tray": {
+    "observed_at": "2026-10-16T23:13:29.203582+00:00",
+    "installed_version": "0.11.5+native17",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      4,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true
+  },
+  "physical_bottom_edge_verified": false,
+  "physical_bottom_edge_check_requested": true,
+  "signed": false,
+  "published": false,
+  "apt_staged": false,
+  "next_followup": "native18 preserves Compact on Receive without pending requests"
+}
