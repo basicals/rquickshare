@@ -110,7 +110,7 @@ Scope and stages before any code:
    from deterministic policy/transport tests, update evidence/current state and
    atomic commits. If real sandbox cannot start, never disable it to green a test.
    No installation, credentials, cloud/peer request, signing or publication.
-6. [ ] D6: export the verified native8 package/source, unsigned APT, unapproved
+6. [x] D6: export the verified native8 package/source, unsigned APT, unapproved
    public review request and exact provenance receipt. Keep native7 and earlier
    artifacts immutable; final documentation is newer than the immutable ZIP.
 
@@ -240,6 +240,32 @@ specification or sanitized synthetic-image peer fixture with sender version,
 Introduction ids, payload type/encoding and ordering around consent. No arbitrary
 peer size/hash/offset is authority to resume or skip data.
 
-Public export/provenance receipt remains pending D6. Owned review processes
-exited; only explicitly owned private groups had deadline cleanup authority.
-Terminal closed.
+Public export/provenance receipt is complete as recorded below. Owned review
+processes exited; only explicitly owned private groups had deadline cleanup
+authority. Terminal closed.
+
+## D6 public handoff verified
+
+Output directory: `/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs`.
+Immutable native8 source archive exportsc3bb7f2a894fa9b63189a756af297a3114994c9d,
+461 tracked files, SHA256
+`9c7bd2a79c19754091b18fc1f95fcc6176da07d3121f8c3a0935b423bf50a7f5`.
+ZIP CRC, full tracked inventory and selected exact source/lock/evidence bytes
+passed. Source inputs did not change from binary commitfb55e8b. The final docs
+handoff commit necessarily postdates that immutable archive; do not rewrite the
+archive to include its own completed export receipt.
+
+Package/checksum copies match the reviewed originals. Unsigned APT ZIP has7 exact
+files, CRC/bytes checked, SHA256
+`b95ed5c85ddfb66c0d20bdbafba453f491fcd057ba1b2f0e0ef012722a3cf1f2`.
+The public request directory preserves exact request.json/request.sha256 names;
+request digest/approval limits above remain unchanged. Generic GTK source ZIP now
+matches the native8 archive; named native7 and all earlier artifacts are retained.
+Public `rquickshare-native8-export.json` binds archive/binary/package/request
+identities and explicitly says remote preview support is still unimplemented.
+
+Next implementation checkpoint is concrete wire evidence and then admitted opaque
+preview routing/native IPC/production card binding; the decoder boundary and its
+offline verification are complete. Do not repeat unchanged checks, Drive recovery,
+signing setup or account-provider alternatives to resume. No install, signature,
+publication or external account/cloud request occurred in this slice.

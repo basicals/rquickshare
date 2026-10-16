@@ -69,7 +69,8 @@ offline native foundation is implemented: private Glycin/Bwrap helper, hard
 resource limits, validated local pixel IPC, cancellation/reaping and Full-card
 fixture. Ten new Rust methods/scoped native checks and the native8 uninstalled
 Ubuntu26.04 amd64 candidate passed; extracted PNG/JPEG and Full/Compact rendering
-were verified. Source/package/unsigned-APT/request public export is pending D6. Remote
+were verified. D6 source/package/unsigned-APT/request public export is verified;
+exact archive/binary provenance and hashes are in the decoder contract/evidence. Remote
 preview encoding/mapping, daemon IPC/production binding and persistent resume
 contracts remain open. Do not ask for the decoder boundary again or claim full
 preview compatibility from local fixtures.
@@ -82,7 +83,7 @@ preview compatibility from local fixtures.
 | Sharing | File/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal and PairedKey authentication foundation implemented | Current native package with physical Android/Windows peers; operational certificate provider, no full compatibility signoff |
 | Settings | Daemon-owned schema2/Settings2 store, migration/backup/recovery, live device name and GTK editor implemented | Real installed migration/recovery and Google/KDE name refresh |
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
-| Distribution | Verified uninstalled Ubuntu26.04 amd64 native8 package with private sandbox helper, fresh unsigned APT and unapproved signing-review request; publisher and narrow HTTPS Worker route implemented | Public native8 handoff, exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
+| Distribution | Verified uninstalled Ubuntu26.04 amd64 native8 package with private sandbox helper; public source/package/unsigned-APT/unapproved-request handoff verified; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
 | Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
 | Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Tray/current-visibility UX, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
 

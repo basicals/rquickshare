@@ -199,5 +199,40 @@
       "sha256": "5030ad052929fc330730ae6080d6d06ff5099c9445ee2b89f01a39e7fbe53972"
     }
   ],
-  "export_complete": false
+  "export_complete": true,
+  "export": {
+    "schema": 1,
+    "date": "2026-10-16",
+    "source_commit": "c3bb7f2a894fa9b63189a756af297a3114994c9d",
+    "binary_source_commit": "fb55e8b8fa124cff0911d2deba31ba1bde762441",
+    "source_zip": {
+      "name": "rquickshare-native8-source.zip",
+      "sha256": "9c7bd2a79c19754091b18fc1f95fcc6176da07d3121f8c3a0935b423bf50a7f5",
+      "tracked_files": 461,
+      "crc_inventory_selected_bytes_verified": true
+    },
+    "package": {
+      "name": "rquickshare_0.11.5+native8_amd64.deb",
+      "sha256": "e89c5ed7a5e356228926d139f2585626dd56528fe74c80fe436643a7a6d26842",
+      "bytes": 6338436
+    },
+    "unsigned_apt": {
+      "name": "rquickshare-native8-apt-UNSIGNED.zip",
+      "sha256": "b95ed5c85ddfb66c0d20bdbafba453f491fcd057ba1b2f0e0ef012722a3cf1f2",
+      "files": 7,
+      "signed": false
+    },
+    "signing_request": {
+      "path": "rquickshare-native8-signing-request/request.json",
+      "sha256": "e206c18cba37b472432c8af37750b259701821b942b1f9c10699c00723383259",
+      "approved": false
+    },
+    "generic_source_refreshed": true,
+    "previous_native7_preserved": true,
+    "remote_google_preview_supported": false,
+    "installed": false,
+    "release_signed": false,
+    "published": false,
+    "archive_precedes_final_handoff_docs": true
+  }
 }
