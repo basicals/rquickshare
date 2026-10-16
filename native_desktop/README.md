@@ -32,8 +32,9 @@ and source ownership if the card closes. A selected vanished peer stays visible
 and blocks Send until explicitly unchecked or available again. See
 [multi-recipient contract](../docs/native-multi-recipient-review.md).
 
-An uninstalled GTK4 tray client for the native daemon. This does not retire the
-Tauri application or establish Google Quick Share parity. The current plan,
+A GTK4 tray client for the native daemon. Native12 replaced the legacy Tauri
+package on the approved Ubuntu26.04/KDE Wayland host on2026-10-16; this does not
+establish Google Quick Share parity. See [installed acceptance](../docs/native-installed-acceptance.md). The current plan,
 invariants, exact measured checks and pending acceptance are in
 [native-gtk-shell.md](../docs/native-gtk-shell.md).
 

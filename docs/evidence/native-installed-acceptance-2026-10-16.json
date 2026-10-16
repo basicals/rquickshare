@@ -45,11 +45,232 @@
     "path": "native_desktop/target/packages/rquickshare_0.11.5+native12_amd64.deb",
     "sha256": "b4ef947385b46a2b16f2dc625f1cfc216205672b1df75478f821bb4a857962f0"
   },
-  "native_installed": false,
-  "user_manager_reloaded": false,
-  "services_started": false,
-  "physical_device_availability_confirmed": false,
+  "native_installed": true,
+  "user_manager_reloaded": true,
+  "services_started": true,
+  "physical_device_availability_confirmed": true,
   "physical_peer_acceptance": false,
-  "system_changed": false,
-  "next_gate": "explicit approval to replace installed legacy application and administrator authentication"
+  "system_changed": true,
+  "next_gate": "select tmpfs source accounting contract; then current Android two-way sharing acceptance",
+  "installation": {
+    "user_authorized": true,
+    "apt_exit_code": 0,
+    "version": "0.11.5+native12",
+    "added_dependency": "libgtk4-layer-shell0 1.3.0-1",
+    "removed_packages": 0,
+    "unrelated_packages_upgraded": 0,
+    "installed_regular_files_verified": 11,
+    "installed_bytes_modes_root_ownership_match": true,
+    "cli_help_passed": true,
+    "daemon_settings_only_check_passed": true,
+    "login_start_enabled": false
+  },
+  "live_observation": {
+    "observed_at": "2026-10-16T19:33:28.654132+00:00",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1901044"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1901045"
+      }
+    },
+    "daemon_before": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 24,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "repeat_launcher_exit": 0,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1901044"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1901045"
+      }
+    },
+    "repeat_launcher_same_pids": true,
+    "own_tray_items": 1,
+    "tray": {
+      "Id": "rquickshare",
+      "Title": "rQuickShare",
+      "Status": "Active",
+      "Menu": "/Menu"
+    },
+    "menu": {
+      "revision": 6,
+      "row_count": 21,
+      "actions": [
+        {
+          "id": 1,
+          "label": "Open card",
+          "enabled": true
+        },
+        {
+          "id": 18,
+          "label": "Visible",
+          "enabled": true,
+          "toggle-state": 1
+        },
+        {
+          "id": 19,
+          "label": "Hidden",
+          "enabled": true,
+          "toggle-state": 0
+        },
+        {
+          "id": 20,
+          "label": "Visible for one minute",
+          "enabled": true,
+          "toggle-state": 0
+        },
+        {
+          "id": 21,
+          "label": "Retry visibility change",
+          "enabled": false
+        },
+        {
+          "id": 2,
+          "label": "Send files\u2026",
+          "enabled": true
+        },
+        {
+          "id": 3,
+          "label": "Send a folder\u2026",
+          "enabled": true
+        },
+        {
+          "id": 16,
+          "label": "Send text\u2026",
+          "enabled": true
+        },
+        {
+          "id": 17,
+          "label": "Send image\u2026",
+          "enabled": true
+        },
+        {
+          "id": 4,
+          "label": "Incoming requests",
+          "enabled": true
+        },
+        {
+          "id": 5,
+          "label": "Transfers",
+          "enabled": true
+        },
+        {
+          "id": 6,
+          "label": "Compact view",
+          "enabled": true,
+          "toggle-state": 0
+        },
+        {
+          "id": 7,
+          "label": "Full view",
+          "enabled": true,
+          "toggle-state": 1
+        },
+        {
+          "id": 8,
+          "label": "Settings\u2026",
+          "enabled": true
+        },
+        {
+          "id": 9,
+          "label": "Reconnect service",
+          "enabled": false
+        },
+        {
+          "id": 10,
+          "label": "Hide card",
+          "enabled": true
+        },
+        {
+          "id": 11,
+          "label": "Quit panel",
+          "enabled": true
+        }
+      ]
+    },
+    "descriptor_staging": {
+      "executed": true,
+      "fixture_filesystem": "tmpfs /tmp",
+      "append_rejected": "InvalidInput",
+      "abort_cleanup_executed": true,
+      "commit_called": false,
+      "send_called": false,
+      "fixture_removed": true,
+      "limitation": "GET_SEALS succeeds with SEAL only for ordinary named tmpfs file; existing immutable-memory classifier rejects it"
+    }
+  },
+  "disk_descriptor_staging": {
+    "observed_at": "2026-10-16T19:35:54.529280+00:00",
+    "fixture_filesystem": "repository target disk filesystem",
+    "commit_called": false,
+    "send_called": false,
+    "before": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 30,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "append_ack": 1,
+    "abort_status": "aborted",
+    "fixture_removed": true,
+    "after": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 30,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "resources_restored": true,
+    "passed": true
+  },
+  "user_observation": {
+    "tray_icon_visible": true,
+    "card_visible_on_click": true,
+    "android_available": true,
+    "windows_available": null,
+    "near_clock_placement_acceptance_complete": false,
+    "full_compact_visual_acceptance_complete": false
+  },
+  "remaining": [
+    "Android peer identity/version, code/consent and two-way byte checks",
+    "Windows physical availability/acceptance",
+    "Full/Compact placement, focus, lock/DND and interruption acceptance",
+    "Committed file-manager Send and optional login-start lifecycle",
+    "Controlled idle stop/restart and removal/settings recovery",
+    "Exact signed APT release approval and publication"
+  ],
+  "documentation_verification": {
+    "local_links_verified": 54,
+    "json_valid": true,
+    "whitespace_passed": true
+  }
 }

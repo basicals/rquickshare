@@ -203,17 +203,25 @@ the existing native file capability. Core focused checks, native39/0, strict lin
 passed. Exact public source/artifact handoff follows the receive contract; native11
 and earlier artifacts remain immutable.
 [Essential acceptance](native-essential-acceptance.md) provides the short current
-Android/Windows/KDE check procedure; all checks remain unexecuted. Native11 and
+Android/Windows/KDE check procedure; physical transfer checks remain unexecuted. Native11 and
 its immutable public artifacts are unchanged.
 
-## Installed acceptance preparation — 2026-10-16
+## Installed acceptance checkpoint — 2026-10-16
 
-[Installed acceptance](native-installed-acceptance.md) read-only readiness matches
-native12 to this Ubuntu26.04.1/KDE Wayland host. Native12 is not installed: legacy
-0.11.5 is installed, native services absent, no rQuickShare process observed at
-inspection. Dependency simulation passed (upgrade application, add Layer Shell,
-remove0). Because the old local debug .deb differs from the installed executable,
-an exact five-file installed-state recovery package was prepared privately and
-verified. Exact recovery/candidate hashes and pending installation/authentication
-are in evidence/native-installed-acceptance-2026-10-16.json. No system change or
-physical-peer acceptance occurred; peer availability remains unconfirmed.
+[Installed acceptance](native-installed-acceptance.md): after explicit user approval,
+native12 replaced legacy0.11.5 on Ubuntu26.04.1/KDE Wayland. APT installed only
+rquickshare0.11.5+native12 and libgtk4-layer-shell0 1.3.0-1;11 installed regular
+files match candidate bytes/modes/root ownership. The exact private five-file
+legacy recovery package remains available; downgrade was not executed.
+
+One systemd daemon/client and one real KDE tray item are running. Repeat normal
+launch retained the same PIDs; login start remains disabled. User confirmed the
+icon/card and available Android. Owned disk descriptor Begin/Append/Abort passed
+with zero remaining source/handle/byte/transfer resources; no Commit/Send.
+The /tmp fixture exposed the documented broad seal-capable-source rejection:
+[tmpfs source review](native-tmpfs-source-review.md) records the required accounting
+choice before changing code. Actual Android/Windows transfers, remaining visual/
+lock/DND/file-manager/login-start/stop-restart/removal acceptance and signed APT
+publication remain open. Exact installed evidence is in
+evidence/native-installed-acceptance-2026-10-16.json. Backup/keys and immutable
+native12 binaries/source/release artifacts are unchanged.

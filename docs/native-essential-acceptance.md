@@ -1,7 +1,9 @@
 # Essential installed/peer acceptance
 
 2026-10-16. Short procedure prepared from the native11 checkpoint and updated for the native12 receive repair.
-Status: not executed. This is current-package acceptance, not an ADB/hardware
+Status: partially executed; native12 installed, launch/tray/basic card confirmed.
+Physical transfers and the remaining desktop/lifecycle matrix are unexecuted.
+This is current-package acceptance, not an ADB/hardware
 automation project. See [priorities](native-essential-priorities.md) and
 [receive reliability finding](native-receive-reliability.md).
 
@@ -9,8 +11,9 @@ automation project. See [priorities](native-essential-priorities.md) and
 
 Agree on the actual Linux package/desktop and available Android/Google Quick Share
 for Windows versions before installation. Native12 targets Ubuntu26.04 amd64; use its exact final package/checksum
-from the receive-reliability evidence after candidate handoff. It is verified
-offline only until the physical checks below are executed. Record exact package SHA256, OS/desktop and peer
+from the receive-reliability evidence after candidate handoff. The exact package is now installed on the matching host; offline checks plus
+scoped installed observations are recorded in [installed acceptance](native-installed-acceptance.md).
+They do not complete the physical checks below. Record exact package SHA256, OS/desktop and peer
 versions. Installation/activation and physical device actions require the user's
 availability/authorization; no such operation was performed to prepare this file.
 Use disposable test files/destination, not personal documents. Record evidence
@@ -32,3 +35,14 @@ before repeating the affected check. Record PASS/FAIL/UNTESTED with candidate/pe
 versions and a brief reason. This procedure supplies no current compatibility,
 physical acceptance or release-publication claim by itself. Previews, account/QR,
 resume and advanced payloads are outside these essential checks.
+
+## Observed installed checkpoint — 2026-10-16
+
+Native12 upgrade and Layer Shell dependency installation passed with explicit
+user approval;11 installed files match candidate bytes/modes/root ownership.
+Normal/repeated launcher preserves one systemd daemon/client and one real KDE
+tray item. User confirmed icon/card and available Android. Disk descriptor
+Begin/Append/Abort leaves no source/transfer resources; no Send/Commit. The tmpfs
+fixture exposed the existing seal-capable-source rejection and its pending
+accounting decision. Check1-4 physical content/consent/interruption and check5-6
+remaining lifecycle/removal/signed updates are not passed by these observations.
