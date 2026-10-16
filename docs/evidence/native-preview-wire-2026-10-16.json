@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "mode": "A",
+  "guide": "/home/morozhenko/.codex/AGENTS.md",
+  "branch": "dev",
+  "research": {
+    "previous": {
+      "repository": "google/nearby",
+      "revision": "d128b5fca30b3fa8d4642f8c75dd9e314e090e74",
+      "url": "https://codeload.github.com/google/nearby/tar.gz/d128b5fca30b3fa8d4642f8c75dd9e314e090e74",
+      "archive_bytes": 10228029,
+      "archive_sha256": "540226f877168fbb68eb74e9fb80c795689f4c067b2d98f99104279a394b62d2"
+    },
+    "previous_sharing_files": 300,
+    "previous_all_regular_files": 3310,
+    "previous_all_bytes": 139220818,
+    "current": {
+      "repository": "google/nearby",
+      "revision": "1c1bcbe8e7c5d40597014789414a6a48c40294a2",
+      "url": "https://codeload.github.com/google/nearby/tar.gz/1c1bcbe8e7c5d40597014789414a6a48c40294a2",
+      "archive_bytes": 3837056,
+      "archive_sha256": "cef092dccc76efd7124795ea6aedbc50b02c0bb3bc95c3cd2aa9c55c9aa4c9b7",
+      "all_regular_files_scanned": 1611,
+      "all_bytes": 21842518,
+      "preview_payload_matching_files": [
+        "sharing/proto/wire_format.proto"
+      ]
+    },
+    "current_sharing_files": 300,
+    "current_main_observation": {
+      "sha": "1c1bcbe8e7c5d40597014789414a6a48c40294a2",
+      "commit_date": "2026-10-15T03:17:00Z",
+      "url": "https://github.com/google/nearby/commit/1c1bcbe8e7c5d40597014789414a6a48c40294a2"
+    }
+  },
+  "finding": "Only schema declares preview_payload_ids; no producer/consumer codec/mapping fixture established in either complete sharing tree or archive token scan.",
+  "compatible_preview_codec_established": false,
+  "attachment_mapping_established": false,
+  "ordering_established": false,
+  "selected_decoder_boundary": 1,
+  "runtime_fix": {
+    "status": "planned",
+    "scope": "bounded announced preview IDs are isolated from sharing-control parsing and discarded opaque"
+  },
+  "checks": [],
+  "installed": false,
+  "physical_peer_tested": false,
+  "cloud_account_calls": false,
+  "release_signed": false,
+  "published": false
+}

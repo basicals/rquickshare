@@ -66,7 +66,7 @@ the next dependency. No supported third-party scope/client path was established.
 An independent optional Linux provider uses an explicitly unofficial master-token/
 Google Play services exchange, not normal desktop OAuth. The user selected option1:
 supported authorization only; continue independent parity. No sign-in, credentials
-or account API calls. Native8 is the latest measured package. The next scoped
+or account API calls. Native9 is the latest measured package. The next scoped
 prerequisite [bounded byte ingress](native-byte-ingress.md) is implemented: both
 handlers now share request-owned16-payload/5MiB reservation limits, stable headers,
 exact completion and release-before-dispatch. Nine new methods and scoped checks
@@ -81,6 +81,12 @@ exact archive/binary provenance and hashes are in the decoder contract/evidence.
 preview encoding/mapping, daemon IPC/production binding and persistent resume
 contracts remain open. Do not ask for the decoder boundary again or claim full
 preview compatibility from local fixtures.
+
+[Preview wire review](native-preview-wire.md) now records complete public Google
+source inspection at both the earlier pin and current main. No codec/mapping
+fixture was established. A scoped internal inbound routing fix is planned before
+production preview IPC/display: advertised preview bytes must not be decoded as
+sharing control frames. Native9 remains immutable and does not include this fix.
 
 ## Implemented source and remaining acceptance
 
