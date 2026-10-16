@@ -74,7 +74,7 @@ not renewed payload-thumbnail development.
 - [ ] C5: render Full/Compact/incoming/transfer widget fixtures on an isolated
   broker/display, inspect rounded alpha corners/layout and record actual images.
   No synthetic thumbnail development or physical-placement claim from Xvfb.
-- [ ] C6: commit code/docs, build/verify distinct native14 with actual private
+- [ ] C6: commit code/docs, build/verify the final distinct candidate (native15 after the documented native14 visual failure) with actual private
   Layer Shell shlibs, preserve native13/12, then upgrade only known idle owners
   under existing application repair authorization. Do not interrupt active work.
 - [ ] C7: record installed tray icon/menu/header checks and request the user's
@@ -176,3 +176,26 @@ methods and final five package checks remain measured above; no claim that the
 whole39 were repeated after this small presentation change. Final release rendering
 and installed KDE observation remain pending. Runtime/core source is unchanged.
 All owned affected-check processes exited: Terminal closed.
+
+## C5 release visual finding: natural measurement was not allocated
+
+Native14 built/verified with14 regular files, SHA256
+7e47b89b5e3ee98002e816a7cf4765bf12d500023a85d696599fd23ca68b3515.
+Final release PNG corners remain transparent, but Full Nearby420x375 and Full
+Transfers420x267 prematurely scroll after about one row. The actual GtkWindow
+default height still requested1(minimum), while natural height was used only
+for monitor-fit. This visual failure was found before installation; native13
+remains installed. Preserve native14 as an intermediate diagnostic artifact.
+
+Before correcting code: centralize content sizing after row/fixture population,
+reset the old default height before measurement, then request the real natural
+height. Scrolled lists still cap at300 and close/consent/placement ownership is
+unchanged. Call this sizing step for complete, unavailable and fixture renders.
+Increment final candidate to native15; do not overwrite native14 bytes. Rerun only
+affected GTK smoke/lint after this correction, then build and visually inspect
+the final release. No premature installation or successful layout claim.
+
+The post-population sizing correction passed the affected GTK smoke1/0 and
+strict native all-target/no-deps lint. The failed native14 geometry remains in
+evidence alongside its checksum; final candidate is native15. No core source
+change or package-check repetition was needed. All owned checks exited: Terminal closed.

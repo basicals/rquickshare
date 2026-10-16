@@ -806,7 +806,6 @@ impl Panel {
         } else {
             "Show full view"
         }));
-        self.window.set_default_size(420, 1);
         let ready = !preview
             && (!model.safety_active || model.safety.manual_allowed())
             && controls_ready(
@@ -1021,10 +1020,23 @@ impl Panel {
             }
             if let Some(page) = model.preview_page.as_deref() {
                 self.render_preview(page);
+            } else {
+                self.resize_to_content();
             }
             return;
         };
         self.render_rows(view, selection, ready, current, &model.recipients);
+        self.resize_to_content();
+    }
+    fn resize_to_content(&self) {
+        // Request the measured natural height, not the scroller's minimum allocation.
+        self.window.set_default_size(420, 1);
+        let height = self
+            .window
+            .measure(gtk::Orientation::Vertical, 420)
+            .1
+            .max(1);
+        self.window.set_default_size(420, height);
     }
     fn incoming_card(
         self: &Rc<Self>,
@@ -1339,6 +1351,7 @@ impl Panel {
                 compact.append(&send);
             }
         }
+        self.resize_to_content();
     }
 }
 

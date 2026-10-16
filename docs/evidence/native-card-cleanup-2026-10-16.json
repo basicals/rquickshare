@@ -25,7 +25,7 @@
   "core_wire_settings_changed": false,
   "development_ten_repetitions": false,
   "physical_kde_visual_acceptance": false,
-  "package_revision": 14,
+  "package_revision": 15,
   "candidate_built": false,
   "candidate_installed": false,
   "affected_gtk_after_height_correction": {
@@ -96,5 +96,74 @@
       "center_alpha": 255
     }
   ],
-  "final_render_pending": true
+  "final_render_pending": true,
+  "native14_intermediate": {
+    "binary_source_commit": "d61b2b864ca48c04fc2f083299af8d7095f728b1",
+    "sha256": "7e47b89b5e3ee98002e816a7cf4765bf12d500023a85d696599fd23ca68b3515",
+    "bytes": 6469486,
+    "package_verification_passed": true,
+    "installed": false,
+    "final_ui_acceptance": false,
+    "visual_failure": "minimum window allocation caused premature scrolling despite natural-height measurement",
+    "release_render": [
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/nearby-compact.png",
+        "page": "nearby",
+        "mode": "compact",
+        "width": 420,
+        "height": 137,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "66201ada1d3bee8cfdf94e1ac6a6e039addbfea622ba3b05ae4b6920b1a08e11"
+      },
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/nearby-full.png",
+        "page": "nearby",
+        "mode": "full",
+        "width": 420,
+        "height": 375,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "5ece9d551c1cad3f65cbe98bdde732a59efa025ce21ea7e2ffb28a9d0a195e22"
+      },
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/incoming-compact.png",
+        "page": "incoming",
+        "mode": "compact",
+        "width": 420,
+        "height": 330,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "5c8372b0ccd8ebde8a64fcdccc42da3ea809e5498baba24a286e1ee6d817020a"
+      },
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/transfers-full.png",
+        "page": "transfers",
+        "mode": "full",
+        "width": 420,
+        "height": 267,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "9061443dd3501adda16ceccbcf82c63d9796d5a729089cb5dcb7e09c291bbf24"
+      }
+    ]
+  },
+  "final_sizing_gtk_passed": true,
+  "final_sizing_clippy_passed": true
 }
