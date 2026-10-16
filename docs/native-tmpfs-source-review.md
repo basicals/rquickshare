@@ -95,7 +95,7 @@ property; confirm that invariant in implementation review if option1 is selected
 - [x] T3: verify named tmpfs files at0/1/32MiB+1, clone/read and zero anonymous
   charge; mutable unlinked tmpfs rejection; existing anonymous bounds and missing
   seals including SEAL-only rejection. Run affected source suites/lint once.
-- [ ] T4: increment package revision to13, commit source/docs, build/verify the
+- [x] T4: increment package revision to13, commit source/docs, build/verify the
   distinct package without overwriting native12, and record exact source/hash.
 - [ ] T5: under the user's existing application-replacement/repair authorization,
   upgrade the fixed installed package only after confirming no active transfers,
@@ -149,3 +149,38 @@ uses that setup for ordinary memfd; [namei.c](https://github.com/torvalds/linux/
 rejects cross-filesystem links and unlinked inodes without I_LINKABLE. Runtime
 classification uses the held descriptor's metadata, never these diagnostic names.
 All owned checks/probes exited: Terminal closed.
+
+## Prepared Android fixture (not sent)
+
+Owned private fixture: /home/morozhenko/Documents/Codex/rquickshare-acceptance/2026-10-16/peer-fixtures/rquickshare-android-check.txt,123 bytes, SHA256
+36f53d9c2376e0c6c8f911327ab0a3cd067afa1e24989b6c34fbf1a8f2f3230d.
+Its private receipt records sent=false/received=false. This is a plain ASCII
+interoperability sample with no personal contents or device identifiers, prepared
+without invoking any desktop source preparation or peer Send. Recipient choice,
+verification code and remote acceptance remain explicit user actions.
+
+## T4 actual package checkpoint
+
+Binary source:1607c8f95e308a533269b31e6ceb8ce7cf21a505. Native13 release compilation passed: daemon196s,
+GUI60s, existing helper1.33s. Initial packaging stopped before .deb creation
+because dpkg-shlibdeps could not locate the private Layer Shell dependency
+metadata. Extracted the actual shlibs from its already-held1.3.0-1 Debian package
+and passed it through the existing --shlibs-file option. No code/test changes or
+dependency suppression; cached Cargo invocations did not rebuild unchanged code.
+Corrected packaging verified11-file inventory, owner/mode, dependencies, ELF,
+checksum, extracted help and isolated settings check. Existing native12 remains
+intact; nothing signed/published or APT-enrolled.
+
+Package bytes:6416616; SHA256:3d52d836d5b2a4a4832b1ea00b8964e7b3c6a16d1bb2e19926d94b8c22414d06.
+Logs:/tmp/rqs-native13-build.log and /tmp/rqs-native13-build-final.log.
+The existing nine nonexperimental-core warnings and libc6 usr-merge diversion
+notice remain visible; dependency verification passed with actual metadata.
+All owned build commands exited: Terminal closed.
+
+T5 next: under existing repair/replacement authorization, recheck the known
+owned native12 service PIDs, zero daemon source/transfer resources, and retained
+native12 hash; join only those idle services, use pkexec apt-get install --yes
+on this exact native13 local package, reload user units without enablement and
+launch normally. Authentication remains solely in the system prompt. Preserve
+settings, received files and optional login-start state; on a failed upgrade
+report actual package state and restore ordinary launch where it remains valid.

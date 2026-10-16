@@ -29,10 +29,28 @@
     "physical_peer_transfer": false
   },
   "candidate_revision": 13,
-  "candidate_built": false,
+  "candidate_built": true,
   "fixed_candidate_installed": false,
   "logs": [
     "/tmp/rqs-tmpfs-source-tests.log",
-    "/tmp/rqs-tmpfs-source-clippy.log"
-  ]
+    "/tmp/rqs-tmpfs-source-clippy.log",
+    "/tmp/rqs-native13-build.log",
+    "/tmp/rqs-native13-build-final.log"
+  ],
+  "binary_source_commit": "1607c8f95e308a533269b31e6ceb8ce7cf21a505",
+  "candidate": {
+    "version": "0.11.5+native13",
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native13_amd64.deb",
+    "bytes": 6416616,
+    "sha256": "3d52d836d5b2a4a4832b1ea00b8964e7b3c6a16d1bb2e19926d94b8c22414d06",
+    "eleven_file_inventory_dependencies_checksum_elf_offline_smoke_verified": true,
+    "build_seconds": {
+      "daemon": 196,
+      "gui": 60,
+      "helper": 1.33
+    },
+    "private_layer_shell_shlibs_from": "libgtk4-layer-shell0_1.3.0-1_amd64.deb",
+    "initial_packaging_missing_private_shlibs": true,
+    "corrected_packaging_passed": true
+  }
 }
