@@ -699,3 +699,11 @@ GTK paint; the empty list is a single natural-height row, with the disconnected
 warning intentionally visible because these widgets have no connected writer.
 No core/full-native repetition, no production timer or persisted field. All owned
 checks exited: Terminal closed. Native19 build/installed verification follows.
+
+H4 build checkpoint: native19 package is6508810 bytes, SHA-256
+a2f5298cdf96087fcbfbe886e16cb1cfd2ff042b272882fe004154762400b0ff. Offline verification passed for14 regular
+files and existing dependency/ELF/checksum/help/private-settings gates. Source
+commit ed4fffa; native18 package remains unchanged for rollback. The authorized
+upgrade next requires known native18 service owners2170697/2170698 (or an already
+closed GUI), zero globally prepared resources and no active transfer. Any occupied
+gate stops before mutation. No signing/publication. Build exited: Terminal closed.
