@@ -205,3 +205,15 @@ and earlier artifacts remain immutable.
 [Essential acceptance](native-essential-acceptance.md) provides the short current
 Android/Windows/KDE check procedure; all checks remain unexecuted. Native11 and
 its immutable public artifacts are unchanged.
+
+## Installed acceptance preparation — 2026-10-16
+
+[Installed acceptance](native-installed-acceptance.md) read-only readiness matches
+native12 to this Ubuntu26.04.1/KDE Wayland host. Native12 is not installed: legacy
+0.11.5 is installed, native services absent, no rQuickShare process observed at
+inspection. Dependency simulation passed (upgrade application, add Layer Shell,
+remove0). Because the old local debug .deb differs from the installed executable,
+an exact five-file installed-state recovery package was prepared privately and
+verified. Exact recovery/candidate hashes and pending installation/authentication
+are in evidence/native-installed-acceptance-2026-10-16.json. No system change or
+physical-peer acceptance occurred; peer availability remains unconfirmed.

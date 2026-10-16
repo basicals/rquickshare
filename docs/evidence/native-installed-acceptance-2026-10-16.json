@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "scope": "essential-installed-acceptance",
+  "host": {
+    "os": "Ubuntu 26.04.1 LTS",
+    "architecture": "amd64",
+    "desktop": "KDE",
+    "session_type": "wayland",
+    "systemd_activation_feature": true
+  },
+  "installed_before": {
+    "package": "rquickshare",
+    "version": "0.11.5",
+    "native_units_present": false,
+    "native_libexec_present": false,
+    "application_processes_observed": 0
+  },
+  "dependency_simulation": {
+    "passed": true,
+    "upgrade": [
+      "rquickshare"
+    ],
+    "new": [
+      "libgtk4-layer-shell0 1.3.0-1"
+    ],
+    "remove_count": 0,
+    "unrelated_upgrade_count": 0,
+    "actual_install": false
+  },
+  "rollback": {
+    "path": "/home/morozhenko/Documents/Codex/rquickshare-acceptance/2026-10-16/rollback/rquickshare_0.11.5_installed-snapshot_amd64.deb",
+    "version": "0.11.5",
+    "architecture": "amd64",
+    "bytes": 80994242,
+    "sha256": "a9dc9185d4c8208fd3511c691c4d1445d9d37bae6f676a72fa601b5f7d6b1eb3",
+    "inventory_bytes_modes_root_ownership_verified": true,
+    "live_files_rechecked_unchanged": true,
+    "original_release_archive": false,
+    "user_data_included": false
+  },
+  "local_legacy_debug_package_matches_installed_binary": false,
+  "candidate": {
+    "version": "0.11.5+native12",
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native12_amd64.deb",
+    "sha256": "b4ef947385b46a2b16f2dc625f1cfc216205672b1df75478f821bb4a857962f0"
+  },
+  "native_installed": false,
+  "user_manager_reloaded": false,
+  "services_started": false,
+  "physical_device_availability_confirmed": false,
+  "physical_peer_acceptance": false,
+  "system_changed": false,
+  "next_gate": "explicit approval to replace installed legacy application and administrator authentication"
+}
