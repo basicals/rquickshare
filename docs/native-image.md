@@ -32,12 +32,16 @@ selection/manager wire signatures and finite errors; no new transfer owner/servi
 memory_source::create(bytes,name) accepts1..32MiB; creates CLOEXEC/ALLOW_SEALING
 memfd, writes exact bytes, seals WRITE/GROW/SHRINK/SEAL. Reopen ONLY its held own
 /proc/self/fd/<n> reference read-only/CLOEXEC while writer lives; never caller paths.
-OpenedFile::adopt independently checks actual kernel properties/size. If GET_SEALS
-succeeds the file is seal-capable memory backing: require all four immutable seals,
-<=32MiB; charge actual size. EINVAL means ordinary non-sealable disk descriptor,
-unchanged existing mutable-file checks. Other inspection errors fail closed.
-This deliberately rejects mutable seal-capable memory FDs (including applicable
-tmpfs files) rather than pretending their captured size is immutable/accounted.
+OpenedFile::adopt independently checks actual kernel properties/size. Following
+user-selected option1 on2026-10-16, fully immutable seal-capable files require
+size1..32MiB and charge actual size. Otherwise a seal-capable read-only regular
+file with kernel link count above0 follows ordinary mutable filesystem handling,
+including named tmpfs files. Anonymous/unlinked seal-capable files still require
+all four immutable seals and bounds. Read size after seal validation. EINVAL means
+an ordinary non-sealable filesystem descriptor; other inspection errors fail
+closed. No filesystem source is claimed immutable or RAM-free. This explicitly
+supersedes the earlier broad rejection of mutable named tmpfs files; anonymous
+source immutability/accounting is unchanged. See [tmpfs source review](native-tmpfs-source-review.md).
 No caller flag/name can bypass charge. No file deletion capability or named spool.
 Anonymous kernel bytes disappear when final descriptors close; no permanent RAM or
 crash-proof journal/persistence claim. Ordinary external disk source contents can

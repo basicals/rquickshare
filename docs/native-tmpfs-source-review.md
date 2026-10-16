@@ -1,8 +1,8 @@
 # Named tmpfs source acceptance and memory accounting review
 
 2026-10-16. Mode A, direct dev. Guide: /home/morozhenko/.codex/AGENTS.md,
-sections3/3.1/11/12/13. Decision pending; no implementation authorized for this
-contract change. Scope is an installed ordinary-file acceptance limitation,
+sections3/3.1/11/12/13. The user selected option1 on2026-10-16; implementation
+of that scoped contract change is authorized. Scope is an installed ordinary-file acceptance limitation,
 not previews, a new payload type or an unrelated storage refactor.
 
 ## Observed failure and root cause
@@ -47,9 +47,9 @@ evidence/native-installed-acceptance-2026-10-16.json.
 Option1 is recommended for ordinary sharing: an explicitly selected filesystem
 file should use the same descriptor model regardless of filesystem placement.
 The application does not allocate a second copy or introduce a spool owner.
-This recommendation does not authorize changing the frozen memory accounting
-policy before the user's response. Keeping current rejection is a valid deferral,
-but does not fix ordinary tmpfs-file sharing.
+The user selected this recommendation. Named mutable filesystem capabilities
+are outside the anonymous-source memory budget even on tmpfs; this does not claim
+they consume no RAM. Anonymous/fully sealed sources retain the existing charge.
 
 ## Implementation and verification plan after selection
 
@@ -85,3 +85,36 @@ describes seal queries and restrictions. These explain sealing; actual named
 tmpfs behavior above is a measured host observation. Do not rely on a debugging
 memfd name as an authority or claim that these pages establish every kernel link
 property; confirm that invariant in implementation review if option1 is selected.
+
+## Selected option1 execution plan — 2026-10-16
+
+- [x] T1: document explicit selection and update native-image.md before code.
+- [ ] T2: add only the kernel link-count guard after the fully sealed branch;
+  retain size inspection after seal validation, read-only/regular checks, limits
+  and fail-closed errors. No FD path classification or source reopening.
+- [ ] T3: verify named tmpfs files at0/1/32MiB+1, clone/read and zero anonymous
+  charge; mutable unlinked tmpfs rejection; existing anonymous bounds and missing
+  seals including SEAL-only rejection. Run affected source suites/lint once.
+- [ ] T4: increment package revision to13, commit source/docs, build/verify the
+  distinct package without overwriting native12, and record exact source/hash.
+- [ ] T5: under the user's existing application-replacement/repair authorization,
+  upgrade the fixed installed package only after confirming no active transfers,
+  preparations or unknown owners. Join only the task-owned idle systemd services,
+  keep login start/settings intact, launch normally and repeat the failed tmpfs
+  staging/abort check. If user work exists, preserve it and defer replacement.
+- [ ] T6: record current installed evidence and refresh mutable handoff documents;
+  continue the user-operated Android consent/content check without choosing an
+  unidentified peer or sending personal files automatically.
+
+This changes acceptance/accounting policy for linked filesystem sources only.
+Actual kernel link count is observed at adoption; later source mutation/unlink can
+still cause existing clone/preflight failure, never an immutable-file guarantee.
+An already adopted FD continues to refer to the held inode. A fresh adoption of
+mutable unlinked tmpfs remains rejected. No API/wire/settings schema is changed.
+Rollback is the scoped source commit and, if an installed repair is needed, the
+retained native12 package; do not downgrade or interrupt active user work blindly.
+
+Focused verification uses the existing Mode A source suites rather than a new
+Mode B coverage project. Writable /dev/shm is required by the tmpfs regressions;
+assert seal-capable behavior instead of silently substituting a disk fixture.
+No sleeps, real peer network, source mocks or repeated full-product suites.
