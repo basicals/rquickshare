@@ -257,3 +257,21 @@ checkpoint; native9 and older public artifacts are immutable.
 See [multi-recipient contract](native-multi-recipient-review.md) and its JSON
 evidence for measured checks, fresh unsigned APT/request and exact export.
 Installed KDE/Wayland, current Google peers and signed publication remain open.
+
+
+## Native12 receive reliability candidate — 2026-10-16
+
+Latest verified uninstalled Ubuntu26.04 amd64 candidate:
+native_desktop/target/packages/rquickshare_0.11.5+native12_amd64.deb,
+6,416,730 bytes, SHA256 b4ef947385b46a2b16f2dc625f1cfc216205672b1df75478f821bb4a857962f0.
+Binary source:88c1f94003fc35c665568024273d446b5ced35ed. Anonymous Linux staging,
+size/data-sync/no-overwrite publication, retained completed members and explicit
+partial receipt/GTK reveal are included. All11 package files and existing offline
+package smoke passed. The chosen filesystem must support safe O_TMPFILE/FD-link
+publication; unsupported preparation fails before wire Accept. No final-name
+streaming fallback or path-based deletion; empty hierarchy directories may remain.
+The native11 and older artifacts are preserved. Actual physical Android/Windows
+and installed KDE/Wayland/package lifecycle acceptance remains unexecuted.
+Fresh unsigned APT/request/provenance are in the
+[receive reliability contract](native-receive-reliability.md) and its JSON evidence.
+No production signature/publication was made.

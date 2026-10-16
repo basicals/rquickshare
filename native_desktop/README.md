@@ -218,3 +218,13 @@ and checked conditional publisher/public approval handoff are implemented in
 [native-r2.md](../docs/native-r2.md). Existing download.morozhenko.com serves
 Picturix; domain routing remains a separate choice before public binding. No
 production key or publicly trusted channel is provisioned by these builds.
+
+
+Incoming Linux files are now staged as unnamed inodes on the destination
+filesystem. A final name is linked without overwrite only after exact completion
+and data sync. On failure/cancellation, incomplete files disappear and completed
+members remain; the card lists Saved N of M with completed-file-only Show in folder.
+This requires O_TMPFILE and safe FD publication on the selected filesystem;
+unsupported storage fails preparation before the peer receives Accept. There is
+no unsafe final-name streaming fallback. Empty newly created folder hierarchy
+may remain after failure. See [receive reliability](../docs/native-receive-reliability.md).

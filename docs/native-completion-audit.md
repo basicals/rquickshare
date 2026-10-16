@@ -33,7 +33,7 @@ advanced payloads are deferred. This does not revoke existing input/file safety.
 
 | Area | Implemented source | Still missing implementation | Separate acceptance |
 |---|---|---|---|
-| Manual sharing | Native file/folder selection, multiple files, explicit1..10 recipients via daemon-owned queue/results, PIN/Accept/Reject, progress/cancel; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native11 with real Android/Google Windows; radio failure/large files/interruptions |
+| Manual sharing | Native file/folder selection, multiple files, explicit1..10 recipients via daemon-owned queue/results, PIN/Accept/Reject, progress/cancel, per-file atomic receive publication and explicit retained-file partial results; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native12 with real Android/Google Windows; radio failure/large files/interruptions |
 | Text and clipboard | Outbound text/URL and explicit clipboard capture; reviewed immutable PNG image source; incoming text/URL review and explicit Copy | Complete Remote Copy negotiation/peer semantics; native Wi-Fi/app completeness | Current peer/clipboard/portal behavior on installed desktop |
 | Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states; live visibility/quick actions | Localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
 | Settings and desktop | Daemon-owned Settings2/schema2, migration/recovery, live name, receive-directory capability, opt-in daemon+tray login start and Dolphin Send assets | Broader desktop/share-target integration is not complete | Installed context menu, autostart, restart, upgrade/removal, recovery and live-transfer behavior |
@@ -41,12 +41,12 @@ advanced payloads are deferred. This does not revoke existing input/file safety.
 | Resume/dedup | Modern wire fields only | Content identity, safe partial storage/integrity/recovery and actual negotiation | Interrupted transfers against supported peers |
 | Other payloads | Modern proto fields and some core/legacy parsing | Streams, complete Wi-Fi/app/sensitive-content behavior | Versioned capability matrix and physical peers |
 | Trust/account/platform parity | Bounded token/role/certificate verifier; production certificate source explicitly empty | Supported Google certificate acquisition/rotation, remembered trust/auto-accept, Contacts/Your devices, compatible QR and Apple transport work | Supported account authorization and applicable real platform paths |
-| Distribution | Native11 uninstalled Ubuntu26.04 amd64 package/unsigned APT/public unapproved request; source export verified; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
+| Distribution | Native12 uninstalled Ubuntu26.04 amd64 package/unsigned APT/public unapproved request; source export verified; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
 
 Basic manual workflows and a substantial native shell exist in source. Neither
 "all basic functionality is release accepted" nor "UI is finished" is supported.
 Old core/legacy physical observations do not validate the current native package.
-Native11 is locally verified and uninstalled, not a replacement already installed
+Native12 is locally verified and uninstalled, not a replacement already installed
 on the user's desktop. No percentage estimate or full Google compatibility claim.
 
 The shell already uses GTK/theme-relative CSS; do not list all dark/system styling
@@ -108,3 +108,12 @@ option1 selected and source implementation complete. Atomic admission, exact
 retry and GTK recipient selection/status are verified in scoped offline checks;
 corrected native11 package/visual review passed. See the feature SSOT for actual
 evidence; native10 is a preserved superseded intermediate.
+
+
+2026-10-16 essential receive follow-up: selected per-file publication is implemented
+with anonymous Linux staging, size/sync/no-overwrite completion, retained published
+members and terminal partial file capability/GTK projection. Core653 initial
+652/1 old-contract assertion, corrected pinned-root1/0, SDK1/0, final directory-sync
+1/0 and native39/0 plus strict lints are recorded in
+[native-receive-reliability.md](native-receive-reliability.md). Physical peer/desktop
+acceptance and detailed platform/storage coverage remain separate.

@@ -265,3 +265,11 @@ authenticated Batch1, SDK recovery and GTK checkboxes/summary/explicit Send.
 Core8 affected methods and native39 passed; see the feature SSOT for complete
 measured observations. Current physical-peer acceptance and remaining parity
 features are not implied by this offline implementation.
+
+
+2026-10-16 essential receive reliability: per-file atomic Linux publication and
+explicit retained-file partial outcomes are implemented and verified in scoped
+checks plus the uninstalled native12 package. See
+[native-receive-reliability.md](native-receive-reliability.md). Ordinary peer/desktop
+acceptance remains essential; preview work stays excluded and advanced parity
+stays deferred.

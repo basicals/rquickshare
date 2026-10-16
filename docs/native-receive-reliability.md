@@ -222,3 +222,36 @@ smoke, then export exact public Git source/package/unsigned APT/unapproved reque
 Existing helper/dependencies are preserved; no new thumbnail feature/fixture work
 is part of this receive fix. Do not install, sign or publish. Preserve native11
 and earlier immutable source/package checkpoints.
+
+Documentation checkpoint:55 relevant local links and trailing-whitespace checks
+passed before final candidate handoff; no runtime suite repetition.
+
+## R5 corrected package verification — 2026-10-16
+
+Binary source:88c1f94003fc35c665568024273d446b5ced35ed. Native12 release build
+passed: daemon258s, GUI120s, helper3.61s. Verified11-file inventory, permissions/
+ownership, dependency metadata, ELF, checksum, extracted help and isolated settings
+smoke. Package6,416,730 bytes, SHA256
+b4ef947385b46a2b16f2dc625f1cfc216205672b1df75478f821bb4a857962f0.
+No install, activation, real tray, radio/peer/account or protected-key operation.
+The already existing helper remains packaged; no preview development was resumed.
+
+An artifact-review command was incorrectly launched before the builder exited;
+it stopped on the missing .deb.sha256 precondition before APT/request/output
+mutation. The short review command exited while the one owned builder continued;
+then builder completion/exit was awaited before the corrected sequential review.
+This violated the intended single-active-terminal discipline briefly; no ambient
+or user process was touched. Corrected artifact review passed after the checksum
+existed. Do not count the early failure as a runtime test or hide it.
+
+Fresh unsigned APT staging contains7 files with no signatures; metadata expires
+2026-10-23T18:08:35Z. Public canonical request SHA256
+34d1ca73c10956a269196ee42005996abcfbb09012a9dafbe3406bc3fd7c7e05 is unapproved;
+source attestation and live baseline proof are absent. Nothing signed/published.
+Native11/package hash was independently rechecked and preserved. The README change
+after binary-source commit is documentation only; runtime source equality is
+checked excluding only native_desktop/README.md from the native source paths.
+The final immutable source archive records its own later documentation commit.
+Logs: /tmp/rqs-native12-build.log, /tmp/rqs-native12-review.log (early precondition),
+/tmp/rqs-native12-review-final.log. All owned processes exited: Terminal closed.
+Exact committed-source/public-artifact export remains the final R5 handoff step.
