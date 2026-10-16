@@ -254,3 +254,27 @@ metadata is Unsupported with no manifest/byte counters, so independent byte/hash
 verification is not claimed. Exact versions, reverse sharing and interruption/
 Windows checks remain open. Next selected work: the user's eight-point card/tray
 cleanup in native-card-cleanup.md, while preserving the essential acceptance queue.
+
+## Requested card/tray cleanup installed — 2026-10-16
+
+[Card cleanup](native-card-cleanup.md) implements the user's eight presentation
+requests: transparent outer window/rounded themed body; upper-right hide cross;
+no duplicated options button, card branding, idle Ready/Choose files/Discovery
+labels; original blue app icon; Settings/About identity and consistent ordered
+Full/Compact content with measured bounded height. Existing consent, error/recovery,
+visibility owner, source clearing and transfer lifetime are preserved. No core/
+wire/settings changes; native13 tmpfs repair remains included.
+
+Native15 is installed: SHA256 f32e3f35021c358e3357bab066ce695c9d8a2272616f030d9a29e9b9c0340099.
+Fourteen installed files match; one daemon/client/active KDE tray item, restored
+icon name and About menu verified. Native14 is an uninstalled diagnostic package
+whose visual review found premature scrolling; final sizing repair is native15.
+Native13 remains rollback and first user-confirmed Android outgoing checkpoint.
+
+Native39 and package5 passed initially; affected GTK1/lint passed after each
+visual sizing correction, and final package5 after icon ownership relocation
+passed. Final release widgets show transparent corners and full short lists.
+Physical KDE cosmetic review is pending user response. Broader Android reverse/
+version/hash/interruption, Windows, lock/DND/focus/lifecycle and signed APT gates
+remain; do not equate this eight-point slice with full product/UI/parity completion.
+Exact source/build/install/visual observations: evidence/native-card-cleanup-2026-10-16.json.

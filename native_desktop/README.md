@@ -3,8 +3,15 @@
 Current implementation, selected distribution/signing bindings and remaining gates:
 [current state](../docs/current-state.md). Dated checkpoints below retain historical observations.
 
+The card uses a transparent outer surface and a themed rounded body. Its close
+button hides the card while tray/daemon/transfers continue. Full/Compact remain;
+idle readiness/discovery/branding text and the duplicated options button are gone.
+The original blue application icon is restored, and Settings/tray offer an owned
+About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
+checks and exact installed status.
+
 The tray now exports a standard DBusMenu with Open, file/folder/text/image selection, incoming/
-transfer navigation, Compact/Full, Settings, Reconnect, Hide and Quit. It contains
+transfer navigation, Compact/Full, Settings/About, Reconnect, Hide and Quit. It contains
 fixed labels only. Actions share current GTK readiness and lock safety; no consent,
 implicit Send or daemon-stop action is exposed. Live visibility choices use the
 daemon-owned settings writer and exact retry contract. Primary click
@@ -117,8 +124,8 @@ The public ingress contract and measured SDK checks are in
 [native-desktop-ingress.md](../docs/native-desktop-ingress.md).
 
 Custom card presentation now starts in Compact mode. Full keeps Nearby, Incoming
-and Transfers, with source controls on Nearby. The header menu and right-click
-menu expose secondary actions; Settings persists Appearance and supported service
+and Transfers, with source controls on Nearby. The tray and right-click
+menus expose secondary actions; Settings persists Appearance and supported service
 values through the daemon's typed contract. No legacy persistent setting is overwritten. Full/Compact share
 checked consent/cancel commands and preserve the prepared source owner.
 

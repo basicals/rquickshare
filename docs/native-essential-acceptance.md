@@ -1,7 +1,7 @@
 # Essential installed/peer acceptance
 
 2026-10-16. Short procedure prepared from the native11 checkpoint and updated for the native12 receive repair.
-Status: partially executed; native13 installed after the tmpfs source repair,
+Status: partially executed; native15 installed after the tmpfs repair and requested card cleanup,
 launch/tray/basic card confirmed.
 Physical transfers and the remaining desktop/lifecycle matrix are unexecuted.
 This is current-package acceptance, not an ADB/hardware
@@ -53,3 +53,9 @@ anonymous-source guards; real /tmp append/abort passes. Its CLI has prepared the
 known123-byte Android fixture, with no agent-initiated peer choice or Send. User
 recipient/code/acceptance result and exact Android version remain pending. See
 [native-tmpfs-source-review.md](native-tmpfs-source-review.md) for current evidence.
+
+Current native15 adds the requested card/tray presentation repair. Installed
+14-file/tray/icon/About checks and isolated rendering passed; user physical
+KDE review remains pending. The user confirmed receiving the Android outbound
+fixture with matching code on native13; daemon reports Finished. Reverse/content
+hash/versions and remaining matrix checks are still open. See [card cleanup](native-card-cleanup.md).

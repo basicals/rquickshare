@@ -27,7 +27,7 @@
   "physical_kde_visual_acceptance": false,
   "package_revision": 15,
   "candidate_built": true,
-  "candidate_installed": false,
+  "candidate_installed": true,
   "affected_gtk_after_height_correction": {
     "passed": 1,
     "failed": 0,
@@ -243,5 +243,72 @@
     "seconds": 0.87,
     "filtered": 38
   },
-  "final_sizing_native_clippy_seconds": 2.25
+  "final_sizing_native_clippy_seconds": 2.25,
+  "installation": {
+    "observed_at": "2026-10-16T20:30:46.356627+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native13",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1909694"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1909695"
+      }
+    },
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 1,
+      "owned_selections": 0,
+      "transfers": 1
+    },
+    "terminal_history_count": 1,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native15",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1925337"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1925338"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true,
+    "tray": {
+      "own_items": 1,
+      "icon_name": "rquickshare",
+      "status": "Active",
+      "menu_rows": 22,
+      "about_present": true,
+      "about_enabled": true
+    }
+  },
+  "installed_verification_completed_at": "2026-10-16T20:40:39.558214+00:00",
+  "documentation_verification": {
+    "local_links_verified": 61,
+    "json_valid": true,
+    "runtime_source_matches_binary_commit": true,
+    "whitespace_passed": true
+  }
 }

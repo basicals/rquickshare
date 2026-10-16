@@ -203,3 +203,13 @@ daemon/client/tray running with login start disabled. The real installed CLI has
 prepared a known123-byte Android fixture with no auto-Send; retain that source
 while the user performs recipient/code/acceptance actions. I4 is still partially
 complete: actual current-peer content and remaining desktop/lifecycle checks open.
+
+## Subsequent native15 card cleanup
+
+User-requested eight-point card/tray cleanup is installed as native15. Exact
+14-file package/install verification, one tray/client/daemon, actual icon/About
+projection and renderer corner/geometry results are in [native-card-cleanup.md](native-card-cleanup.md).
+Native14 was reviewed but not installed; native13 remains a rollback artifact.
+Native13's user-confirmed Android outgoing smoke is retained, with remote hash/
+exact version/reverse transfer still unverified. Physical KDE cosmetic feedback
+and the rest of I4 remain distinct pending checks, not blanket acceptance.

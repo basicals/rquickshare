@@ -74,7 +74,7 @@ not renewed payload-thumbnail development.
 - [x] C5: render Full/Compact/incoming/transfer widget fixtures on an isolated
   broker/display, inspect rounded alpha corners/layout and record actual images.
   No synthetic thumbnail development or physical-placement claim from Xvfb.
-- [ ] C6: commit code/docs, build/verify the final distinct candidate (native15 after the documented native14 visual failure) with actual private
+- [x] C6: commit code/docs, build/verify the final distinct candidate (native15 after the documented native14 visual failure) with actual private
   Layer Shell shlibs, preserve native13/12, then upgrade only known idle owners
   under existing application repair authorization. Do not interrupt active work.
 - [ ] C7: record installed tray icon/menu/header checks and request the user's
@@ -220,3 +220,34 @@ with pkexec apt-get, reload without enablement and launch normally. Require14
 installed files to match, one tray/client/daemon and actual restored icon/menu.
 Never stop an unknown owner or active transfer. Native13 remains the rollback
 package; native14 is diagnostic and has never been installed.
+
+## C6 actual installation and C7 pending physical review
+
+The known native13 service owners matched; source resources were0 and the one
+retained transfer was terminal Finished. Normal joined stop touched only those
+owned idle services. User confirmed the administrator authentication window and
+entered the password there; no credential was read/logged. Apt exited0 upgrading
+to0.11.5+native15; user unit metadata reloaded without enablement and normal
+launch restored daemon PID1925337/client PID1925338. All14 installed regular
+files match archive bytes/modes/root ownership. Login start remains disabled.
+
+Actual KDE watcher readback found exactly one own Active item, IconName=rquickshare,
+22 menu rows and enabled About rQuickShare. No menu event, auto-Send or protected
+key operation was issued. Native13/12 and the native14 diagnostic package remain
+intact. Settings/received files are preserved; no unrelated upgrade/removal or
+APT enrollment. Logs:/tmp/rqs-native15-build.log and /tmp/rqs-native15-install.log.
+All owned one-shot commands exited: Terminal closed. Installed app services remain
+running as the user's application; no test watcher/terminal remains.
+
+The user was asked to check actual KDE corners/blue icon/removed labels and to
+hide/reopen with the new cross/tray. Until that response, installed IPC/assets and
+isolated renderer results are passed, physical visual confirmation is pending.
+This cosmetic implementation does not close reverse Android, exact peer versions,
+remote hashes, interruptions, Windows or broader desktop lifecycle acceptance.
+
+Handoff validation:61 affected local documentation links resolve; evidence
+JSON parses; runtime/native/core/UI/assets/packaging/build-script source matches
+344909f. Later native README edits are documentation only. Whitespace verified
+before the atomic docs checkpoint. No unrelated test suite or dependency warning
+suppression. Mutable handoff files and immutable final artifacts follow this
+committed source/evidence checkpoint; signing/production APT remain separate.
