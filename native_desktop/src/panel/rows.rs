@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 struct Entry {
     root: gtk::Box,
     transfer: Option<TransferView>,
-    endpoint: Option<(String, Option<rqs_lib::service::client::Selection>)>,
+    endpoint: Option<(String, bool)>,
 }
 #[derive(Default)]
 pub(super) struct Rows {
@@ -31,6 +31,7 @@ fn named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
 }
 fn same_description(a: &TransferView, b: &TransferView) -> bool {
     a.transfer == b.transfer
+        && a.recipient == b.recipient
         && a.direction == b.direction
         && a.phase == b.phase
         && a.consent_revision == b.consent_revision
@@ -165,6 +166,7 @@ impl Panel {
         selection: Option<rqs_lib::service::client::Selection>,
         ready: bool,
         current: Option<&TransferView>,
+        recipients: &BTreeMap<String, String>,
     ) {
         let mut rows = self.rows.borrow_mut();
         let mut used = BTreeSet::new();
@@ -173,44 +175,60 @@ impl Panel {
                 .into_iter()
                 .map(|page| (page, vec![]))
                 .collect();
-        for endpoint in &view.endpoints {
-            let key = ("nearby".to_owned(), endpoint.id.clone());
-            let projection = (endpoint.name.clone(), selection.clone());
+        let mut endpoints = view
+            .endpoints
+            .iter()
+            .map(|peer| (peer.id.clone(), (peer.name.clone(), true)))
+            .collect::<BTreeMap<_, _>>();
+        for (id, name) in recipients {
+            endpoints
+                .entry(id.clone())
+                .or_insert_with(|| (name.clone(), false));
+        }
+        for (id, projection) in endpoints {
+            let key = ("nearby".to_owned(), id.clone());
+            let selected = recipients.contains_key(&id);
             if rows
                 .entries
                 .get(&key)
                 .is_none_or(|entry| entry.endpoint.as_ref() != Some(&projection))
             {
                 let root = card();
-                root.append(&label(&endpoint.name));
-                root.append(&label("Nearby advertised device"));
-                let send = gtk::Button::with_label("Send");
-                send.set_widget_name("send");
+                let choice = gtk::CheckButton::with_label(&projection.0);
+                choice.set_widget_name("select-recipient");
+                choice.set_active(selected);
                 let weak = Rc::downgrade(self);
-                let endpoint = endpoint.id.clone();
-                let selection = selection.clone();
-                send.connect_clicked(move |_| {
+                choice.connect_toggled(move |choice| {
                     if let Some(panel) = weak.upgrade() {
-                        if let (Some(handle), Some(selection)) = (&panel.handle, selection.clone())
-                        {
-                            panel.submit(|| handle.send(selection, endpoint.clone()));
-                        }
+                        panel.choose_recipient(&id, choice.is_active());
                     }
                 });
-                root.append(&send);
+                root.append(&choice);
+                root.append(&label(if projection.1 {
+                    "Nearby advertised device"
+                } else {
+                    "Unavailable · uncheck to remove"
+                }));
                 rows.entries.insert(
                     key.clone(),
                     Entry {
                         root,
                         transfer: None,
-                        endpoint: Some(projection),
+                        endpoint: Some(projection.clone()),
                     },
                 );
             }
             let root = rows.entries[&key].root.clone();
-            named(root.upcast_ref(), "send")
-                .unwrap()
-                .set_sensitive(ready && selection.is_some());
+            let choice = named(root.upcast_ref(), "select-recipient")
+                .and_downcast::<gtk::CheckButton>()
+                .unwrap();
+            choice.set_active(selected);
+            choice.set_sensitive(
+                ready
+                    && (selected
+                        || (projection.1
+                            && recipients.len() < rqs_lib::service::batch::RECIPIENTS)),
+            );
             pages.get_mut("nearby").unwrap().push(root);
             used.insert(key);
         }
@@ -258,7 +276,7 @@ impl Panel {
                     root.append(&label(title));
                     if page == "compact" {
                         let button = gtk::Button::with_label(if selection.is_some() {
-                            "Choose recipient"
+                            "Choose recipients"
                         } else {
                             "Send files…"
                         });

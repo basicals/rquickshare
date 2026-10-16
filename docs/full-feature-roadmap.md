@@ -28,9 +28,10 @@ R2 publication and outside-CI signing on the existing Linux workstation are sele
 private-bucket publication/approval tooling is in [native-r2.md](native-r2.md).
 Production prefix routing and real signing identity are ready; exact release
 approval, scoped publisher access, signed public APT and installed updates remain
-open. Account/QR capabilities still require their own work. Latest completed slice:
-[isolated native preview decoder foundation](native-preview-review.md), not remote
-preview ingestion. [Completion audit](native-completion-audit.md) records remaining
+open. Account/QR capabilities still require their own work. Latest completed source slice:
+[daemon-owned multi-recipient sharing](native-multi-recipient-review.md), with
+explicit bounded selection and independent peer results. The isolated preview
+decoder foundation does not yet provide remote preview ingestion. [Completion audit](native-completion-audit.md) records remaining
 everyday UI work and physical acceptance separately.
 
 ## Product principles
@@ -254,3 +255,11 @@ Hardware smoke on 2026-10-07 exposed intermittent image-transfer startup latency
 - Existing inbound/router/listener tests cover exact-match precedence, valid old-id aliases, missing/malformed identity and preservation of unrelated pending routes. Keep broader secure-session/migration hardware gates separate.
 - Keep BWU phase timeouts unchanged until hardware logs distinguish TCP-route timeout from old-channel drain timeout; do not hide handshake defects by shortening timers.
 
+
+
+2026-10-16 multi-recipient continuation: selected daemon-owned admission/results
+are implemented with exact vector receipts, shared source/descriptor accounting,
+authenticated Batch1, SDK recovery and GTK checkboxes/summary/explicit Send.
+Core8 affected methods and native39 passed; see the feature SSOT for complete
+measured observations. Current physical-peer acceptance and remaining parity
+features are not implied by this offline implementation.

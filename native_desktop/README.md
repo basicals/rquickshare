@@ -6,7 +6,8 @@ Current implementation, selected distribution/signing bindings and remaining gat
 The tray now exports a standard DBusMenu with Open, file/folder/text/image selection, incoming/
 transfer navigation, Compact/Full, Settings, Reconnect, Hide and Quit. It contains
 fixed labels only. Actions share current GTK readiness and lock safety; no consent,
-implicit Send, saved-setting write or daemon-stop action is exposed. Primary click
+implicit Send or daemon-stop action is exposed. Live visibility choices use the
+daemon-owned settings writer and exact retry contract. Primary click
 opens the card; direct ContextMenu opens its existing popover. See
 [native-tray-menu.md](../docs/native-tray-menu.md) for protocol/lifecycle and actual
 checks. Physical Plasma menu rendering and placement/focus remain acceptance gates.
@@ -24,6 +25,12 @@ files/live transfers block restart. Reconnect reads the new generation without
 replaying source/send/save actions. Missing daemon or read-only `--settings PATH`
 override disables persistence and labels appearance temporary. No install/autostart
 is implied; normal native startup uses the separate native store when present.
+
+Nearby now supports1..10 explicit recipient choices and one Send. The daemon
+admits all selected targets atomically, then keeps independent per-peer outcomes
+and source ownership if the card closes. A selected vanished peer stays visible
+and blocks Send until explicitly unchecked or available again. See
+[multi-recipient contract](../docs/native-multi-recipient-review.md).
 
 An uninstalled GTK4 tray client for the native daemon. This does not retire the
 Tauri application or establish Google Quick Share parity. The current plan,

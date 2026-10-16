@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "scope": "daemon-owned-multi-recipient",
+  "choice": 1,
+  "checks": {
+    "initial_core_full": {
+      "total": 645,
+      "passed": 644,
+      "failed": 1,
+      "seconds": 13.96,
+      "reason": "SDK assertion assumed one reserved handle; prompted batch clone-handle accounting refinement"
+    },
+    "affected_core_after_refinement": {
+      "passed": 8,
+      "failed": 0,
+      "filtered": 637,
+      "seconds": 0.29
+    },
+    "core_clippy": {
+      "passed": true,
+      "seconds": 12.57,
+      "all_features": true,
+      "all_targets": true
+    },
+    "native_suite": {
+      "passed": 39,
+      "failed": 0,
+      "seconds": 0.56
+    },
+    "native_clippy": {
+      "passed": true,
+      "seconds": 8.62,
+      "all_targets": true,
+      "no_deps": true
+    },
+    "gtk_affected_after_preview_fixture": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 38,
+      "seconds": 0.49
+    }
+  },
+  "invariants": {
+    "atomic_local_admission": true,
+    "independent_peer_outcomes": true,
+    "max_recipients": 10,
+    "source_reservation_shared": true,
+    "handle_slots": "max(previous, files*(recipients+1))",
+    "existing_resource_budgets_preserved": true,
+    "one_ordered_ledger": true,
+    "exact_replay_and_ack": true,
+    "explicit_send_only": true,
+    "selected_missing_peer_blocks_send": true,
+    "admitted_source_survives_gui_close": true
+  },
+  "installed": false,
+  "physical_peer_acceptance": false,
+  "remote_preview_wire_supported": false,
+  "release_signed": false,
+  "published": false,
+  "visual_inspection_complete": false
+}

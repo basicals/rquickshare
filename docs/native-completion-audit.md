@@ -25,13 +25,13 @@ no unaffected Rust/GTK/package checks are repeated for a documentation change.
 
 | Area | Implemented source | Still missing implementation | Separate acceptance |
 |---|---|---|---|
-| Manual sharing | Native file/folder selection, multiple files, one explicit recipient, PIN/Accept/Reject, progress/cancel; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native9 with real Android/Google Windows; radio failure/large files/interruptions |
+| Manual sharing | Native file/folder selection, multiple files, explicit1..10 recipients via daemon-owned queue/results, PIN/Accept/Reject, progress/cancel; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native9 with real Android/Google Windows; radio failure/large files/interruptions |
 | Text and clipboard | Outbound text/URL and explicit clipboard capture; reviewed immutable PNG image source; incoming text/URL review and explicit Copy | Complete Remote Copy negotiation/peer semantics; native Wi-Fi/app completeness | Current peer/clipboard/portal behavior on installed desktop |
 | Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states; live visibility/quick actions | Localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
 | Settings and desktop | Daemon-owned Settings2/schema2, migration/recovery, live name, receive-directory capability, opt-in daemon+tray login start and Dolphin Send assets | Broader desktop/share-target integration is not complete | Installed context menu, autostart, restart, upgrade/removal, recovery and live-transfer behavior |
 | Preview images | Bounded byte ingress, real isolated Glycin/Bwrap helper, bounded pixels/cancel/deadline/reaping, synthetic Full/Compact fixture | Canonical peer payload encoding/mapping/order, admitted core routing, daemon IPC/production-card binding and outgoing previews | Real peer preview interoperability; fixture is not this evidence |
 | Resume/dedup | Modern wire fields only | Content identity, safe partial storage/integrity/recovery and actual negotiation | Interrupted transfers against supported peers |
-| Other payloads | Modern proto fields and some core/legacy parsing | Streams, multiple recipients, complete Wi-Fi/app/sensitive-content behavior | Versioned capability matrix and physical peers |
+| Other payloads | Modern proto fields and some core/legacy parsing | Streams, complete Wi-Fi/app/sensitive-content behavior | Versioned capability matrix and physical peers |
 | Trust/account/platform parity | Bounded token/role/certificate verifier; production certificate source explicitly empty | Supported Google certificate acquisition/rotation, remembered trust/auto-accept, Contacts/Your devices, compatible QR and Apple transport work | Supported account authorization and applicable real platform paths |
 | Distribution | Native9 uninstalled Ubuntu26.04 amd64 package/unsigned APT/public unapproved request; source export verified; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
 
@@ -87,7 +87,8 @@ the already selected Glycin decoder boundary must not be asked again.
    when the required peer/session is available; failures may reveal source defects.
 3. Obtain canonical preview fixtures and implement the compatible receive/IPC/card
    slice using the already verified decoder. Do not call synthetic pixels peer support.
-4. Resume/dedup, multi-recipient and remaining payload contracts, then their code.
+4. Multi-recipient source is complete; continue resume/dedup and remaining payload
+   contracts, then their code.
 5. Localization/history/accessibility/presentation polish alongside supported
    account/QR/platform research. Supported authorization only remains selected.
 6. Exact release approval/scoped publisher credential, signed APT consumption and
@@ -101,4 +102,6 @@ inspection commands exited; Terminal closed.
 2026-10-16 continuation: the private defensive preview routing fix is complete in
 source, outside native9 binaries; full codec/mapping/IPC/display remains open.
 The next independent parity decision is [multi-recipient ownership](native-multi-recipient-review.md),
-option1 recommended. No selection/code/package is implied by the review.
+option1 selected and source implementation complete. Atomic admission, exact
+retry and GTK recipient selection/status are verified in scoped offline checks;
+native10 artifact review is in progress. See the feature SSOT for actual evidence.

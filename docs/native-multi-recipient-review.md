@@ -60,7 +60,7 @@ recipient remains supported. No hidden immediate sends while building the set.
 3. [x] M2: implement real coordinator/domain admission and lifetime/receipt logic;
    inventory branches before deterministic unit/integration regressions. No
    domain mocks or GUI-owned substitute for the selected authority.
-4. [ ] M3: authenticated typed native IPC, exact-retry SDK/controller, safe
+4. [x] M3: authenticated typed native IPC, exact-retry SDK/controller, safe
    per-recipient projection and GTK selection/summary/status/cancel. No new peer
    wire format, account mode, automatic retry or unrequested trust behavior.
 5. [ ] M4: affected checks once, actual observations in SSOT, atomic commits,
@@ -200,3 +200,38 @@ ten-run stability claim. Logs: /tmp/rqs-multi-core.log,
 
 Terminal commands completed and their owned sessions exited: Terminal closed.
 M3 GTK widgets are in progress; native9 and installed applications are unchanged.
+
+## M3 projection detail before final source
+
+Update the offline Nearby preview fixture to inert recipient checkboxes and an
+explicit selection summary, and the Transfers fixture to named independent rows.
+Synthetic fixtures remain disabled and are not peer evidence. Production checkbox
+callbacks retain IDs and resolve names from the current snapshot; keyed widget
+resynchronization returns before model mutation when already equal, avoiding
+reentrant RefCell writes during render. Prepared-source guidance now says choose
+recipients; one-recipient selection remains supported.
+
+## M3 observed verification (2026-10-16)
+
+GTK nearby rows now hold bounded recipient choices, preserve selected unavailable
+peers, show a selection summary and submit one SendMany command. Successful batch
+results/exact recovered batch receipts clear choices; failed or uncertain outcomes
+retain them. Epoch change/disconnect/close clears stale local choice authority.
+Each outbound member shows its admitted recipient name and independent Cancel.
+Full/Compact and preview/lock/busy/disconnect/ingress gates remain in force.
+
+Native suite:39 passed,0 failed (0.56s), including the extended existing single GTK
+smoke thread and updated preparation guidance assertions. Strict native all-target
+Clippy passed8.62s; the nine pre-existing dependency warnings in the nonexperimental
+core build remain visible, with no new suppression. Updating inert preview fixture
+widgets afterward affects only the GTK smoke/visual artifact check; its scoped
+rerun is recorded in M4. Core strict all-target/all-feature Clippy passed12.57s.
+Logs: /tmp/rqs-multi-gtk.log, /tmp/rqs-multi-gtk-clippy.log. Owned sessions exited:
+Terminal closed. No real broker/radio/account/service installation was used.
+
+Final inert-preview/widget smoke rerun:1 passed,0 failed (0.49s),38 filtered;
+build2.01s. Log /tmp/rqs-multi-gtk-affected.log. Candidate revision is incremented
+to native10 before building; native9 package/export remains immutable. M4 now
+builds the committed source, verifies the eleven-file package and offline
+Full/Compact/Nearby/Transfers fixtures, then exports only public source/artifacts
+and a fresh unsigned APT/unapproved request. No install/sign/publication.

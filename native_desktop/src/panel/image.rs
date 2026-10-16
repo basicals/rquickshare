@@ -95,7 +95,7 @@ impl Image {
         root.set_margin_bottom(16);
         root.set_margin_start(16);
         root.set_margin_end(16);
-        let heading = label("Capture a clipboard image, review it, then choose a recipient.");
+        let heading = label("Capture a clipboard image, review it, then choose recipients.");
         heading.set_selectable(false);
         root.append(&heading);
         let picture = gtk::Picture::new();
@@ -179,7 +179,7 @@ impl Image {
             image.preview_width as usize * 4,
         );
         self.picture.set_paintable(Some(&texture));
-        self.status.set_text(&format!("{} × {} pixels · {} bytes · Clipboard.png\nReview the image, then prepare and choose a recipient.", image.width, image.height, image.source.total_bytes()));
+        self.status.set_text(&format!("{} × {} pixels · {} bytes · Clipboard.png\nReview the image, then prepare and choose recipients.", image.width, image.height, image.source.total_bytes()));
         self.source.replace(Some(image.source));
     }
     fn capture_explicitly(self: &Rc<Self>) {

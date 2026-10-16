@@ -237,6 +237,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(*panel.settings.borrow().as_ref().unwrap(), settings);
     assert!(settings.is_visible());
     tray::verify_tray_projection(&panel);
+    recipients::tests::verify_ui(&panel);
     image::tests::verify_image_smoke(&panel, &application);
     compose::tests::verify_composer_smoke(&panel, &application);
     text::tests::verify_review_smoke(&panel, &application);

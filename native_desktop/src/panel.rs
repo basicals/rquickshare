@@ -15,6 +15,7 @@ use rqs_lib::service::client::{
 use rqs_lib::service::{Direction, Lifecycle, Phase};
 use std::{
     cell::{Cell, RefCell},
+    collections::BTreeMap,
     rc::Rc,
     sync::Arc,
 };
@@ -25,6 +26,7 @@ mod image;
 mod incoming_preview;
 mod menu;
 mod presentation;
+mod recipients;
 mod reveal;
 mod rows;
 mod settings;
@@ -51,6 +53,7 @@ struct Model {
     manual_requested: bool,
     preview: bool,
     saved_mode: Option<u8>,
+    recipients: BTreeMap<String, String>,
 }
 pub struct Panel {
     pub window: gtk::Window,
@@ -195,9 +198,9 @@ fn source_summary(
 ) -> String {
     use rqs_lib::sessions::details::PayloadKind;
     match kind {
-        PayloadKind::Files => format!("{} files prepared · choose a recipient", file_count),
+        PayloadKind::Files => format!("{} files prepared · choose recipients", file_count),
         PayloadKind::Text | PayloadKind::Url => format!(
-            "{} prepared · {} bytes · choose a recipient",
+            "{} prepared · {} bytes · choose recipients",
             if kind == PayloadKind::Url {
                 "Link"
             } else {
@@ -240,6 +243,12 @@ fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'stat
             "Operation needs recovery. Do not repeat the send."
         }
         Some(Source) => "Cannot read the selected files. Check access and select them again.",
+        Some(Rejected(rqs_lib::service::Error::UnknownEndpoint)) => {
+            "A recipient is no longer available. Review the selected devices; nothing was queued."
+        }
+        Some(Rejected(rqs_lib::service::Error::Capacity)) => {
+            "Sharing resources are busy. Nothing was queued. Try fewer recipients or wait."
+        }
         Some(_) => "The operation was not accepted. Review the current state and try again.",
         None => "Choose files, a folder or text, then choose a nearby recipient.",
     }
@@ -442,6 +451,16 @@ impl Panel {
             .map(|view| view.card_mode);
         let changed = {
             let mut model = self.model.borrow_mut();
+            if state.disconnected || previous_epoch != current_epoch {
+                model.recipients.clear();
+            }
+            if let Some(view) = &state.view {
+                for endpoint in &view.endpoints {
+                    if let Some(name) = model.recipients.get_mut(&endpoint.id) {
+                        *name = endpoint.name.clone();
+                    }
+                }
+            }
             let changed = saved.is_some() && saved != model.saved_mode;
             model.saved_mode = saved;
             model.state = state;
@@ -572,6 +591,7 @@ impl Panel {
         self.context.unparent();
         let mut model = self.model.borrow_mut();
         model.closing = true;
+        model.recipients.clear();
         model.dialog_permit.take();
         if let Some(dialog) = model.dialog.take() {
             dialog.cancel();
@@ -615,9 +635,13 @@ impl Panel {
                 {
                     let mut model = panel.model.borrow_mut();
                     model.waiting = false;
+                    if recipients::confirmed(&result) {
+                        model.recipients.clear();
+                    }
                     model.notice = match &result {
                         Ok(rqs_lib::service::client::controller::ActionResult::Settings(view)) if view.error != 0 =>
                             Some("Visibility was saved but could not be fully applied. Review discovery status and Settings."),
+                        Err(ControllerError::Client(error)) => Some(error_message(Some(*error))),
                         Err(_) => Some("Operation did not complete. Review its state before retrying."),
                         _ => None,
                     };
@@ -802,6 +826,7 @@ impl Panel {
             .as_ref()
             .and_then(|view| view.selections.first().cloned());
         let selected = selection.is_some();
+        self.render_recipients(&model, selected);
         self.button("files").set_sensitive(ready && !selected);
         self.button("folder").set_sensitive(ready && !selected);
         self.button("discard").set_sensitive(ready && selected);
@@ -971,7 +996,7 @@ impl Panel {
             }
             return;
         };
-        self.render_rows(view, selection, ready, current);
+        self.render_rows(view, selection, ready, current, &model.recipients);
     }
     fn incoming_card(
         self: &Rc<Self>,
@@ -1013,6 +1038,9 @@ impl Panel {
     ) -> gtk::Box {
         let row =
             details_card_mode_with_files(&transfer.details, full, self.file_action(transfer, full));
+        if let Some(recipient) = &transfer.recipient {
+            row.prepend(&label(&format!("Recipient: {recipient}")));
+        }
         let phase = label(phase_text(transfer.phase));
         phase.set_widget_name("phase");
         row.append(&phase);
@@ -1176,12 +1204,15 @@ impl Panel {
         clear(&nearby);
         for name in ["Example phone", "Example laptop"] {
             let row = card();
-            row.append(&label(name));
-            let button = gtk::Button::with_label("Send");
-            button.set_sensitive(false);
-            row.append(&button);
+            let choice = gtk::CheckButton::with_label(name);
+            choice.set_active(true);
+            choice.set_sensitive(false);
+            row.append(&choice);
+            row.append(&label("Nearby advertised device · preview"));
             nearby.append(&row);
         }
+        self.text("recipient-summary", "2 selected · preview");
+        self.button("send-many").set_label("Send to 2");
         let details = TransferDetails {
             status: DetailsStatus::Ready,
             sender: "Example phone".into(),
@@ -1210,10 +1241,18 @@ impl Panel {
         incoming.append(&row);
         let transfers = self.box_widget("transfers");
         clear(&transfers);
-        let row = card();
-        row.append(&label("Example transfer"));
-        row.append(&label("2048 / 12345 bytes locally sent"));
-        transfers.append(&row);
+        for (recipient, status) in [
+            ("Example phone", "2048 / 12345 bytes locally sent"),
+            ("Example laptop", "Queued"),
+        ] {
+            let row = card();
+            row.append(&label(&format!("Recipient: {recipient}")));
+            row.append(&label(status));
+            let cancel = gtk::Button::with_label("Cancel");
+            cancel.set_sensitive(false);
+            row.append(&cancel);
+            transfers.append(&row);
+        }
         let compact = self.box_widget("compact");
         clear(&compact);
         match page {
@@ -1234,7 +1273,7 @@ impl Panel {
             }
             "transfers" => {
                 let row = card();
-                row.append(&label("Example transfer"));
+                row.append(&label("Recipient: Example phone"));
                 row.append(&label("2048 / 12345 bytes locally sent"));
                 let cancel = gtk::Button::with_label("Cancel");
                 cancel.set_sensitive(false);

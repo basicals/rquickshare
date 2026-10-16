@@ -48,6 +48,7 @@ impl Panel {
             "folder",
             "send-text",
             "send-image",
+            "send-many",
             "discard",
             "recover",
             "abort",
@@ -72,6 +73,7 @@ impl Panel {
                     }
                     "send-text" => panel.show_composer(),
                     "send-image" => panel.show_image(),
+                    "send-many" => panel.send_recipients(),
                     "files" | "folder" => {
                         panel.set_mode(Mode::Full);
                         panel.pages.set_visible_child_name("nearby");

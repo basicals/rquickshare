@@ -84,7 +84,7 @@ impl Composer {
         root.set_margin_bottom(16);
         root.set_margin_start(16);
         root.set_margin_end(16);
-        let heading = label("Write or paste text, then prepare it and choose a recipient.");
+        let heading = label("Write or paste text, then prepare it and choose recipients.");
         heading.set_selectable(false);
         root.append(&heading);
         let buffer = gtk::TextBuffer::new(None::<&gtk::TextTagTable>);
@@ -226,7 +226,7 @@ impl Composer {
                     Ok(text) => {
                         composer.buffer.set_text(text.text());
                         composer.status.set_text(
-                            "Text captured. Review it, then prepare and choose a recipient.",
+                            "Text captured. Review it, then prepare and choose recipients.",
                         );
                     }
                     Err(()) => composer.status.set_text(

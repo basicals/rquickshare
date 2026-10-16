@@ -144,14 +144,14 @@ fn given_prepared_source_metadata_when_summarized_then_text_is_never_mislabeled_
     use rqs_lib::sessions::details::PayloadKind;
     assert_eq!(
         source_summary(PayloadKind::Text, 0, 12),
-        "Text prepared · 12 bytes · choose a recipient"
+        "Text prepared · 12 bytes · choose recipients"
     );
     assert_eq!(
         source_summary(PayloadKind::Url, 0, 7),
-        "Link prepared · 7 bytes · choose a recipient"
+        "Link prepared · 7 bytes · choose recipients"
     );
     assert_eq!(
         source_summary(PayloadKind::Files, 3, 7),
-        "3 files prepared · choose a recipient"
+        "3 files prepared · choose recipients"
     );
 }
