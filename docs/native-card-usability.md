@@ -476,3 +476,41 @@ compositor test, multi-monitor/scale survey, settings acceptance or peer result.
 No code/settings/service changes or development-test reruns were needed. Next
 manual UI gate is staged Settings Cancel/OK, then additive file chooser behavior;
 ordinary Android/Windows acceptance remains in the separate essential matrix.
+
+## Native17 bottom-edge and Compact order follow-up — plan before code
+
+The user confirmed Settings edits remain unsaved until OK on native16. Record
+that specific user observation; no broader fault-recovery claim follows from it.
+They then requested Compact order Receive, Send, Full view, Hide and a shared
+bottom edge between Full/Compact, especially after dragging Full.
+
+Analysis: drag currently anchors Left/Top, and clamp_moved_surface preserves its
+top margin when the natural height changes. This necessarily lifts the Compact
+bottom edge. Subtracting the height delta on each render would accumulate errors
+when several updates occur before GTK allocates the new height. Use the native
+Layer Shell bottom anchor as the position owner instead of such corrections.
+
+1. [ ] B1: swap the two Compact widget children, keeping the same actions and
+   four-action invariant. No menu/daemon/settings contract change.
+2. [ ] B2: drag writes Left/Bottom margins. Before changing a visible card's mode,
+   convert a Top anchor to Bottom once using its current allocation; preserve an
+   existing Bottom margin. Pin that position across content renders/mode changes,
+   preventing apply_mode from reapplying the old tray hint. Rename the internal
+   dragged flag to position_pinned because mode switching also pins geometry.
+   Keep horizontal anchoring, logical coordinates, monitor bounds and lock/hide
+   guards. Explicit tray placement starts a fresh tray-relative position.
+3. [ ] B3: add focused pure geometry boundaries/Full-Compact roundtrip assertions
+   and extend the existing GTK smoke for exact quick-action order. Run affected
+   checks and strict native lint once, then inspect the final Compact frame.
+   No full core suite or ten-run repetition; rerun only failures/affected changes.
+4. [ ] B4: commit source/docs, build/verify distinct native17 and preserve native16.
+   Upgrade only after the existing known-owner/global-idle gate. Record14 actual
+   installed files, one tray and unchanged login state; physical bottom alignment
+   needs the user's KDE check. Update artifacts/evidence and continuation index.
+
+Invariant: while pinned and the resized card fits above its existing bottom edge,
+monitor_height - bottom_margin stays constant across repeated renders and mode
+roundtrips. If expansion would cross the monitor top, clamp once to keep the
+whole card visible; screen-fit takes precedence over an impossible position.
+Do not persist a position or add a timer/global pointer/window-manager fallback.
+Rollback is the native17 source commit plus retained native16 package when idle.
