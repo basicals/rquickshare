@@ -30,13 +30,24 @@ Tauri application or establish Google Quick Share parity. The current plan,
 invariants, exact measured checks and pending acceptance are in
 [native-gtk-shell.md](../docs/native-gtk-shell.md).
 
-Build from the repository root with Rust >=1.92, GTK4 >=4.12 development files,
-GTK4 Layer Shell development/runtime, pkg-config and the existing core build
+Build from the repository root with Rust >=1.93, GTK4 >=4.12 development files,
+GTK4 Layer Shell development/runtime, fontconfig/libseccomp development files,
+Bubblewrap, Glycin loaders >=2.1, pkg-config and the existing core build
 dependencies. This separate crate keeps GTK4 isolated from Tauri's GTK3 stack.
 
 ```sh
 cargo +stable build --locked --manifest-path native_desktop/Cargo.toml
 ```
+
+The private `rquickshare-preview-helper` binary is installed under `/usr/libexec`.
+It runs Glycin with explicit Bwrap and hard per-process resource limits. The GUI
+only receives bounded validated RGBA, with no unsandboxed fallback. Existing
+`--preview --preview-page incoming --preview-mode full` exercises a synthetic
+PNG through the real helper; Compact keeps metadata/actions. This local fixture
+does not establish remote preview wire semantics or Google interoperability.
+See [preview contract](../docs/native-preview-review.md). Tests require building
+the helper first; real sandbox smoke must fail if the environment cannot enforce
+isolation, never silently decode in-process. Native7 remains an older artifact.
 
 Normal launch requires a supported Layer Shell compositor and same-user KDE status
 notifier watcher. Normal launch delegates to the fixed systemd desktop user service

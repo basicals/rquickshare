@@ -357,7 +357,11 @@ fn run_gui(
             if let Some(output) = options.output.clone() {
                 let application = application.clone();
                 let failure = failure_ui.clone();
+                let preview = Rc::downgrade(&panel);
                 panel.window.add_tick_callback(move |window, _| {
+                    if preview.upgrade().is_none_or(|panel| !panel.preview_ready()) {
+                        return glib::ControlFlow::Continue;
+                    }
                     let width = window.width();
                     let height = window.height();
                     if width <= 0 || height <= 0 {

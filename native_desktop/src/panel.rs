@@ -22,6 +22,7 @@ use tokio::runtime::Handle;
 
 mod compose;
 mod image;
+mod incoming_preview;
 mod menu;
 mod presentation;
 mod reveal;
@@ -71,6 +72,7 @@ pub struct Panel {
     text_review: RefCell<Option<Rc<text::Review>>>,
     composer: RefCell<Option<Rc<compose::Composer>>>,
     image: RefCell<Option<Rc<image::Image>>>,
+    preview_image: incoming_preview::Fixture,
     reveal: RefCell<Option<Rc<reveal::Pending>>>,
     text_generation: RefCell<Rc<()>>,
     rows: RefCell<rows::Rows>,
@@ -312,6 +314,7 @@ impl Panel {
             text_review: RefCell::new(None),
             composer: RefCell::new(None),
             image: RefCell::new(None),
+            preview_image: incoming_preview::Fixture::default(),
             reveal: RefCell::new(None),
             text_generation: RefCell::new(Rc::new(())),
             rows: RefCell::new(rows::Rows::default()),
@@ -545,6 +548,7 @@ impl Panel {
         if self.model.borrow().closing {
             return;
         }
+        self.preview_image.cancel();
         self.close_text_review();
         self.close_composer();
         self.close_image();
@@ -1101,9 +1105,16 @@ impl Panel {
         self.notice("Tray position is outside available monitors. Activate the tray icon again.");
         false
     }
-    pub fn preview(&self, page: &str) {
+    pub fn preview(self: &Rc<Self>, page: &str) {
         self.model.borrow_mut().preview_page = Some(page.into());
         self.render_preview(page);
+        if page == "incoming" {
+            incoming_preview::Fixture::start(self);
+        }
+    }
+    pub fn preview_ready(&self) -> bool {
+        self.model.borrow().preview_page.as_deref() != Some("incoming")
+            || self.preview_image.finished()
     }
     fn render_preview(&self, page: &str) {
         self.pages.set_visible_child_name(page);
@@ -1132,6 +1143,9 @@ impl Panel {
         let incoming = self.box_widget("incoming");
         clear(&incoming);
         let row = details_card(&details);
+        if let Some(picture) = self.preview_image.picture() {
+            row.append(&picture);
+        }
         let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         for title in ["Decline", "Accept"] {
             let button = gtk::Button::with_label(title);

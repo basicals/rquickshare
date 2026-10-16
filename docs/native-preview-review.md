@@ -86,22 +86,22 @@ Keep explicit Bwrap, no base-directory exposure and no unsandboxed fallback.
 
 Scope and stages before any code:
 
-1. [ ] D1: add a private rquickshare-preview-helper binary and shared bounded
+1. [x] D1: add a private rquickshare-preview-helper binary and shared bounded
    binary pixel protocol. It reads encoded stdin only, writes pixels only on
    success, receives no path/account/session/receive-directory authority, and
    never initializes GTK. The helper uses a fresh Glycin pool, zero retention,
    max1 parallel operation and explicit Bwrap. No global pool.
-2. [ ] D2: add the native async subprocess adapter with explicit executable
+2. [x] D2: add the native async subprocess adapter with explicit executable
    dependency, one-operation admission/no queue, cancellation and deadline,
    bounded concurrent stdin/stdout, kill-on-drop fallback and explicit kill/reap
    on failed/cancelled/timed-out operations. Never manage unrelated processes.
-3. [ ] D3: exercise the actual adapter in existing developer --preview incoming
+3. [x] D3: exercise the actual adapter in existing developer --preview incoming
    mode with a tracked harmless synthetic PNG. Full mode can show the decoded
    thumbnail; Compact retains its current metadata/actions. This is an offline
    review fixture, not peer ingress, consent or Google image mapping. Stale/closed
    panels discard results and cancel their operation. Decoder failure leaves the
    existing metadata card usable without a picture.
-4. [ ] D4: package the private helper under /usr/libexec, resolve it relative to
+4. [x] D4: packaging source includes the private helper under /usr/libexec; resolve it relative to
    the installed executable's known prefix (never peer/PATH input), include its
    ELF/runtime dependencies and require Bubblewrap/Glycin image loaders. Update
    exact offline package inventory/help checks and documentation. Preserve all
@@ -126,6 +126,11 @@ decode limits add a5s stage timeout and2048 dimensions. Parent helper environmen
 is explicit/clean with system PATH/data directories, no inherited secrets or
 user loader/config overrides. Stdout protocol only; stderr not surfaced/logged.
 Budgets are per operation/process, not a global memory/cumulative CPU guarantee.
+The helper fixes RAYON_NUM_THREADS=1 during single-threaded startup. Actual JPEG
+testing exposed Glycin's format converter creating a host-CPU-sized pool under
+the address-space cap; configure the documented pool limit instead of raising
+the resource ceiling or removing JPEG verification. This is an internal resource
+fix within the selected sandbox boundary. No upstream code is patched.
 
 Pixel protocol is private local helper IPC, never a Quick Share wire extension:
 8-byte magic/version RQSP/1, big-endian u32 width/height, then exact width*height*4
@@ -135,10 +140,12 @@ sandbox yields no image. The native adapter uses only validated pixels.
 Expected scoped verification (Mode A, before tests):7 domain methods for input
 admission/signatures/boundaries, dimensions/aspect scaling, frame stride/format/
 length validation, protocol magic/version/truncation/extra bytes, exact pixels,
-redacted Debug and resource policy;3 adapter methods for real helper PNG pixels,
-pre-cancel/busy/missing helper, and process cancellation/oversized/truncated output
-using only external process fixtures. Actual decoder is never mocked. Existing
-GTK preview/safety/close tests protect UI lifecycle; add one fixture UI assertion
+redacted Debug and invalid pixel-object serialization;3 adapter methods for real helper PNG/JPEG pixels,
+pre-cancel/busy/missing helper, and process cancellation/deadline/oversized/truncated output
+using only external process fixtures. Actual decoder is never mocked.
+Deadline verification uses Tokio's paused clock after an actual readiness event,
+never a10-second sleep. The added test-util feature is development-only.
+Existing GTK preview/safety/close tests protect UI lifecycle; add one fixture UI assertion
 if needed. Categories Positive,N1,N2,N3,N4,N5,N7,N9,N10,N12 (spawn/pipe failures).
 N6 applies to malformed/versioned helper output; N8/N11 not applicable (no clock
 dates/billing). No ten repetitions or blanket repository coverage claim.
@@ -148,3 +155,48 @@ pixel metadata. Rollback each native implementation commit together with its
 dependency/packaging changes; no stored schema, protocol or remote state exists.
 Wire ingestion, native daemon preview IPC, production card binding and outgoing
 previews remain a subsequent compatible slice gated on concrete payload semantics.
+
+## Actual source verification2026-10-16
+
+Implementation uses a package-local non-published Rust library shared by GUI/helper
+to keep the local pixel protocol in one place. Glycin4.0.0 resolves via the locked
+external/core4.0.3 and utils5.0.1; glib/gio0.22 match GTK. Use Glycin's Tokio feature
+with default features disabled to match the existing zbus runtime. An initial
+async-io/Tokio feature mismatch was corrected before executing the helper.
+
+- Actual helper PNG smoke: exit0, exact24-byte header/body with2x1 known RGBA.
+  Bubblewrap0.11.1 and installed Glycin loaders2.1.5 were used; no host installation
+  or sandbox policy change. No Google/physical peer was involved.
+- New library suite initially9/10 passed in0.17s; the real JPEG fixture exposed
+  a Glycin Rayon ThreadPoolBuildError under the hard address-space ceiling.
+  The documented one-thread configuration fixes the cause. Affected actual
+  PNG/JPEG method passed in0.14s with the same ceilings and strict pixel checks.
+  JPEG uses a documented small color-error bound because its source is lossy;
+  pixel ordering, dimensions, length and alpha remain exact.
+- Transport method subsequently gained a fake-clock deadline case and strict
+  per-fixture error assertions. Final affected method passed in0.08s; child PIDs
+  were absent after awaited cancellation/deadline completion. No sleeps or
+  arbitrary watcher/process termination. Other passed domain methods were not rerun.
+- Existing native GTK binary suite39/0 passed in1.84s on a private display/bus,
+  including actual builder/close/preview safety. No additional near-duplicate
+  GTK test was added; the final package visual fixture will check Full/Compact.
+- Package Python suite5/0 passed in3.227s. The subsequent minimum-loader-floor
+  change was checked with only its affected metadata method (result in evidence).
+- Final native all-targets --no-deps Clippy -D warnings passed in15.37s;
+  format/diff checks passed. Existing9 no-experimental core dependency warnings
+  remain visible; none were suppressed. No unchanged core/Tauri test rerun.
+
+Ten unique new Rust methods by primary category: Positive2,N1=1,N2=2,N6=1,N7=1,
+N9=2,N10=1. Shared interactions also exercise N3/N4/N5/N12 as described above;
+no full coverage/ten-run stability or mutation-runner claim. Assertions protect
+admission/count/size/layout/version/EOF/cancel/deadline/reap/redaction invariants.
+The manual native-package workflow now installs required build/runtime dependencies
+and builds the helper before tests; a runner unable to enforce Bwrap fails the real
+smoke. CI itself was not dispatched; namespace/AppArmor availability remains a
+runner acceptance requirement, never a reason for an unsandboxed fallback.
+
+Source changes are ready for the native8 uninstalled candidate (revision8 avoids
+overwriting native7). Candidate build, extracted helper/GUI and Full/Compact
+rendering, fresh unsigned APT/public review request and export are still pending.
+Do not mark native8 verified or claim it can display remote Google previews yet.
+Owned build/test/lint processes exited. Terminal closed.

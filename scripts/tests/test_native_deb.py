@@ -9,7 +9,7 @@ import unittest
 spec = importlib.util.spec_from_file_location("native_deb", Path(__file__).parents[1] / "native_deb.py")
 package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
-DEPENDENCIES = "systemd, libpam-systemd, dbus-user-session, bluez, xdg-desktop-portal, libgtk-4-1 (>= 4.12), libgtk4-layer-shell0 (>= 1.3)"
+DEPENDENCIES = "systemd, libpam-systemd, dbus-user-session, bluez, xdg-desktop-portal, libgtk-4-1 (>= 4.12), libgtk4-layer-shell0 (>= 1.3), bubblewrap, glycin-loaders (>= 2.1)"
 
 
 def fields():
@@ -24,7 +24,7 @@ class NativeDebTests(unittest.TestCase):
             "Package": ["", "other"],
             "Version": ["", "0.11.5", "0.11.5+native1.fake", "0.11.5\nInjected: field", "0.11.5+native0", "0.11.5+native01", "0.11.5+native2147483648"],
             "Architecture": ["", "i386", "amd64\n"],
-            "Depends": ["", DEPENDENCIES.replace("systemd, ", "", 1), DEPENDENCIES.replace("libgtk4-layer-shell0", "wrong"), DEPENDENCIES.replace(" (>= 4.12)", "")],
+            "Depends": ["", DEPENDENCIES.replace("systemd, ", "", 1), DEPENDENCIES.replace("libgtk4-layer-shell0", "wrong"), DEPENDENCIES.replace(" (>= 4.12)", ""), DEPENDENCIES.replace("bubblewrap", "wrong"), DEPENDENCIES.replace("glycin-loaders", "wrong"), DEPENDENCIES.replace("glycin-loaders (>= 2.1)", "glycin-loaders")],
         }.items():
             for value in variants:
                 with self.subTest(field=field, value=value):
@@ -43,7 +43,7 @@ class NativeDebTests(unittest.TestCase):
     def test_given_selected_assets_when_validated_then_process_ownership_supports_only_opt_in_login_without_direct_fallback(self):
         # Arrange / Act / Assert: actual shipped service/activation assets.
         package.validate_assets()
-        self.assertEqual(len(package.FILES), 10)
+        self.assertEqual(len(package.FILES), 11)
         self.assertFalse(any("autostart" in name for name in package.FILES))
 
     def test_given_elf_header_when_truncated_wrong_type_endian_or_machine_then_reject_relabelled_binary(self):

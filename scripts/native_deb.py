@@ -18,6 +18,7 @@ ASSETS = ROOT / "native_desktop/packaging"
 FILES = {
     "usr/bin/rquickshare": (None, 0o755),
     "usr/libexec/rquickshare-daemon": (None, 0o755),
+    "usr/libexec/rquickshare-preview-helper": (None, 0o755),
     "usr/share/doc/rquickshare/LICENSE": (ROOT / "LICENSE", 0o644),
     "usr/share/doc/rquickshare/README.md": (ASSETS / "README.md", 0o644),
 }
@@ -59,8 +60,9 @@ def validate_metadata(fields):
     require(fields.get("Architecture") in {"amd64", "arm64"}, "Unsupported architecture")
     depends = fields.get("Depends", "")
     names = {re.match(r"[a-z0-9+.-]+", item.strip())[0] for item in depends.split(",") if re.match(r"[a-z0-9+.-]+", item.strip())}
-    require({"systemd", "libpam-systemd", "dbus-user-session", "bluez", "xdg-desktop-portal", "libgtk-4-1", "libgtk4-layer-shell0"} <= names, "Missing runtime dependency")
+    require({"systemd", "libpam-systemd", "dbus-user-session", "bluez", "xdg-desktop-portal", "libgtk-4-1", "libgtk4-layer-shell0", "bubblewrap", "glycin-loaders"} <= names, "Missing runtime dependency")
     require("libgtk-4-1 (>= 4.12)" in depends, "Missing GTK API floor")
+    require("glycin-loaders (>= 2.1)" in depends, "Missing Glycin loader floor")
 
 
 def validate_elf(header, architecture):
@@ -160,6 +162,8 @@ def verify(package, smoke=True):
             gui = run(str(directory / "usr/bin/rquickshare"), "--help", env=clean)
             require("native tray client" in gui, "Not the native GUI binary")
             daemon = directory / "usr/libexec/rquickshare-daemon"
+            helper = directory / "usr/libexec/rquickshare-preview-helper"
+            require("Requires Bubblewrap sandbox" in run(str(helper), "--help", env=clean), "Not the private preview helper")
             require("--check" in run(str(daemon), "--help", env=clean), "Not the native daemon")
             settings = directory / "fixture.json"
             settings.write_text('{"visibility":0}')
@@ -177,7 +181,7 @@ def build(args):
     require(not os.environ.get("CARGO_BUILD_TARGET") and not os.environ.get("CARGO_TARGET_DIR"), "Use native default cargo target directories")
     revision = tomllib.loads((ASSETS / "release.toml").read_text())["revision"]
     version = native_version(versions[0], revision, args.profile == "dev")
-    for crate, binary in [("core_lib", "rquickshare-daemon"), ("native_desktop", "rquickshare")]:
+    for crate, binary in [("core_lib", "rquickshare-daemon"), ("native_desktop", "rquickshare"), ("native_desktop", "rquickshare-preview-helper")]:
         subprocess.run(["cargo", "+stable", "build", "--locked", "--manifest-path", str(ROOT / crate / "Cargo.toml"), "--bin", binary, "--profile", args.profile], check=True)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -187,7 +191,7 @@ def build(args):
         stage = work / "debian/rquickshare"
         for destination, (source, mode) in FILES.items():
             if source is None:
-                crate = "native_desktop" if destination.endswith("/rquickshare") else "core_lib"
+                crate = "core_lib" if destination.endswith("/rquickshare-daemon") else "native_desktop"
                 source = ROOT / crate / "target" / ("debug" if args.profile == "dev" else "release") / Path(destination).name
             target = stage / destination
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -197,14 +201,14 @@ def build(args):
         (work / "debian/control").write_text("Source: rquickshare\n\nPackage: rquickshare\nArchitecture: any\nDescription: Native nearby sharing\n")
         control = stage / "DEBIAN"
         control.mkdir()
-        command = ["dpkg-shlibdeps", "-O", "-e" + str(stage / "usr/bin/rquickshare"), "-e" + str(stage / "usr/libexec/rquickshare-daemon")]
+        command = ["dpkg-shlibdeps", "-O", "-e" + str(stage / "usr/bin/rquickshare"), "-e" + str(stage / "usr/libexec/rquickshare-daemon"), "-e" + str(stage / "usr/libexec/rquickshare-preview-helper")]
         for library in args.library_dir:
             command.append("-l" + str(library.resolve(strict=True)))
         if args.shlibs_file:
             command.append("-L" + str(args.shlibs_file.resolve(strict=True)))
         dependencies = run(*command, cwd=work)
         require(dependencies.startswith("shlibs:Depends="), "Missing generated ELF dependencies")
-        depends = dependencies.removeprefix("shlibs:Depends=") + ", libgtk-4-1 (>= 4.12), systemd, libpam-systemd, dbus-user-session, bluez, xdg-desktop-portal"
+        depends = dependencies.removeprefix("shlibs:Depends=") + ", libgtk-4-1 (>= 4.12), systemd, libpam-systemd, dbus-user-session, bluez, xdg-desktop-portal, bubblewrap, glycin-loaders (>= 2.1)"
         validate_metadata({"Package": "rquickshare", "Version": version, "Architecture": architecture, "Depends": depends})
         (control / "control").write_text(f"Package: rquickshare\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: rQuickShare contributors <noreply@github.com>\nSection: net\nPriority: optional\nDepends: {depends}\nRecommends: xdg-desktop-portal-kde\nDescription: Native nearby file and text sharing\n GTK4 tray client and independently owned transfer daemon.\n")
         (control / "control").chmod(0o644)

@@ -64,8 +64,14 @@ prerequisite [bounded byte ingress](native-byte-ingress.md) is implemented: both
 handlers now share request-owned16-payload/5MiB reservation limits, stable headers,
 exact completion and release-before-dispatch. Nine new methods and scoped checks
 passed as documented; this source change is newer than the native7 package/archive.
-[Preview decoder boundary](native-preview-review.md) selection is pending before
-pre-consent image parsing; persistent resume contracts remain open.
+[Preview decoder boundary](native-preview-review.md) option1 is selected and its
+offline native foundation is implemented: private Glycin/Bwrap helper, hard
+resource limits, validated local pixel IPC, cancellation/reaping and Full-card
+fixture. Ten new Rust methods/scoped native checks passed as documented. Native8
+candidate is pending; native7 remains the last measured package/export. Remote
+preview encoding/mapping, daemon IPC/production binding and persistent resume
+contracts remain open. Do not ask for the decoder boundary again or claim full
+preview compatibility from local fixtures.
 
 ## Implemented source and remaining acceptance
 

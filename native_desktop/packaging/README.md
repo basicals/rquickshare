@@ -4,12 +4,12 @@ The source builds a native Debian package with GTK4/Layer Shell GUI, independent
 systemd user daemon, D-Bus activation, application entry and Dolphin Send action.
 A build stages/extracts/verifies files only; it never installs or enables services.
 
-From the repository root, with Rust >=1.92, Python >=3.11 and Debian development
+From the repository root, with Rust >=1.93, Python >=3.11 and Debian development
 libraries/tools installed:
 
 ```sh
 python3 scripts/native_deb.py build
-python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native7_amd64.deb
+python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native8_amd64.deb
 ```
 
 Default artifacts contain locked release binaries. `build --profile dev` explicitly
@@ -89,3 +89,12 @@ busy cases, menu discovery, GTK Layer Shell/portal lock/DND/focus/scale and real
 Google peers. Staged package verification does not establish these observations.
 Contracts and measured checks are maintained in repository docs/native-package.md,
 docs/native-desktop-ingress.md and docs/native-notification-backend.md.
+# Private preview helper
+
+The current packaging source includes `/usr/libexec/rquickshare-preview-helper`
+and requires Bubblewrap plus Glycin loaders >=2.1. The helper reads encoded stdin
+and returns bounded RGBA; it never receives a local input path or session account
+authority. Sandbox failure leaves metadata usable without an image. This boundary
+is currently exercised by an offline incoming-card fixture, not remote wire
+ingress. Native7 was built before this source change and remains immutable.
+See `docs/native-preview-review.md` in the source repository for limits/checks.

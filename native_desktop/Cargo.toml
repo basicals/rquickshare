@@ -3,25 +3,34 @@ name = "rquickshare-desktop"
 version = "0.11.5"
 edition = "2021"
 license = "GPL-3.0-only"
+publish = false
 
 [[bin]]
 name = "rquickshare"
 path = "src/main.rs"
 
+[[bin]]
+name = "rquickshare-preview-helper"
+path = "src/preview_helper.rs"
+test = false
+bench = false
+
 [dependencies]
 gtk = { package = "gtk4", version = "=0.11.3", features = ["v4_12"] }
 gtk4-layer-shell = "=0.8.0"
 rqs_lib = { path = "../core_lib", default-features = false }
-tokio = { version = "1.43", features = ["rt-multi-thread", "sync", "net", "process", "macros"] }
+tokio = { version = "1.43", features = ["rt-multi-thread", "sync", "net", "process", "macros", "io-util", "time"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 zbus = { version = "=5.19.0", default-features = false, features = ["tokio"] }
 futures = "0.3"
 rand = "0.9"
 serde = "1.0"
 rustix = { version = "1.0", features = ["process", "fs"] }
+glycin = { version = "=4.0.0", default-features = false, features = ["tokio"] }
 
 [dev-dependencies]
 tempfile = "3.0"
+tokio = { version = "1.43", features = ["test-util"] }
 
 [profile.dev]
 debug = 0
