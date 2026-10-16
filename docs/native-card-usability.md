@@ -647,7 +647,7 @@ minute deadline or timer should be added.
    Run affected checks and strict native lint once. Inspect actual empty/full and
    temporary Compact frames using isolated test widgets, with no real visibility
    changes or fake daemon transfers. CSS parse failures must fail the smoke.
-4. [ ] H4: distinct native19 package, offline verification and authorized local
+4. [x] H4: distinct native19 package, offline verification and authorized local
    upgrade behind known-owner/zero-source/nonterminal-transfer gate. Verify14
    installed files, one tray and unchanged login preference. Update SSOT/evidence
    and existing handoff; preserve native18 immutable rollback artifacts.
@@ -707,3 +707,13 @@ commit ed4fffa; native18 package remains unchanged for rollback. The authorized
 upgrade next requires known native18 service owners2170697/2170698 (or an already
 closed GUI), zero globally prepared resources and no active transfer. Any occupied
 gate stops before mutation. No signing/publication. Build exited: Terminal closed.
+
+H4 installed observations: native19 replaced native18 after the fresh known-owner
+gate found zero prepared resources and no active transfer. Apt passed; all14
+installed regular files matched bytes/modes/root ownership. One active rquickshare
+tray exports the expected15 rows. Current daemon/desktop PIDs2175594/2175595;
+login start remains disabled. No user source was discarded or original removed.
+See [native19 evidence](evidence/native-card-feedback-2026-10-17.json). The user
+has been asked to inspect the new header and actual green pulse; physical native19
+acceptance is pending. Native18 Receive/shared-bottom acceptance is confirmed.
+Native18 package remains the immutable rollback. Terminal closed.

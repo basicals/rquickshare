@@ -1,0 +1,169 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "scope": "header Send, natural empty list, confirmed temporary Receive feedback",
+  "binary_source_commit": "ed4fffac40e19c8a27d2570825fe8899c12946e0",
+  "package": {
+    "name": "rquickshare_0.11.5+native19_amd64.deb",
+    "bytes": 6508810,
+    "sha256": "a2f5298cdf96087fcbfbe886e16cb1cfd2ff042b272882fe004154762400b0ff",
+    "regular_files": 14,
+    "offline_verified": true
+  },
+  "checks": {
+    "initial_affected_smoke": {
+      "passed": 0,
+      "failed": 1,
+      "reason": "expected child natural45px without GTK intrinsic46px minimum; corrected contract retains explicit rejection of old120px floor"
+    },
+    "intermediate_smokes": [
+      {
+        "passed": 1,
+        "failed": 0,
+        "seconds": 0.71
+      },
+      {
+        "passed": 1,
+        "failed": 0,
+        "seconds": 0.66
+      }
+    ],
+    "intermediate_frames_rejected": "an owned asynchronous incoming-preview fixture repainted widgets during the first GLib event processing; fixture now cancelled before live projection checks; capture after paint retained",
+    "final_affected_actual_gtk_smoke": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.58,
+      "css_parse_errors": 0,
+      "assertions": [
+        "header Send parent and no expansion",
+        "preparation row hidden when empty",
+        "main scroller content minimum0, maximum300",
+        "empty natural=max(content,intrinsic minimum), below old120px floor",
+        "four Compact actions unchanged",
+        "temporary-only Receive CSS class",
+        "busy and pending states retain confirmed active visibility",
+        "normal, hidden, unavailable, disconnected, stopped, unsynchronized, absent and preview states remove active CSS class",
+        "existing no-request Receive preserves mode/page and dispatches exact temporary visibility target"
+      ]
+    },
+    "final_strict_native_all_targets_no_deps_clippy": {
+      "passed": true,
+      "seconds": 1.46,
+      "existing_core_dependency_warnings": 9
+    },
+    "format_and_whitespace_passed": true,
+    "core_or_full_native_suite_repeated": false,
+    "ten_repetitions": false
+  },
+  "frames": [
+    {
+      "name": "temporary-compact.png",
+      "width": 420,
+      "height": 203,
+      "sha256": "292215476ea0ed6d2cb3220902abccf381fa0cd987b0707d72cf9ea233db426a",
+      "source": "actual isolated GTK test widgets, no connected writer; unavailable warning retained"
+    },
+    {
+      "name": "empty-full.png",
+      "width": 420,
+      "height": 211,
+      "sha256": "b3b3c90a0e327732f48bb1b2dd9d94e61e3ac0aa593cd93943622fbf738a389d",
+      "source": "actual isolated GTK test widgets, no connected writer; unavailable warning retained"
+    }
+  ],
+  "receive_feedback": {
+    "authority": "confirmed VisibilityView temporary mode plus running/synchronized complete service view",
+    "css_pulse_seconds": 1.8,
+    "ui_minute_timer_added": false,
+    "no_real_visibility_changes_in_isolated_checks": true,
+    "automatic_accept_added": false,
+    "physical_motion_and_theme_acceptance": false
+  },
+  "installation": {
+    "observed_at": "2026-10-16T23:24:14.668244+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native18",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2170697"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2170698"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 0,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "terminal_history_count": 0,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native19",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2175594"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2175595"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "tray": {
+    "observed_at": "2026-10-16T23:24:40.904213+00:00",
+    "installed_version": "0.11.5+native19",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      4,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true
+  },
+  "acceptance": {
+    "native18_receive_and_bottom_edge": "user explicitly confirmed on2026-10-17; see native-receive-view-2026-10-17.json",
+    "native19_header_empty_list_and_pulse_physical_verified": false,
+    "physical_check_requested": true,
+    "current_candidate_android_windows_accepted": false
+  },
+  "signed": false,
+  "published": false,
+  "apt_staged": false
+}

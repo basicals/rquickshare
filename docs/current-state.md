@@ -1,19 +1,20 @@
 # Current implementation and continuation state
 
-Latest work (2026-10-17): native18 is installed and running. It includes Compact
-order Receive, Send, Full view, Hide; pinned bottom anchoring across Full/Compact
-resizing; and corrected Receive navigation. Without a pending incoming request,
-Receive requests one-minute visibility and preserves the current card mode/page
-and an already visible card's position. With a pending request it opens explicit
-code/manifest review in Full. No auto-accept. The affected actual GTK smoke and
-strict native lint passed once; offline package verification,14 installed file
-comparisons and one active15-row tray passed. Login start remains off. Current
-owned daemon/desktop PIDs2170697/2170698. The user confirmed native18 Receive stays Compact and the shared bottom edge
-works on2026-10-17. Header Send/empty-list spacing/green temporary Receive feedback
-are the next authorized native19 slice, documented before code in card usability. Native16 user-confirmed dragging/Settings OK/Cancel remain
-historical evidence. Native16/native17 immutable rollback packages/source archives
-remain available. See [card usability](native-card-usability.md) and
-[native18 evidence](evidence/native-receive-view-2026-10-17.json).
+Latest work (2026-10-17): native19 is installed and running. Full now places a
+natural-width Send files entry in the header alongside Settings/view/Hide, and
+hides the padded preparation row until a source exists. The main list has no
+120px empty-content floor, retaining its300px cap. Compact Receive has a slow
+green CSS pulse only during confirmed running/synchronized temporary visibility;
+expiry/hidden/normal-visible/disconnected/unavailable remove it. No UI minute
+timer or automatic acceptance. Affected GTK/CSS/layout/state checks and strict
+native lint passed; offline package verification,14 installed file comparisons
+and one active15-row tray passed. Login start remains off. Current owned daemon/
+desktop PIDs2175594/2175595. User confirmed native18 Receive stays Compact and
+the shared bottom edge works; native19 header/pulse physical inspection is
+requested and pending. Earlier source-extension/peer acceptance gates remain
+separate. Native18 immutable rollback artifacts are retained. See
+[card usability](native-card-usability.md) and
+[native19 evidence](evidence/native-card-feedback-2026-10-17.json).
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.
@@ -24,7 +25,7 @@ and routine Reconnect are removed. Source checks and renderer observations are
 recorded in the follow-up; current physical KDE/peer acceptance is still open.
 No paired identity or durable history is inferred from the mockup or device names.
 
-Updated2026-10-16. Mode A; direct dev, no branch/worktree/push. This is the current
+Updated2026-10-17. Mode A; direct dev, no branch/worktree/push. This is the current
 status index. Dated entries in other documents remain historical evidence; they
 must not override this index or the linked feature contracts. The active goal is reliable ordinary nearby sharing with native
 tray/card UX. [Essential priorities](native-essential-priorities.md) supersede

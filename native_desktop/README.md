@@ -10,13 +10,17 @@ The original blue application icon is restored, and Settings/tray offer an owned
 About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
 checks and exact installed status.
 
-The installed native18 follows the approved [UI mockup](../docs/native-card-usability.md):
+The installed native19 follows the approved [UI mockup](../docs/native-card-usability.md):
 Compact has Receive, Send, Full view and Hide; Full has one keyed device/request/
 transfer list, icon-overlay statuses and inline code/manifest/progress actions.
 No main tabs or branding. The branded Settings window uses General, Receiving,
 Advanced and About sidebar sections, with shared Cancel/OK and no internal scroll.
 Editing never previews/applies values; switching sections preserves the draft.
 Full/Compact changes preserve a pinned bottom edge while the card fits onscreen.
+Full's natural-width Send entry shares the header; its preparation row appears
+only for a prepared source, and an empty list has no reserved120px floor.
+Compact Receive pulses green during confirmed one-minute discoverability, with
+a textual tooltip/accessibility hint. The daemon owns expiry; no UI minute timer.
 
 The shortened tray offers a visibility-aware Open/Hide, Receive, one Send entry,
 actual incoming/active counts, three live visibility choices, Settings/About and
