@@ -941,7 +941,7 @@ The user selected one authoritative snapshot. No pending product/API choice.
   SDK/service affected checks; pure display elapsed/epoch/format boundaries; actual
   GTK toggle/indicator/tick lifetime and existing geometry bounds. Run affected
   checks/lint once and rerun only source changes/failures. No ten-run dev loop.
-- [ ] T6: distinct native21 build/offline verification, known-owner/global-idle
+- [x] T6: distinct native21 build/offline verification, known-owner/global-idle
   upgrade,14-file/one-tray readback and updated evidence/artifact handoff. Native20
   package/source remain immutable rollback references. Physical tray/position/
   countdown acceptance stays separate from source and isolated renderer checks.
@@ -1005,3 +1005,15 @@ private-settings verification passed. Release daemon took2m09s, GTK46.13s and
 helper0.83s. Binary source15d8c5f; native20 package retained. Upgrade next requires
 known native20 service owners2180773/2180775 (or already closed GUI), zero global
 preparation and no active transfer. Build exited: Terminal closed.
+
+T6 installed observations: native21 replaced native20 after a fresh known-owner
+gate confirmed zero prepared resources and no active transfer. Apt passed, all14
+installed regular files matched bytes/modes/root ownership, and one active tray
+exports the expected15 rows. Current daemon/desktop PIDs2201915/2201916; login
+start remains off. Installed Visibility2.Read returned running Temporary with
+27684ms remaining. Two actual StatusNotifierItem.Activate calls changed Hide card
+to Open card and back, using own LayoutUpdated conditions and preserving original
+visibility. Actual screen coordinates were not measured. User physical position/
+spinner/countdown inspection is requested and pending. No user source was
+discarded or original removed. See [evidence](evidence/native-tray-countdown-2026-10-17.json).
+All owned checks exited: Terminal closed; the normal installed app stays running.

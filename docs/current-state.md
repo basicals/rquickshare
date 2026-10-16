@@ -1,21 +1,23 @@
 # Current implementation and continuation state
 
-Latest work (2026-10-17): native20 is installed and running. A single permanent
-Receive/Send/Devices/Hide toolbar replaces exclusive Compact/Full layouts. Devices
-toggles the common device/request/transfer/preparation block above it, retaining
-the native bottom anchor. Selected explicit sending/review actions also open it;
-collapsing preserves selected recipients and keyed rows. The obsolete header and
-Card view setting are removed. Legacy card_mode is preserved in settings writes
-but never changes local drawer state. Active Receive uses a subdued theme-relative
-green pulse; a repeat while confirmed Temporary requests Hidden without cancelling
-transfers or accepting requests. No UI minute timer, optimistic success or schema
-change. Native42/0, final affected GTK1/0, strict lint, offline package verification,
-14 installed file comparisons and one active15-row tray passed. Login start is
-off; current owned daemon/desktop PIDs2180773/2180775. Physical drawer/soft pulse/
-early-stop inspection is requested and pending. Native18 user-confirmed Receive
-and lower-edge alignment remain historical. Native19 rollback artifacts retained.
-See [card usability](native-card-usability.md) and
-[drawer evidence](evidence/native-device-drawer-2026-10-17.json).
+Latest work (2026-10-17): native21 is installed and running. Primary tray Activate
+now toggles the card, and valid same-session monitor/bottom margins are restored
+after hiding instead of reapplying tray coordinates. Expanded temporary Receive
+shows a spinner, visible-device message and countdown. Visibility2 `(sbtbyt)`
+returns one core snapshot including remaining_ms; SDK stamps a conservative
+monotonic sample and GTK ticks only the display while visible/expanded. The daemon
+remains the sole expiry owner. At sampled zero the display waits for authority;
+no per-second IPC, optimistic visibility or fresh minute on reopen.
+Native42/0 and final affected GTK1/0 passed. The service run292/297 exposed five
+old tmpfs fixture-lifetime failures; all five passed after retaining their named
+sources, with production adoption/security gates unchanged. Strict core/native
+lint passed. Offline package verification,14 installed file comparisons, one
+15-row tray, actual SNI Activate hide/show roundtrip and Visibility2 read passed.
+Login start is off; current owned daemon/desktop PIDs2201915/2201916. Physical
+position/spinner/countdown inspection is requested and pending. The user accepted
+native20 panel appearance. Native20 rollback artifacts remain immutable. See
+[card usability](native-card-usability.md) and
+[native21 evidence](evidence/native-tray-countdown-2026-10-17.json).
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.

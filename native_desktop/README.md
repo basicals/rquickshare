@@ -10,7 +10,7 @@ The original blue application icon is restored, and Settings/tray offer an owned
 About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
 checks and exact installed status.
 
-The installed native20 uses a single Receive, Send, Devices, Hide toolbar.
+The installed native21 uses a single Receive, Send, Devices, Hide toolbar.
 Devices toggles an upper drawer containing the keyed device/request/transfer list
 with icon statuses, explicit code/manifest review, prepared source Add/Clear and
 recipient Send. Explicit sending/review actions also open that drawer. Closing
@@ -28,6 +28,13 @@ The branded Settings window retains General, Receiving, Advanced and About
 sidebar sections, shared Cancel/OK and staged edits. Legacy card_mode is preserved
 from the acknowledged settings base for API/storage compatibility and ignored
 by presentation. Drawer expansion is local, initially Closed.
+
+Primary tray clicks toggle the card, preserving valid monitor/anchor margins
+within the running process. Expanded temporary visibility shows a native spinner
+and countdown from the checked Visibility2 snapshot, paired with an SDK monotonic
+sample. Display ticks stop while collapsed/hidden/disconnected/closed; they never
+expire visibility or send periodic IPC. Daemon and client must be upgraded together
+for Visibility2; the previous Visibility1 wire signature is not reinterpreted.
 
 The shortened tray offers a visibility-aware Open/Hide, Receive, one Send entry,
 actual incoming/active counts, three live visibility choices, Settings/About and
