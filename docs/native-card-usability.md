@@ -434,3 +434,35 @@ the old GUI just to satisfy its previous tray predicate. Keep login start off;
 normal post-install launch must restore one desktop/daemon/tray and14 matching
 installed files. Preserve the earlier deferred receipt, no rebuilding/retesting
 of unchanged code, and no automatic transfer/settings replay.
+
+## Native16 installed verification — 2026-10-17 local date
+
+The fresh gate passed with the GUI inactive, the known daemon owner and globally
+zero source/transfer resources. Only the owned idle services were joined. The
+exact verified local native16 upgrade returned apt exit0; normal launch restored
+daemon PID2139034 and desktop PID2139035. All14 installed regular files match the
+archive bytes/modes/root ownership. Login start remains disabled, no unrelated
+package upgrade/removal, settings mutation or received-file deletion occurred.
+
+Real KDE watcher inspection found one Active rquickshare item with15 menu rows,
+the expected action order and all removed duplicate/view/reconnect IDs absent.
+Two explicit Open/Hide events were checked by LayoutUpdated-driven readback,
+restoring the original card visibility. No sleeps, repeated unchanged polling,
+selection/send/consent event or unknown-process operation was used.
+
+One installed API smoke used this observer's two private temporary files (3+7
+bytes), held read-only descriptors and an independent caller connection. Actual
+Operations1.CommitExtension atomically produced one2-file/10-byte/4-handle source;
+an exact replay returned the same token and no transfer was created. Explicitly
+discarded only that observer's new source and closed its connection; resources
+returned to zero and fixture bytes matched until the observer removed its own
+temporary directory. This does not establish physical Add chooser/peer behavior.
+
+Receipts:/tmp/rqs-native16-upgrade.json, /tmp/rqs-native16-installed-tray.json,
+/tmp/rqs-native16-installed-extension.json; install log:/tmp/rqs-native16-install.log.
+Tracked evidence preserves the earlier deferred observation separately. No source
+change/rebuild or unaffected development-suite repetition was needed. All owned
+observer/installer commands exited: Terminal closed. Normal app services remain
+running intentionally. Source/package/installed scope is complete; physical KDE
+dragging, chooser and Settings OK/Cancel review, plus Android/Windows acceptance,
+remain explicit pending checks. No signing/APT publication or Drive/key work.
