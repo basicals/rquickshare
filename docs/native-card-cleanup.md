@@ -71,7 +71,7 @@ not renewed payload-thumbnail development.
   and page/source visibility. Adjust existing tray/package contract assertions
   only for the explicitly selected icon/menu/assets. Run appropriate affected
   suites/lint once; core source tests already passed and are not repeated.
-- [ ] C5: render Full/Compact/incoming/transfer widget fixtures on an isolated
+- [x] C5: render Full/Compact/incoming/transfer widget fixtures on an isolated
   broker/display, inspect rounded alpha corners/layout and record actual images.
   No synthetic thumbnail development or physical-placement claim from Xvfb.
 - [ ] C6: commit code/docs, build/verify the final distinct candidate (native15 after the documented native14 visual failure) with actual private
@@ -199,3 +199,24 @@ The post-population sizing correction passed the affected GTK smoke1/0 and
 strict native all-target/no-deps lint. The failed native14 geometry remains in
 evidence alongside its checksum; final candidate is native15. No core source
 change or package-check repetition was needed. All owned checks exited: Terminal closed.
+
+## C5 final release visual result and C6 installation gate
+
+Native15 built/verified14 files from344909f; daemon0.26s(cache), GUI24.71s,
+helper0.22s(cache). SHA256 f32e3f35021c358e3357bab066ce695c9d8a2272616f030d9a29e9b9c0340099.
+Final release PNGs are Compact Nearby420x137, Full Nearby420x421, Compact
+Incoming420x330 and Full Transfers420x377. Both example devices/transfers fit
+fully; the premature scrolling is corrected. All four corner alpha values are0.
+Fixtures are explicitly marked inert previews; production idle text is hidden.
+No actual KDE compositor observation is implied by these isolated frames.
+The trailing search returned1 because no network-wireless reference remained,
+not because rendering/build failed. All owned render processes exited.
+
+Next, use existing repair authorization to check installed native13 hash, known
+owned daemon/client PIDs1909694/1909695, no source/preparation resources and no
+nonterminal transfers. Completed history is not active work and may exist. Close
+only the owned idle services gracefully, install the exact native15 local .deb
+with pkexec apt-get, reload without enablement and launch normally. Require14
+installed files to match, one tray/client/daemon and actual restored icon/menu.
+Never stop an unknown owner or active transfer. Native13 remains the rollback
+package; native14 is diagnostic and has never been installed.

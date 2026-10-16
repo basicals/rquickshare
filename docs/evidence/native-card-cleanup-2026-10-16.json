@@ -26,7 +26,7 @@
   "development_ten_repetitions": false,
   "physical_kde_visual_acceptance": false,
   "package_revision": 15,
-  "candidate_built": false,
+  "candidate_built": true,
   "candidate_installed": false,
   "affected_gtk_after_height_correction": {
     "passed": 1,
@@ -96,7 +96,7 @@
       "center_alpha": 255
     }
   ],
-  "final_render_pending": true,
+  "final_render_pending": false,
   "native14_intermediate": {
     "binary_source_commit": "d61b2b864ca48c04fc2f083299af8d7095f728b1",
     "sha256": "7e47b89b5e3ee98002e816a7cf4765bf12d500023a85d696599fd23ca68b3515",
@@ -165,5 +165,83 @@
     ]
   },
   "final_sizing_gtk_passed": true,
-  "final_sizing_clippy_passed": true
+  "final_sizing_clippy_passed": true,
+  "binary_source_commit": "344909f36bc06a3cd4582e3cb1c697a549f5a203",
+  "candidate": {
+    "version": "0.11.5+native15",
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native15_amd64.deb",
+    "sha256": "f32e3f35021c358e3357bab066ce695c9d8a2272616f030d9a29e9b9c0340099",
+    "bytes": 6469576,
+    "fourteen_file_inventory_dependencies_elf_checksum_offline_smoke_passed": true,
+    "build_seconds": {
+      "daemon": 0.26,
+      "gui": 24.71,
+      "helper": 0.22
+    }
+  },
+  "final_render": [
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/nearby-compact.png",
+      "page": "nearby",
+      "mode": "compact",
+      "width": 420,
+      "height": 137,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "66201ada1d3bee8cfdf94e1ac6a6e039addbfea622ba3b05ae4b6920b1a08e11"
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/nearby-full.png",
+      "page": "nearby",
+      "mode": "full",
+      "width": 420,
+      "height": 421,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "3cc3458af05c52f8deb5b54872aada5dc9e975f064f8dc8a612cd73d3da2572d"
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/incoming-compact.png",
+      "page": "incoming",
+      "mode": "compact",
+      "width": 420,
+      "height": 330,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "5c8372b0ccd8ebde8a64fcdccc42da3ea809e5498baba24a286e1ee6d817020a"
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/transfers-full.png",
+      "page": "transfers",
+      "mode": "full",
+      "width": 420,
+      "height": 377,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "e9459e8ed1ca398176c1ce52e214d3f2c717848d2b11aa060ca463b52bc1e177"
+    }
+  ],
+  "final_sizing_gtk": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 0.87,
+    "filtered": 38
+  },
+  "final_sizing_native_clippy_seconds": 2.25
 }
