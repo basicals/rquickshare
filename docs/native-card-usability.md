@@ -466,3 +466,13 @@ observer/installer commands exited: Terminal closed. Normal app services remain
 running intentionally. Source/package/installed scope is complete; physical KDE
 dragging, chooser and Settings OK/Cancel review, plus Android/Windows acceptance,
 remain explicit pending checks. No signing/APT publication or Drive/key work.
+
+## User-confirmed installed dragging — 2026-10-17
+
+The user answered "Yes, the card can be dragged" to the specific native16 full
+card/header movement check on their KDE/Wayland session. Mark physical dragging
+passed on this installed host. This is a user observation, not an automated
+compositor test, multi-monitor/scale survey, settings acceptance or peer result.
+No code/settings/service changes or development-test reruns were needed. Next
+manual UI gate is staged Settings Cancel/OK, then additive file chooser behavior;
+ordinary Android/Windows acceptance remains in the separate essential matrix.

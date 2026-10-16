@@ -188,13 +188,22 @@
     "physical_visual_acceptance_pending": true
   },
   "acceptance": {
-    "physical_kde_drag_verified": false,
+    "physical_kde_drag_verified": true,
     "physical_settings_ok_cancel_verified": false,
     "current_candidate_android_windows_accepted": false,
     "persistent_pairing_implemented": false,
     "persistent_history_implemented": false,
     "signed": false,
-    "published": false
+    "published": false,
+    "physical_kde_drag_observation": {
+      "local_date": "2026-10-17",
+      "source": "explicit user reply in current chat",
+      "installed_version": "0.11.5+native16",
+      "surface": "full card header",
+      "environment": "existing KDE/Wayland session",
+      "result": "card can be dragged",
+      "automated_compositor_test": false
+    }
   },
   "deferred_installation_observation": {
     "candidate_installed": false,

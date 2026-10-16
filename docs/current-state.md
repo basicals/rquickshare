@@ -6,8 +6,9 @@ releasing its414-byte preparation without deleting the original. The fresh idle
 gate passed; apt upgrade,14 installed-file comparisons, one real tray with15 rows,
 actual Open/Hide roundtrip and installed atomic source-extension/replay/no-Send
 smoke passed. Login start remains off. New owned service PIDs2139034/2139035.
-Native15 package/archive remain immutable rollback references. Physical KDE
-drag/chooser/settings OK/Cancel and current-version peer acceptance remain open.
+Native15 package/archive remain immutable rollback references. The user confirmed
+full-card dragging works on the installed KDE/Wayland session on2026-10-17.
+Physical chooser/settings OK/Cancel and current-version peer acceptance remain open.
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.
