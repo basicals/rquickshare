@@ -5,21 +5,19 @@ impl Panel {
     pub(super) fn configure_menu(self: &Rc<Self>, application: &gtk::Application) {
         self.window
             .insert_action_group("panel", Some(&self.actions));
-        let mode = gio::SimpleAction::new_stateful(
-            "mode",
-            Some(glib::VariantTy::STRING),
-            &"compact".to_variant(),
-        );
+        let devices = gio::SimpleAction::new_stateful("devices", None, &false.to_variant());
         let weak = Rc::downgrade(self);
-        mode.connect_activate(move |_, value| {
-            if let (Some(panel), Some(mode)) = (
-                weak.upgrade(),
-                value.and_then(glib::Variant::str).and_then(Mode::parse),
-            ) {
-                panel.set_mode(mode);
+        devices.connect_activate(move |_, _| {
+            if let Some(panel) = weak.upgrade() {
+                let drawer = panel.drawer();
+                panel.set_drawer(if drawer == Drawer::Closed {
+                    Drawer::Open
+                } else {
+                    Drawer::Closed
+                });
             }
         });
-        self.actions.add_action(&mode);
+        self.actions.add_action(&devices);
         let visibility = gio::SimpleAction::new_stateful(
             "visibility",
             Some(glib::VariantTy::STRING),
@@ -71,7 +69,7 @@ impl Panel {
                 }
                 match name {
                     "nearby" | "incoming" | "transfers" => {
-                        panel.set_mode(Mode::Full);
+                        panel.set_drawer(Drawer::Open);
                         panel.pages.set_visible_child_name("nearby");
                         panel.render();
                         let ids = panel
@@ -107,7 +105,7 @@ impl Panel {
                     "send-image" => panel.show_image(),
                     "send-many" => panel.send_recipients(),
                     "files" | "folder" => {
-                        panel.set_mode(Mode::Full);
+                        panel.set_drawer(Drawer::Open);
                         panel.pages.set_visible_child_name("nearby");
                         panel.choose(name == "folder");
                     }
@@ -182,7 +180,8 @@ impl Panel {
             sending.append(Some(title), Some(&format!("panel.{name}")));
         }
         self.sending.set_menu_model(Some(&sending));
-        self.sending.set_parent(&self.box_widget("root"));
+        self.sending.set_parent(&self.button("quick-send"));
+        self.sending.set_position(gtk::PositionType::Top);
         self.configure_movement();
         self.context.set_menu_model(Some(&menu));
         self.context.set_parent(&self.box_widget("root"));
@@ -202,17 +201,6 @@ impl Panel {
             }
         });
         self.box_widget("root").add_controller(gesture);
-        let weak = Rc::downgrade(self);
-        self.button("mode").connect_clicked(move |_| {
-            if let Some(panel) = weak.upgrade() {
-                let mode = panel.model.borrow().mode;
-                panel.set_mode(if mode == Mode::Compact {
-                    Mode::Full
-                } else {
-                    Mode::Compact
-                });
-            }
-        });
     }
     pub(super) fn receive(self: &Rc<Self>) {
         let pending = self
@@ -228,8 +216,12 @@ impl Panel {
                 })
             })
             .map(|transfer| transfer.transfer.id().to_owned());
-        if let Some(id) = pending {
-            self.set_mode(Mode::Full);
+        if temporary_receiving(&self.model.borrow()) {
+            self.actions
+                .activate_action("visibility", Some(&"hidden".to_variant()));
+            self.render();
+        } else if let Some(id) = pending {
+            self.set_drawer(Drawer::Open);
             self.pages.set_visible_child_name("nearby");
             self.render();
             self.expand_transfer(&id);
@@ -243,10 +235,12 @@ impl Panel {
         }
     }
     pub(super) fn show_sending(self: &Rc<Self>) {
-        self.set_mode(Mode::Full);
+        self.set_drawer(Drawer::Open);
         self.pages.set_visible_child_name("nearby");
         self.render();
-        self.present_surface();
+        if !self.window.is_visible() {
+            self.present_surface();
+        }
         if self
             .model
             .borrow()
@@ -255,8 +249,6 @@ impl Panel {
             .as_ref()
             .is_none_or(|view| view.selections.is_empty())
         {
-            self.sending
-                .set_pointing_to(Some(&gtk::gdk::Rectangle::new(14, 44, 1, 1)));
             self.sending.popup();
         }
     }
@@ -292,38 +284,19 @@ impl Panel {
             self.show_sending();
         }
     }
-    pub fn set_mode(self: &Rc<Self>, mode: Mode) {
-        self.apply_mode(mode, true);
-    }
-    pub(super) fn apply_mode(self: &Rc<Self>, mode: Mode, manual: bool) {
-        if manual {
-            self.mark_manual();
-        }
-        {
-            let model = self.model.borrow();
-            if model.closing || model.mode == mode {
-                return;
-            }
+    pub fn set_drawer(self: &Rc<Self>, drawer: Drawer) {
+        self.mark_manual();
+        if self.model.borrow().closing || self.drawer() == drawer {
+            return;
         }
         self.pin_surface_bottom();
-        self.model.borrow_mut().mode = mode;
+        self.model.borrow_mut().drawer = drawer;
         self.actions
-            .lookup_action("mode")
+            .lookup_action("devices")
             .and_downcast::<gio::SimpleAction>()
             .unwrap()
-            .set_state(&mode.name().to_variant());
-        if let Some(editor) = self.settings_owner.borrow().as_ref() {
-            editor.sync_mode(mode, manual);
-        } else if let Some(appearance) = self.appearance.borrow().as_ref() {
-            appearance.set_selected(u32::from(mode == Mode::Full));
-        }
+            .set_state(&(drawer == Drawer::Open).to_variant());
         self.render();
-        if self.layer && self.window.is_visible() && !self.model.borrow().position_pinned {
-            let hint = self.model.borrow().last_hint;
-            if let Some(hint) = hint {
-                self.show_at(hint);
-            }
-        }
     }
     fn show_settings(self: &Rc<Self>) {
         {

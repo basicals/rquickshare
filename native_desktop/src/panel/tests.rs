@@ -102,7 +102,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         false,
     );
     // Act / Assert
-    assert_eq!(panel.model.borrow().mode, Mode::Compact);
+    assert_eq!(panel.model.borrow().drawer, Drawer::Closed);
     assert!(panel.box_widget("compact").get_visible());
     assert!(!panel.pages.get_visible());
     assert!(!panel.box_widget("source").get_visible());
@@ -113,7 +113,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.box_widget("root").has_css_class("rqs-card-body"));
     assert_eq!(panel.box_widget("root").overflow(), gtk::Overflow::Hidden);
     assert_eq!(
-        panel.button("close").action_name().as_deref(),
+        panel.button("quick-hide").action_name().as_deref(),
         Some("panel.hide")
     );
     for text in labels(&panel.window) {
@@ -122,32 +122,34 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     }
     let permit = panel.ingress.gate.try_acquire().unwrap();
     panel.window.present();
-    panel.button("close").emit_clicked();
+    panel.button("quick-hide").emit_clicked();
     assert!(!panel.window.is_visible() && !panel.model.borrow().closing);
     assert!(*panel.ingress.gate.subscribe().borrow());
-    panel
-        .actions
-        .activate_action("mode", Some(&"full".to_variant()));
-    assert_eq!(panel.model.borrow().mode, Mode::Full);
+    panel.button("quick-devices").emit_clicked();
+    assert_eq!(panel.model.borrow().drawer, Drawer::Open);
     assert!(panel.pages.get_visible());
     assert!(!panel.box_widget("source").get_visible());
+    for removed in ["header", "mode", "settings-button", "close", "send-entry"] {
+        assert!(panel.builder.object::<gtk::Widget>(removed).is_none());
+    }
+    assert!(panel.box_widget("compact").get_visible());
     assert_eq!(
-        panel.button("send-entry").parent(),
-        Some(panel.box_widget("header").upcast())
+        panel.box_widget("device-drawer").next_sibling(),
+        Some(panel.box_widget("compact").upcast())
     );
-    assert!(!panel.button("send-entry").hexpands());
     let scroll = panel
         .builder
         .object::<gtk::ScrolledWindow>("nearby-scroll")
         .unwrap();
     assert_eq!(scroll.min_content_height(), 0);
     assert_eq!(scroll.max_content_height(), 300);
-    assert!(!panel.box_widget("compact").get_visible());
+    assert!(panel.box_widget("compact").get_visible());
     assert!(*panel.ingress.gate.subscribe().borrow());
-    panel
-        .actions
-        .activate_action("mode", Some(&"invalid".to_variant()));
-    assert_eq!(panel.model.borrow().mode, Mode::Full);
+    panel.button("quick-devices").emit_clicked();
+    assert_eq!(panel.drawer(), Drawer::Closed);
+    assert!(!panel.box_widget("device-drawer").get_visible());
+    panel.button("quick-devices").emit_clicked();
+    assert_eq!(panel.drawer(), Drawer::Open);
     drop(permit);
     assert!(!*panel.ingress.gate.subscribe().borrow());
     panel.actions.activate_action("files", None);
@@ -240,7 +242,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     }
     expander.set_expanded(false);
     assert!(expander.child().is_none());
-    panel.set_mode(Mode::Compact);
+    panel.set_drawer(Drawer::Closed);
     panel.preview("incoming");
     let compact_text = labels(&panel.box_widget("compact"))
         .iter()
@@ -249,7 +251,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .join(" ");
     assert_eq!(panel.box_widget("compact").observe_children().n_items(), 4);
     let quick = panel.box_widget("compact").observe_children();
-    for (index, expected) in ["quick-receive", "quick-send", "quick-full", "quick-hide"]
+    for (index, expected) in ["quick-receive", "quick-send", "quick-devices", "quick-hide"]
         .iter()
         .enumerate()
     {
@@ -263,7 +265,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         );
     }
 
-    for action in ["Receive", "Send", "Hide", "Full view"] {
+    for action in ["Receive", "Send", "Hide", "Devices"] {
         assert!(compact_text.contains(action));
     }
     assert!(!compact_text.contains("Code: 4821"));
@@ -291,9 +293,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.actions.activate_action("about", None);
     assert_eq!(*panel.about.borrow().as_ref().unwrap(), about);
     assert!(about.is_visible());
-    let appearance = panel.appearance.borrow().as_ref().unwrap().clone();
-    appearance.set_selected(1);
-    assert_eq!(panel.model.borrow().mode, Mode::Compact); // Settings edit is staged until OK.
+    assert_eq!(panel.drawer(), Drawer::Closed);
     settings::verify_editor_smoke(panel.settings_owner.borrow().as_ref().unwrap());
     assert!(labels(&panel.box_widget("incoming"))
         .iter()
@@ -301,21 +301,20 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(
         panel
             .actions
-            .lookup_action("mode")
+            .lookup_action("devices")
             .unwrap()
             .state()
             .unwrap()
-            .str(),
-        Some("full")
+            .get::<bool>(),
+        Some(true)
     );
-    panel.set_mode(Mode::Compact);
-    assert_eq!(appearance.selected(), 0);
-    panel.set_mode(Mode::Full);
+    panel.set_drawer(Drawer::Closed);
+    panel.set_drawer(Drawer::Open);
     assert!(panel.pages.get_visible()); // Full content stays configured while Cancel hides its parent.
     assert!(panel.builder.object::<gtk::Widget>("tabs").is_none());
     assert_eq!(panel.pages.visible_child_name().as_deref(), Some("nearby"));
     panel.pages.set_visible_child_name("incoming");
-    panel.set_mode(Mode::Compact);
+    panel.set_drawer(Drawer::Closed);
     settings.close();
     assert!(!settings.is_visible());
     panel.actions.activate_action("settings", None);
@@ -386,7 +385,6 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.settings.borrow().is_none());
     assert!(panel.about.borrow().is_none());
     assert!(!about.is_visible());
-    assert!(panel.appearance.borrow().is_none());
     assert!(panel.settings_owner.borrow().is_none());
     assert!(panel.context.parent().is_none());
     assert!(!settings.is_visible());

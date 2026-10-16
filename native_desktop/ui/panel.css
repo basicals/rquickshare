@@ -26,13 +26,13 @@ window.rqs-card-window { background: transparent; border: none; box-shadow: none
 
 /* The daemon owns visibility/expiry; CSS animates only its confirmed projection. */
 @keyframes receive-pulse {
-  0%, 100% { background-color: #237a3b; }
-  50% { background-color: #36964e; }
+  0%, 100% { background-color: mix(@theme_bg_color, @success_color, 0.12); }
+  50% { background-color: mix(@theme_bg_color, @success_color, 0.22); }
 }
 button.quick-action.receive-active {
   background-image: none;
-  background-color: #237a3b;
-  color: white;
-  border-color: #237a3b;
+  background-color: mix(@theme_bg_color, @success_color, 0.12);
+  color: @theme_fg_color;
+  border-color: mix(@theme_bg_color, @success_color, 0.28);
   animation: receive-pulse 1.8s ease-in-out infinite;
 }

@@ -15,7 +15,6 @@ pub(super) struct Editor {
     name: gtk::Entry,
     name_hint: gtk::Label,
     port: gtk::Entry,
-    appearance: gtk::DropDown,
     directory: gtk::Label,
     directory_intent: Cell<u8>,
     file: RefCell<Option<File>>,
@@ -181,7 +180,6 @@ impl Editor {
                 .placeholder_text("Automatic")
                 .input_purpose(gtk::InputPurpose::Digits)
                 .build(),
-            appearance: gtk::DropDown::from_strings(&["Compact", "Full"]),
             directory: label("Connect to read the receive folder"),
             directory_intent: Cell::new(0),
             file: RefCell::new(None),
@@ -212,9 +210,6 @@ impl Editor {
             login_busy: Cell::new(false),
             login_task: RefCell::new(None),
         });
-        editor
-            .appearance
-            .set_selected(u32::from(panel.mode() == Mode::Full));
         editor.visibility.set_selected(0);
         editor.name_hint.set_selectable(false);
         editor.directory.set_wrap(false);
@@ -257,7 +252,6 @@ impl Editor {
         let general = section();
         field(&general, "Device name", editor.name.upcast_ref());
         general.append(&editor.name_hint);
-        field(&general, "Card view", editor.appearance.upcast_ref());
         general.append(&editor.login);
         general.append(&label(
             "Starts sharing and the tray at sign-in, with the card hidden.",
@@ -302,11 +296,10 @@ GNU General Public License v3.0.",
         actions.append(&editor.save);
         content.append(&actions);
         window.set_child(Some(&content));
-        panel.appearance.replace(Some(editor.appearance.clone()));
         panel.settings.replace(Some(window.clone()));
         panel.settings_owner.replace(Some(editor.clone()));
         if let Some(view) = panel.model.borrow().state.settings.clone() {
-            editor.load(view, false);
+            editor.load(view);
         }
         let weak = Rc::downgrade(&editor);
         editor.login.connect_toggled(move |_| {
@@ -326,15 +319,6 @@ GNU General Public License v3.0.",
                 }
             });
         }
-        let weak = Rc::downgrade(&editor);
-        editor.appearance.connect_selected_notify(move |_| {
-            if let Some(editor) = weak.upgrade() {
-                if editor.loading.get() || editor.closed.get() {
-                    return;
-                }
-                editor.changed();
-            }
-        });
         let weak = Rc::downgrade(&editor);
         editor.visibility.connect_selected_notify(move |_| {
             if let Some(editor) = weak.upgrade() {
@@ -421,26 +405,9 @@ GNU General Public License v3.0.",
         editor.refresh();
         window.present();
     }
+    #[cfg(test)]
     pub fn is_dirty(&self) -> bool {
         self.dirty.get()
-    }
-    pub fn sync_mode(&self, mode: Mode, manual: bool) {
-        if self.dirty.get() {
-            return;
-        }
-        let loading = self.loading.replace(true);
-        self.appearance.set_selected(u32::from(mode == Mode::Full));
-        self.loading.set(loading);
-        if manual
-            && self.window.is_visible()
-            && self
-                .base
-                .borrow()
-                .as_ref()
-                .is_none_or(|view| view.card_mode != u8::from(mode == Mode::Full))
-        {
-            self.changed();
-        }
     }
     pub fn reopen(self: &Rc<Self>) {
         if !self.window.is_visible() {
@@ -499,12 +466,8 @@ GNU General Public License v3.0.",
         if let Some(panel) = self.panel.upgrade() {
             let saved = panel.model.borrow().state.settings.clone();
             if let Some(view) = saved {
-                self.load(view, false);
+                self.load(view);
             }
-            self.loading.set(true);
-            self.appearance
-                .set_selected(u32::from(panel.mode() == Mode::Full));
-            self.loading.set(false);
             self.dirty.set(false);
             self.file.borrow_mut().take();
             self.refresh_login();
@@ -529,7 +492,7 @@ GNU General Public License v3.0.",
         } else { "Changes will apply after OK." });
         self.refresh();
     }
-    fn load(&self, view: SettingsView, appearance: bool) {
+    fn load(&self, view: SettingsView) {
         self.loading.set(true);
         self.name.set_text(&view.device_name);
         self.name_hint.set_text(&if view.resolved_name.is_empty() {
@@ -554,16 +517,8 @@ GNU General Public License v3.0.",
             .set(if view.configured { 0 } else { 1 });
         self.file.borrow_mut().take();
         self.recover.set_active(false);
-        if appearance {
-            self.appearance.set_selected(view.card_mode.into());
-        }
-        self.dirty
-            .set(!appearance && self.appearance.selected() != u32::from(view.card_mode));
-        self.status.set_text(if self.dirty.get() {
-            "Card view will be saved after OK."
-        } else {
-            status(&view)
-        });
+        self.dirty.set(false);
+        self.status.set_text(status(&view));
         self.base.replace(Some(view));
         self.loading.set(false);
         self.refresh();
@@ -582,7 +537,7 @@ GNU General Public License v3.0.",
             if let Some(view) = latest {
                 let view = view.clone();
                 drop(model);
-                self.load(view, false);
+                self.load(view);
                 return;
             }
         }
@@ -660,9 +615,6 @@ GNU General Public License v3.0.",
         ] {
             widget.set_sensitive(ready && writable && !model.state.settings_pending);
         }
-        self.appearance.set_sensitive(
-            safe && !self.busy.get() && !self.login_busy.get() && !model.state.settings_pending,
-        );
         if !available {
             self.status
                 .set_text("Sharing settings are unavailable. Retry the connection from the card.");
@@ -833,7 +785,7 @@ GNU General Public License v3.0.",
                         request: format!("{request:032x}"),
                         visibility,
                         port,
-                        card_mode: self.appearance.selected() as u8,
+                        card_mode: base.card_mode,
                         directory: self.directory_intent.get(),
                         recover: self.recover.is_active(),
                         device_name,
@@ -862,13 +814,7 @@ GNU General Public License v3.0.",
                 match result {
                     Ok(ActionResult::Settings(view)) => {
                         let applied = confirmation_applied(&view);
-                        let card_mode = view.card_mode;
-                        editor.load(view, true);
-                        if matches!(operation, Operation::Save | Operation::Retry) {
-                            if let Some(panel) = editor.panel.upgrade() {
-                                panel.apply_mode(if card_mode == 1 { Mode::Full } else { Mode::Compact }, false);
-                            }
-                        }
+                        editor.load(view);
                         if editor.confirming.get() {
                             if applied { editor.finish_confirmation(); }
                             else { editor.confirming.set(false); editor.sections.set_visible_child_name("advanced"); }
@@ -943,6 +889,7 @@ GNU General Public License v3.0.",
 #[cfg(test)]
 pub(super) fn verify_editor_smoke(editor: &Editor) {
     // Run on the existing single GTK test thread; no real settings owner is connected.
+    editor.name.set_text("Staged name");
     assert!(!editor.save.is_sensitive()); // Staged edit has no connected writer.
     assert!(editor.is_dirty());
     assert!(editor.login.is_inconsistent());
@@ -952,7 +899,6 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     assert_eq!(editor.visibility.selected(), 0);
     assert!(!editor.choose.is_sensitive());
     assert!(!editor.recover.is_visible());
-    assert!(editor.appearance.is_sensitive());
     if let Some(output) = std::env::var_os("RQS_SETTINGS_PREVIEW_OUTPUT") {
         use gtk::gdk::prelude::PaintableExt;
         let output = std::path::PathBuf::from(output);
@@ -999,17 +945,15 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
         editor.sections.set_visible_child_name("general");
     }
     let panel = editor.panel.upgrade().unwrap();
-    let before = panel.mode();
-    editor
-        .appearance
-        .set_selected(u32::from(before != Mode::Full));
-    assert_eq!(panel.mode(), before); // Editing never previews or applies a card mode.
+    let before = panel.drawer();
+    editor.name.set_text("Another staged name");
+    assert_eq!(panel.drawer(), before); // Settings edits never change drawer presentation.
     assert!(editor.is_dirty());
-    let staged = editor.appearance.selected();
+    let staged = editor.name.text();
     for section in ["receiving", "advanced", "about", "general"] {
         editor.sections.set_visible_child_name(section);
-        assert_eq!(editor.appearance.selected(), staged);
-        assert_eq!(panel.mode(), before);
+        assert_eq!(editor.name.text(), staged);
+        assert_eq!(panel.drawer(), before);
     }
     assert_eq!(editor.sections.pages().n_items(), 4);
     assert!(!editor.save.is_sensitive()); // No daemon cannot acknowledge this edit.
@@ -1020,7 +964,7 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     editor.cancel_draft();
     assert!(!editor.window.is_visible());
     assert!(!editor.is_dirty());
-    assert_eq!(panel.mode(), before);
+    assert_eq!(panel.drawer(), before);
     editor.window.present();
     assert!(editor.window.child().unwrap().is::<gtk::Box>());
     editor.port.set_text("655350");
@@ -1030,7 +974,7 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     view.available = true;
     view.token = "a".repeat(64);
     view.error = 2;
-    editor.load(view.clone(), true);
+    editor.load(view.clone());
     assert!(editor.recover.is_visible());
     assert!(!editor.recover.is_active());
     editor.recover.set_active(true);
@@ -1044,9 +988,9 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     view.card_mode = 1;
     let panel = editor.panel.upgrade().unwrap();
     panel.model.borrow_mut().automatic = true;
-    editor.load(view, true);
+    editor.load(view);
     assert!(panel.model.borrow().automatic); // Loading preferences is not manual presentation intent.
-    assert_eq!(panel.mode(), before);
+    assert_eq!(panel.drawer(), before);
     assert!(!editor.is_dirty());
     assert!(!editor.recover.is_visible());
     assert!(editor.save.is_sensitive()); // An unchanged acknowledged configuration needs no write.
@@ -1055,7 +999,7 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     named.device_name = "Рабочий ПК".into();
     named.resolved_name = "Рабочий ПК".into();
     named.name_status = 2;
-    editor.load(named.clone(), true);
+    editor.load(named.clone());
     assert_eq!(editor.name.text(), "Рабочий ПК");
     assert_eq!(editor.name_input().unwrap(), "Рабочий ПК");
     assert!(editor.name_hint.text().contains("Рабочий ПК"));
@@ -1068,11 +1012,11 @@ pub(super) fn verify_editor_smoke(editor: &Editor) {
     assert_eq!(editor.name.text(), long);
     assert!(editor.name_input().is_err());
     assert!(!editor.save.is_sensitive());
-    editor.load(named, true);
+    editor.load(named);
     assert_eq!(editor.name.text(), "Рабочий ПК");
     assert!(!editor.is_dirty());
-    assert_eq!(panel.mode(), before);
-    panel.set_mode(Mode::Full);
+    assert_eq!(panel.drawer(), before);
+    panel.set_drawer(Drawer::Open);
 }
 
 #[cfg(test)]

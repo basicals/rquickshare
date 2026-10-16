@@ -2,23 +2,17 @@
 use rqs_lib::service::{Direction, Phase};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub enum Mode {
+pub enum Drawer {
     #[default]
-    Compact,
-    Full,
+    Closed,
+    Open,
 }
-impl Mode {
+impl Drawer {
     pub fn parse(value: &str) -> Option<Self> {
         match value {
-            "compact" => Some(Self::Compact),
-            "full" => Some(Self::Full),
+            "compact" => Some(Self::Closed),
+            "full" => Some(Self::Open),
             _ => None,
-        }
-    }
-    pub fn name(self) -> &'static str {
-        match self {
-            Self::Compact => "compact",
-            Self::Full => "full",
         }
     }
 }
@@ -87,10 +81,10 @@ mod tests {
             compact_index([(Direction::Inbound, Phase::AwaitingConsent); 64]),
             Some(0)
         );
-        assert_eq!(Mode::parse("full"), Some(Mode::Full));
-        assert_eq!(Mode::parse("compact"), Some(Mode::default()));
+        assert_eq!(Drawer::parse("full"), Some(Drawer::Open));
+        assert_eq!(Drawer::parse("compact"), Some(Drawer::default()));
         for value in ["", "Full", "full\0", "unknown"] {
-            assert_eq!(Mode::parse(value), None);
+            assert_eq!(Drawer::parse(value), None);
         }
     }
 }

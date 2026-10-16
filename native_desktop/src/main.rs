@@ -45,7 +45,7 @@ struct Options {
     service: bool,
     output: Option<PathBuf>,
     page: String,
-    mode: card_view::Mode,
+    mode: card_view::Drawer,
 }
 impl Options {
     fn parse(args: impl IntoIterator<Item = std::ffi::OsString>) -> Result<Self, &'static str> {
@@ -55,7 +55,7 @@ impl Options {
             service: false,
             output: None,
             page: "nearby".into(),
-            mode: card_view::Mode::Compact,
+            mode: card_view::Drawer::Closed,
         };
         let mut preview_options = false;
         while let Some(arg) = args.next() {
@@ -63,7 +63,7 @@ impl Options {
                 Some("--preview")=>options.preview=true,
                 Some("--service") if !options.service=>options.service=true,
                 Some("--preview-output")=>{options.preview=true;options.output=Some(PathBuf::from(args.next().ok_or("Missing preview output")?));},
-                Some("--preview-mode")=>{preview_options=true;options.mode=args.next().and_then(|arg|arg.into_string().ok()).and_then(|value|card_view::Mode::parse(&value)).ok_or("Invalid preview mode")?;},
+                Some("--preview-mode")=>{preview_options=true;options.mode=args.next().and_then(|arg|arg.into_string().ok()).and_then(|value|card_view::Drawer::parse(&value)).ok_or("Invalid preview mode")?;},
                 Some("--preview-page")=>{preview_options=true;options.page=args.next().and_then(|arg|arg.into_string().ok()).filter(|page|["nearby","incoming","transfers"].contains(&page.as_str())).ok_or("Invalid preview page")?;},
                 _=>return Err("Usage: rquickshare [--preview [--preview-page nearby|incoming|transfers] [--preview-mode compact|full] [--preview-output PATH]]"),
             }
@@ -205,7 +205,7 @@ fn run_gui(
     runtime: &tokio::runtime::Runtime,
     options: Options,
     process_stop: CancellationToken,
-) -> Result<(bool, card_view::Mode), &'static str> {
+) -> Result<(bool, card_view::Drawer), &'static str> {
     gtk::init().map_err(|_| "GTK display is unavailable")?;
     if !options.preview && !gtk4_layer_shell::is_supported() {
         return Err(
@@ -352,7 +352,7 @@ fn run_gui(
             }));
         }
         if options.preview {
-            panel.set_mode(options.mode);
+            panel.set_drawer(options.mode);
             panel.preview(&options.page);
             if let Some(output) = options.output.clone() {
                 let application = application.clone();
@@ -482,10 +482,10 @@ fn run_gui(
     });
     let exit = application.run_with_args::<&str>(&[]);
     let mut reconnect = false;
-    let mut mode = card_view::Mode::Compact;
+    let mut mode = card_view::Drawer::Closed;
     if let Some(panel) = retained.borrow_mut().take() {
         reconnect = panel.reconnect_requested();
-        mode = panel.mode();
+        mode = panel.drawer();
         panel.close();
     }
     stop.cancel();
@@ -563,7 +563,7 @@ mod tests {
         .unwrap();
         assert!(options.preview);
         assert_eq!(options.page, "incoming");
-        assert_eq!(options.mode, card_view::Mode::Full);
+        assert_eq!(options.mode, card_view::Drawer::Open);
         assert_eq!(options.output, Some(PathBuf::from("/tmp/panel.png")));
         assert!(!Options::parse([]).unwrap().preview);
     }

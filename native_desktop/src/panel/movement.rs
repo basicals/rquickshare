@@ -63,7 +63,7 @@ impl Panel {
         }
     }
     pub(super) fn configure_movement(self: &Rc<Self>) {
-        let handle = self.box_widget("drag-handle");
+        let handle = self.box_widget("root");
         handle.set_cursor_from_name(Some("grab"));
         let drag = gtk::GestureDrag::new();
         drag.set_button(1);

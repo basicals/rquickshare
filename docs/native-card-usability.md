@@ -780,24 +780,24 @@ cloud/signing/publication is proposed. Analysis command exited: Terminal closed.
 The user explicitly selected action-driven opening in addition to Devices toggle.
 No material UX decision remains for this slice.
 
-- [ ] D1: use local Drawer Closed/Open presentation state, one permanent toolbar
+- [x] D1: use local Drawer Closed/Open presentation state, one permanent toolbar
   Receive/Send/Devices/Hide, and source/list/recipient content above it. Remove
   the old Full header and its duplicate Send/settings/view/close controls. Keep
   existing consent/progress/Add/Clear rows, safety/focus policy and native bottom
   anchor. Devices closes/reopens without releasing capabilities or transfers.
-- [ ] D2: explicit Send/chooser/preparation and incoming-review actions open the
+- [x] D2: explicit Send/chooser/preparation and incoming-review actions open the
   same drawer. Preserve notification safety policy. Attach Send popover to its
   toolbar button so an expanding drawer cannot leave a stale absolute anchor.
-- [ ] D3: remove Card view editor and saved-mode application; preserve legacy
+- [x] D3: remove Card view editor and saved-mode application; preserve legacy
   card_mode from the acknowledged settings base in writes. Local drawer state
   starts Closed and may survive the existing in-process reconnect only. Keep
   compact/full aliases solely for the development preview CLI, mapping to drawer
   Closed/Open; no second production layout or new persisted preference.
-- [ ] D4: subdued theme-relative green pulse; Receive while confirmed temporary
+- [x] D4: subdued theme-relative green pulse; Receive while confirmed temporary
   requests Hidden before pending-review navigation. Preserve current active
   transfers and waiting consent; unconfirmed/pending requests do not flip colour
   optimistically or bypass exact request reconciliation.
-- [ ] D5: affected GTK/source-policy/parser checks once, strict native lint,
+- [x] D5: affected GTK/source-policy/parser checks once, strict native lint,
   collapsed/expanded/soft-active actual widget frames. Extend Settings smoke
   using a staged name edit, not the removed view field. Keep lower-edge bounds
   and no automatic consent assertions. Rerun only affected failures/source edits.
@@ -809,3 +809,32 @@ reachable via Devices/Receive/tray. Settings acknowledgements must not reopen th
 drawer or reset it. Existing storage schema/API and daemon remain unchanged;
 legacy card_mode is preserved without affecting presentation. Revert scoped
 source commits/install retained native19 only while idle. No cloud or publication.
+
+D1-D4 source checkpoint: the single toolbar/drawer, Settings view-field removal
+and confirmed Receive stop are implemented. First native test compilation found
+an over-broad internal enum rename had touched rustix::fs::Mode in ingress. Restore
+that unrelated type unchanged before testing; no tests executed or core changes.
+All checks remain pending until the corrected source compiles. Terminal closed.
+
+D5 initial corrected native binary suite passed42/0 in0.72s; native strict
+all-target/no-deps lint passed3.82s with the existing nine dependency warnings.
+Actual empty-expanded and soft-green collapsed frames confirm a permanent toolbar
+below the drawer. Strengthen the same GTK smoke for actual Devices button clicks,
+retained selected recipients/keyed row identity after collapse/reopen, ignored
+legacy card_mode acknowledgements and Send opening the anchored popover. These
+are affected verification additions, not a full-suite repetition.
+
+D1-D5 completed: Drawer Closed/Open is local presentation state; the toolbar
+remains visible in both states, with the common content above it. Actual Devices
+clicks toggle without replacing keyed rows or clearing selected recipients. Send
+opens the same content and its popover is anchored to the toolbar button. Saved
+legacy card_mode is preserved on settings writes and never changes the drawer.
+Card view settings/header duplicates are removed. Theme-relative green uses
+12–22% success tint with theme foreground, retaining a slow1.8s pulse. Receive
+during confirmed temporary visibility requests Hidden; colour remains confirmed
+until acknowledgement. Existing safety/consent/exact retry remain unchanged.
+Final affected GTK smoke passed1/0 in0.69s; strict native lint and whitespace passed.
+Actual empty/device-expanded and soft-active collapsed frames were inspected;
+these isolated fixtures retain the truthful unavailable-service warning. No core
+changes or repeat full-suite run. All owned checks exited: Terminal closed.
+D6 package/installation verification follows.

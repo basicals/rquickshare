@@ -394,7 +394,7 @@ impl Panel {
                     if !successful {
                         panel.notice("Image preparation did not complete. Review Recover or discard the pending preparation.");
                     }
-                    panel.set_mode(Mode::Full);
+                    panel.set_drawer(Drawer::Open);
                     panel.pages.set_visible_child_name("nearby");
                     panel.render();
                     panel.apply_presentation();

@@ -183,7 +183,7 @@ impl Panel {
                     let mut model = self.model.borrow_mut();
                     model.automatic = true;
                     model.automatic_focus = Some(notice.id);
-                    model.mode == Mode::Full
+                    model.drawer == Drawer::Open
                 };
                 if full {
                     self.pages.set_visible_child_name("nearby");

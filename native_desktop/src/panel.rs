@@ -1,7 +1,7 @@
 //! GTK widgets live exclusively on the GLib thread. No service IO in callbacks.
 
 use crate::{
-    card_view::{compact_index, Mode},
+    card_view::{compact_index, Drawer},
     ingress::{Ingress, IngressState},
     placement::{self, Edge, Rect},
 };
@@ -45,7 +45,7 @@ struct Model {
     waiting: bool,
     closing: bool,
     notice: Option<&'static str>,
-    mode: Mode,
+    drawer: Drawer,
     preview_page: Option<String>,
     safety: crate::desktop_guard::SafetyState,
     safety_active: bool,
@@ -53,7 +53,6 @@ struct Model {
     automatic_focus: Option<String>,
     manual_requested: bool,
     preview: bool,
-    saved_mode: Option<u8>,
     position_pinned: bool,
     recipients: BTreeMap<String, String>,
 }
@@ -73,7 +72,6 @@ pub struct Panel {
     context: gtk::PopoverMenu,
     settings: RefCell<Option<gtk::Window>>,
     about: RefCell<Option<gtk::AboutDialog>>,
-    appearance: RefCell<Option<gtk::DropDown>>,
     settings_owner: RefCell<Option<Rc<settings::Editor>>>,
     text_review: RefCell<Option<Rc<text::Review>>>,
     composer: RefCell<Option<Rc<compose::Composer>>>,
@@ -355,7 +353,6 @@ impl Panel {
             context: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
             settings: RefCell::new(None),
             about: RefCell::new(None),
-            appearance: RefCell::new(None),
             settings_owner: RefCell::new(None),
             text_review: RefCell::new(None),
             composer: RefCell::new(None),
@@ -441,7 +438,7 @@ impl Panel {
         panel.pages.connect_visible_child_name_notify(move |pages| {
             if let Some(panel) = weak.upgrade() {
                 let model = panel.model.borrow();
-                let nearby = model.mode == Mode::Full
+                let nearby = model.drawer == Drawer::Open
                     && pages.visible_child_name().as_deref() == Some("nearby");
                 panel.box_widget("source").set_visible(
                     nearby
@@ -468,8 +465,8 @@ impl Panel {
     pub fn reconnect_requested(&self) -> bool {
         self.reconnect.get()
     }
-    pub fn mode(&self) -> Mode {
-        self.model.borrow().mode
+    pub fn drawer(&self) -> Drawer {
+        self.model.borrow().drawer
     }
     fn button(&self, id: &str) -> gtk::Button {
         self.builder.object(id).expect("button widget")
@@ -498,12 +495,7 @@ impl Panel {
             self.close_image();
             self.close_reveal();
         }
-        let saved = state
-            .settings
-            .as_ref()
-            .filter(|view| view.configured)
-            .map(|view| view.card_mode);
-        let changed = {
+        {
             let mut model = self.model.borrow_mut();
             if state.disconnected || previous_epoch != current_epoch {
                 model.recipients.clear();
@@ -515,26 +507,7 @@ impl Panel {
                     }
                 }
             }
-            let changed = saved.is_some() && saved != model.saved_mode;
-            model.saved_mode = saved;
             model.state = state;
-            changed
-        };
-        if changed
-            && !self
-                .settings_owner
-                .borrow()
-                .as_ref()
-                .is_some_and(|editor| editor.is_dirty())
-        {
-            self.apply_mode(
-                if saved == Some(1) {
-                    Mode::Full
-                } else {
-                    Mode::Compact
-                },
-                false,
-            );
         }
         if let Some(editor) = self.settings_owner.borrow().as_ref() {
             editor.refresh();
@@ -574,7 +547,7 @@ impl Panel {
         }
     }
     fn present_recipient(self: &Rc<Self>) -> bool {
-        self.set_mode(Mode::Full);
+        self.set_drawer(Drawer::Open);
         self.pages.set_visible_child_name("nearby");
         self.model.borrow_mut().manual_requested = true;
         self.present_surface()
@@ -648,7 +621,6 @@ impl Panel {
         if let Some(about) = self.about.borrow_mut().take() {
             about.destroy();
         }
-        self.appearance.borrow_mut().take();
         self.context.unparent();
         self.sending.unparent();
         let mut model = self.model.borrow_mut();
@@ -823,7 +795,7 @@ impl Panel {
         // Publish after readiness/action updates using an immutable model projection.
         let model = self.model.borrow();
         let preview = model.preview;
-        let full = model.mode == Mode::Full;
+        let full = model.drawer == Drawer::Open;
         self.box_widget("source").set_visible(
             full && self.pages.visible_child_name().as_deref() == Some("nearby")
                 && model
@@ -832,14 +804,13 @@ impl Panel {
                     .as_ref()
                     .is_some_and(|view| !view.selections.is_empty()),
         );
-        self.box_widget("header").set_visible(full);
+        self.box_widget("device-drawer").set_visible(full);
         self.pages.set_visible(full);
-        self.box_widget("compact").set_visible(!full);
-        self.button("mode").set_icon_name("view-restore-symbolic");
-        self.button("mode").set_tooltip_text(Some(if full {
-            "Use compact card"
+        self.box_widget("compact").set_visible(true);
+        self.button("quick-devices").set_tooltip_text(Some(if full {
+            "Hide devices and transfers"
         } else {
-            "Show full view"
+            "Show devices and transfers"
         }));
         let ready = !preview
             && (!model.safety_active || model.safety.manual_allowed())
@@ -858,13 +829,7 @@ impl Panel {
             .as_ref()
             .filter(|view| view.available && view.running && !model.state.disconnected);
         let mode = visibility.map(|view| view.mode);
-        let receiving = !preview
-            && mode == Some(2)
-            && model
-                .state
-                .view
-                .as_ref()
-                .is_some_and(|view| view.synchronized && view.lifecycle == Lifecycle::Running);
+        let receiving = temporary_receiving(&model);
         let receive = self.button("quick-receive");
         if receiving {
             receive.add_css_class("receive-active");
@@ -872,7 +837,7 @@ impl Panel {
             receive.remove_css_class("receive-active");
         }
         let description = if receiving {
-            "Visible for receiving — one-minute mode"
+            "Visible for one minute — press again to stop receiving requests"
         } else {
             "Review an incoming request or become visible for one minute"
         };
@@ -961,7 +926,6 @@ impl Panel {
         self.button("folder").set_sensitive(ready && can_add);
         self.button("discard").set_sensitive(ready && selected);
         self.button("files").set_visible(selected && can_add);
-        self.button("send-entry").set_visible(!selected);
         self.button("folder").set_visible(false);
         self.button("files").set_label("Add files…");
         self.button("discard").set_visible(selected);
@@ -1393,7 +1357,7 @@ impl Panel {
             .collect();
         self.render_rows(&fixture, None, false, None, &choices);
         self.box_widget("recipients")
-            .set_visible(self.mode() == Mode::Full && page == "nearby");
+            .set_visible(self.drawer() == Drawer::Open && page == "nearby");
         self.text("recipient-summary", "2 selected · preview");
         self.button("send-many").set_label("Send to 2");
         let details = TransferDetails {
@@ -1480,3 +1444,19 @@ fn phase_text(phase: Phase) -> &'static str {
 
 #[cfg(test)]
 mod tests;
+
+/// Confirmed presentation state only; command admission/reconciliation remains in the controller.
+fn temporary_receiving(model: &Model) -> bool {
+    !model.preview
+        && !model.state.disconnected
+        && model
+            .state
+            .visibility
+            .as_ref()
+            .is_some_and(|view| view.available && view.running && view.mode == 2)
+        && model
+            .state
+            .view
+            .as_ref()
+            .is_some_and(|view| view.synchronized && view.lifecycle == Lifecycle::Running)
+}

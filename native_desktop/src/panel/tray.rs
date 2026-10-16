@@ -59,7 +59,7 @@ impl Panel {
                 })
                 .unwrap_or(0),
             enabled,
-            full: model.mode == Mode::Full,
+            full: model.drawer == Drawer::Open,
             visibility: model
                 .state
                 .visibility
@@ -86,10 +86,10 @@ impl Panel {
                 self.present_surface();
             }
             Action::Compact | Action::Full => {
-                self.set_mode(if action == Action::Full {
-                    Mode::Full
+                self.set_drawer(if action == Action::Full {
+                    Drawer::Open
                 } else {
-                    Mode::Compact
+                    Drawer::Closed
                 });
                 self.model.borrow_mut().manual_requested = true;
                 self.present_surface();
@@ -252,7 +252,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         model.state = confirmed;
         model.preview = false;
     }
-    panel.set_mode(Mode::Full);
+    panel.set_drawer(Drawer::Open);
     panel.render();
     assert!(!panel.box_widget("source").get_visible());
     let scroll = panel
@@ -269,14 +269,14 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         natural < 120,
         "an empty list must not reserve the old120px floor"
     );
-    super::tests::capture_card(panel, "empty-full");
-    panel.set_mode(Mode::Compact);
+    super::tests::capture_card(panel, "empty-expanded");
+    panel.set_drawer(Drawer::Closed);
     assert!(panel
         .button("quick-receive")
         .tooltip_text()
         .unwrap()
-        .contains("one-minute mode"));
-    super::tests::capture_card(panel, "temporary-compact");
+        .contains("press again to stop"));
+    super::tests::capture_card(panel, "temporary-collapsed");
     for case in 0..4 {
         {
             let mut model = panel.model.borrow_mut();
@@ -309,9 +309,26 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
             .borrow_mut()
             .push(value.unwrap().str().unwrap().to_owned());
     });
-    for mode in [Mode::Compact, Mode::Full] {
+    panel.actions.activate_action("receive", None);
+    assert_eq!(&*targets.borrow(), &["hidden"]);
+    assert!(panel
+        .button("quick-receive")
+        .has_css_class("receive-active")); // No optimistic success before acknowledgement.
+    panel
+        .model
+        .borrow_mut()
+        .state
+        .visibility
+        .as_mut()
+        .unwrap()
+        .mode = 1;
+    panel.render();
+    assert!(!panel
+        .button("quick-receive")
+        .has_css_class("receive-active"));
+    for mode in [Drawer::Closed, Drawer::Open] {
         for shown in [false, true] {
-            panel.set_mode(mode);
+            panel.set_drawer(mode);
             panel.window.set_visible(shown);
             let page = panel.pages.visible_child_name();
             targets.borrow_mut().clear();
@@ -319,7 +336,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
             for _ in 0..2 {
                 panel.actions.activate_action("receive", None);
                 // Assert: request temporary visibility, preserving the chosen view and page.
-                assert_eq!(panel.mode(), mode);
+                assert_eq!(panel.drawer(), mode);
                 assert_eq!(panel.pages.visible_child_name(), page);
                 assert!(panel.window.is_visible());
             }
@@ -327,9 +344,20 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         }
     }
     visibility.disconnect(observer);
-    panel.set_mode(Mode::Full);
+    panel.set_drawer(Drawer::Closed);
+    let current = panel.model.borrow().state.clone(); // The legacy saved card_mode is1.
+    panel.update(current);
+    assert_eq!(panel.drawer(), Drawer::Closed); // An acknowledgement cannot resurrect Full or reopen the drawer.
+    panel.actions.activate_action("send", None);
+    assert_eq!(panel.drawer(), Drawer::Open);
+    assert_eq!(
+        panel.sending.parent(),
+        Some(panel.button("quick-send").upcast())
+    );
+    panel.sending.popdown();
+    panel.set_drawer(Drawer::Open);
     assert!(!panel.tray_action(Action::Compact));
-    assert_eq!(panel.mode(), Mode::Full);
+    assert_eq!(panel.drawer(), Drawer::Open);
     panel.tray_action(Action::Settings);
     assert!(panel.settings.borrow().as_ref().unwrap().is_visible());
     assert_ne!(panel.tray_projection().enabled & Action::About.bit(), 0);
@@ -343,7 +371,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     let locked = panel.tray_projection();
     assert_eq!(locked.enabled, Action::Quit.bit());
     panel.tray_action(Action::Compact);
-    assert_eq!(panel.mode(), Mode::Full);
+    assert_eq!(panel.drawer(), Drawer::Open);
     assert!(!panel.tray_context((1, 1)));
     assert!(!panel.settings.borrow().as_ref().unwrap().is_visible());
     assert!(!panel.about.borrow().as_ref().unwrap().is_visible());

@@ -26,7 +26,7 @@ pub(in crate::panel) fn verify_ui(panel: &Rc<Panel>) {
         (
             model.state.clone(),
             model.preview,
-            model.mode,
+            model.drawer,
             model.safety,
             model.safety_active,
             panel.pages.visible_child_name(),
@@ -60,7 +60,7 @@ pub(in crate::panel) fn verify_ui(panel: &Rc<Panel>) {
         };
         model.recipients.clear();
     }
-    panel.set_mode(Mode::Full);
+    panel.set_drawer(Drawer::Open);
     panel.pages.set_visible_child_name("nearby");
     panel.render();
     // Act: toggling actual widgets does not require or submit a prepared source.
@@ -69,6 +69,16 @@ pub(in crate::panel) fn verify_ui(panel: &Rc<Panel>) {
     }
     // Assert: exact limit, explicit Send remains disabled without a source.
     assert_eq!(panel.model.borrow().recipients.len(), 10);
+    let selected = panel.model.borrow().recipients.clone();
+    let row = panel.box_widget("nearby").first_child();
+    panel.button("quick-devices").emit_clicked();
+    assert_eq!(panel.drawer(), Drawer::Closed);
+    assert_eq!(panel.model.borrow().recipients, selected);
+    panel.button("quick-devices").emit_clicked();
+    assert_eq!(panel.drawer(), Drawer::Open);
+    assert_eq!(panel.model.borrow().recipients, selected);
+    assert_eq!(panel.box_widget("nearby").first_child(), row);
+    crate::panel::tests::capture_card(panel, "devices-expanded");
     assert!(!panel.model.borrow().waiting);
     assert!(panel.model.borrow().notice.is_none());
     assert!(choices(panel)
@@ -160,7 +170,7 @@ pub(in crate::panel) fn verify_ui(panel: &Rc<Panel>) {
         model.safety = safety;
         model.safety_active = safety_active;
     }
-    panel.set_mode(mode);
+    panel.set_drawer(mode);
     if let Some(page) = page {
         panel.pages.set_visible_child_name(&page);
     }
