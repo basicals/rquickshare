@@ -490,16 +490,16 @@ bottom edge. Subtracting the height delta on each render would accumulate errors
 when several updates occur before GTK allocates the new height. Use the native
 Layer Shell bottom anchor as the position owner instead of such corrections.
 
-1. [ ] B1: swap the two Compact widget children, keeping the same actions and
+1. [x] B1: swap the two Compact widget children, keeping the same actions and
    four-action invariant. No menu/daemon/settings contract change.
-2. [ ] B2: drag writes Left/Bottom margins. Before changing a visible card's mode,
+2. [x] B2: drag writes Left/Bottom margins. Before changing a visible card's mode,
    convert a Top anchor to Bottom once using its current allocation; preserve an
    existing Bottom margin. Pin that position across content renders/mode changes,
    preventing apply_mode from reapplying the old tray hint. Rename the internal
    dragged flag to position_pinned because mode switching also pins geometry.
    Keep horizontal anchoring, logical coordinates, monitor bounds and lock/hide
    guards. Explicit tray placement starts a fresh tray-relative position.
-3. [ ] B3: add focused pure geometry boundaries/Full-Compact roundtrip assertions
+3. [x] B3: add focused pure geometry boundaries/Full-Compact roundtrip assertions
    and extend the existing GTK smoke for exact quick-action order. Run affected
    checks and strict native lint once, then inspect the final Compact frame.
    No full core suite or ten-run repetition; rerun only failures/affected changes.
@@ -514,3 +514,16 @@ roundtrips. If expansion would cross the monitor top, clamp once to keep the
 whole card visible; screen-fit takes precedence over an impossible position.
 Do not persist a position or add a timer/global pointer/window-manager fallback.
 Rollback is the native17 source commit plus retained native16 package when idle.
+
+B1-B3 observations: drag now stores Bottom rather than Top. A visible mode switch
+pins/converts the current bottom before changing content; repeated resizes clamp
+that native margin without applying height deltas or old tray hints. The internal
+position_pinned name reflects both dragging and mode changes. Compact order is
+Receive, Send, Full view, Hide. The existing GTK smoke checks exact child/action
+order, and one new table-driven geometry method checks repeated shrink/expand,
+monitor-height/edge/invalid/overflow boundaries and required screen-fit clamping.
+The affected12 panel methods passed12/0 in0.57s. Strict native all-target/no-deps
+Clippy passed, with the same nine existing core dependency warnings. Formatting/
+whitespace passed. No core or full native-suite repetition. All owned checks
+exited: Terminal closed. Distinct native17 build/visual/installed checks follow;
+physical bottom alignment is not claimed from the pure/Xvfb checks.

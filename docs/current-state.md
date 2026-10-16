@@ -8,7 +8,10 @@ actual Open/Hide roundtrip and installed atomic source-extension/replay/no-Send
 smoke passed. Login start remains off. New owned service PIDs2139034/2139035.
 Native15 package/archive remain immutable rollback references. The user confirmed
 full-card dragging works on the installed KDE/Wayland session on2026-10-17.
-Physical chooser/settings OK/Cancel and current-version peer acceptance remain open.
+The user also confirmed staged Settings OK/Cancel on native16. Physical chooser
+and current-version peer acceptance remain open. The requested Compact action
+swap and shared Full/Compact bottom edge are being verified for native17; see
+the follow-up's Native17 plan. Native16 remains installed until its idle upgrade gate.
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.
