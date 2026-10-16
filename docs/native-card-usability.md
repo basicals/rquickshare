@@ -914,3 +914,39 @@ seconds every second while temporary, keeping all cadence in the daemon but
 adding periodic IPC and missed-signal/reconnect handling. Both require a checked
 initial snapshot and epoch/revision binding. No production implementation starts
 before selection. Analysis commands exited: Terminal closed.
+
+### Countdown snapshot option1 selected — native21 implementation plan
+
+The user selected one authoritative snapshot. No pending product/API choice.
+- [ ] T1: version Visibility1 to Visibility2 with remaining_ms appended to the
+  checked view. Derive mode/revision/running/remaining from one copied core
+  policy snapshot and its existing monotonic deadline; limit to0..60000ms, zero
+  outside running Temporary. Set/Changed retain the existing exact intent owner.
+  Daemon and native client ship together; stale versions fail closed rather than
+  reinterpret the changed signature. Update the installed XML contract.
+- [ ] T2: SDK stamps a local monotonic sample immediately before Read; pair it
+  with the validated response in PanelState. Rendering subtracts elapsed time
+  from that conservative sample, preventing RPC delay from extending the display.
+  Epoch/mode/lifecycle/unavailable changes invalidate display; no new minute
+  deadline, per-second IPC, wall-clock expiry or client visibility write.
+- [ ] T3: an owned weak-reference GTK display tick refreshes a spinner and visible
+  message/countdown only while card and drawer are shown in confirmed Temporary.
+  At sampled zero show a transition message rather than claim continued visibility
+  or change the daemon. Cancel the tick on collapse/hide/disconnect/close.
+- [ ] T4: primary Activate toggles card visibility; ContextMenu remains explicit.
+  Pin the current bottom/monitor margins on hide and restore only valid monitor/
+  size geometry before falling back to current tray placement. Reuse the path
+  for menu/Open/explicit presentation; do not persist position across processes.
+- [ ] T5: deterministic paused-clock policy/snapshot boundaries and wire validity;
+  SDK/service affected checks; pure display elapsed/epoch/format boundaries; actual
+  GTK toggle/indicator/tick lifetime and existing geometry bounds. Run affected
+  checks/lint once and rerun only source changes/failures. No ten-run dev loop.
+- [ ] T6: distinct native21 build/offline verification, known-owner/global-idle
+  upgrade,14-file/one-tray readback and updated evidence/artifact handoff. Native20
+  package/source remain immutable rollback references. Physical tray/position/
+  countdown acceptance stays separate from source and isolated renderer checks.
+
+Risk: queue delay can make the display slightly conservative; it cannot extend
+the actual deadline. Display reaching zero has no expiry authority. Reconnect
+uses a fresh sample, not another60s. Protocol rollout is a coordinated package
+upgrade; prior native20 rollback restores both daemon and client when idle.
