@@ -51,18 +51,21 @@ pub(crate) async fn interrupted<T>(future: impl Future<Output = Result<T>>, reac
     }
     // The borrowed future is dropped here; the caller-owned client stays alive.
 }
-async fn command(client: &mut NativeClient, kind: OperationKind) -> Command {
+async fn command(
+    client: &mut NativeClient,
+    kind: OperationKind,
+) -> (Command, Vec<tempfile::NamedTempFile>) {
     if kind == OperationKind::Begin {
-        return Command::Begin;
+        return (Command::Begin, vec![]);
     }
     let upload = client.begin_selection().await.unwrap();
     if kind == OperationKind::Abort {
-        return Command::Abort(upload);
+        return (Command::Abort(upload), vec![]);
     }
     let (_source, files) = source();
     client.append_batch(&upload, 0, &files).await.unwrap();
     if kind == OperationKind::Commit {
-        return Command::Commit(upload);
+        return (Command::Commit(upload), vec![_source]);
     }
     if kind == OperationKind::Extend {
         let base = client.commit_selection(&upload).await.unwrap();
@@ -70,11 +73,14 @@ async fn command(client: &mut NativeClient, kind: OperationKind) -> Command {
         let file = tempfile::NamedTempFile::new().unwrap();
         let added = OpenedFile::adopt(File::open(file.path()).unwrap(), "added".into()).unwrap();
         client.append_batch(&delta, 0, &[added]).await.unwrap();
-        return Command::Extend(delta, base);
+        return (Command::Extend(delta, base), vec![_source, file]);
     }
-    Command::Send(
-        client.commit_selection(&upload).await.unwrap(),
-        "peer".into(),
+    (
+        Command::Send(
+            client.commit_selection(&upload).await.unwrap(),
+            "peer".into(),
+        ),
+        vec![_source],
     )
 }
 fn member(kind: OperationKind) -> &'static str {
@@ -359,7 +365,7 @@ async fn given_interrupted_mutation_before_or_after_acceptance_when_reconciled_t
         ] {
             for after in [false, true] {
                 let (_bus, host, mut client) = fixture().await;
-                let command = command(&mut client, kind).await;
+                let (command, _source_guards) = command(&mut client, kind).await;
                 let next = client.last + 1;
                 let reached = hook(&mut client, member(kind), after);
                 interrupted(client.mutation(command.clone()), reached).await;
@@ -401,7 +407,7 @@ async fn given_lost_ack_before_or_after_retirement_when_resumed_then_recorded_re
         ] {
             for after in [false, true] {
                 let (_bus, host, mut client) = fixture().await;
-                let command = command(&mut client, kind).await;
+                let (command, _source_guards) = command(&mut client, kind).await;
                 let next = client.last + 1;
                 let reached = hook(&mut client, "AcknowledgeThrough", after);
                 interrupted(client.mutation(command.clone()), reached).await;
@@ -657,7 +663,7 @@ async fn given_accepted_send_with_failed_ack_when_daemon_disappears_then_recorde
     scenario(async {
         // Arrange
         let (_bus, host, mut client) = fixture().await;
-        let command = command(&mut client, OperationKind::Send).await;
+        let (command, _source_guards) = command(&mut client, OperationKind::Send).await;
         let reached = hook(&mut client, "AcknowledgeThrough", false);
         interrupted(client.mutation(command), reached).await;
         let recorded = client.last_outcome().unwrap().clone();

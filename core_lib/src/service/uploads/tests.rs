@@ -8,6 +8,13 @@ fn file(name: &str, size: u64) -> OpenedFile {
     OpenedFile::adopt(File::open(source.path()).unwrap(), name.into()).unwrap()
 }
 
+// Extension revalidates descriptors; keep their tmpfs names alive for the full test scope.
+fn named_file(directory: &tempfile::TempDir, name: &str, size: u64) -> OpenedFile {
+    let path = directory.path().join(name);
+    File::create(&path).unwrap().set_len(size).unwrap();
+    OpenedFile::adopt(File::open(path).unwrap(), name.into()).unwrap()
+}
+
 fn setup(limits: Limits) -> (Coordinator, ClientId) {
     let mut service = Coordinator::new(1, limits).unwrap();
     let client = service.connect().unwrap();
@@ -823,18 +830,23 @@ fn given_memory_owners_when_aborted_cancelled_or_finished_then_only_actual_reade
 
 #[test]
 fn given_file_extension_when_committed_then_base_is_replaced_atomically_and_receipts_are_exact() {
+    let fixtures = tempfile::TempDir::new().unwrap();
     // Arrange
     let (mut service, client) = setup(Limits::default());
     let base = service
         .create_selection(
             client,
-            OpenedSelection::from_files(vec![file("old", 3)], SelectionLimits::default()).unwrap(),
+            OpenedSelection::from_files(
+                vec![named_file(&fixtures, "old", 3)],
+                SelectionLimits::default(),
+            )
+            .unwrap(),
         )
         .unwrap();
     let retained = service.selections[&base].resource.clone();
     let upload = service.ordered_begin(client, 1).unwrap();
     service
-        .append_files(client, upload, 0, vec![file("new", 7)])
+        .append_files(client, upload, 0, vec![named_file(&fixtures, "new", 7)])
         .unwrap();
     let before = service.snapshot(client).unwrap();
     assert_eq!(before.selections, vec![base]);
@@ -968,12 +980,13 @@ fn given_invalid_extension_when_rejected_then_previous_selection_and_delta_remai
 #[test]
 fn given_aggregate_file_limits_when_extending_then_max_is_accepted_and_max_plus_one_preserves_base()
 {
+    let fixtures = tempfile::TempDir::new().unwrap();
     // Arrange / Act / Assert
     for (count, accepted) in [(254, true), (255, true), (256, false)] {
         let (mut service, client) = setup(Limits::default());
         service.limits.reserved_handles = 2048; // Isolate the per-selection count boundary.
         let files = (0..count)
-            .map(|index| file(&format!("old-{index}"), 0))
+            .map(|index| named_file(&fixtures, &format!("old-{index}"), 0))
             .collect();
         let base = service
             .create_selection(
@@ -983,7 +996,7 @@ fn given_aggregate_file_limits_when_extending_then_max_is_accepted_and_max_plus_
             .unwrap();
         let upload = service.ordered_begin(client, 1).unwrap();
         service
-            .append_files(client, upload, 0, vec![file("new", 0)])
+            .append_files(client, upload, 0, vec![named_file(&fixtures, "new", 0)])
             .unwrap();
         let before = service.snapshot(client).unwrap();
         let result = service.ordered_extend(client, upload, base, 2);
@@ -1086,6 +1099,7 @@ fn given_changed_base_size_or_aborted_delta_when_extending_then_original_capabil
 
 #[test]
 fn given_aggregate_byte_and_memory_budgets_when_extended_then_boundaries_preserve_reservations() {
+    let fixtures = tempfile::TempDir::new().unwrap();
     // Arrange / Act / Assert
     for added in [0, 1, 2] {
         let (mut service, client) = setup(Limits::default());
@@ -1093,13 +1107,16 @@ fn given_aggregate_byte_and_memory_budgets_when_extended_then_boundaries_preserv
         let base = service
             .create_selection(
                 client,
-                OpenedSelection::from_files(vec![file("old", max - 1)], SelectionLimits::default())
-                    .unwrap(),
+                OpenedSelection::from_files(
+                    vec![named_file(&fixtures, "old", max - 1)],
+                    SelectionLimits::default(),
+                )
+                .unwrap(),
             )
             .unwrap();
         let upload = service.ordered_begin(client, 1).unwrap();
         service
-            .append_files(client, upload, 0, vec![file("new", added)])
+            .append_files(client, upload, 0, vec![named_file(&fixtures, "new", added)])
             .unwrap();
         let before = service.snapshot(client).unwrap();
         let result = service.ordered_extend(client, upload, base, 2);
@@ -1133,7 +1150,7 @@ fn given_aggregate_byte_and_memory_budgets_when_extended_then_boundaries_preserv
             .unwrap();
         let upload = service.ordered_begin(client, 1).unwrap();
         let added = if delta == 0 {
-            file("new", 0)
+            named_file(&fixtures, "new", 0)
         } else {
             crate::memory_source::create(b"x", "new".into()).unwrap()
         };

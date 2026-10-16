@@ -950,3 +950,32 @@ Risk: queue delay can make the display slightly conservative; it cannot extend
 the actual deadline. Display reaching zero has no expiry authority. Reconnect
 uses a fresh sample, not another60s. Protocol rollout is a coordinated package
 upgrade; prior native20 rollback restores both daemon and client when idle.
+
+T1-T4 implementation checkpoint: Visibility2 includes bounded sampled remaining_ms;
+SDK pairs it with a conservative local monotonic sample. GTK adds an owned
+display-only tick, spinner/label and valid-position restoration/primary toggle.
+The first core compile caught duration validation accidentally added to the intent
+validator; restored the unchanged intent fields before execution. Corrected
+visibility checks passed18/19; one prior test compared full views across separate
+reads and now correctly observes elapsed milliseconds. Replace that obsolete
+equality with strict unchanged metadata plus positive nonincreasing remaining
+time; deterministic paused-clock tests retain exact duration/renewal boundaries.
+Initial native42/0 passed0.70s. Extend only the affected GTK/core checks for primary
+activation, invalid/missing sample data and actual SDK sample publication. No
+visibility command is added by the display tick. Commands exited: Terminal closed.
+
+T5 wider service run:292 passed/5 failed in7.12s. The countdown/visibility checks
+passed. The five failures are existing extension fixtures dropping NamedTempFile
+guards before FD revalidation on this host's tmpfs /tmp; unlinked/unsealed tmpfs
+is intentionally rejected. Fix fixture ownership, not the production adoption
+gate: retain SDK command source guards through reconciliation and keep named
+upload-extension files in a test-owned TempDir. This is a small scoped test-only
+root fix under the cross-project maintenance preference, with no weakened limits
+or new global state. Final affected GTK passed1/0 in0.63s, including primary
+Activate hide/reopen and countdown lifecycle/elapsed boundaries. Terminal closed.
+
+Fixture correction verification initially failed to compile because a third
+command-helper call site also needed to retain its returned guards. Fix that
+call site before any pass claim. The strict core check reported the same compile
+error; no runtime checks executed in those attempts. Re-run the five failed
+scenarios plus the third helper caller, then amend the owned test-only checkpoint.
