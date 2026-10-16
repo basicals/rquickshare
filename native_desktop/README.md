@@ -10,21 +10,29 @@ The original blue application icon is restored, and Settings/tray offer an owned
 About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
 checks and exact installed status.
 
-The installed native19 follows the approved [UI mockup](../docs/native-card-usability.md):
-Compact has Receive, Send, Full view and Hide; Full has one keyed device/request/
-transfer list, icon-overlay statuses and inline code/manifest/progress actions.
-No main tabs or branding. The branded Settings window uses General, Receiving,
-Advanced and About sidebar sections, with shared Cancel/OK and no internal scroll.
-Editing never previews/applies values; switching sections preserves the draft.
-Full/Compact changes preserve a pinned bottom edge while the card fits onscreen.
-Full's natural-width Send entry shares the header; its preparation row appears
-only for a prepared source, and an empty list has no reserved120px floor.
-Compact Receive pulses green during confirmed one-minute discoverability, with
-a textual tooltip/accessibility hint. The daemon owns expiry; no UI minute timer.
+The installed native20 uses a single Receive, Send, Devices, Hide toolbar.
+Devices toggles an upper drawer containing the keyed device/request/transfer list
+with icon statuses, explicit code/manifest review, prepared source Add/Clear and
+recipient Send. Explicit sending/review actions also open that drawer. Closing
+it preserves selected recipients and active transfers. Native bottom anchoring
+keeps the toolbar in place while the drawer fits onscreen. There is no separate
+Full header or saved Card view control. Existing compact/full development preview
+aliases map to drawer Closed/Open only. See [card usability](../docs/native-card-usability.md).
+
+Confirmed one-minute visibility gives Receive a subdued theme-relative green
+pulse. Pressing it again requests Hidden, ending discoverability early without
+interrupting transfers or accepting requests. The daemon owns expiry and exact
+command reconciliation; the indicator never claims optimistic success.
+
+The branded Settings window retains General, Receiving, Advanced and About
+sidebar sections, shared Cancel/OK and staged edits. Legacy card_mode is preserved
+from the acknowledged settings base for API/storage compatibility and ignored
+by presentation. Drawer expansion is local, initially Closed.
 
 The shortened tray offers a visibility-aware Open/Hide, Receive, one Send entry,
 actual incoming/active counts, three live visibility choices, Settings/About and
-Quit. Appearance stays on the card. Receive reviews a waiting request, otherwise
+Quit. Devices stays on the card. Receive stops confirmed temporary visibility,
+otherwise reviews a waiting request, otherwise
 requests one-minute visibility through the existing daemon owner while preserving
 the chosen card view; it never accepts.
 The Send surface offers files/folder/text/explicit clipboard image capture. Add

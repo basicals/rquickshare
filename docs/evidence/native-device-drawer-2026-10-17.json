@@ -1,0 +1,188 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "scope": "single four-action toolbar with upward device drawer and early Receive stop",
+  "binary_source_commit": "1d9dca626314a166250e32f3fbf78d838bc3b5da",
+  "selected_drawer_flow": 1,
+  "package": {
+    "name": "rquickshare_0.11.5+native20_amd64.deb",
+    "bytes": 6498134,
+    "sha256": "57394bf35e67838282713e295b29bc12ac06140fe3288946fb8a85151205d6e1",
+    "regular_files": 14,
+    "offline_verified": true
+  },
+  "checks": {
+    "initial_compile": {
+      "passed": false,
+      "tests_executed": false,
+      "reason": "over-broad internal Mode rename touched rustix::fs::Mode; unrelated ingress change restored"
+    },
+    "native_binary_suite": {
+      "passed": 42,
+      "failed": 0,
+      "seconds": 0.72
+    },
+    "final_affected_actual_gtk_smoke": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.69,
+      "assertions": [
+        "permanent four-action toolbar below drawer",
+        "actual Devices clicks open/close without losing recipients or keyed rows",
+        "removed Full header and duplicate controls absent",
+        "Send opens drawer and button-anchored popover",
+        "legacy card_mode acknowledgement cannot reopen drawer",
+        "Settings name draft retained across sections and cancelled without changing drawer",
+        "confirmed temporary Receive dispatches Hidden before incoming-review branch",
+        "no optimistic colour change before authoritative acknowledgement",
+        "ordinary Receive preserves drawer and dispatches temporary",
+        "existing visibility lifecycle and consent/privacy checks retained"
+      ]
+    },
+    "strict_native_all_targets_no_deps_clippy": {
+      "passed": true,
+      "seconds": 1.16,
+      "existing_core_dependency_warnings": 9
+    },
+    "format_and_whitespace_passed": true,
+    "core_changed": false,
+    "core_suite_repeated": false,
+    "ten_repetitions": false
+  },
+  "presentation": {
+    "toolbar": [
+      "Receive",
+      "Send",
+      "Devices",
+      "Hide"
+    ],
+    "old_full_layout_removed": true,
+    "drawer": "local Closed/Open; Devices toggle plus selected action-driven opening",
+    "legacy_card_mode": "round-tripped from acknowledged base; ignored by presentation; editor removed",
+    "preview_cli_aliases": "compact/full retained for Closed/Open development fixtures only",
+    "green_tint": [
+      0.12,
+      0.22
+    ],
+    "green_tint_relative_to_theme": true,
+    "pulse_seconds": 1.8,
+    "early_stop": "confirmed temporary -> existing daemon Hidden command; does not cancel transfers or accept pending requests",
+    "ui_minute_timer_added": false
+  },
+  "frames": [
+    {
+      "name": "devices-expanded.png",
+      "width": 420,
+      "height": 557,
+      "sha256": "1041857d6c124d141c646e5e1eae6cf47f79073a1686908c6bf79efbb9a2de3e",
+      "source": "actual isolated GTK widgets, no connected service writer; unavailable warning retained"
+    },
+    {
+      "name": "empty-expanded.png",
+      "width": 420,
+      "height": 259,
+      "sha256": "fc360438cbb319dd7eb31ed3149eb9cfb91b96edefe5aa7b88cf5636ad64735a",
+      "source": "actual isolated GTK widgets, no connected service writer; unavailable warning retained"
+    },
+    {
+      "name": "temporary-collapsed.png",
+      "width": 420,
+      "height": 203,
+      "sha256": "def63c4335ece95644b8dabea4925186f54ccd6d41921d2d210c1f85c2ea3bfc",
+      "source": "actual isolated GTK widgets, no connected service writer; unavailable warning retained"
+    }
+  ],
+  "installation": {
+    "observed_at": "2026-10-16T23:34:56.479971+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native19",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2175594"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2175595"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 0,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "terminal_history_count": 0,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native20",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2180773"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2180775"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "tray": {
+    "observed_at": "2026-10-16T23:36:11.297826+00:00",
+    "installed_version": "0.11.5+native20",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      4,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true,
+    "live_receive_toggle": {
+      "initial_mode": 2,
+      "idle_gate_passed": true,
+      "attempted": false,
+      "skipped_reason": "requires initially Hidden, idle, available and enabled Receive; existing state left untouched"
+    }
+  },
+  "acceptance": {
+    "physical_drawer_soft_pulse_and_early_stop_verified": false,
+    "physical_check_requested": true,
+    "native18_receive_and_lower_edge": "historical user-confirmed; not attributed to new native20 drawer",
+    "current_candidate_android_windows_accepted": false
+  },
+  "signed": false,
+  "published": false,
+  "apt_staged": false
+}

@@ -801,7 +801,7 @@ No material UX decision remains for this slice.
   collapsed/expanded/soft-active actual widget frames. Extend Settings smoke
   using a staged name edit, not the removed view field. Keep lower-edge bounds
   and no automatic consent assertions. Rerun only affected failures/source edits.
-- [ ] D6: native20 offline package, known-owner/idle upgrade and14-file/single-tray
+- [x] D6: native20 offline package, known-owner/idle upgrade and14-file/single-tray
   readback; retain native19 rollback, update evidence and immutable/current handoff.
 
 Risks/rollback: content must never disappear without its actions remaining
@@ -846,3 +846,15 @@ plus dependency/ELF/checksum/help/private-settings gates. The next authorized
 local upgrade requires known native19 service owners2175594/2175595 (or already
 closed GUI), zero global preparation and no active transfer. Native19 package
 remains unchanged for rollback. Build exited: Terminal closed.
+
+D6 installed observations: native20 replaced native19 after the known-owner gate
+confirmed zero global prepared resources and no active transfer. Apt passed;14
+installed regular files matched bytes/mode/root ownership. One active rquickshare
+tray has the expected15 rows. Current daemon/desktop PIDs2180773/2180775; login
+start remains disabled. No user source was discarded or original removed.
+See [drawer evidence](evidence/native-device-drawer-2026-10-17.json). A guarded
+installed Receive roundtrip was not attempted because the current live mode was
+already Temporary; it was left untouched. The actual GTK action test verifies
+the Hidden intent and acknowledgement-driven indicator. User physical inspection
+of drawer/soft colour/early stop is requested and remains pending. Native19
+package/source remain the rollback. All owned commands exited: Terminal closed.

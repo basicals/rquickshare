@@ -1,25 +1,27 @@
 # Current implementation and continuation state
 
-Latest work (2026-10-17): native19 is installed and running. Full now places a
-natural-width Send files entry in the header alongside Settings/view/Hide, and
-hides the padded preparation row until a source exists. The main list has no
-120px empty-content floor, retaining its300px cap. Compact Receive has a slow
-green CSS pulse only during confirmed running/synchronized temporary visibility;
-expiry/hidden/normal-visible/disconnected/unavailable remove it. No UI minute
-timer or automatic acceptance. Affected GTK/CSS/layout/state checks and strict
-native lint passed; offline package verification,14 installed file comparisons
-and one active15-row tray passed. Login start remains off. Current owned daemon/
-desktop PIDs2175594/2175595. User confirmed native18 Receive stays Compact and
-the shared bottom edge works; native19 header/pulse physical inspection is
-requested and pending. Earlier source-extension/peer acceptance gates remain
-separate. Native18 immutable rollback artifacts are retained. See
-[card usability](native-card-usability.md) and
-[native19 evidence](evidence/native-card-feedback-2026-10-17.json).
+Latest work (2026-10-17): native20 is installed and running. A single permanent
+Receive/Send/Devices/Hide toolbar replaces exclusive Compact/Full layouts. Devices
+toggles the common device/request/transfer/preparation block above it, retaining
+the native bottom anchor. Selected explicit sending/review actions also open it;
+collapsing preserves selected recipients and keyed rows. The obsolete header and
+Card view setting are removed. Legacy card_mode is preserved in settings writes
+but never changes local drawer state. Active Receive uses a subdued theme-relative
+green pulse; a repeat while confirmed Temporary requests Hidden without cancelling
+transfers or accepting requests. No UI minute timer, optimistic success or schema
+change. Native42/0, final affected GTK1/0, strict lint, offline package verification,
+14 installed file comparisons and one active15-row tray passed. Login start is
+off; current owned daemon/desktop PIDs2180773/2180775. Physical drawer/soft pulse/
+early-stop inspection is requested and pending. Native18 user-confirmed Receive
+and lower-edge alignment remain historical. Native19 rollback artifacts retained.
+See [card usability](native-card-usability.md) and
+[drawer evidence](evidence/native-device-drawer-2026-10-17.json).
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.
-Compact has four actions; Full uses a single device/request/transfer list with
-status overlays and inline consent details, a movable header and no main tabs.
+The single toolbar has four actions; its upper drawer uses the shared device/
+request/transfer list with status overlays and inline consent details. There are
+no main tabs or separate Full header.
 Settings has branded sidebar sections and deferred OK/Cancel. Tray duplicates
 and routine Reconnect are removed. Source checks and renderer observations are
 recorded in the follow-up; current physical KDE/peer acceptance is still open.
