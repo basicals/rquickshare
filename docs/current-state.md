@@ -1,10 +1,13 @@
 # Current implementation and continuation state
 
 Latest work (2026-10-16): [card/tray/settings mockup](native-card-usability.md)
-is implemented in source; native16 built/verified with14 files and final renderer
-frames. Native15 remains installed: the idle upgrade gate found an existing414-byte
-GUI-owned preparation and stopped before changing anything. The user was asked
-to send/clear it or defer installation; no repeated polling or automatic discard.
+is implemented and native16 is now installed after the user exited the old GUI,
+releasing its414-byte preparation without deleting the original. The fresh idle
+gate passed; apt upgrade,14 installed-file comparisons, one real tray with15 rows,
+actual Open/Hide roundtrip and installed atomic source-extension/replay/no-Send
+smoke passed. Login start remains off. New owned service PIDs2139034/2139035.
+Native15 package/archive remain immutable rollback references. Physical KDE
+drag/chooser/settings OK/Cancel and current-version peer acceptance remain open.
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.

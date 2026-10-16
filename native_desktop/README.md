@@ -10,7 +10,7 @@ The original blue application icon is restored, and Settings/tray offer an owned
 About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
 checks and exact installed status.
 
-The native16 candidate follows the approved [UI mockup](../docs/native-card-usability.md):
+The installed native16 follows the approved [UI mockup](../docs/native-card-usability.md):
 Compact has Receive, Send, Hide and Full view; Full has one keyed device/request/
 transfer list, icon-overlay statuses and inline code/manifest/progress actions.
 No main tabs or branding. The branded Settings window uses General, Receiving,

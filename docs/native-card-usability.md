@@ -68,7 +68,7 @@ it does not authorize transport restarts while active work exists.
 - [x] U7: extend affected existing contract/GTK checks, run appropriate checks
   once, inspect isolated actual widget frames, and record observed results.
   No ten-run development loop or full compatibility claim.
-- [ ] U8: atomic scoped commits, distinct native16-or-later candidate, offline
+- [x] U8: atomic scoped commits, distinct native16-or-later candidate, offline
   package verification and existing authorized local repair after an idle-owner
   check. Never overwrite native15 or stop an unknown/active owner. Record real
   installed checks and leave physical drag/chooser/OK/Cancel observations explicit.
@@ -179,7 +179,7 @@ made clear; no new durable history store is included in this layout slice.
    naturally without an internal scroller. Common Cancel/OK footer owns the
    staged draft across sections; switching sections never applies values.
    Preserve the U6 validation/CAS/exact-retry/capability/partial-outcome rules.
-7. [ ] M7: implement the approved additive source contract and integrated source
+7. [x] M7: implement the approved additive source contract and integrated source
    controls, run scoped checks once, inspect real offline GTK frames including
    all Settings sections and four-button Compact, then distinct package/install
    verification under U7/U8. Physical KDE/peer results remain separate.
