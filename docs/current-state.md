@@ -150,7 +150,9 @@ single-use Selection, shared source reservations, ordered receipts and GTK rows.
 Recommended option1 keeps bounded batch/member admission and retry ownership in
 the daemon. Option2 leaves unsent recipient orchestration in GTK. Both introduce
 recipient multi-selection and explicit Send; no automatic acceptance/retry.
-Significant ownership/API/UX selection is pending; no multi-send code exists yet.
+The user selected option1. M1 freezes atomic local admission, independent peer
+outcomes, shared source retention, exact ordered receipts and explicit GTK Send
+before code. Implementation is next; no batch code is claimed yet.
 The defensive preview routing fix is source-only after native9; no new package
 or immutable source export was built for the partial preview foundation.
 

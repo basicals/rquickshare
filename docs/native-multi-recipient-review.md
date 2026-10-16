@@ -3,7 +3,7 @@
 2026-10-16. Mode A, direct dev. Guide: /home/morozhenko/.codex/AGENTS.md,
 sections3/3.1/11/12/13. This is the next independent parity slice while canonical
 preview codec/mapping remains unestablished. No multi-send behavior/API/UI code
-is authorized by this review until the significant choice below is selected.
+follows selected option1. The user chose daemon-owned queue/results on2026-10-16.
 
 ## Analysis
 
@@ -52,7 +52,7 @@ recipient remains supported. No hidden immediate sends while building the set.
 
 1. [x] M0: inspect actual selection/transfer/resource/receipt/UI owners and record
    options and recommendation. Documentation-only; no runtime checks repeated.
-2. [ ] M1: freeze exact bounded admission, partial-outcome/structural-failure,
+2. [x] M1: freeze exact bounded admission, partial-outcome/structural-failure,
    member identity/order, source retention, capacity/counter preflight and
    request/acknowledgement/reconnect contracts. Preserve supported single-send
    behavior or document the coordinated API extension explicitly. Bound recipient
@@ -70,4 +70,95 @@ recipient remains supported. No hidden immediate sends while building the set.
 Rollback: remove client/UI exposure before reverting the new daemon admission;
 preserve existing one-recipient transfer and receipt contracts. No persistence
 migration or durable background queue is assumed. No package rebuild for M0.
-Significant selection is pending under guide3/3.1; stop after presenting it.
+Option1 is selected; implementation follows the frozen M1 contract below.
+
+
+## M1 frozen implementation contract (before code)
+
+Local admission is atomic, remote transfer outcomes are independent. One Send
+requests1..10 unique discovered endpoint IDs in explicit order (existing default
+queue budget10, no capacity increase). Validate the whole request, ownership,
+Running/synchronized state, all endpoints, queue/transfer budgets and the full
+revision-ID range before consuming the prepared Selection or allocating a member.
+Unknown/stale peer, invalid/duplicate ID, insufficient capacity or exhaustion
+leaves the selection and queue intact. No partial local send is hidden behind an
+error. After admission, each ordinary peer session independently accepts/rejects,
+progresses, fails or cancels; no group-wide rollback or automatic retry. Retry of
+a terminal failed peer remains a new explicit preparation/send as in single-send.
+
+The daemon creates one ordinary Transfer per recipient, in request order, sharing
+the existing Arc<PreparedSource>. The original Reservation is charged once until
+all queued/active readers release it. No reopened path, copied payload, extra
+long-lived source holder, new parallel-radio policy, disk queue or restart resume.
+GUI close/disconnect releases only unadmitted client preparation; admitted queued
+and active transfers retain source authority. Source external-mutation guarantees
+stay those of existing positional/size-checked reads, not immutable byte snapshots.
+
+Extend the one ordered operation ledger with SendMany and vector transfer receipt.
+Exact same sequence/selection/ordered IDs returns the same vector; changed retry
+is ReplayConflict, acknowledged sequence RequestExpired. Check enough revision
+space before creating any member. Receipt pins every member until acknowledged;
+retired/acknowledged entries cannot start new work. Do not create another replay
+ledger or an unbounded Batch history owner. Rust OperationResult loses Copy and
+adds Transfers(Vec<TransferId>); coordinated local consumers migrate together.
+Existing single-send methods/semantics and all existing D-Bus tuple signatures stay.
+
+New authenticated Batch1 facade on the existing path:
+Send(selection:s, recipients:as, sequence:t)->transfers:as;
+GetReceipt(sequence:t)->(kind:s, transfers:as);
+GetRecipientPage(snapshot:s, offset:u)->(next:u, rows:a(ss)).
+Use existing Operations1 state/acknowledgement and Manager2 capture lifetime.
+Operations1 scalar GetReceipt explicitly rejects a batch receipt (InvalidState);
+batch SDK uses Batch1 receipt endpoint, old clients cannot issue that new command.
+Bound recipient array decoding before collecting more than10 IDs, validate strings
+<=256 ASCII graphic and duplicates. No descriptors, caller-provided addresses or
+names. Same-UID sender authentication, connection ownership, epoch/counter syntax,
+frame/inbox limits and unknown-method checks apply unchanged.
+
+Capture recipient display names from daemon discovery at admission, not from the
+caller. Bound names to256 bytes, no controls; empty advertised name becomes
+Unnamed nearby device. Names are presentation, never identity/authentication.
+Store a private optional name on each outbound Transfer; do not remove it when
+next_send consumes its endpoint. Keep recipient rows in the same immutable
+Manager2 capture, aligned one-to-one with its transfer rows. Existing capture
+memory accounting includes owned name strings/row storage; retain current budgets.
+New client TransferView adds optional recipient name with redacted Debug. Validate
+row ID alignment/count/name and forbid a recipient on inbound rows. Existing
+single-send rows may have no captured name; existing payload detail/PIN behavior
+is preserved. No separate batch ID or persistent user history is introduced.
+
+SDK retains exact SendMany in the existing one pending mutation slot, validates
+all returned unique canonical IDs/count/order, recovers a lost response through
+the shared sequence state and Batch1 receipt, then acknowledges once. Daemon epoch
+change never silently replays. PanelController queues one action and publishes
+member transfers via the existing watch; no GUI loop over SendSelection.
+
+GTK nearby rows use bounded checkboxes and a selection summary with one explicit
+Send button. Checking peers or choosing files never sends. Selection may precede
+file preparation. Keep a checked vanished peer visible with its last name and an
+unavailable marker, allow explicit uncheck, disable Send until all selected peers
+are currently present. Do not silently drop recipients or auto-send on reappearance.
+On a race, daemon rejection retains source/recipient choices for review. Clear
+choices after confirmed batch result or its exact recovery, and on daemon epoch
+change/close. Keep existing Full/Compact, preview/lock/busy/disconnect/ingress gates.
+Display stable recipient on each transfer; per-transfer Cancel stays independent.
+Compact continues directing recipient choice to Full; no additional large window.
+
+## M1 focused regression inventory
+
+| Artifact | Branches / interactions | Level / planned new methods | Categories |
+|---|---|---|---|
+| Coordinator/ordered batch |1/10 and invalid0/11 recipients; duplicate/invalid IDs/names; owner/epoch/running/sync; unknown peer; queue/transfer/revision preflight all-or-none; ordered exact/altered/acknowledged replay | unit /3 table-driven | Positive,N1,N2,N4,N5,N7,N10 |
+| Shared source/lifecycle | one reservation across members; independent positional reads; disconnect; cancel one member; release only after all readers; receipt pins each terminal member | unit /2 | Positive,N2,N4,N5,N9,N12 |
+| Bus/SDK/controller | actual private broker; ordered result/captured names; lost reply and ack recovery; malformed types/FD/oversized arrays/foreign owner; immutable capture and privacy; one controller command creates N transfers | integration /3 | Positive,N1,N2,N3,N4,N5,N6,N7,N9,N10 |
+| GTK projection | checkbox-only never sends; limit/uncheck; vanished checked peer retained; explicit summary/Send; unavailable/pending/locked/preview gates; result/recovery clears choices; stable recipient labels and per-peer cancel | extend existing GTK smoke /1 helper | Positive,N1,N2,N4,N5,N7,N9,N10 |
+
+Use real coordinator/resources/receipt logic, temporary files/private broker and
+existing reply interruption seams. No subject mocks or sleeps. Existing transport/
+file reader/source mutation/store suites protect unchanged peer/session and disk
+logic. N8/N11 inapplicable (no new wall clock/billing); N6 concerns malformed IPC,
+not a new persisted schema. Important assertions kill partial local admission,
+shared-offset or per-recipient resource double charging, replay duplicates, wrong
+member pins, lost names on queue dispatch, hidden vanished targets and automatic
+send from selection. This is Mode A, checks once per change/failure, not Mode B
+whole-product coverage or ten-run stability. Update observed counts after execution.
