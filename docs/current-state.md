@@ -1,8 +1,11 @@
 # Current implementation and continuation state
 
 Latest work (2026-10-16): [card/tray/settings mockup](native-card-usability.md)
-is implemented in source; native15 remains installed pending a distinct native16
-build/verification. The user selected Receive=request review or one-minute
+is implemented in source; native16 built/verified with14 files and final renderer
+frames. Native15 remains installed: the idle upgrade gate found an existing414-byte
+GUI-owned preparation and stopped before changing anything. The user was asked
+to send/clear it or defer installation; no repeated polling or automatic discard.
+The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.
 Compact has four actions; Full uses a single device/request/transfer list with

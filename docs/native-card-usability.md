@@ -377,3 +377,23 @@ Polkit authorization, reload units without enablement and normal launch. Require
 all14 installed files to match, one tray with15 menu rows and unchanged login-start
 state. Stop if owners/work differ; never force-kill or interrupt active work.
 Physical KDE dragging/chooser/OK/Cancel acceptance remains separate after install.
+
+## Native16 installation safely deferred by prepared work
+
+At2026-10-16T22:58:26Z the preflight matched native15 and known daemon/client
+PIDs1925337/1925338. The daemon was Running/synchronized with zero transfers,
+but had one retained source reservation, two reserved handles and414 selected
+bytes. The observer owns no selections; the existing GUI owns that preparation.
+Do not infer a filename or discard/adopt another client's source from display
+metadata. The idle-resource assertion stopped the upgrade before any service
+stop, package operation or system mutation. Installed version remains native15;
+login start remains disabled. Preserve the failed preflight as evidence of the
+guard, not a package/install defect. Script:/tmp/rqs-native16-upgrade.py;
+receipt:/tmp/rqs-native16-upgrade.json; log:/tmp/rqs-native16-install.log.
+
+Asked the user to finish sending or clear the prepared selection, or defer the
+installation. Do not poll unchanged work or delete it automatically. All source,
+checks, release package and renderer artifacts are complete and can be exported
+while waiting. Only a fresh idle gate after the user's response permits the
+already-authorized local upgrade. No further architecture question is pending.
+All owned commands exited: Terminal closed; normal native15 app services remain.

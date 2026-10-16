@@ -1,0 +1,151 @@
+{
+  "source_commit": "1a9d675d45196ba11e57b2261830bd882c39f011",
+  "package": "rquickshare_0.11.5+native16_amd64.deb",
+  "bytes": 6502012,
+  "sha256": "902748767e11c8e5c0307653c13e795737d13dc43364ed8e24dd25b1e4ea4ede",
+  "frames": [
+    {
+      "file": "nearby-compact.png",
+      "width": 420,
+      "height": 141,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "8216ead0028b16b86aab5b349ced0808eb6c245ca064966f6b3e98c67d18a812"
+    },
+    {
+      "file": "nearby-full.png",
+      "width": 420,
+      "height": 341,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "d1c012c67360053121b6bc07ae1cd6afcac010c1f2828a065a7e1ae85d950e54"
+    },
+    {
+      "file": "incoming-full.png",
+      "width": 420,
+      "height": 349,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "c62b154812bcbc152e33a325cb2cdd6ab1fb939ae1b5d7b126c5117f7fa1010f"
+    },
+    {
+      "file": "settings-general.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "d87682d75859a7486136dad9735703cc7587b1a975f87ece0107ef9a85da8b46",
+      "source": "actual GTK test window, no connected settings writer"
+    },
+    {
+      "file": "settings-receiving.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "d9717adb89f3cbd6d08b1f611e077a5c31cd207ccbc09ad931be3231cc7fff48",
+      "source": "actual GTK test window, no connected settings writer"
+    },
+    {
+      "file": "settings-advanced.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "5c183c89ca6f1d427ab6e7e4dec9e2f64fafb4e394eb149548c4c2218ceafa27",
+      "source": "actual GTK test window, no connected settings writer"
+    },
+    {
+      "file": "settings-about.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "b39e67c21068f309092af81285c83db5b8e98e13291cd5bbb31ee3c488cbb021",
+      "source": "actual GTK test window, no connected settings writer"
+    }
+  ],
+  "scope": "approved card/tray/sidebar settings mockup and atomic daemon-owned file extension",
+  "source_extension_commit": "228785e",
+  "verification": {
+    "core_service_initial": {
+      "passed": 293,
+      "failed": 0,
+      "seconds": 15.52
+    },
+    "subsequent_extension_filter": {
+      "passed": 4,
+      "failed": 0,
+      "seconds": 0.98
+    },
+    "subsequent_budget_method": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.16
+    },
+    "core_strict_clippy": true,
+    "native_full_before_final_changes": {
+      "passed": 41,
+      "failed": 0,
+      "seconds": 0.72
+    },
+    "native_final_affected_panel": {
+      "passed": 11,
+      "failed": 0,
+      "seconds": 0.9
+    },
+    "native_final_strict_clippy": true,
+    "native_final_strict_clippy_seconds": 1.8,
+    "full_core_suite_freshly_run": false,
+    "ten_repetitions": false,
+    "package_regular_files_verified": 14
+  },
+  "installation": {
+    "candidate_installed": false,
+    "current_version": "0.11.5+native15",
+    "system_changed": false,
+    "preflight": {
+      "observed_at": "2026-10-16T22:58:26.810846+00:00",
+      "system_changed": false,
+      "installed_before": "0.11.5+native15",
+      "units_before": {
+        "rquickshare-daemon.service": {
+          "ActiveState": "active",
+          "SubState": "running",
+          "UnitFileState": "static",
+          "MainPID": "1925337"
+        },
+        "rquickshare-desktop.service": {
+          "ActiveState": "active",
+          "SubState": "running",
+          "UnitFileState": "disabled",
+          "MainPID": "1925338"
+        }
+      },
+      "daemon_preflight": {
+        "lifecycle": "running",
+        "synchronized": true,
+        "source_reservations": 1,
+        "reserved_handles": 2,
+        "selected_bytes": 414,
+        "nearby_devices": 46,
+        "owned_selections": 0,
+        "transfers": 0
+      }
+    },
+    "deferred_reason": "Existing GUI-owned preparation; user asked to send/clear or defer. Do not discard automatically."
+  },
+  "acceptance": {
+    "physical_kde_drag_verified": false,
+    "physical_settings_ok_cancel_verified": false,
+    "current_candidate_android_windows_accepted": false,
+    "persistent_pairing_implemented": false,
+    "persistent_history_implemented": false,
+    "signed": false,
+    "published": false
+  }
+}
