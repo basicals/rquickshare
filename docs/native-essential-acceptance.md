@@ -1,24 +1,22 @@
 # Essential installed/peer acceptance
 
-2026-10-16. Short procedure prepared from the native11 checkpoint and updated for the native12 receive repair.
-Status: partially executed; native15 installed after the tmpfs repair and requested card cleanup,
-launch/tray/basic card confirmed.
-Physical transfers and the remaining desktop/lifecycle matrix are unexecuted.
-This is current-package acceptance, not an ADB/hardware
-automation project. See [priorities](native-essential-priorities.md) and
-[receive reliability finding](native-receive-reliability.md).
+Updated2026-10-17. Native21 is installed on the existing KDE/Wayland host.
+The requested single toolbar/drawer, primary tray hide/show, same-session position
+and visibility countdown checks are user-confirmed. The native13 one-file Android
+outbound/code match is historical; it does not pass current native21 peer checks.
+Remaining transfer/failure/lifecycle matrix entries below are untested unless
+explicitly recorded in current evidence. See [priorities](native-essential-priorities.md)
+and [mainline integration](native-mainline-integration-2026-10-17.md).
 
 ## Preconditions
 
-Agree on the actual Linux package/desktop and available Android/Google Quick Share
-for Windows versions before installation. Native12 targets Ubuntu26.04 amd64; use its exact final package/checksum
-from the receive-reliability evidence after candidate handoff. The exact package is now installed on the matching host; offline checks plus
-scoped installed observations are recorded in [installed acceptance](native-installed-acceptance.md).
-They do not complete the physical checks below. Record exact package SHA256, OS/desktop and peer
-versions. Installation/activation and physical device actions require the user's
-availability/authorization; no such operation was performed to prepare this file.
-Use disposable test files/destination, not personal documents. Record evidence
-locally without publishing device identifiers, filenames, contents or PINs.
+Use the exact installed native21 package/hash from
+[evidence](evidence/native-tray-countdown-2026-10-17.json), with the actual Android
+and Google Quick Share for Windows versions recorded before checking each peer.
+The package targets Ubuntu26.04 amd64; unavailable peers/platforms remain UNTESTED.
+Use disposable files/destination and preserve content/hash evidence locally
+without publishing identifiers, filenames, contents or PINs. No new installation
+is needed for this checklist. Real device actions require the user's availability.
 
 ## Minimal ordered checks
 
@@ -26,8 +24,8 @@ locally without publishing device identifiers, filenames, contents or PINs.
 |---|---|---|
 | 1 — discover and consent | With each available Android/Windows peer, find Linux and peer in both directions. Send one small file; compare the verification code and explicitly accept, then separately reject a request. | Correct intended device; no content accepted before consent; rejection leaves no received file. Record an unavailable platform as untested, not passed. |
 | 2 — ordinary content | In both directions send one file, several files, a nested folder and text/link. Compare exact bytes/hashes and relative folder names; copy received text explicitly. | Correct content and destination; links do not auto-open or replace clipboard. Existing files remain intact; name collisions are resolved or rejected safely. |
-| 3 — interrupted receive | In a disposable destination cancel midway through a large file; separately interrupt the peer/network. Retry explicitly. Verify the implemented native12 repair from native-receive-reliability.md before release signoff. | No incomplete file under an ordinary final name; no false full success, unintended overwrite or duplicate send. Retained completed members match the selected partial-outcome contract. |
-| 4 — card and multiple recipients | Use tray/card near the clock, Full/Compact and two recipients when available. Close the card during a send; decline/cancel one recipient. Lock/unlock and exercise notification inhibition. | Admitted work survives card close; member outcomes remain independent; lock/notification policy is respected; progress/cancel and received-file location are usable. |
+| 3 — interrupted receive | In a disposable destination cancel midway through a large file; separately interrupt the peer/network. Retry explicitly. Verify the implemented atomic receive repair from native-receive-reliability.md before release signoff. | No incomplete file under an ordinary final name; no false full success, unintended overwrite or duplicate send. Retained completed members match the selected partial-outcome contract. |
+| 4 — card and multiple recipients | Use tray/card near the clock, collapsed/expanded Devices and two recipients when available. Close the card during a send; decline/cancel one recipient. Lock/unlock and exercise notification inhibition. | Admitted work survives card close; member outcomes remain independent; lock/notification policy is respected; progress/cancel and received-file location are usable. |
 | 5 — desktop/lifecycle | Use file-manager Send, enable/disable optional login start, reopen from the launcher and tray, then quit/restart under controlled idle conditions. | Recipient choice remains explicit; one daemon and one tray owner; no manual config repair or surprise automatic send. |
 | 6 — package lifecycle | After ordinary transfer failures are resolved, verify install/upgrade/removal and settings recovery for the actual target OS. Test signed APT acquisition only after the exact release is approved/published. | Dependencies resolve, settings remain recoverable, and update ownership is the system package manager. No unsigned staging is represented as a trusted published channel. |
 
@@ -54,7 +52,7 @@ known123-byte Android fixture, with no agent-initiated peer choice or Send. User
 recipient/code/acceptance result and exact Android version remain pending. See
 [native-tmpfs-source-review.md](native-tmpfs-source-review.md) for current evidence.
 
-Current native15 adds the requested card/tray presentation repair. Installed
+Historical native15 added the requested card/tray presentation repair. Installed
 14-file/tray/icon/About checks and isolated rendering passed; user physical
 KDE review remains pending. The user confirmed receiving the Android outbound
 fixture with matching code on native13; daemon reports Finished. Reverse/content

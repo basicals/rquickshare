@@ -1,5 +1,14 @@
 # Current implementation and continuation state
 
+Mainline integration (2026-10-17): the user authorized moving the current native21
+checkpoint into the repository's actual default branch, master. Incoming remote
+repository configuration is merged into dev; two Python CI environment/fixture
+defects are fixed. The full54-test offline Python suite passed. Exact-head remote
+Preflight and dev-to-master merge are in progress; see
+[integration checkpoint](native-mainline-integration-2026-10-17.md). Installed
+native21 and its accepted UI stay unchanged. Peer/lifecycle/signed-release gates
+listed there remain open.
+
 Latest work (2026-10-17): native21 is installed and running. Primary tray Activate
 now toggles the card, and valid same-session monitor/bottom margins are restored
 after hiding instead of reapplying tray coordinates. Expanded temporary Receive
@@ -27,38 +36,26 @@ request/transfer list with status overlays and inline consent details. There are
 no main tabs or separate Full header.
 Settings has branded sidebar sections and deferred OK/Cancel. Tray duplicates
 and routine Reconnect are removed. Source checks and renderer observations are
-recorded in the follow-up; current physical KDE/peer acceptance is still open.
+recorded in the follow-up. The requested native21 UI checks are user-confirmed;
+broader desktop/peer acceptance remains open.
 No paired identity or durable history is inferred from the mockup or device names.
 
-Updated2026-10-17. Mode A; direct dev, no branch/worktree/push. This is the current
+Updated2026-10-17. Mode A; implementation on dev. The separately authorized
+mainline integration uses existing dev/master only, with no new branch/worktree. This is the current
 status index. Dated entries in other documents remain historical evidence; they
 must not override this index or the linked feature contracts. The active goal is reliable ordinary nearby sharing with native
 tray/card UX. [Essential priorities](native-essential-priorities.md) supersede
 the broader execution order: previews are excluded and full feature parity is a
 long-term inventory, not an essential-release gate.
 
-[Completion audit](native-completion-audit.md) separates implemented manual flows,
-remaining product work and current-package physical acceptance. The basic native
-shell is substantial but not release accepted or UI-complete.
-[Live visibility/quick controls](native-live-visibility.md) option1 is implemented
-and scoped source checks passed. The latest completed slice is
-[multi-recipient sharing](native-multi-recipient-review.md): daemon-owned atomic
-admission, exact receipts, GTK selection and per-peer status/cancel. Native11
-offline package and corrected Full/Compact rendering passed. The latest source
-and offline candidate is [receive reliability](native-receive-reliability.md),
-with atomic per-file publication and explicit retained-file partial results in
-native12. Exact source/package/handoff evidence is recorded in that contract. Native9 remains an immutable earlier checkpoint.
-
-## Native UI redesign decision (2026-10-16)
-
-[Native GTK panel redesign](native-ui-redesign.md) records the user's approved
-Compact/Full/Settings layout and Receive option A: 60-second temporary discoverability,
-then restore the pre-invocation visibility mode. This is a **design decision only**,
-not an implemented behavior or a choice of the core-vs-native deadline architecture.
-[Visibility ownership review](native-visibility-review.md) remains awaiting its
-separate significant source/API decision. The current one-minute implementation
-expires to Hidden; do not claim previous-mode restoration or working trust/history
-sorting in the installed client.
+[Completion audit](native-completion-audit.md) distinguishes implemented and
+user-accepted scoped UI from broader installed/peer release acceptance. Completed
+foundations include [live visibility](native-live-visibility.md),
+[multi-recipient sharing](native-multi-recipient-review.md) and
+[atomic receive publication](native-receive-reliability.md). Their native9/11/12
+artifacts and dated observations are historical; native21 is the installed
+candidate. The selected one-minute policy expires to Hidden. No production
+remembered trust, Google account integration, auto-accept or full parity is claimed.
 
 ## Documentation maintenance plan and rationale
 

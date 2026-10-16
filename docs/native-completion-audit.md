@@ -1,5 +1,14 @@
 # Native completion audit and next everyday UI slice
 
+Current checkpoint2026-10-17: native21 is installed. The single toolbar/device
+drawer and the requested tray position/visibility countdown checks are user-
+accepted. The dated analysis below records earlier source milestones; native12
+is superseded as the installed candidate. Remaining essential peer, failure,
+desktop lifecycle and signed-release gates are listed in
+[mainline integration](native-mainline-integration-2026-10-17.md) and
+[essential priorities](native-essential-priorities.md). Full Google parity is not
+accepted, and previews remain excluded.
+
 2026-10-16. Mode A, direct dev. Guide: /home/morozhenko/.codex/AGENTS.md,
 sections3/3.1/11/12/13. User requested continuing implementation and an honest
 assessment of whether basic features and UI are complete. No installation,

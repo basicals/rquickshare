@@ -32,7 +32,7 @@ those results do not validate the new native21 revision. Failure roots:
 - [x] M2: correct the binary inventory fixture and isolated Python CI runtime.
   Run the Python suite once with the existing matching pinned venv. No unaffected
   native21 rebuild or repeated Rust/GTK tests for metadata-only incoming changes.
-- [ ] M3: update the remaining essential acceptance list to distinguish completed
+- [x] M3: update the remaining essential acceptance list to distinguish completed
   native21 UI from physical peer/lifecycle/release gates. Commit scoped changes.
 - [ ] M4: push dev normally; inspect exact-head Preflight. Prepare a dev-to-master
   PR and attach it to this task. Merge only once the substantive exact dev-head
@@ -75,3 +75,11 @@ M2 verification: the complete offline Python suite passed with the repository's
 existing pinned publication-test venv. No production verifier/adapter change or
 cloud request. The two former CI failure scenarios now run against all executable
 headers and the supported SDK model. No native package/runtime rebuild was needed.
+
+M2 measured result:54 offline Python tests passed in the matching pinned venv.
+M3: current-state/acceptance/audit entry points now distinguish user-confirmed
+native21 toolbar/drawer/position/countdown from remaining current-peer, natural
+expiry/monitor/lifecycle and signed-publication gates. No previously accepted UI
+work is relisted as a missing feature. Dated original observations are retained.
+M4 will use normal dev push, exact-head Preflight and a dev-to-master PR; no tags,
+application publication, force push or dev branch deletion.
