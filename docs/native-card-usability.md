@@ -604,3 +604,14 @@ Native16/native17 package/source exports are retained for rollback. See
 [evidence](evidence/native-receive-view-2026-10-17.json). The user was asked to check
 no-request Receive staying Compact and the shared bottom edge on native18; these
 physical results are pending, not inferred from isolated checks. Terminal closed.
+
+Native18 handoff: immutable public source ZIP contains499 tracked
+files at commit 80f5910057103108807f372bfa3ca813589723e8, SHA-256
+bfb722c79cfe2c8f264546a488d9d92464cda500960d3f15f166bbc3aa15827a. Binary source remains
+61fb6b10dd7c3b330a8b1f055595e7123e8b29a7; package SHA-256 remains
+4a8a22d275366ec483dcce9cc138fa9ac341b8340dc8a5ccec7364fb0e910b87. Export receipt and package/ZIP
+are under the existing outputs directory. Native17's newly written receipt count
+was corrected from613 ZIP entries to498 tracked files; archive/package bytes and
+hashes were not changed. Native18 has499 tracked files. Mutable continuation
+exports point to the final documentation commit; they are distinct from this
+immutable source archive. No signing, APT staging, publication or cloud calls.
