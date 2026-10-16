@@ -858,3 +858,12 @@ already Temporary; it was left untouched. The actual GTK action test verifies
 the Hidden intent and acknowledgement-driven indicator. User physical inspection
 of drawer/soft colour/early stop is requested and remains pending. Native19
 package/source remain the rollback. All owned commands exited: Terminal closed.
+
+Native20 handoff: immutable public source ZIP has501 tracked files at
+8ef491fba9e705967d71a5564b187201a68da3af, SHA-256
+089ca20ff3accbd86c99924a82411c365c2188f181779225b2340558c8944732. Binary source remains
+1d9dca626314a166250e32f3fbf78d838bc3b5da. Package/source/three isolated
+widget frames and rquickshare-native20-export.json are preserved in the existing
+outputs directory. Mutable continuation artifacts follow the final docs commit.
+Native19 rollback package/source are unchanged. No signing, staging, publishing
+or cloud access was performed. Physical acceptance remains explicitly pending.
