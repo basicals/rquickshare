@@ -39,6 +39,8 @@ pub fn create(bytes: &[u8], name: String) -> io::Result<OpenedFile> {
 
 #[cfg(test)]
 mod tests {
+    use std::os::unix::fs::MetadataExt;
+
     use super::*;
     #[test]
     fn given_memory_bounds_when_created_then_exact_immutable_private_bytes_are_owned() {
@@ -91,6 +93,7 @@ mod tests {
         // Arrange / Act / Assert
         for (seals, size, accepted) in [
             (SealFlags::empty(), 1, false),
+            (SealFlags::SEAL, 1, false),
             (
                 SealFlags::WRITE | SealFlags::GROW | SealFlags::SHRINK,
                 1,
@@ -103,6 +106,7 @@ mod tests {
             let writer = File::from(memfd_create("untrusted", MemfdFlags::ALLOW_SEALING).unwrap());
             writer.set_len(size).unwrap();
             fcntl_add_seals(&writer, seals).unwrap();
+            assert_eq!(writer.metadata().unwrap().nlink(), 0);
             let reader = File::from(
                 open(
                     format!("/proc/self/fd/{}", writer.as_raw_fd()),

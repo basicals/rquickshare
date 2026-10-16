@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "scope": "named-tmpfs-source-acceptance",
+  "selected_option": 1,
+  "user_authorized": true,
+  "source_contract": {
+    "named_mutable_seal_capable_link_count_min": 1,
+    "named_file_memory_charge": 0,
+    "fully_sealed_sources_still_charged": true,
+    "anonymous_complete_seals_required": true,
+    "anonymous_file_max_bytes": 33554432,
+    "aggregate_anonymous_reservation_bytes": 134217728,
+    "wire_settings_schema_changed": false
+  },
+  "verification": {
+    "source_tests_passed": 49,
+    "source_tests_failed": 0,
+    "filtered": 606,
+    "seconds": 0.15,
+    "new_methods": 2,
+    "existing_memory_table_extended": true,
+    "strict_core_all_features_all_targets_clippy_passed": true,
+    "clippy_seconds": 8.07,
+    "existing_bluer_future_incompatibility_notice": true,
+    "anonymous_memfd_link_count": 0,
+    "anonymous_filesystem_link_probe_errno": 18,
+    "ten_repetitions": false,
+    "physical_peer_transfer": false
+  },
+  "candidate_revision": 13,
+  "candidate_built": false,
+  "fixed_candidate_installed": false,
+  "logs": [
+    "/tmp/rqs-tmpfs-source-tests.log",
+    "/tmp/rqs-tmpfs-source-clippy.log"
+  ]
+}

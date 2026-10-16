@@ -208,6 +208,64 @@ fn given_read_only_regular_file_when_adopted_then_metadata_and_bytes_are_preserv
 }
 
 #[test]
+fn given_named_tmpfs_files_when_adopted_then_filesystem_sizes_bytes_and_clones_are_preserved() {
+    // Arrange: require real seal-capable tmpfs rather than silently testing a disk file.
+    let directory = tempfile::tempdir_in("/dev/shm").unwrap();
+    for size in [0, 1, crate::memory_source::MAX_MEMORY_FILE_BYTES + 1] {
+        let expected = vec![0x5a; size];
+        let path = source(directory.path(), "ordinary", &expected);
+        let reader = File::open(&path).unwrap();
+        assert_eq!(reader.metadata().unwrap().nlink(), 1);
+        assert_eq!(
+            rustix::fs::fcntl_get_seals(&reader).unwrap(),
+            rustix::fs::SealFlags::SEAL
+        );
+
+        // Act.
+        let file = OpenedFile::adopt(reader, "folder/display.txt".into()).unwrap();
+        let selection =
+            OpenedSelection::from_files(vec![file], SelectionLimits::default()).unwrap();
+        let duplicate = selection.try_clone().unwrap();
+        let file = &duplicate.files()[0];
+        let mut actual = vec![0; size];
+
+        // Assert: the anonymous-memory size cap/charge must not apply to a named file.
+        assert_eq!(file.size(), size as u64);
+        assert_eq!(file.memory_bytes(), 0);
+        assert_eq!(file.relative_name(), "folder/display.txt");
+        assert_eq!(file.read_chunk_at(0, &mut actual).unwrap(), size);
+        assert_eq!(actual, expected);
+        assert_eq!(file.read_chunk_at(size as u64, &mut []).unwrap(), 0);
+    }
+}
+
+#[test]
+fn given_mutable_unlinked_tmpfs_file_when_adopted_then_anonymous_guard_is_preserved() {
+    // Arrange.
+    let directory = tempfile::tempdir_in("/dev/shm").unwrap();
+    let path = source(directory.path(), "ordinary", b"original bytes");
+    let reader = File::open(&path).unwrap();
+    let adopted = OpenedFile::adopt(reader.try_clone().unwrap(), "display.txt".into()).unwrap();
+    fs::remove_file(&path).unwrap();
+    assert_eq!(reader.metadata().unwrap().nlink(), 0);
+    assert_eq!(
+        rustix::fs::fcntl_get_seals(&reader).unwrap(),
+        rustix::fs::SealFlags::SEAL
+    );
+
+    // Act / Assert: a held source remains readable; fresh anonymous adoption fails closed.
+    let mut bytes = [0; 14];
+    assert_eq!(adopted.read_chunk_at(0, &mut bytes).unwrap(), bytes.len());
+    assert_eq!(&bytes, b"original bytes");
+    assert_eq!(
+        OpenedFile::adopt(reader, "disk-looking-name".into())
+            .unwrap_err()
+            .kind(),
+        ErrorKind::InvalidInput
+    );
+}
+
+#[test]
 fn given_writable_descriptors_when_adopted_then_both_write_access_modes_are_rejected() {
     // Arrange.
     let directory = tempfile::tempdir().unwrap();

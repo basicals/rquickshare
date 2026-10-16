@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fs::File;
 use std::io::{self, ErrorKind};
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use rustix::fs::{fcntl_getfl, openat2, Dir, Mode, OFlags, ResolveFlags, CWD};
@@ -105,6 +106,9 @@ impl OpenedFile {
         }
         let memory_backed = match rustix::fs::fcntl_get_seals(&file) {
             Ok(seals) if seals.contains(crate::memory_source::IMMUTABLE_SEALS) => true,
+            // Named tmpfs files support GET_SEALS too; they follow ordinary mutable-file rules.
+            // Anonymous memory has no filesystem links and must retain the immutable-source guard.
+            Ok(_) if file.metadata()?.nlink() > 0 => false,
             Ok(_) => return Err(invalid("Expected an immutable memory descriptor")),
             Err(rustix::io::Errno::INVAL) => false,
             Err(error) => return Err(error.into()),

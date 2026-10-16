@@ -89,10 +89,10 @@ property; confirm that invariant in implementation review if option1 is selected
 ## Selected option1 execution plan — 2026-10-16
 
 - [x] T1: document explicit selection and update native-image.md before code.
-- [ ] T2: add only the kernel link-count guard after the fully sealed branch;
+- [x] T2: add only the kernel link-count guard after the fully sealed branch;
   retain size inspection after seal validation, read-only/regular checks, limits
   and fail-closed errors. No FD path classification or source reopening.
-- [ ] T3: verify named tmpfs files at0/1/32MiB+1, clone/read and zero anonymous
+- [x] T3: verify named tmpfs files at0/1/32MiB+1, clone/read and zero anonymous
   charge; mutable unlinked tmpfs rejection; existing anonymous bounds and missing
   seals including SEAL-only rejection. Run affected source suites/lint once.
 - [ ] T4: increment package revision to13, commit source/docs, build/verify the
@@ -118,3 +118,34 @@ Focused verification uses the existing Mode A source suites rather than a new
 Mode B coverage project. Writable /dev/shm is required by the tmpfs regressions;
 assert seal-capable behavior instead of silently substituting a disk fixture.
 No sleeps, real peer network, source mocks or repeated full-product suites.
+
+## T2-T3 actual source verification
+
+OpenedFile::adopt now accepts a not-fully-sealed descriptor as an ordinary
+filesystem source only when kernel metadata reports at least one actual link.
+The fully immutable branch remains first and its size is read after validation.
+Read-only/type/name/size and anonymous limits are unchanged. No source path is
+opened/unlinked, no budget constant or IPC schema changed. Package revision13
+is reserved for this changed candidate; revision12 bytes remain immutable.
+
+Two real-kernel regression methods were added: named tmpfs0/1/32MiB+1 exact
+read/clone/charge behavior and mutable unlinked tmpfs rejection with an existing
+FD still readable. The existing anonymous seal/bounds table now includes SEAL
+alone and asserts link count0 for every case. The Linux /dev/shm fixture is an
+explicit seal-capable test prerequisite, not a disk substitution or silent skip.
+Existing suites cover writable/O_PATH/nonregular/source-size-change rejection.
+
+One affected source filter execution passed49/0,606 filtered,0.15s; it includes
+file_source, memory_source and prepared_source. Strict core all-feature/all-target
+Clippy passed8.07s. Its existing upstream bluer future-incompatibility notice
+remains visible. Formatting was applied once; no full-suite or ten-run claim.
+Logs: /tmp/rqs-tmpfs-source-tests.log and /tmp/rqs-tmpfs-source-clippy.log.
+
+A separate owned kernel probe confirmed memfd link count0 and a rejected attempt
+to link it into the test-owned /dev/shm directory (EXDEV18); all resources removed.
+Primary pinned Linux v6.17 sources reviewed: [shmem.c](https://github.com/torvalds/linux/blob/v6.17/mm/shmem.c)
+clears link count for shmem_file_setup; [memfd.c](https://github.com/torvalds/linux/blob/v6.17/mm/memfd.c)
+uses that setup for ordinary memfd; [namei.c](https://github.com/torvalds/linux/blob/v6.17/fs/namei.c)
+rejects cross-filesystem links and unlinked inodes without I_LINKABLE. Runtime
+classification uses the held descriptor's metadata, never these diagnostic names.
+All owned checks/probes exited: Terminal closed.
