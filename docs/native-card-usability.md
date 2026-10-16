@@ -586,3 +586,11 @@ including all eight no-request action invocations and the existing UI/consent
 assertions. Native strict all-target/no-deps Clippy passed; the same nine existing
 core dependency warnings remain. Formatting/whitespace passed. Commands exited:
 Terminal closed. Native18 package and installed gates follow.
+
+Native18 package checkpoint: offline inventory/ELF/dependencies/checksum/help and
+private-settings verification passed for14 files. Distinct package is
+6,507,586 bytes, SHA-256
+4a8a22d275366ec483dcce9cc138fa9ac341b8340dc8a5ccec7364fb0e910b87. The next authorized local upgrade
+requires the existing known native17 owners2168586/2168587 (or already closed GUI),
+zero global prepared resources and no active transfer. No unsafe source discard
+or signing/publication. Build exited: Terminal closed.
