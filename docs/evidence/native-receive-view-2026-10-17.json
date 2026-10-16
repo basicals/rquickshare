@@ -112,11 +112,18 @@
     "passed": true
   },
   "acceptance": {
-    "physical_receive_preserves_compact_verified": false,
-    "physical_shared_bottom_edge_verified": false,
-    "physical_checks_requested": true,
+    "physical_receive_preserves_compact_verified": true,
+    "physical_shared_bottom_edge_verified": true,
+    "physical_checks_requested": false,
     "historical_native16_drag_and_settings_ok_cancel": "explicit user confirmations in native-card-usability-2026-10-16.json; not repeated or attributed to native18",
-    "current_candidate_android_windows_accepted": false
+    "current_candidate_android_windows_accepted": false,
+    "user_observation": {
+      "local_date": "2026-10-17",
+      "source": "explicit user reply to the native18 combined Receive/edge question",
+      "installed_version": "0.11.5+native18",
+      "result": "both corrections work; earlier edge question also confirmed alignment",
+      "automated_compositor_test": false
+    }
   },
   "signed": false,
   "published": false,

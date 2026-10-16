@@ -8,8 +8,9 @@ and an already visible card's position. With a pending request it opens explicit
 code/manifest review in Full. No auto-accept. The affected actual GTK smoke and
 strict native lint passed once; offline package verification,14 installed file
 comparisons and one active15-row tray passed. Login start remains off. Current
-owned daemon/desktop PIDs2170697/2170698. Physical Receive/edge checks are requested
-but not confirmed. Native16 user-confirmed dragging/Settings OK/Cancel remain
+owned daemon/desktop PIDs2170697/2170698. The user confirmed native18 Receive stays Compact and the shared bottom edge
+works on2026-10-17. Header Send/empty-list spacing/green temporary Receive feedback
+are the next authorized native19 slice, documented before code in card usability. Native16 user-confirmed dragging/Settings OK/Cancel remain
 historical evidence. Native16/native17 immutable rollback packages/source archives
 remain available. See [card usability](native-card-usability.md) and
 [native18 evidence](evidence/native-receive-view-2026-10-17.json).

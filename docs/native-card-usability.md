@@ -615,3 +615,46 @@ was corrected from613 ZIP entries to498 tracked files; archive/package bytes and
 hashes were not changed. Native18 has499 tracked files. Mutable continuation
 exports point to the final documentation commit; they are distinct from this
 immutable source archive. No signing, APT staging, publication or cloud calls.
+
+## Native19 header, empty list and Receive feedback — plan before code
+
+The user confirmed native18 Receive stays Compact and Full/Compact share the
+bottom edge. They request removing odd empty-list padding, a smaller Send files
+entry in the existing Full header and green blinking while Receive's one-minute
+mode is actually active. These are explicit product instructions, not new choices.
+
+Analysis: the main scroller imposes120px even when it contains only one empty
+message. A padded source row also remains visible without a prepared source. The
+header contains a flexible spacer, so the existing Send action can fit there
+without a new toolbar/window/action/API. VisibilityView already reports actual
+available/running mode2 and existing state updates report expiry; no UI-owned
+minute deadline or timer should be added.
+
+1. [ ] H1: move the existing Send files widget before the flexible header spacer,
+   remove its horizontal expansion, keep its action/popover/source semantics.
+   Show the separate padded preparation row only when a source exists. Remove
+   the main scroller's120px minimum while keeping its300px content cap and natural
+   measurement. Retain the drag spacer and action hit areas, inline consent and
+   Add/Clear controls. Compact remains exactly four actions.
+2. [ ] H2: bind a scoped Receive CSS class to confirmed live temporary visibility,
+   independent of transient operation busy flags. Use a slow1.8-second green
+   background pulse, never blinking text or a UI timer. Remove it on hidden/normal
+   visible/unavailable/disconnected/stopped/unsynchronized state. Tooltip and
+   accessible description name the one-minute mode; failure to apply must not
+   display success. No new user setting or persisted field.
+3. [ ] H3: extend the existing GTK smoke with header/empty-height/preparation
+   invariants and mode/availability/busy/disconnection transitions for the class.
+   Run affected checks and strict native lint once. Inspect actual empty/full and
+   temporary Compact frames using isolated test widgets, with no real visibility
+   changes or fake daemon transfers. CSS parse failures must fail the smoke.
+4. [ ] H4: distinct native19 package, offline verification and authorized local
+   upgrade behind known-owner/zero-source/nonterminal-transfer gate. Verify14
+   installed files, one tray and unchanged login preference. Update SSOT/evidence
+   and existing handoff; preserve native18 immutable rollback artifacts.
+
+Risks: an unconfirmed click could falsely imply discoverability, prevented by
+authoritative state binding. Theme changes/animation settings can suppress CSS
+motion; the active class still has a green base and textual accessibility hint.
+No security/protocol/schema change, no automatic consent, no broad refactoring.
+Rollback is the scoped code commit plus native18 package when idle. Physical
+acceptance is separate from isolated GTK/renderer evidence.
