@@ -14,7 +14,7 @@ physical peer, account/cloud call, package rebuild or runtime change in this aud
    paragraph and obsolete roadmap continuation markers; retain dated evidence.
 3. [x] A3: record the next significant UI/API alternatives before code. User choice
    is required for the new live-visibility facade and quick-control UX.
-4. [ ] A4 after selection: freeze the concrete current-policy/read/status,
+4. [x] A4 selected option1: see [frozen implementation contract](native-live-visibility.md); freeze the concrete current-policy/read/status,
    settings-intent/idempotency/reconnect and GTK/tray contract before code; then
    implement and run affected checks once with reversible commits.
 
@@ -76,7 +76,7 @@ failure, replay and renewal semantics must be frozen at A4 before implementation
 Do not silently replace settings authority or reopen an expired mode on unrelated
 saves. No second expiry clock or radio-success claim from the GUI.
 
-Significant UI/API selection is pending under sections3/3.1. This is a new slice;
+The user selected option1. Implementation follows native-live-visibility.md. This is a new slice;
 the already selected Glycin decoder boundary must not be asked again.
 
 ## Continuation order
