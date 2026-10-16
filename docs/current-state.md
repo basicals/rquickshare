@@ -5,6 +5,17 @@ status index. Dated entries in other documents remain historical evidence; they
 must not override this index or the linked feature contracts. Goals remain native
 tray/card UX and full Google Quick Share parity, not an achieved compatibility claim.
 
+## Native UI redesign decision (2026-10-16)
+
+[Native GTK panel redesign](native-ui-redesign.md) records the user's approved
+Compact/Full/Settings layout and Receive option A: 60-second temporary discoverability,
+then restore the pre-invocation visibility mode. This is a **design decision only**,
+not an implemented behavior or a choice of the core-vs-native deadline architecture.
+[Visibility ownership review](native-visibility-review.md) remains awaiting its
+separate significant source/API decision. The current one-minute implementation
+expires to Hidden; do not claim previous-mode restoration or working trust/history
+sorting in the installed client.
+
 ## Documentation maintenance plan and rationale
 
 Six copied top-level distribution checkpoints drifted: they still required an
