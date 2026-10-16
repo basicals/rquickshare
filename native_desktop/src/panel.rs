@@ -365,6 +365,9 @@ impl Panel {
                     }
                     if let Some(handle) = &panel.handle {
                         let action = || match id {
+                            "recover" if panel.model.borrow().state.visibility_pending => {
+                                handle.retry_visibility()
+                            }
                             "recover" => handle.recover(),
                             "abort" => handle.abort_preparation(),
                             _ => {
@@ -612,10 +615,12 @@ impl Panel {
                 {
                     let mut model = panel.model.borrow_mut();
                     model.waiting = false;
-                    model.notice = result
-                        .as_ref()
-                        .err()
-                        .map(|_| "Operation did not complete. Review its state before retrying.");
+                    model.notice = match &result {
+                        Ok(rqs_lib::service::client::controller::ActionResult::Settings(view)) if view.error != 0 =>
+                            Some("Visibility was saved but could not be fully applied. Review discovery status and Settings."),
+                        Err(_) => Some("Operation did not complete. Review its state before retrying."),
+                        _ => None,
+                    };
                 }
                 panel.render();
                 panel.apply_presentation();
@@ -748,6 +753,49 @@ impl Panel {
                     || model.closing
                     || *self.ingress.gate.subscribe().borrow(),
             );
+        let visibility = model
+            .state
+            .visibility
+            .as_ref()
+            .filter(|view| view.available && view.running && !model.state.disconnected);
+        let mode = visibility.map(|view| view.mode);
+        self.text(
+            "visibility",
+            match mode {
+                Some(0) => "Discovery: visible",
+                Some(1) => "Discovery: hidden",
+                Some(2) => "Discovery: visible for up to one minute",
+                _ => "Discovery: unavailable",
+            },
+        );
+        let visibility_action = self
+            .actions
+            .lookup_action("visibility")
+            .and_downcast::<gio::SimpleAction>()
+            .unwrap();
+        visibility_action.set_state(
+            &match mode {
+                Some(0) => "visible",
+                Some(1) => "hidden",
+                Some(2) => "temporary",
+                _ => "unavailable",
+            }
+            .to_variant(),
+        );
+        visibility_action.set_enabled(
+            ready
+                && visibility.is_some()
+                && !model.state.settings_pending
+                && !model.state.visibility_pending
+                && model.state.settings.as_ref().is_some_and(|view| {
+                    view.available && view.configured && matches!(view.error, 0 | 4)
+                }),
+        );
+        self.actions
+            .lookup_action("visibility-retry")
+            .and_downcast::<gio::SimpleAction>()
+            .unwrap()
+            .set_enabled(ready && model.state.visibility_pending);
         let selection = model
             .state
             .view
@@ -789,7 +837,10 @@ impl Panel {
         self.reconnect_button.set_visible(unavailable);
         self.box_widget("recovery").set_visible(
             unavailable
-                || ((model.state.pending || model.state.text_pending || model.desktop.staging)
+                || ((model.state.pending
+                    || model.state.text_pending
+                    || model.state.visibility_pending
+                    || model.desktop.staging)
                     && !model.state.disconnected),
         );
         for id in ["recover", "abort"] {
@@ -801,7 +852,8 @@ impl Panel {
                     && !model.waiting
                     && !model.state.busy
                     && (model.state.pending
-                        || (id == "recover" && model.state.text_pending)
+                        || (id == "recover"
+                            && (model.state.text_pending || model.state.visibility_pending))
                         || (id == "abort" && model.desktop.staging))
                     && !model.state.disconnected,
             );
@@ -867,6 +919,8 @@ impl Panel {
             "Preparing selection…"
         } else if model.ingress.failed {
             "Preparation failed. Review service state or select accessible files."
+        } else if model.state.visibility_pending {
+            "Visibility change outcome is uncertain. Use Retry visibility change."
         } else if model.state.error.is_some() {
             error_message(model.state.error)
         } else if model

@@ -63,8 +63,8 @@ items. No new logs contain settings tokens, names or payloads.
 1. [x] L1: inspect owners and replay/lifecycle paths; freeze this selected contract.
 2. [x] L2: visibility-only durable operation, coherent read seam, bounded daemon
    facade/application/change signals; preserve old settings signatures and behavior.
-3. [ ] L3: exact-retry SDK/controller and thin GTK/card/tray projections/gates.
-4. [ ] L4: affected checks once, record observed outcomes and corrections here,
+3. [x] L3: exact-retry SDK/controller and thin GTK/card/tray projections/gates.
+4. [x] L4: affected checks once, record observed outcomes and corrections here,
    atomic source commits and continuation index update. No unchanged package build.
 5. [ ] L5: after source checks, prepare a successor native candidate/handoff if
    appropriate. Native8 remains last measured package until a replacement is built.
@@ -135,3 +135,14 @@ native all-target no-deps strict Clippy passed10.70s. Nine existing core warning
 without experimental features and Xvfb EGL/DRI3 warnings were emitted, not hidden.
 Formatting/diff checks passed. No ten repetitions, workstation radios, installed
 services, cloud access, signing or publication. Terminal closed after each check.
+
+
+L3/L4 source complete: Full/Compact display current discovery policy independently
+of transfer status, GTK/context and DBusMenu share actual mode radio selection,
+three explicit modes and an exact pending-command retry route. Existing recovery
+button also routes a retained visibility command to that retry. Busy, pending
+settings/visibility, stopped, preview, locked and disconnected gates stay inert.
+Uncertain/save-but-unapplied outcomes are visible without claiming discovery
+success. No persistent-history/localization/account/remote-preview feature is
+claimed. Prepare changed native9 from the next source commit; native8 remains
+last measured candidate until build/verification completes. No package overwrite.

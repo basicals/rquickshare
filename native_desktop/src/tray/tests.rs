@@ -75,6 +75,7 @@ async fn given_private_kde_watcher_when_registered_activated_and_lost_then_lates
     tray.menu.publish(menu::Projection {
         enabled: 0x7ff,
         full: true,
+        visibility: None,
     });
     let signal = layouts.next().await.unwrap();
     assert_eq!(signal.body().deserialize::<(u32, i32)>().unwrap(), (2, 0));

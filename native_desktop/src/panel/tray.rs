@@ -13,7 +13,7 @@ impl Panel {
             && !model.preview
             && ((!self.layer && !model.safety_active) || model.safety.manual_allowed());
         let mut enabled = 0;
-        for id in (1..=11).chain([16, 17]) {
+        for id in (1..=11).chain(16..=21) {
             let action = Action::from_id(id).expect("fixed tray action");
             let cleanup = matches!(action, Action::Hide | Action::Quit);
             let allowed = !model.closing
@@ -30,6 +30,12 @@ impl Panel {
         Projection {
             enabled,
             full: model.mode == Mode::Full,
+            visibility: model
+                .state
+                .visibility
+                .as_ref()
+                .filter(|view| view.available && view.running && !model.state.disconnected)
+                .map(|view| view.mode),
         }
     }
     pub(super) fn sync_tray_menu(&self) {
@@ -55,6 +61,15 @@ impl Panel {
                 });
                 self.model.borrow_mut().manual_requested = true;
                 self.present_surface();
+            }
+            Action::Visible | Action::Hidden | Action::Temporary => {
+                let mode = match action {
+                    Action::Visible => "visible",
+                    Action::Hidden => "hidden",
+                    _ => "temporary",
+                };
+                self.actions
+                    .activate_action("visibility", Some(&mode.to_variant()));
             }
             Action::Files
             | Action::Folder
@@ -116,6 +131,79 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     assert_ne!(full.enabled & Action::Text.bit(), 0);
     assert_ne!(full.enabled & Action::Image.bit(), 0);
     assert_ne!(full.enabled & Action::Files.bit(), 0); // Presentation projection; no service handle exists.
+    let settings = rqs_lib::service::client::settings::SettingsView {
+        epoch: format!("{:032x}", 1),
+        available: true,
+        source: 2,
+        configured: true,
+        revision: 1,
+        token: "a".repeat(64),
+        visibility: 2,
+        port: -1,
+        card_mode: 1,
+        directory_display: String::new(),
+        visibility_recovered: false,
+        applied_live_revision: 1,
+        running: true,
+        restart_required: false,
+        error: 0,
+        last_request: String::new(),
+        device_name: String::new(),
+        resolved_name: String::new(),
+        name_status: 0,
+    };
+    panel.model.borrow_mut().state.settings = Some(settings);
+    for (mode, target, label) in [
+        (0, "visible", "Discovery: visible"),
+        (1, "hidden", "Discovery: hidden"),
+        (2, "temporary", "Discovery: visible for up to one minute"),
+    ] {
+        panel.model.borrow_mut().state.visibility =
+            Some(rqs_lib::service::client::visibility::VisibilityView {
+                epoch: format!("{:032x}", 1),
+                available: true,
+                revision: 1,
+                running: true,
+                mode,
+            });
+        panel.render();
+        assert_eq!(panel.tray_projection().visibility, Some(mode));
+        assert_ne!(panel.tray_projection().enabled & Action::Temporary.bit(), 0);
+        let state = panel
+            .actions
+            .lookup_action("visibility")
+            .unwrap()
+            .state()
+            .unwrap();
+        assert_eq!(state.str(), Some(target));
+        assert_eq!(
+            panel
+                .builder
+                .object::<gtk::Label>("visibility")
+                .unwrap()
+                .text(),
+            label
+        );
+    }
+    for case in 0..4 {
+        {
+            let mut model = panel.model.borrow_mut();
+            model.state.visibility_pending = case == 0;
+            model.state.settings_pending = case == 1;
+            model.state.disconnected = case == 2;
+            model.state.visibility.as_mut().unwrap().running = case != 3;
+        }
+        panel.render();
+        assert_eq!(panel.tray_projection().enabled & Action::Temporary.bit(), 0);
+    }
+    {
+        let mut model = panel.model.borrow_mut();
+        model.state.disconnected = false;
+        model.state.settings_pending = false;
+        model.state.visibility_pending = false;
+        model.state.visibility.as_mut().unwrap().running = true;
+    }
+    panel.render();
     panel.tray_action(Action::Compact);
     assert_eq!(panel.mode(), Mode::Compact);
     panel.tray_action(Action::Full);

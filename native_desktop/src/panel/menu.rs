@@ -20,6 +20,26 @@ impl Panel {
             }
         });
         self.actions.add_action(&mode);
+        let visibility = gio::SimpleAction::new_stateful(
+            "visibility",
+            Some(glib::VariantTy::STRING),
+            &"unavailable".to_variant(),
+        );
+        let weak = Rc::downgrade(self);
+        visibility.connect_activate(move |_, value| {
+            let mode = match value.and_then(glib::Variant::str) {
+                Some("visible") => 0,
+                Some("hidden") => 1,
+                Some("temporary") => 2,
+                _ => return,
+            };
+            if let Some(panel) = weak.upgrade() {
+                if let Some(handle) = panel.handle.as_ref() {
+                    panel.submit(|| handle.set_visibility(mode));
+                }
+            }
+        });
+        self.actions.add_action(&visibility);
         for name in [
             "nearby",
             "incoming",
@@ -32,6 +52,7 @@ impl Panel {
             "recover",
             "abort",
             "settings",
+            "visibility-retry",
             "reconnect",
             "hide",
             "quit",
@@ -58,6 +79,11 @@ impl Panel {
                     }
                     "discard" | "recover" | "abort" => panel.button(name).emit_clicked(),
                     "settings" => panel.show_settings(),
+                    "visibility-retry" => {
+                        if let Some(handle) = panel.handle.as_ref() {
+                            panel.submit(|| handle.retry_visibility());
+                        }
+                    }
                     "reconnect" => {
                         panel.reconnect.set(true);
                         application.quit();
@@ -77,6 +103,19 @@ impl Panel {
         modes.append(Some("Compact view"), Some("panel.mode::compact"));
         modes.append(Some("Full view"), Some("panel.mode::full"));
         menu.append_section(None, &modes);
+        let visibility = gio::Menu::new();
+        for (title, target) in [
+            ("Visible", "visible"),
+            ("Hidden", "hidden"),
+            ("Visible for one minute", "temporary"),
+        ] {
+            visibility.append(Some(title), Some(&format!("panel.visibility::{target}")));
+        }
+        visibility.append(
+            Some("Retry visibility change"),
+            Some("panel.visibility-retry"),
+        );
+        menu.append_section(Some("Discovery visibility"), &visibility);
         let navigation = gio::Menu::new();
         for (name, title) in [
             ("files", "Send files…"),

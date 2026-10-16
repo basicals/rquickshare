@@ -8,8 +8,9 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
     // Arrange
     let state = State {
         projection: Projection {
-            enabled: 0x187ff,
+            enabled: 0x1f87ff,
             full: false,
+            visibility: None,
         },
         ..Default::default()
     };
@@ -20,11 +21,11 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
             layout(0, depth, &[], state).unwrap().2.len(),
             if depth == 0 { 0 } else { ROWS.len() }
         );
-        for id in 1..=17 {
+        for id in 1..=21 {
             assert!(layout(id, depth, &[], state).unwrap().2.is_empty());
         }
     }
-    for id in [-1, 18, i32::MAX] {
+    for id in [-1, 22, i32::MAX] {
         assert!(layout(id, -1, &[], state).is_err());
     }
     assert!(layout(0, -2, &[], state).is_err());
@@ -42,8 +43,23 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
     let compact = i32::try_from(properties(6, state, &[]).remove("toggle-state").unwrap()).unwrap();
     let full = i32::try_from(properties(7, state, &[]).remove("toggle-state").unwrap()).unwrap();
     assert_eq!((compact, full), (1, 0));
+    for mode in [None, Some(0), Some(1), Some(2)] {
+        let mut current = state;
+        current.projection.visibility = mode;
+        for (id, expected) in [(18, 0), (19, 1), (20, 2)] {
+            let row = properties(id, current, &[]);
+            assert_eq!(
+                i32::try_from(row.get("toggle-state").unwrap().try_clone().unwrap()).unwrap(),
+                i32::from(mode == Some(expected))
+            );
+            assert_eq!(
+                String::try_from(row.get("toggle-type").unwrap().try_clone().unwrap()).unwrap(),
+                "radio"
+            );
+        }
+    }
     assert!(checked_event(0, "clicked", state).is_err());
-    for id in (1..=11).chain([16, 17]) {
+    for id in (1..=11).chain(16..=21) {
         assert_eq!(
             checked_event(id, "clicked", state).unwrap(),
             Action::from_id(id)
@@ -64,6 +80,7 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
     handle.publish(Projection {
         enabled: 0,
         full: true,
+        visibility: None,
     });
     assert!(updates.borrow().exhausted);
 }
@@ -77,8 +94,9 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
     let server = broker.connection().await;
     let (state, _) = watch::channel(State {
         projection: Projection {
-            enabled: 0x187ff,
+            enabled: 0x1f87ff,
             full: true,
+            visibility: None,
         },
         ..Default::default()
     });
@@ -112,7 +130,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .unwrap();
     assert_eq!(revision, 1);
     assert_eq!(tree.0, 0);
-    assert_eq!(tree.2.len(), 17);
+    assert_eq!(tree.2.len(), 21);
     let rows: Vec<i32> = tree
         .2
         .into_iter()
@@ -122,7 +140,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         })
         .collect();
     assert_eq!(rows, ROWS);
-    for id in (1..=11).chain([16, 17]) {
+    for id in (1..=11).chain(16..=21) {
         let label: OwnedValue = proxy.call("GetProperty", &(id, "label")).await.unwrap();
         assert_eq!(
             String::try_from(label).unwrap(),
@@ -133,7 +151,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .call("GetGroupProperties", &(Vec::<i32>::new(), vec!["enabled"]))
         .await
         .unwrap();
-    assert_eq!(props.len(), 18);
+    assert_eq!(props.len(), ROWS.len() + 1);
     assert!(props
         .iter()
         .all(|(_, props)| props.keys().all(|key| key == "enabled")));

@@ -8,8 +8,9 @@ tray/card UX and full Google Quick Share parity, not an achieved compatibility c
 [Completion audit](native-completion-audit.md) separates implemented manual flows,
 remaining product work and current-package physical acceptance. The basic native
 shell is substantial but not release accepted or UI-complete. Next recommended
-slice is authoritative live visibility/quick controls; option1 is selected and its
-[implementation contract](native-live-visibility.md) is frozen before code.
+[Live visibility/quick controls](native-live-visibility.md) option1 is implemented
+and scoped source checks passed. Native9 package verification is next; native8
+remains the measured candidate until that finishes.
 
 ## Documentation maintenance plan and rationale
 

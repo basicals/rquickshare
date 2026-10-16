@@ -27,7 +27,7 @@ no unaffected Rust/GTK/package checks are repeated for a documentation change.
 |---|---|---|---|
 | Manual sharing | Native file/folder selection, multiple files, one explicit recipient, PIN/Accept/Reject, progress/cancel; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native8 with real Android/Google Windows; radio failure/large files/interruptions |
 | Text and clipboard | Outbound text/URL and explicit clipboard capture; reviewed immutable PNG image source; incoming text/URL review and explicit Copy | Complete Remote Copy negotiation/peer semantics; native Wi-Fi/app completeness | Current peer/clipboard/portal behavior on installed desktop |
-| Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states | Live visibility projection/quick actions; localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
+| Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states | Live visibility/quick actions now implemented (native-live-visibility.md); localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
 | Settings and desktop | Daemon-owned Settings2/schema2, migration/recovery, live name, receive-directory capability, opt-in daemon+tray login start and Dolphin Send assets | Broader desktop/share-target integration is not complete | Installed context menu, autostart, restart, upgrade/removal, recovery and live-transfer behavior |
 | Preview images | Bounded byte ingress, real isolated Glycin/Bwrap helper, bounded pixels/cancel/deadline/reaping, synthetic Full/Compact fixture | Canonical peer payload encoding/mapping/order, admitted core routing, daemon IPC/production-card binding and outgoing previews | Real peer preview interoperability; fixture is not this evidence |
 | Resume/dedup | Modern wire fields only | Content identity, safe partial storage/integrity/recovery and actual negotiation | Interrupted transfers against supported peers |
@@ -81,7 +81,7 @@ the already selected Glycin decoder boundary must not be asked again.
 
 ## Continuation order
 
-1. Finish live visibility/quick-control native UX after selection.
+1. Live visibility/quick-control source is complete; verify the changed native9 candidate, then installed acceptance.
 2. Complete installed KDE/Wayland and current-package manual-sharing acceptance
    when the required peer/session is available; failures may reveal source defects.
 3. Obtain canonical preview fixtures and implement the compatible receive/IPC/card

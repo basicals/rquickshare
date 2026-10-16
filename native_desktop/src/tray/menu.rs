@@ -8,7 +8,9 @@ pub(super) const PATH: &str = "/Menu";
 #[cfg(test)]
 pub(super) const INTERFACE: &str = "com.canonical.dbusmenu";
 const MAX_PROPERTIES: usize = 16;
-const ROWS: [i32; 17] = [1, 12, 2, 3, 16, 17, 4, 5, 13, 6, 7, 14, 8, 9, 10, 15, 11];
+const ROWS: [i32; 21] = [
+    1, 12, 18, 19, 20, 21, 2, 3, 16, 17, 4, 5, 13, 6, 7, 14, 8, 9, 10, 15, 11,
+];
 pub type Layout = (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>);
 type Properties = Vec<(i32, HashMap<String, OwnedValue>)>;
 
@@ -28,6 +30,10 @@ pub enum Action {
     Quit,
     Text = 16,
     Image = 17,
+    Visible = 18,
+    Hidden = 19,
+    Temporary = 20,
+    RetryVisibility = 21,
 }
 impl Action {
     pub fn from_id(id: i32) -> Option<Self> {
@@ -45,6 +51,10 @@ impl Action {
             11 => Self::Quit,
             16 => Self::Text,
             17 => Self::Image,
+            18 => Self::Visible,
+            19 => Self::Hidden,
+            20 => Self::Temporary,
+            21 => Self::RetryVisibility,
             _ => return None,
         })
     }
@@ -54,6 +64,10 @@ impl Action {
             Self::Files => "Send files…",
             Self::Text => "Send text…",
             Self::Image => "Send image…",
+            Self::Visible => "Visible",
+            Self::Hidden => "Hidden",
+            Self::Temporary => "Visible for one minute",
+            Self::RetryVisibility => "Retry visibility change",
             Self::Folder => "Send a folder…",
             Self::Incoming => "Incoming requests",
             Self::Transfers => "Transfers",
@@ -71,6 +85,8 @@ impl Action {
             Self::Files => Some("files"),
             Self::Text => Some("send-text"),
             Self::Image => Some("send-image"),
+            Self::Visible | Self::Hidden | Self::Temporary => Some("visibility"),
+            Self::RetryVisibility => Some("visibility-retry"),
             Self::Folder => Some("folder"),
             Self::Incoming => Some("incoming"),
             Self::Transfers => Some("transfers"),
@@ -89,6 +105,7 @@ impl Action {
 pub struct Projection {
     pub enabled: u32,
     pub full: bool,
+    pub visibility: Option<u8>,
 }
 #[derive(Clone, Copy)]
 pub(super) struct State {
@@ -103,6 +120,7 @@ impl Default for State {
             projection: Projection {
                 enabled: 0,
                 full: false,
+                visibility: None,
             },
             exhausted: false,
         }
@@ -139,7 +157,7 @@ fn invalid() -> fdo::Error {
     fdo::Error::InvalidArgs("Invalid menu request".into())
 }
 fn known(id: i32) -> bool {
-    (0..=17).contains(&id)
+    (0..=21).contains(&id)
 }
 fn validate_properties(names: &[String]) -> fdo::Result<()> {
     if names.len() > MAX_PROPERTIES
@@ -171,6 +189,19 @@ fn properties(id: i32, state: State, names: &[String]) -> HashMap<String, OwnedV
             put("toggle-type", OwnedValue::from(Str::from("radio")));
             let selected = (action == Action::Full) == state.projection.full;
             put("toggle-state", OwnedValue::from(i32::from(selected)));
+        }
+        let mode = match action {
+            Action::Visible => Some(0),
+            Action::Hidden => Some(1),
+            Action::Temporary => Some(2),
+            _ => None,
+        };
+        if let Some(mode) = mode {
+            put("toggle-type", OwnedValue::from(Str::from("radio")));
+            put(
+                "toggle-state",
+                OwnedValue::from(i32::from(state.projection.visibility == Some(mode))),
+            );
         }
     } else {
         put("type", OwnedValue::from(Str::from("separator")));
@@ -255,7 +286,7 @@ impl Menu {
         }
         validate_properties(&property_names)?;
         let ids = if ids.is_empty() {
-            (0..=17).collect()
+            (0..=21).collect()
         } else {
             ids
         };
