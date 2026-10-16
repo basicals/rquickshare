@@ -234,3 +234,21 @@ Handoff verification: 58 affected local links resolve; evidence JSON parses.
 Runtime/core/native/packaging/build-script source matches binary commit1607c8f;
 the later native README edit is documentation only. Native13 source/package
 export will record its own final documentation commit. No runtime suite repetition.
+
+## First Android outbound observation
+
+The user reported receiving the prepared file on Android with matching code.
+A private immutable daemon snapshot shows one outbound Finished and zero remaining
+source/handle/byte resources. Its outgoing terminal details are Unsupported,
+without manifest/byte counters. An initial observer assertion expecting the exact
+fixture manifest failed; source tests were not changed or weakened. A focused
+read established the actual available fields. Do not claim independently checked
+123/123 bytes or a remote hash. No peer name/identifier or PIN was logged.
+
+This is a successful first user-confirmed outbound smoke, not full Android/Windows
+parity, independently hashed remote contents, reverse sharing or rejection/
+interruption acceptance. Exact Android/Quick Share version remains unprovided.
+The outgoing metadata/progress projection limitation is retained for the essential
+acceptance queue; do not expand the selected cosmetic slice into a new daemon API.
+Native13 source/package/installed tmpfs repair is complete. The next user request
+is the explicit eight-point card/tray cleanup, tracked in native-card-cleanup.md.

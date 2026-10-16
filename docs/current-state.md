@@ -247,3 +247,10 @@ source and application owners intact while awaiting the user's check.
 Native13 is not signed or staged into APT; the earlier native12 unsigned repository
 and unapproved request are retained historical artifacts, not this repaired release.
 Exact repair/build/install/runtime observations: evidence/native-tmpfs-source-2026-10-16.json.
+
+First Android outgoing smoke passed by user report: file received, matching code.
+The daemon shows one outbound Finished and zero source resources; outgoing terminal
+metadata is Unsupported with no manifest/byte counters, so independent byte/hash
+verification is not claimed. Exact versions, reverse sharing and interruption/
+Windows checks remain open. Next selected work: the user's eight-point card/tray
+cleanup in native-card-cleanup.md, while preserving the essential acceptance queue.

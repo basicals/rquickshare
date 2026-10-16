@@ -162,11 +162,31 @@
       "transfers": 0,
       "observed_at": "2026-10-16T19:55:57.399122+00:00"
     },
-    "user_result_pending": true
+    "user_result_pending": false
   },
   "documentation_verification": {
     "local_links_verified": 58,
     "json_valid": true,
     "runtime_sources_match_binary_commit": true
+  },
+  "android_outbound": {
+    "observed_at": "2026-10-16T20:03:57.290865+00:00",
+    "user_reported_file_received": true,
+    "user_reported_code_matched": true,
+    "android_version": null,
+    "quick_share_version": null,
+    "remote_file_sha256_independently_verified": false,
+    "daemon_observation": {
+      "outbound_transfer_count": 1,
+      "phase": "finished",
+      "detail_status": "unsupported",
+      "total_bytes": 0,
+      "transferred_bytes": 0,
+      "manifest_available": false,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0
+    },
+    "first_observer_assertion_failed": "Observer assumed outgoing terminal metadata includes fixture manifest/bytes; actual metadata unsupported. No source test assertion changed."
   }
 }
