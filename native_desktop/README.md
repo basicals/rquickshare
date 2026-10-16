@@ -10,7 +10,7 @@ The original blue application icon is restored, and Settings/tray offer an owned
 About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
 checks and exact installed status.
 
-The installed native17 follows the approved [UI mockup](../docs/native-card-usability.md):
+The installed native18 follows the approved [UI mockup](../docs/native-card-usability.md):
 Compact has Receive, Send, Full view and Hide; Full has one keyed device/request/
 transfer list, icon-overlay statuses and inline code/manifest/progress actions.
 No main tabs or branding. The branded Settings window uses General, Receiving,
@@ -21,7 +21,8 @@ Full/Compact changes preserve a pinned bottom edge while the card fits onscreen.
 The shortened tray offers a visibility-aware Open/Hide, Receive, one Send entry,
 actual incoming/active counts, three live visibility choices, Settings/About and
 Quit. Appearance stays on the card. Receive reviews a waiting request, otherwise
-requests one-minute visibility through the existing daemon owner; it never accepts.
+requests one-minute visibility through the existing daemon owner while preserving
+the chosen card view; it never accepts.
 The Send surface offers files/folder/text/explicit clipboard image capture. Add
 files atomically extends an unsent file source in the daemon, preserving the base
 on failure and never auto-sending after chooser completion. See

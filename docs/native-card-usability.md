@@ -568,7 +568,7 @@ is a scoped correction to the selected flow, not a new product decision.
    handles are connection-bound and are not fabricated by GTK tests. That branch
    is source-reviewed and still needs physical incoming acceptance. The affected
    smoke and strict native lint run once; no unchanged core/full-suite repetition.
-3. [ ] R3: bump distinct native18, build/package verify, upgrade only through
+3. [x] R3: bump distinct native18, build/package verify, upgrade only through
    known-owner/zero-preparation/nonterminal-transfer gates, then record installed
    state and immutable handoff. Preserve native16/native17 rollback artifacts.
 
@@ -594,3 +594,13 @@ private-settings verification passed for14 files. Distinct package is
 requires the existing known native17 owners2168586/2168587 (or already closed GUI),
 zero global prepared resources and no active transfer. No unsafe source discard
 or signing/publication. Build exited: Terminal closed.
+
+R3 installed observations: native18 replaced native17 through the known-owner idle
+gate with zero prepared sources/handles/bytes and no active transfer. Apt passed,
+all14 installed regular files matched bytes/mode/root ownership, and exactly one
+active rquickshare tray had the expected15 rows. Current daemon/desktop service
+PIDs2170697/2170698; login start remains disabled. No user files were removed.
+Native16/native17 package/source exports are retained for rollback. See
+[evidence](evidence/native-receive-view-2026-10-17.json). The user was asked to check
+no-request Receive staying Compact and the shared bottom edge on native18; these
+physical results are pending, not inferred from isolated checks. Terminal closed.

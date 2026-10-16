@@ -1,15 +1,18 @@
 # Current implementation and continuation state
 
-Latest work (2026-10-17): native17 is installed and running, with Compact order
-Receive, Send, Full view, Hide and native Bottom anchoring across card resizing.
-All14 installed files and one active15-row tray match; login start remains off.
-Current owned daemon/desktop PIDs2168586/2168587. Physical bottom-edge alignment
-has been requested but not confirmed. Native16 user-confirmed dragging and staged
-Settings OK/Cancel remain historical evidence. The user then reported Receive
-incorrectly expanding Compact with no waiting request. The next scoped native18
-correction is documented before code in [card usability](native-card-usability.md):
-preserve the current view and request one-minute visibility unless a request
-needs review. Native17 remains installed until the idle native18 upgrade gate.
+Latest work (2026-10-17): native18 is installed and running. It includes Compact
+order Receive, Send, Full view, Hide; pinned bottom anchoring across Full/Compact
+resizing; and corrected Receive navigation. Without a pending incoming request,
+Receive requests one-minute visibility and preserves the current card mode/page
+and an already visible card's position. With a pending request it opens explicit
+code/manifest review in Full. No auto-accept. The affected actual GTK smoke and
+strict native lint passed once; offline package verification,14 installed file
+comparisons and one active15-row tray passed. Login start remains off. Current
+owned daemon/desktop PIDs2170697/2170698. Physical Receive/edge checks are requested
+but not confirmed. Native16 user-confirmed dragging/Settings OK/Cancel remain
+historical evidence. Native16/native17 immutable rollback packages/source archives
+remain available. See [card usability](native-card-usability.md) and
+[native18 evidence](evidence/native-receive-view-2026-10-17.json).
 The user selected Receive=request review or one-minute
 visibility, view switching only on the card and atomic daemon-owned Add files.
 [Source extension](native-source-extension.md) is committed with core/SDK checks.
