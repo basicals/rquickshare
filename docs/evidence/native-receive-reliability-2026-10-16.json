@@ -154,5 +154,27 @@
   },
   "native9_preserved": true,
   "native11_preserved": true,
-  "owned_processes_exited": true
+  "owned_processes_exited": true,
+  "public_export": {
+    "completed": true,
+    "source_commit": "1802f2f96e87f3464cead8a1232faaf8e9f30af7",
+    "binary_source_commit": "88c1f94003fc35c665568024273d446b5ced35ed",
+    "source_zip": {
+      "name": "rquickshare-native12-source.zip",
+      "sha256": "bd12f4ac5210fa3ada9b2574fac0a567ef43ccdfae1808b2178290a8593d775d",
+      "tracked_files": 482,
+      "crc_inventory_selected_bytes_verified": true
+    },
+    "unsigned_apt_zip": {
+      "name": "rquickshare-native12-apt-UNSIGNED.zip",
+      "sha256": "f8fe5e8982f77a3512b9f07de740fe8cbfe51a73641e2579ae024caab818d29a",
+      "files": 7,
+      "signed": false
+    },
+    "receipt": "rquickshare-native12-export.json",
+    "archive_precedes_final_handoff_docs": true,
+    "generic_source_refreshed": true,
+    "previous_artifacts_preserved": true
+  },
+  "selected_scope_complete": true
 }

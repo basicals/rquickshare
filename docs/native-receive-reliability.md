@@ -66,7 +66,7 @@ per-file publication and explicit partial-outcome scope.
    regressions for incomplete drop/cancel, preparation failure after an earlier
    member, write/completion failure, complete success and collision/replacement.
    No subject mocks, no sleep-based waits, no full unrelated suite repetitions.
-5. [ ] R5: run affected checks once, record observations, update SSOT and prepare
+5. [x] R5: run affected checks once, record observations, update SSOT and prepare
    a changed candidate only after final source is ready. Preserve native11.
 
 Risks: accidental removal of user files, premature final names, incorrect partial
@@ -254,4 +254,32 @@ checked excluding only native_desktop/README.md from the native source paths.
 The final immutable source archive records its own later documentation commit.
 Logs: /tmp/rqs-native12-build.log, /tmp/rqs-native12-review.log (early precondition),
 /tmp/rqs-native12-review-final.log. All owned processes exited: Terminal closed.
-Exact committed-source/public-artifact export remains the final R5 handoff step.
+Exact committed-source/public-artifact export completed as recorded below.
+
+## R5 completed handoff
+
+Immutable source archive rquickshare-native12-source.zip contains all482 tracked
+files from1802f2f96e87f3464cead8a1232faaf8e9f30af7, SHA256
+bd12f4ac5210fa3ada9b2574fac0a567ef43ccdfae1808b2178290a8593d775d. ZIP CRC/exact
+inventory and selected Git bytes passed. Runtime code matches binary source
+88c1f94003fc35c665568024273d446b5ced35ed; the archive includes
+later measured documentation/README and precedes this final handoff entry. Keep
+that exact immutable archive; generic rquickshare-native-gtk-source.zip matches it.
+Previous named native11 and older source/packages are preserved.
+
+Release package/sidecar copied bytes match the reviewed package. Unsigned7-file
+APT ZIP CRC, inventory and every file byte passed, SHA256
+f8fe5e8982f77a3512b9f07de740fe8cbfe51a73641e2579ae024caab818d29a. Public request
+copy digest matches the unapproved review request. No signature or publication.
+Feature/current-state/roadmap/audit/package/README/acceptance copies, progress and
+readiness are refreshed. Backup facts remain intact; remote observations are still
+dated2026-10-14, not rechecked by this fix.
+
+R1-R5 are complete for selected per-file receive publication and explicit partial
+results. This is Linux-source/offline-candidate verification, not physical peer,
+installed desktop/lifecycle, universal filesystem, whole-product coverage or
+power-loss acceptance. Previews remain excluded; resume and advanced parity remain
+deferred. Continue essential current Android/Windows/KDE acceptance and concrete
+reliability fixes; do not sign/publish on generic continuation. Rollback must keep
+handler/storage/receipt/SDK/GTK changes coordinated and remove exposure first.
+All owned terminal commands/processes exited: Terminal closed.
