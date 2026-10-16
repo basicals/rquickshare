@@ -717,3 +717,12 @@ See [native19 evidence](evidence/native-card-feedback-2026-10-17.json). The user
 has been asked to inspect the new header and actual green pulse; physical native19
 acceptance is pending. Native18 Receive/shared-bottom acceptance is confirmed.
 Native18 package remains the immutable rollback. Terminal closed.
+
+Native19 handoff: immutable public source ZIP has500 tracked files at
+acc60eef55f38004754ed941b595cf71889f2470, SHA-256
+8db040da2db2c6d17e0de05cae94699be963bafbd6c45df4d1f7585c7365caf4. Binary source remains
+ed4fffac40e19c8a27d2570825fe8899c12946e0. Package/source/isolated-widget
+frames and rquickshare-native19-export.json are in the existing outputs directory.
+Native18 package/source are unchanged rollback references. Mutable continuation
+exports follow the final docs commit, distinct from the immutable source ZIP.
+No release signing, APT staging, publication or cloud request was performed.
