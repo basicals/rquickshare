@@ -3,7 +3,7 @@
 Current implementation, selected distribution/signing bindings and remaining gates:
 [current state](current-state.md). Dated checkpoints below retain historical observations.
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-16_
 
 The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, initial compatibility matrix and migration history. Current choices and implementation gates are indexed in current-state.md.
 
@@ -29,7 +29,9 @@ private-bucket publication/approval tooling is in [native-r2.md](native-r2.md).
 Production prefix routing and real signing identity are ready; exact release
 approval, scoped publisher access, signed public APT and installed updates remain
 open. Account/QR capabilities still require their own work. Latest completed slice:
-[live native device name](native-device-name.md).
+[isolated native preview decoder foundation](native-preview-review.md), not remote
+preview ingestion. [Completion audit](native-completion-audit.md) records remaining
+everyday UI work and physical acceptance separately.
 
 ## Product principles
 
@@ -221,7 +223,12 @@ A prospective local Ubuntu + physical Pixel/ADB hardware automation harness is s
 
 ## Current implementation order
 
-The 2026-10-12 user correction supersedes the previous custom-name-first order. Next: confirm the tray/notification UX, design the native service boundary and migration, then deliver the native shell and parity gaps in separable stages. The authoritative order and rollback points are in [product-direction.md](product-direction.md). The list below preserves the protocol feature dependencies; its first three steps already have implementations. Completed offline infrastructure is tracked in [offline-maintenance.md](offline-maintenance.md).
+The native daemon/D-Bus/GTK shell, manual-sharing surfaces, desktop ownership and
+decoder foundation are implemented. The next everyday UI review is authoritative
+live visibility and quick controls in [completion audit](native-completion-audit.md).
+Continue installed/physical acceptance separately and preserve the open account,
+preview wire and resume gates. The list below retains broader feature dependencies;
+it is not a claim that completed foundation slices need implementing again.
 
 1. Modern protocol model.
 2. Clipboard/text outbound.

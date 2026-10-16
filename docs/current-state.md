@@ -1,9 +1,14 @@
 # Current implementation and continuation state
 
-Updated2026-10-15. Mode A; direct dev, no branch/worktree/push. This is the current
+Updated2026-10-16. Mode A; direct dev, no branch/worktree/push. This is the current
 status index. Dated entries in other documents remain historical evidence; they
 must not override this index or the linked feature contracts. Goals remain native
 tray/card UX and full Google Quick Share parity, not an achieved compatibility claim.
+
+[Completion audit](native-completion-audit.md) separates implemented manual flows,
+remaining product work and current-package physical acceptance. The basic native
+shell is substantial but not release accepted or UI-complete. Next recommended
+slice is authoritative live visibility/quick controls; its UI/API choice is pending.
 
 ## Documentation maintenance plan and rationale
 
@@ -116,14 +121,14 @@ on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The 
 confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
 repair observations remain in native-signing-backup.md and its JSON.
 
-No production APT release has been signed/published. Current native7 package SHA256
-c426c29d8141d752b04943d2629eb8e1c1123ec3f99aebbd27e8b38c0cb465bf was built
-fromc286e206a3992bd0eee057c017a4cca3cbbe6576 and verified offline. The current
-unsigned APT metadata expires2026-10-22T21:21:09Z; canonical first-release request
-ab6fff2d380954f8a549484f78930292caa0b94afb43a054d963a3224643a323
+No production APT release has been signed/published. Current native8 package SHA256
+e89c5ed7a5e356228926d139f2585626dd56528fe74c80fe436643a7a6d26842 was built
+fromfb55e8b8fa124cff0911d2deba31ba1bde762441 and verified offline. The current
+unsigned APT metadata expires2026-10-23T06:35:16Z; canonical first-release request
+e206c18cba37b472432c8af37750b259701821b942b1f9c10699c00723383259
 is unapproved. Exact artifact/source/check evidence is linked in
-native-trust-review.md and evidence/native-peer-authentication-2026-10-15.json.
-Native6 is the prior visibility checkpoint, native4 the name checkpoint;
+native-preview-review.md and evidence/native-preview-decoder-2026-10-16.json.
+Native7 is the verifier checkpoint, native6 the core visibility checkpoint, native4 the name checkpoint;
 intermediate native5 was superseded by explicit SDK shutdown. Prior artifacts
 remain preserved. Do not confuse a source-commit assertion with proof
 of build provenance or report later documentation-only commits as binary rebuilds.
