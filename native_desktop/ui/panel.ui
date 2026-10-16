@@ -12,6 +12,7 @@
       <property name="orientation">vertical</property><property name="spacing">10</property>
       <property name="overflow">hidden</property><style><class name="rqs-card-body"/></style>
       <child><object class="GtkBox" id="header"><property name="spacing">6</property>
+        <child><object class="GtkButton" id="send-entry"><property name="label">Send files…</property><property name="action-name">panel.send</property><property name="valign">center</property></object></child>
         <child><object class="GtkBox" id="drag-handle"><property name="hexpand">true</property><property name="height-request">32</property><property name="tooltip-text">Drag to move</property></object></child>
         <child><object class="GtkButton" id="settings-button"><property name="icon-name">emblem-system-symbolic</property><property name="tooltip-text">Settings</property><property name="action-name">panel.settings</property><style><class name="flat"/></style></object></child>
         <child><object class="GtkButton" id="mode"><property name="icon-name">view-restore-symbolic</property><property name="tooltip-text">Compact view</property><style><class name="flat"/></style></object></child>
@@ -20,7 +21,6 @@
       <child><object class="GtkLabel" id="status"><property name="xalign">0</property><property name="wrap">true</property><style><class name="dim-label"/></style></object></child>
       <child><object class="GtkBox" id="source"><property name="spacing">6</property><style><class name="selection-card"/></style>
         <child><object class="GtkLabel" id="selection"><property name="wrap">true</property><property name="hexpand">true</property><property name="xalign">0</property></object></child>
-        <child><object class="GtkButton" id="send-entry"><property name="label">Send files…</property><property name="action-name">panel.send</property><property name="hexpand">true</property></object></child>
         <child><object class="GtkButton" id="files"><property name="label">Add files…</property><property name="hexpand">true</property></object></child>
         <child><object class="GtkButton" id="folder"><property name="label">Folder…</property></object></child>
         <child><object class="GtkButton" id="discard"><property name="icon-name">edit-clear-symbolic</property><property name="tooltip-text">Discard prepared files</property></object></child>
@@ -37,7 +37,7 @@
       </object></child>
       <child><object class="GtkStack" id="pages"><property name="vexpand">false</property><property name="transition-type">none</property><property name="vhomogeneous">false</property>
         <child><object class="GtkStackPage"><property name="name">nearby</property><property name="title">Nearby</property><property name="child">
-          <object class="GtkScrolledWindow"><property name="hscrollbar-policy">never</property><property name="min-content-height">120</property><property name="max-content-height">300</property><property name="propagate-natural-height">true</property><property name="child">
+          <object class="GtkScrolledWindow" id="nearby-scroll"><property name="hscrollbar-policy">never</property><property name="min-content-height">0</property><property name="max-content-height">300</property><property name="propagate-natural-height">true</property><property name="child">
             <object class="GtkBox" id="nearby"><property name="orientation">vertical</property><property name="spacing">10</property></object>
           </property></object>
         </property></object></child>

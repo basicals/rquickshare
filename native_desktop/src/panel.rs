@@ -443,7 +443,14 @@ impl Panel {
                 let model = panel.model.borrow();
                 let nearby = model.mode == Mode::Full
                     && pages.visible_child_name().as_deref() == Some("nearby");
-                panel.box_widget("source").set_visible(nearby);
+                panel.box_widget("source").set_visible(
+                    nearby
+                        && model
+                            .state
+                            .view
+                            .as_ref()
+                            .is_some_and(|view| !view.selections.is_empty()),
+                );
                 panel.box_widget("recipients").set_visible(
                     nearby
                         && (!model.recipients.is_empty()
@@ -817,8 +824,14 @@ impl Panel {
         let model = self.model.borrow();
         let preview = model.preview;
         let full = model.mode == Mode::Full;
-        self.box_widget("source")
-            .set_visible(full && self.pages.visible_child_name().as_deref() == Some("nearby"));
+        self.box_widget("source").set_visible(
+            full && self.pages.visible_child_name().as_deref() == Some("nearby")
+                && model
+                    .state
+                    .view
+                    .as_ref()
+                    .is_some_and(|view| !view.selections.is_empty()),
+        );
         self.box_widget("header").set_visible(full);
         self.pages.set_visible(full);
         self.box_widget("compact").set_visible(!full);
@@ -845,6 +858,26 @@ impl Panel {
             .as_ref()
             .filter(|view| view.available && view.running && !model.state.disconnected);
         let mode = visibility.map(|view| view.mode);
+        let receiving = !preview
+            && mode == Some(2)
+            && model
+                .state
+                .view
+                .as_ref()
+                .is_some_and(|view| view.synchronized && view.lifecycle == Lifecycle::Running);
+        let receive = self.button("quick-receive");
+        if receiving {
+            receive.add_css_class("receive-active");
+        } else {
+            receive.remove_css_class("receive-active");
+        }
+        let description = if receiving {
+            "Visible for receiving — one-minute mode"
+        } else {
+            "Review an incoming request or become visible for one minute"
+        };
+        receive.set_tooltip_text(Some(description));
+        receive.update_property(&[gtk::accessible::Property::Description(description)]);
         let visibility_action = self
             .actions
             .lookup_action("visibility")
@@ -1424,8 +1457,7 @@ impl Panel {
             transfers.append(&row);
         }
         self.pages.set_visible_child_name("nearby");
-        self.box_widget("source")
-            .set_visible(self.mode() == Mode::Full && page == "nearby");
+        self.box_widget("source").set_visible(false); // Preview has no prepared source.
         self.resize_to_content();
     }
 }

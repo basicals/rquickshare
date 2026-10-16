@@ -23,3 +23,16 @@ window.rqs-card-window { background: transparent; border: none; box-shadow: none
 
 .device-status.accent { color: @theme_selected_bg_color; }
 .quick-action { min-height: 64px; padding: 8px; }
+
+/* The daemon owns visibility/expiry; CSS animates only its confirmed projection. */
+@keyframes receive-pulse {
+  0%, 100% { background-color: #237a3b; }
+  50% { background-color: #36964e; }
+}
+button.quick-action.receive-active {
+  background-image: none;
+  background-color: #237a3b;
+  color: white;
+  border-color: #237a3b;
+  animation: receive-pulse 1.8s ease-in-out infinite;
+}

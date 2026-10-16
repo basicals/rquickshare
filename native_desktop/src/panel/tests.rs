@@ -80,6 +80,12 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
 ) {
     // Arrange: this single GTK test runs on an isolated display/session bus.
     gtk::init().unwrap();
+    let css_errors = Rc::new(RefCell::new(Vec::new()));
+    let observed = css_errors.clone();
+    let css = gtk::CssProvider::new();
+    css.connect_parsing_error(move |_, _, error| observed.borrow_mut().push(error.to_string()));
+    css.load_from_string(include_str!("../../ui/panel.css"));
+    assert!(css_errors.borrow().is_empty(), "{:?}", css_errors.borrow());
     rows::verify_keyed_layout();
     reveal::tests::verify_reveal_smoke();
     let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -123,7 +129,19 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .actions
         .activate_action("mode", Some(&"full".to_variant()));
     assert_eq!(panel.model.borrow().mode, Mode::Full);
-    assert!(panel.pages.get_visible() && panel.box_widget("source").get_visible());
+    assert!(panel.pages.get_visible());
+    assert!(!panel.box_widget("source").get_visible());
+    assert_eq!(
+        panel.button("send-entry").parent(),
+        Some(panel.box_widget("header").upcast())
+    );
+    assert!(!panel.button("send-entry").hexpands());
+    let scroll = panel
+        .builder
+        .object::<gtk::ScrolledWindow>("nearby-scroll")
+        .unwrap();
+    assert_eq!(scroll.min_content_height(), 0);
+    assert_eq!(scroll.max_content_height(), 300);
     assert!(!panel.box_widget("compact").get_visible());
     assert!(*panel.ingress.gate.subscribe().borrow());
     panel
@@ -373,4 +391,60 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.context.parent().is_none());
     assert!(!settings.is_visible());
     panel.close(); // Explicit Quit and the application cleanup may both close the panel.
+}
+
+// Optional actual-widget frames; no connected writer, timer-based state or daemon transfer fixture.
+pub(super) fn capture_card(panel: &Rc<Panel>, name: &str) {
+    use gtk::gdk::prelude::PaintableExt;
+    let Some(output) = std::env::var_os("RQS_CARD_PREVIEW_OUTPUT") else {
+        return;
+    };
+    let output = std::path::PathBuf::from(output);
+    assert!(output.is_absolute());
+    std::fs::create_dir_all(&output).unwrap();
+    let destination = output.join(format!("{name}.png"));
+    panel.window.present();
+    panel.window.queue_draw();
+    let finished = Rc::new(Cell::new(false));
+    let captured = finished.clone();
+    let loop_ = glib::MainLoop::new(None, false);
+    let completed = loop_.clone();
+    let clock = panel.window.frame_clock().unwrap();
+    let window = panel.window.clone();
+    // Snapshot only after GTK has painted the new layout, not the previous frame cached at tick time.
+    let paint = clock.connect_after_paint(move |_| {
+        if window.width() <= 0 || window.height() != window.default_height() {
+            return;
+        }
+        let paintable = gtk::WidgetPaintable::new(Some(&window));
+        let snapshot = gtk::Snapshot::new();
+        paintable.snapshot(&snapshot, window.width().into(), window.height().into());
+        let Some(node) = snapshot.to_node() else {
+            return;
+        };
+        window
+            .renderer()
+            .unwrap()
+            .render_texture(&node, None)
+            .save_to_png(&destination)
+            .unwrap();
+        captured.set(true);
+        completed.quit();
+    });
+    let expired = Rc::new(Cell::new(false));
+    let timeout_fired = expired.clone();
+    let deadline = loop_.clone();
+    let timeout = glib::timeout_add_local_once(std::time::Duration::from_secs(10), move || {
+        timeout_fired.set(true);
+        deadline.quit();
+    });
+    loop_.run();
+    if !expired.get() {
+        timeout.remove();
+    }
+    clock.disconnect(paint);
+    assert!(
+        finished.get(),
+        "actual card frame did not become renderable"
+    );
 }

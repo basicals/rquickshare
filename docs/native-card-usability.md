@@ -630,19 +630,19 @@ without a new toolbar/window/action/API. VisibilityView already reports actual
 available/running mode2 and existing state updates report expiry; no UI-owned
 minute deadline or timer should be added.
 
-1. [ ] H1: move the existing Send files widget before the flexible header spacer,
+1. [x] H1: move the existing Send files widget before the flexible header spacer,
    remove its horizontal expansion, keep its action/popover/source semantics.
    Show the separate padded preparation row only when a source exists. Remove
    the main scroller's120px minimum while keeping its300px content cap and natural
    measurement. Retain the drag spacer and action hit areas, inline consent and
    Add/Clear controls. Compact remains exactly four actions.
-2. [ ] H2: bind a scoped Receive CSS class to confirmed live temporary visibility,
+2. [x] H2: bind a scoped Receive CSS class to confirmed live temporary visibility,
    independent of transient operation busy flags. Use a slow1.8-second green
    background pulse, never blinking text or a UI timer. Remove it on hidden/normal
    visible/unavailable/disconnected/stopped/unsynchronized state. Tooltip and
    accessible description name the one-minute mode; failure to apply must not
    display success. No new user setting or persisted field.
-3. [ ] H3: extend the existing GTK smoke with header/empty-height/preparation
+3. [x] H3: extend the existing GTK smoke with header/empty-height/preparation
    invariants and mode/availability/busy/disconnection transitions for the class.
    Run affected checks and strict native lint once. Inspect actual empty/full and
    temporary Compact frames using isolated test widgets, with no real visibility
@@ -658,3 +658,44 @@ motion; the active class still has a green base and textual accessibility hint.
 No security/protocol/schema change, no automatic consent, no broad refactoring.
 Rollback is the scoped code commit plus native18 package when idle. Physical
 acceptance is separate from isolated GTK/renderer evidence.
+
+H3 first affected run: compilation/CSS parse and visibility transition assertions
+passed, but an exact scroller==child natural-height assertion expected45px while
+GTK's intrinsic frame/scrollbar minimum is46px. This is distinct from the removed
+120px content floor. Correct the assertion to natural=max(child natural,intrinsic
+minimum), retain min-content-height=0 and explicitly reject the former120px empty
+allocation. No production workaround, relaxed consent check or hidden defect.
+The failed run exited: Terminal closed. Rerun only the affected smoke.
+
+H3 corrected assertions passed1/0 in0.71s; strict native lint passed in1.58s.
+Visual inspection caught stale frames in the optional capture helper: a tick
+callback runs before paint, so WidgetPaintable could still expose the previous
+case's cached content. Change the helper to FrameClock after-paint and retain
+the allocation/readiness condition plus bounded failure deadline. This is a
+fixture capture correction, not a production visibility or navigation change.
+Repeat only the affected capture smoke/lint after that test-source change.
+
+H3 frame investigation correction: after-paint capture still showed the old
+incoming fixture. The root cause was an already-running preview decoder callback,
+which repainted that fixture when the test first entered GLib event processing.
+End that owned asynchronous preview fixture and temporarily clear/restore its
+preview-page routing before switching the same widgets to live projection checks.
+Keep after-paint capture because it correctly observes a completed GTK frame.
+These frames explicitly have no service writer and retain the corresponding
+unavailable-service warning; they do not claim a real connected daemon.
+The second corrected smoke passed1/0 in0.66s; its frames were rejected by visual
+inspection. Strict lint passed1.13s. Repeat the affected smoke/lint after fixing
+the fixture lifecycle, not an unchanged full suite. Terminal closed.
+
+H1-H3 completed: header Send files keeps the existing action/popover without
+expanding; the source row is hidden until a preparation exists. Main list natural
+height no longer reserves120px. Confirmed running/synchronized temporary visibility
+adds receive-active and a textual accessibility/tooltip description; normal/hidden/
+unavailable/disconnected/stopped/unsynchronized remove it. Busy or pending controls
+do not hide confirmed visibility. CSS parsing passed with no errors. Final affected
+actual GTK smoke passed1/0 in0.58s after fixture corrections; final strict native
+lint passed. Empty Full and green temporary Compact frames were inspected after
+GTK paint; the empty list is a single natural-height row, with the disconnected
+warning intentionally visible because these widgets have no connected writer.
+No core/full-native repetition, no production timer or persisted field. All owned
+checks exited: Terminal closed. Native19 build/installed verification follows.

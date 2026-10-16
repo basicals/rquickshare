@@ -142,7 +142,9 @@ impl Panel {
 pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     // Existing GTK smoke thread; no broker/menu side effects are mocked.
     assert_eq!(panel.tray_projection().enabled & Action::Open.bit(), 0); // Preview inert.
+    panel.preview_image.cancel(); // End the old asynchronous incoming-preview fixture before live projection checks.
     panel.model.borrow_mut().preview = false;
+    let previous_preview_page = panel.model.borrow_mut().preview_page.take();
     let previous_state = panel.model.borrow().state.clone();
     panel.model.borrow_mut().state.view =
         Some(Arc::new(rqs_lib::service::client::state::StateView {
@@ -206,7 +208,75 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
             .unwrap();
         assert_eq!(state.str(), Some(target));
         assert!(panel.builder.object::<gtk::Label>("visibility").is_none());
+        assert_eq!(
+            panel
+                .button("quick-receive")
+                .has_css_class("receive-active"),
+            mode == 2
+        );
     }
+    // Confirmed visibility drives feedback, not click intent or unrelated busy controls.
+    let confirmed = panel.model.borrow().state.clone();
+    for case in 0..11 {
+        {
+            let mut model = panel.model.borrow_mut();
+            model.state = confirmed.clone();
+            match case {
+                0 => model.state.busy = true,
+                1 => model.state.visibility_pending = true,
+                2 => model.state.settings_pending = true,
+                3 => model.state.disconnected = true,
+                4 => model.state.visibility.as_mut().unwrap().available = false,
+                5 => model.state.visibility.as_mut().unwrap().running = false,
+                6 => Arc::make_mut(model.state.view.as_mut().unwrap()).synchronized = false,
+                7 => {
+                    Arc::make_mut(model.state.view.as_mut().unwrap()).lifecycle = Lifecycle::Stopped
+                }
+                8 => model.state.view = None,
+                9 => model.preview = true,
+                10 => model.state.visibility = None,
+                _ => unreachable!(),
+            }
+        }
+        panel.render();
+        assert_eq!(
+            panel
+                .button("quick-receive")
+                .has_css_class("receive-active"),
+            case < 3,
+            "case {case}"
+        );
+    }
+    {
+        let mut model = panel.model.borrow_mut();
+        model.state = confirmed;
+        model.preview = false;
+    }
+    panel.set_mode(Mode::Full);
+    panel.render();
+    assert!(!panel.box_widget("source").get_visible());
+    let scroll = panel
+        .builder
+        .object::<gtk::ScrolledWindow>("nearby-scroll")
+        .unwrap();
+    let (minimum, natural, _, _) = scroll.measure(gtk::Orientation::Vertical, 390);
+    let content = panel
+        .box_widget("nearby")
+        .measure(gtk::Orientation::Vertical, 390)
+        .1;
+    assert_eq!(natural, content.max(minimum)); // GTK's intrinsic frame/scrollbar minimum still applies.
+    assert!(
+        natural < 120,
+        "an empty list must not reserve the old120px floor"
+    );
+    super::tests::capture_card(panel, "empty-full");
+    panel.set_mode(Mode::Compact);
+    assert!(panel
+        .button("quick-receive")
+        .tooltip_text()
+        .unwrap()
+        .contains("one-minute mode"));
+    super::tests::capture_card(panel, "temporary-compact");
     for case in 0..4 {
         {
             let mut model = panel.model.borrow_mut();
@@ -291,6 +361,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     {
         let mut model = panel.model.borrow_mut();
         model.preview = true;
+        model.preview_page = previous_preview_page;
         model.safety_active = false;
         model.state = previous_state;
     }
