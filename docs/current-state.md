@@ -1,5 +1,13 @@
 # Current implementation and continuation state
 
+Latest requested work (2026-10-16): [card/tray/settings usability follow-up](native-card-usability.md).
+Native15 remains installed. The user reported missing dragging, awkward source
+controls, no additive file selection, duplicated tray actions and a scrolling
+settings editor with inconsistent application timing. Analysis/plan is recorded;
+source-extension ownership and the consolidated File entry need the scoped
+decisions in that document before implementation. Existing native15 evidence
+remains historical verification, not acceptance of these newly reported issues.
+
 Updated2026-10-16. Mode A; direct dev, no branch/worktree/push. This is the current
 status index. Dated entries in other documents remain historical evidence; they
 must not override this index or the linked feature contracts. The active goal is reliable ordinary nearby sharing with native
