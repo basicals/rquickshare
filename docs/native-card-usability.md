@@ -867,3 +867,50 @@ widget frames and rquickshare-native20-export.json are preserved in the existing
 outputs directory. Mutable continuation artifacts follow the final docs commit.
 Native19 rollback package/source are unchanged. No signing, staging, publishing
 or cloud access was performed. Physical acceptance remains explicitly pending.
+
+## Tray toggle, retained position and temporary-visibility countdown — analysis
+
+2026-10-17, Mode A. User accepts native20 appearance and requests: primary tray
+activation hides an already visible card; hiding/reopening retains its position;
+while temporary Receive and the drawer are open, show a spinner, visible-device
+message and countdown. This feedback does not independently prove all previous
+early-stop/expiry paths.
+
+Root causes: primary StatusNotifier activation in main.rs always calls show_at,
+whereas the exported menu Open action already toggles visibility. present_surface
+and show_at always run place_at; place_at resets position_pinned and reapplies
+tray-relative margins. hide itself does not need to discard the existing anchor.
+Retain valid same-session monitor/anchor margins through hide/reopen; explicitly
+validate current monitor/size before restoring, falling back to current tray
+placement if the monitor disappeared. No on-disk position preference is requested.
+Context-menu activation remains a separate explicit action and must not toggle
+the card away. Respect current lock/focus/automatic-presentation guards.
+
+Countdown analysis: core VisibilityPolicy already owns the monotonic60s deadline,
+generation and expiry. Visibility1.Read returns only epoch/available/revision/
+running/mode; GTK cannot recover an exact remaining interval after reconnect or
+late opening. Starting a fresh60s UI timer on a click or first observation would
+misrepresent the core policy and is rejected as a brittle shortcut.
+
+Proposed stages after the public read-contract decision:
+1. Unify primary tray/menu activation toggle while preserving explicit ContextMenu
+   behavior; preserve valid live position across hide/reopen and retain bottom
+   anchoring across drawer resizes. No preparation or transfer changes.
+2. Add read-only authoritative remaining-time projection from the core's existing
+   deadline, bound to the same epoch/revision/mode. Preserve one expiry owner and
+   existing consent/early-stop/exact retry. No wall-clock expiry or per-click reset.
+3. Add spinner/message/countdown only to the expanded drawer during confirmed
+   temporary visibility. Stop display updates when hidden/collapsed/inactive or
+   disconnected; a display tick never changes daemon visibility or claims expiry.
+4. Focused boundary/generation/capture/client/GTK checks once, strict affected lint,
+   distinct package and idle known-owner installation,14-file/one-tray readback,
+   SSOT/evidence/artifact handoff. Native20 remains the rollback reference.
+
+Pending significant API decision (AGENTS sections3/3.1): recommend one atomic
+versioned visibility snapshot including sampled monotonic remaining duration;
+GTK renders the countdown locally and invalidates it on generation/lifecycle
+changes, with daemon-only expiry. Alternative: daemon emits the current remaining
+seconds every second while temporary, keeping all cadence in the daemon but
+adding periodic IPC and missed-signal/reconnect handling. Both require a checked
+initial snapshot and epoch/revision binding. No production implementation starts
+before selection. Analysis commands exited: Terminal closed.

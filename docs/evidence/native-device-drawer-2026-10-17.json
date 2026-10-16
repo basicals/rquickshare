@@ -180,7 +180,15 @@
     "physical_drawer_soft_pulse_and_early_stop_verified": false,
     "physical_check_requested": true,
     "native18_receive_and_lower_edge": "historical user-confirmed; not attributed to new native20 drawer",
-    "current_candidate_android_windows_accepted": false
+    "current_candidate_android_windows_accepted": false,
+    "physical_panel_appearance_accepted": true,
+    "appearance_observation": {
+      "local_date": "2026-10-17",
+      "installed_version": "0.11.5+native20",
+      "source": "explicit user feedback in the current chat",
+      "result": "looks great; user then requested tray toggle, position retention and visible countdown",
+      "scope": "appearance feedback, not independent confirmation of every drawer/early-stop path"
+    }
   },
   "signed": false,
   "published": false,
