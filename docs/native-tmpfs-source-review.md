@@ -37,7 +37,7 @@ evidence/native-installed-acceptance-2026-10-16.json.
 - Preparation does not send, and Abort/disconnect releases owned descriptors.
 - No wire/settings/API shape changes, source deletion or automatic retry.
 
-## Concrete options requiring user selection
+## Reviewed options (option1 selected)
 
 | Option | Description | Advantages | Disadvantages and risks |
 |---|---|---|---|
@@ -73,8 +73,8 @@ they consume no RAM. Anonymous/fully sealed sources retain the existing charge.
    then continue explicit current Android code/consent/two-way content acceptance.
 
 Rollback points: review-only documentation commit; later scoped source commit;
-separate package/installed checkpoint. No source changes, new package, installation
-replacement, transfer, signing or publication occurs in this review. All owned
+separate package/installed checkpoint. At the initial review-only checkpoint no source changes, new package, installation
+replacement, transfer, signing or publication occurred. All owned
 observer/fixture/probe commands exited: Terminal closed.
 
 ## Primary references
@@ -97,7 +97,7 @@ property; confirm that invariant in implementation review if option1 is selected
   seals including SEAL-only rejection. Run affected source suites/lint once.
 - [x] T4: increment package revision to13, commit source/docs, build/verify the
   distinct package without overwriting native12, and record exact source/hash.
-- [ ] T5: under the user's existing application-replacement/repair authorization,
+- [x] T5: under the user's existing application-replacement/repair authorization,
   upgrade the fixed installed package only after confirming no active transfers,
   preparations or unknown owners. Join only the task-owned idle systemd services,
   keep login start/settings intact, launch normally and repeat the failed tmpfs
@@ -184,3 +184,53 @@ on this exact native13 local package, reload user units without enablement and
 launch normally. Authentication remains solely in the system prompt. Preserve
 settings, received files and optional login-start state; on a failed upgrade
 report actual package state and restore ordinary launch where it remains valid.
+
+## T5 actual installed repair
+
+The documented existing repair/replacement authorization was used. Immediately
+before replacement, native12 SHA256 matched, known task-owned service PIDs matched,
+the daemon was synchronized/running with zero preparations/handles/bytes/transfers,
+and the real own tray source action was enabled. Only those idle services were
+joined through normal systemd stop; no force-kill or ambient process interference.
+APT exited0 upgrading native12 to0.11.5+native13, with no additional dependencies,
+removals or unrelated upgrades. Authentication was solely the system prompt.
+User manager metadata reloaded; normal launch restored one running daemon/client.
+All11 installed file bytes/modes/root ownership match the native13 archive.
+Desktop login start remains disabled, as before. Settings/received files preserved.
+
+Repeated normal launch retained new daemon PID1909694 and desktop PID1909695,
+and exactly one own active KDE tray item. Actual /tmp file AppendFiles now ack1;
+Abort returned aborted, resource baseline returned to0, fixture/observer closed.
+No Commit/Send was used in that repair regression. Previous native12 failure is
+preserved in installed evidence rather than rewritten as a pass. No full visual
+or current-Google interoperability claim follows from this check.
+
+## T6 handoff and pending user-operated Android check
+
+The installed CLI prepared only the owned123-byte Android fixture, exit0:
+/usr/bin/rquickshare send -- /home/morozhenko/Documents/Codex/rquickshare-acceptance/2026-10-16/peer-fixtures/rquickshare-android-check.txt
+
+One subsequent immutable daemon observation found1 source reservation,2 handles,
+123 selected bytes and0 transfers: preparation did not send automatically. The
+selection belongs to the existing GTK owner and is intentionally left for the
+user's explicit device choice/Send. Do not stop that owner or discard its source
+as if it were a leaked test process. It may be discarded in the card if the user
+defers; no peer was selected or sent to by the agent.
+
+The user was asked to open Android Quick Share receiving, choose their own phone
+in the Linux card, compare codes and explicitly accept; result/Android version
+remain pending. Windows availability, exact Android/Quick Share version, two-way
+hashes, rejection/cancellation/partial outcomes and remaining visual/lifecycle
+checks are unverified. Do not mark physical acceptance complete from this source
+fix, CLI preparation or a count of nearby endpoints. T6 physical portion remains
+open while source/package/installed tmpfs repair is complete.
+
+No signing, production APT update, key/Drive/account access or immutable native12
+artifact modification occurred. Logs:/tmp/rqs-native13-install.log and committed
+JSON observations. All owned one-shot commands exited: Terminal closed. Installed
+application services and the explicitly prepared user-reviewable source remain.
+
+Handoff verification: 58 affected local links resolve; evidence JSON parses.
+Runtime/core/native/packaging/build-script source matches binary commit1607c8f;
+the later native README edit is documentation only. Native13 source/package
+export will record its own final documentation commit. No runtime suite repetition.

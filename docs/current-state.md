@@ -138,7 +138,7 @@ on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The 
 confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
 repair observations remain in native-signing-backup.md and its JSON.
 
-No production APT release has been signed/published. Current native12 package SHA256
+No production APT release has been signed/published. The retained native12 APT staging package SHA256
 b4ef947385b46a2b16f2dc625f1cfc216205672b1df75478f821bb4a857962f0 was built
 from88c1f94003fc35c665568024273d446b5ced35ed and verified offline. It includes daemon-owned
 multi-recipient sharing and the defensive announced-preview routing fix.
@@ -219,9 +219,31 @@ launch retained the same PIDs; login start remains disabled. User confirmed the
 icon/card and available Android. Owned disk descriptor Begin/Append/Abort passed
 with zero remaining source/handle/byte/transfer resources; no Commit/Send.
 The /tmp fixture exposed the documented broad seal-capable-source rejection:
-[tmpfs source review](native-tmpfs-source-review.md) records the required accounting
-choice before changing code. Actual Android/Windows transfers, remaining visual/
+[tmpfs source review](native-tmpfs-source-review.md) records the subsequently
+selected and implemented accounting repair in native13, detailed below. Actual Android/Windows transfers, remaining visual/
 lock/DND/file-manager/login-start/stop-restart/removal acceptance and signed APT
 publication remain open. Exact installed evidence is in
 evidence/native-installed-acceptance-2026-10-16.json. Backup/keys and immutable
 native12 binaries/source/release artifacts are unchanged.
+
+## Installed tmpfs repair checkpoint — 2026-10-16
+
+The user selected option1 in [tmpfs source review](native-tmpfs-source-review.md).
+Ordinary linked read-only tmpfs files now follow existing filesystem-source rules;
+anonymous sources still require full immutable seals,1..32MiB and128MiB aggregate
+accounting. No wire/settings schema change or spool. Binary source
+1607c8f implements the guard and focused regressions:49 source checks passed,
+strict all-feature/all-target core lint passed. Native13 package SHA256
+3d52d836d5b2a4a4832b1ea00b8964e7b3c6a16d1bb2e19926d94b8c22414d06,
+6,416,616 bytes, is now installed and all11 installed files match. One daemon/
+client/tray, repeated launch and the formerly failing installed /tmp append/abort
+passed. Native12/legacy recovery packages remain available; login start disabled.
+
+A123-byte nonpersonal Android fixture is prepared through the real installed CLI,
+with explicit recipient selection/Send still required. The agent has selected no
+peer or sent content. User-confirmed Android availability/icon/card is distinct
+from pending physical transfer/code/content/version results. Keep the prepared
+source and application owners intact while awaiting the user's check.
+Native13 is not signed or staged into APT; the earlier native12 unsigned repository
+and unapproved request are retained historical artifacts, not this repaired release.
+Exact repair/build/install/runtime observations: evidence/native-tmpfs-source-2026-10-16.json.

@@ -191,3 +191,15 @@ no test server/watcher/terminal remains. Terminal closed.
 Documentation verification:54 affected local links resolve; evidence JSON parses
 and whitespace check passed. No production code/build or unrelated test suite was
 changed/repeated for this installed evidence checkpoint.
+
+## Subsequent native13 repair — 2026-10-16
+
+User-selected tmpfs source distinction is implemented, verified and installed as
+native13. Exact package/source/upgrade/installed-regression evidence is in
+[native-tmpfs-source-review.md](native-tmpfs-source-review.md) and
+evidence/native-tmpfs-source-2026-10-16.json. Native12 observations above are
+historical and remain intact. Current installed version is0.11.5+native13, one
+daemon/client/tray running with login start disabled. The real installed CLI has
+prepared a known123-byte Android fixture with no auto-Send; retain that source
+while the user performs recipient/code/acceptance actions. I4 is still partially
+complete: actual current-peer content and remaining desktop/lifecycle checks open.

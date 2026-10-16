@@ -1,7 +1,8 @@
 # Essential installed/peer acceptance
 
 2026-10-16. Short procedure prepared from the native11 checkpoint and updated for the native12 receive repair.
-Status: partially executed; native12 installed, launch/tray/basic card confirmed.
+Status: partially executed; native13 installed after the tmpfs source repair,
+launch/tray/basic card confirmed.
 Physical transfers and the remaining desktop/lifecycle matrix are unexecuted.
 This is current-package acceptance, not an ADB/hardware
 automation project. See [priorities](native-essential-priorities.md) and
@@ -46,3 +47,9 @@ Begin/Append/Abort leaves no source/transfer resources; no Send/Commit. The tmpf
 fixture exposed the existing seal-capable-source rejection and its pending
 accounting decision. Check1-4 physical content/consent/interruption and check5-6
 remaining lifecycle/removal/signed updates are not passed by these observations.
+
+Subsequent native13 installed repair accepts named tmpfs files while retaining
+anonymous-source guards; real /tmp append/abort passes. Its CLI has prepared the
+known123-byte Android fixture, with no agent-initiated peer choice or Send. User
+recipient/code/acceptance result and exact Android version remain pending. See
+[native-tmpfs-source-review.md](native-tmpfs-source-review.md) for current evidence.
