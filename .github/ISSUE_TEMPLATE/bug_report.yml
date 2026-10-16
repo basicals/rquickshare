@@ -1,0 +1,148 @@
+name: Bug report
+description: Report a reproducible problem with rQuickShare.
+title: "[Bug]: "
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug in rQuickShare.
+
+        Please provide enough information to reproduce the issue.
+        Reports about the original upstream version should be sent
+        to the upstream repository.
+
+        Remove personal information, tokens, private keys, and
+        sensitive file paths from logs and screenshots.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Device discovery
+        - Connection or pairing
+        - Sending or receiving files
+        - Text or clipboard sharing
+        - Desktop UI or system tray
+        - Installation or updates
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: rQuickShare version
+      description: Include the package version or commit SHA.
+      placeholder: "Example: 0.11.5+native15 or commit SHA"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and desktop environment
+      placeholder: "Example: Ubuntu 26.04, KDE Plasma, Wayland"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation method
+      options:
+        - DEB / APT
+        - AppImage
+        - RPM
+        - Built from source
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Transfer direction
+      options:
+        - Android to Linux
+        - Linux to Android
+        - Linux to Windows
+        - Windows to Linux
+        - Linux to Linux
+        - Other
+        - Not related to a transfer
+    validations:
+      required: false
+
+  - type: input
+    id: peer
+    attributes:
+      label: Other device
+      description: Device model, operating system and Quick Share version, if relevant.
+      placeholder: "Example: Pixel 6a, Android, Quick Share"
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Describe the exact sequence that triggers the issue.
+      placeholder: |
+        1. Start rQuickShare.
+        2. Open Quick Share on the other device.
+        3. Select a file and attempt to send it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What happened instead? Include any error messages.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Reproduction frequency
+      options:
+        - Every time
+        - Often
+        - Sometimes
+        - Once
+        - Not tested again
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots and additional details
+      description: |
+        Attach sanitized logs or screenshots if available.
+        Include relevant Bluetooth, network or system details.
+        Do not publish credentials or sensitive personal data.
+      placeholder: Paste sanitized logs or drag and drop attachments here.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I am reporting an issue with this fork, not the original upstream release.
+          required: true
+        - label: I have removed sensitive information from any attached evidence.
+          required: true
