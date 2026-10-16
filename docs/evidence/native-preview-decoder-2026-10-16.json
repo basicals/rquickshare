@@ -1,0 +1,203 @@
+{
+  "schema": 1,
+  "mode": "A",
+  "date": "2026-10-16",
+  "observed_at_utc": "2026-10-16T06:35:17.473630+00:00",
+  "branch": "dev",
+  "implementation_commit": "fb55e8b8fa124cff0911d2deba31ba1bde762441",
+  "plan_commit": "78c0455",
+  "user_selection": {
+    "preview_decoder_option": 1,
+    "google_authorization_supported_only": true
+  },
+  "decoder": {
+    "glycin": "4.0.0",
+    "glycin_core": "4.0.3",
+    "glycin_utils": "5.0.1",
+    "sandbox": "explicit-bwrap",
+    "fallback_unsandboxed": false,
+    "encoded_bytes_max": 262144,
+    "source_dimension_max": 2048,
+    "preview_edge_max": 256,
+    "pixel_bytes_max": 262144,
+    "operation_seconds": 10,
+    "helper_address_space_bytes": 536870912,
+    "helper_cpu_seconds": 5,
+    "helper_fds_max": 128,
+    "helper_core_dumps": false,
+    "helper_rayon_threads": 1,
+    "operations_per_decoder": 1
+  },
+  "checks": {
+    "new_rust_methods": 10,
+    "initial_library": {
+      "passed": 9,
+      "failed": 1,
+      "seconds": 0.17
+    },
+    "fixed_real_png_jpeg": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.14
+    },
+    "final_cancel_deadline_transport": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.08
+    },
+    "gtk_binary": {
+      "passed": 39,
+      "failed": 0,
+      "seconds": 1.84
+    },
+    "python_package": {
+      "passed": 5,
+      "failed": 0,
+      "seconds": 3.227
+    },
+    "final_metadata_floor": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.006
+    },
+    "final_all_target_clippy": {
+      "passed": true,
+      "seconds": 15.37
+    },
+    "primary_category_counts": {
+      "Positive": 2,
+      "N1": 1,
+      "N2": 2,
+      "N6": 1,
+      "N7": 1,
+      "N9": 2,
+      "N10": 1
+    },
+    "format_passed": true,
+    "diff_passed": true,
+    "ten_repetitions": false,
+    "ci_dispatched": false
+  },
+  "package": {
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native8_amd64.deb",
+    "version": "0.11.5+native8",
+    "architecture": "amd64",
+    "bytes": 6338436,
+    "sha256": "e89c5ed7a5e356228926d139f2585626dd56528fe74c80fe436643a7a6d26842",
+    "depends": "libc6 (>= 2.39), libdbus-1-3 (>= 1.10), libfontconfig1 (>= 2.12.6), libgcc-s1 (>= 4.2), libglib2.0-0t64 (>= 2.54.0), libgtk-4-1 (>= 4.12.0), libgtk4-layer-shell0 (>= 1.3.0), libseccomp2 (>= 2.1.0), libgtk-4-1 (>= 4.12), systemd, libpam-systemd, dbus-user-session, bluez, xdg-desktop-portal, bubblewrap, glycin-loaders (>= 2.1)",
+    "builder_exact_inventory_verified": true,
+    "expected_files": 11,
+    "extracted_help_settings_verified": true,
+    "extracted_png_jpeg_verified": true,
+    "installed": false,
+    "release_build_observations": [
+      "Finished `release` profile [optimized] target(s) in 2m 05s",
+      "Finished `release` profile [optimized] target(s) in 2m 35s",
+      "Finished `release` profile [optimized] target(s) in 0.74s"
+    ]
+  },
+  "images": [
+    {
+      "mode": "full",
+      "path": "/home/morozhenko/Documents/ChatGPT/quickshare \u0438 nativepair/outputs/rquickshare-native8-incoming-full.png",
+      "sha256": "a8342998b019d029d47fa105170c5504b57aaa0278eae7ab896c915ea79f7356"
+    },
+    {
+      "mode": "compact",
+      "path": "/home/morozhenko/Documents/ChatGPT/quickshare \u0438 nativepair/outputs/rquickshare-native8-incoming-compact.png",
+      "sha256": "3492cf48194c65694926472a1499f8e3f728fd30305567d7c632bdb44d386ed2"
+    }
+  ],
+  "visual_inspection_complete": true,
+  "unsigned_apt": {
+    "path": "native_desktop/target/apt-unsigned-native8",
+    "files": [
+      "dists/rquickshare-native-ubuntu26.04/Release",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages.gz",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/1410d0c3901c0925030b4db83471fd43a4fce0eeaa5f2ff48d847e2eeab09b80",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/e0cd2ab0d72cb7c7aa4eace0c94789182f0295b78c7c3c580b2d6aaf29a91d45",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native8_amd64.deb",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native8_amd64.deb.sha256"
+    ],
+    "signed": false,
+    "release_headers": {
+      "Date": "Fri, 16 Oct 2026 06:35:16 GMT",
+      "Valid-Until": "Fri, 23 Oct 2026 06:35:16 GMT"
+    }
+  },
+  "signing_request": {
+    "path": "native_desktop/target/signing-request-native8/request.json",
+    "sha256": "e206c18cba37b472432c8af37750b259701821b942b1f9c10699c00723383259",
+    "approved": false,
+    "first_release": true,
+    "source_attestation_supplied": false,
+    "live_empty_baseline_verified": false
+  },
+  "remote_preview_wire_encoding_or_mapping_established": false,
+  "daemon_preview_ipc_implemented": false,
+  "production_remote_preview_card_bound": false,
+  "google_account_provider_enabled": false,
+  "physical_peer_tested": false,
+  "installed": false,
+  "release_signed": false,
+  "published": false,
+  "drive_or_cloud_calls": false,
+  "owned_processes_exited": true,
+  "visual_observations": {
+    "full": "Synthetic bounded PNG thumbnail visible; PIN, metadata and disabled fixture actions remain readable.",
+    "compact": "No thumbnail; existing PIN, metadata and disabled fixture actions remain readable.",
+    "physical_placement_verified": false
+  },
+  "source_files": [
+    {
+      "path": "native_desktop/Cargo.toml",
+      "sha256": "d7e55a4ddec46f51abaf80be9939ca3a966aed76bbdd7bcb39f58718bd309033"
+    },
+    {
+      "path": "native_desktop/Cargo.lock",
+      "sha256": "c85b91cadd1666b793b8e1449e727d7955ce306d5849aad161e1928828d2d820"
+    },
+    {
+      "path": "native_desktop/src/preview.rs",
+      "sha256": "1594c2c50733b84a4264591db8af2d42a8b0ed7de955135d9774f17cf8ff60e5"
+    },
+    {
+      "path": "native_desktop/src/preview_helper.rs",
+      "sha256": "704dc8b80460b1601b19deb581bd5bf3a525e80477965e25ea3402808a6ce18a"
+    },
+    {
+      "path": "native_desktop/src/preview/tests.rs",
+      "sha256": "99d1287e1e966e0d76e989b6cf94423bbbfd76e25a34df3be4783689cf7edef2"
+    },
+    {
+      "path": "native_desktop/src/panel/incoming_preview.rs",
+      "sha256": "ac9c2d358ef9bd26d8cbc6f38570f25530bc4aa81f5b8b62c1102d2533c0f090"
+    },
+    {
+      "path": "native_desktop/src/panel.rs",
+      "sha256": "04bf7afe41f6afe34326a958370afce84c5e6ffd7ec9f7d80e443f28ffecb48e"
+    },
+    {
+      "path": "native_desktop/src/main.rs",
+      "sha256": "a3d33109109a2f347557ece7f9c3f621ae3892b7641db54e8007bc51b3deec8d"
+    },
+    {
+      "path": "native_desktop/assets/preview-fixture.png",
+      "sha256": "99540f7095d54037848118f7ae73d7ca6e3abfc91270517dfa3d3bbc3ab46ca0"
+    },
+    {
+      "path": "native_desktop/assets/preview-fixture.jpg",
+      "sha256": "24cfc78defe8fc35c0cf9d4537ac3144f821a37047c7ae461bb00ca4c66ec8e5"
+    },
+    {
+      "path": "scripts/native_deb.py",
+      "sha256": "61df3463b80059d1684e75d1e3fdc16899f9103acabccffe75d3adf1ea624852"
+    },
+    {
+      "path": ".github/workflows/native-package-smoke.yml",
+      "sha256": "5030ad052929fc330730ae6080d6d06ff5099c9445ee2b89f01a39e7fbe53972"
+    }
+  ],
+  "export_complete": false
+}

@@ -1,11 +1,13 @@
 # Native package and systemd user activation
 
-Current follow-up: selected opt-in daemon + tray login-start and unified desktop
-process ownership are implemented in [native-autostart.md](native-autostart.md).
-The original P1–P3 observations below are historical; the refreshed package adds
-the desktop Type=exec user unit, explicit Install metadata and fixed D-Bus delegation.
-Installation/build still never enables or starts a service. Latest verification
-and artifact provenance are recorded in the autostart SSOT.
+Current verification and provenance: [current state](current-state.md) and
+[native8 decoder contract](native-preview-review.md). Native8 adds the private
+Glycin/Bwrap helper and required runtime dependencies; its11-file uninstalled
+candidate and extracted helper/GUI checks are verified. This does not establish
+remote preview compatibility. Selected opt-in daemon + tray login-start and
+unified desktop ownership are in [native-autostart.md](native-autostart.md).
+Original dated P1–P3 observations below are historical. Build/verification never
+installs, enables or starts a user service.
 
 2026-10-14. Mode A. User selected option1 in native-package-review.md: a systemd
 user service owns the daemon process; D-Bus requests its launch; GTK remains a

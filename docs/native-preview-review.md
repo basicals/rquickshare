@@ -106,10 +106,13 @@ Scope and stages before any code:
    ELF/runtime dependencies and require Bubblewrap/Glycin image loaders. Update
    exact offline package inventory/help checks and documentation. Preserve all
    native7 immutable artifacts; increment revision only for a new candidate.
-5. [ ] D5: run focused checks once, record real sandbox success/failure separately
+5. [x] D5: run focused checks once, record real sandbox success/failure separately
    from deterministic policy/transport tests, update evidence/current state and
    atomic commits. If real sandbox cannot start, never disable it to green a test.
    No installation, credentials, cloud/peer request, signing or publication.
+6. [ ] D6: export the verified native8 package/source, unsigned APT, unapproved
+   public review request and exact provenance receipt. Keep native7 and earlier
+   artifacts immutable; final documentation is newer than the immutable ZIP.
 
 Frozen bounds (internal defensive policy; not wire negotiation): encoded input
 1..=256KiB; admit PNG/JPEG magic only; source dimensions1..=2048 each; decode only
@@ -195,8 +198,48 @@ and builds the helper before tests; a runner unable to enforce Bwrap fails the r
 smoke. CI itself was not dispatched; namespace/AppArmor availability remains a
 runner acceptance requirement, never a reason for an unsandboxed fallback.
 
-Source changes are ready for the native8 uninstalled candidate (revision8 avoids
-overwriting native7). Candidate build, extracted helper/GUI and Full/Compact
-rendering, fresh unsigned APT/public review request and export are still pending.
-Do not mark native8 verified or claim it can display remote Google previews yet.
-Owned build/test/lint processes exited. Terminal closed.
+The affected Python minimum-loader metadata method passed1/0 in0.006s. The final
+whitespace gate exposed one added trailing blank line in the packaging README;
+it was removed and the gate passed before committing source. No Rust source or
+test assertions changed for that documentation repair.
+
+## Native8 uninstalled candidate and review checkpoint
+
+Binary sourcefb55e8b8fa124cff0911d2deba31ba1bde762441. Ubuntu26.04 amd64 only.
+Package `native_desktop/target/packages/rquickshare_0.11.5+native8_amd64.deb`,
+6338436 bytes, SHA256
+`e89c5ed7a5e356228926d139f2585626dd56528fe74c80fe436643a7a6d26842`.
+Locked release build observations: core125s, GUI155s, helper0.74s (shared
+dependencies already built for GUI). Existing usrmerge dpkg-shlibdeps notices
+remain visible. No24.04/ARM/install claim.
+
+Package builder verified11 exact files, root ownership/modes/assets/dependencies,
+ELF architecture, extracted GUI/daemon/helper help and offline settings fixture.
+Extra review used the extracted release helper with a clean environment: exact
+PNG RGBA and bounded JPEG colors passed. Extracted GUI Full/Compact snapshots
+were visually inspected: Full has the harmless synthetic thumbnail; Compact
+retains metadata/actions; PIN/inert review actions remain readable. This is an
+X11 private-bus fixture, not installed Wayland placement or remote peer evidence.
+Exact image/file hashes are in
+[native8 evidence](evidence/native-preview-decoder-2026-10-16.json).
+
+Fresh unsigned `native_desktop/target/apt-unsigned-native8` has7 files and no
+InRelease/Release.gpg. Release date2026-10-16T06:35:16Z; Valid-Until
+2026-10-23T06:35:16Z. Public `signing-request-native8/request.json` SHA256
+`e206c18cba37b472432c8af37750b259701821b942b1f9c10699c00723383259`.
+It explicitly requests first-release review, remains unapproved, has no source
+attestation and does not prove the live repository empty baseline. No signing
+or publication. All recovery artifacts remain complete and unchanged.
+
+Native8 includes the earlier bounded byte ingress fix and this isolated native
+decoder foundation. Remote preview encoding/mapping, daemon IPC/production card
+binding and outgoing previews remain open. Selecting the boundary is complete;
+do not ask for it again, claim full Google preview compatibility or reopen the
+already deferred unsupported account provider. Next wire work needs a concrete
+specification or sanitized synthetic-image peer fixture with sender version,
+Introduction ids, payload type/encoding and ordering around consent. No arbitrary
+peer size/hash/offset is authority to resume or skip data.
+
+Public export/provenance receipt remains pending D6. Owned review processes
+exited; only explicitly owned private groups had deadline cleanup authority.
+Terminal closed.

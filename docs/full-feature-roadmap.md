@@ -131,6 +131,10 @@ open. Account/QR capabilities still require their own work. Latest completed sli
 7. **Preview payloads**
    - Prerequisite [bounded byte ingress](native-byte-ingress.md) implemented;
      this does not yet receive/display or advertise preview images.
+   - User selected [isolated Glycin decoder](native-preview-review.md). Private
+     Bwrap helper/resource limits/validated pixels/lifecycle and native8 offline
+     Full/Compact fixture are verified. Remote encoding/mapping, daemon IPC/card
+     binding and outgoing preview negotiation remain open.
    - Generate bounded image/video/file previews.
    - Advertise preview payload ids.
    - Receive/display previews before consent when peer supplies them.
