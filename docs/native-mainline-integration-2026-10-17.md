@@ -27,9 +27,9 @@ those results do not validate the new native21 revision. Failure roots:
 
 ## Ordered plan
 
-- [ ] M1: merge origin/dev into dev, preserving repository configuration. Capture
+- [x] M1: merge origin/dev into dev, preserving repository configuration. Capture
   any actual conflicts and resolve only with source/contract evidence.
-- [ ] M2: correct the binary inventory fixture and isolated Python CI runtime.
+- [x] M2: correct the binary inventory fixture and isolated Python CI runtime.
   Run the Python suite once with the existing matching pinned venv. No unaffected
   native21 rebuild or repeated Rust/GTK tests for metadata-only incoming changes.
 - [ ] M3: update the remaining essential acceptance list to distinguish completed
@@ -64,3 +64,14 @@ history rewrite; retain incoming repository configuration.
 Previews, accounts/Contacts/Your devices, remembered trust/auto-accept, QR, resume/
 dedup, Apple/advanced payload parity and localization remain outside this scoped
 mainline integration. No full Google Quick Share parity claim.
+
+M1 observed: origin/dev merged cleanly with the ort strategy. The three repository
+configuration files were preserved; no source conflict, reset or branch creation.
+M2 code now derives synthetic ARM header fixtures from all source=None executable
+inventory entries and uses the existing pinned venv in Preflight. The verifier
+and production R2 adapter are unchanged. Python execution follows.
+
+M2 verification: the complete offline Python suite passed with the repository's
+existing pinned publication-test venv. No production verifier/adapter change or
+cloud request. The two former CI failure scenarios now run against all executable
+headers and the supported SDK model. No native package/runtime rebuild was needed.

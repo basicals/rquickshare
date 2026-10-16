@@ -171,7 +171,9 @@ class NativeAptTests(unittest.TestCase):
         def arm_fixture(tree):
             control = tree / "DEBIAN/control"
             control.write_text(control.read_text().replace("Architecture: amd64\n", "Architecture: arm64\n"))
-            for name in ["usr/bin/rquickshare", "usr/libexec/rquickshare-daemon"]:
+            for name, (source, _) in deb_test.package.FILES.items():
+                if source is not None:
+                    continue
                 path = tree / name
                 data = bytearray(path.read_bytes())
                 data[18:20] = (183).to_bytes(2, "little")

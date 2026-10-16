@@ -35,8 +35,11 @@ jobs:
             exit 1
           fi
 
-      - name: Offline receiver log analyzer tests
-        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Offline Python contract tests with pinned publication dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/native-publication-python"
+          "$RUNNER_TEMP/native-publication-python/bin/python" -m pip install -r scripts/requirements-r2.txt
+          "$RUNNER_TEMP/native-publication-python/bin/python" -m unittest discover -s scripts/tests -v
 
   frontend:
     name: Frontend lint, typecheck and unit tests
