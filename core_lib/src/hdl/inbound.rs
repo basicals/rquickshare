@@ -500,6 +500,7 @@ pub struct InboundRequest<S = TcpStream> {
     receiver: Option<Receiver<ChannelMessage>>,
     session: Option<crate::sessions::SessionLease>,
     authentication: crate::peer_authentication::PeerAuthentication,
+    previews: crate::preview_payload::PreviewIds,
     bandwidth_upgrade_enabled: bool,
     bwu_pending: bool,
     peer_endpoint_id: Option<String>,
@@ -529,6 +530,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             authentication: crate::peer_authentication::PeerAuthentication::anonymous(
                 crate::peer_authentication::Role::Receiver,
             ),
+            previews: crate::preview_payload::PreviewIds::default(),
             bandwidth_upgrade_enabled: false,
             bwu_pending: false,
             peer_endpoint_id: None,
@@ -1147,6 +1149,12 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                     payload_header::PayloadType::Bytes => {
                         info!("Processing PayloadType::Bytes");
                         let payload_id = header.id();
+                        if self.previews.contains(payload_id) {
+                            // Optional opaque data must never be interpreted as sharing control.
+                            // Use the same reservations/framing checks; release completion immediately.
+                            let _ = self.state.byte_payloads.push(header, chunk)?;
+                            return Ok(());
+                        }
 
                         let declared_size = checked_payload_buffer_size(header.total_size())?;
                         if self.session.is_some()
@@ -1541,6 +1549,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             }
         }
 
+        let previews = crate::preview_payload::PreviewIds::from_introduction(introduction)?;
+
         // No need to inform the channel here, we'll do it anyway with files info
         self.update_state(
             |e| {
@@ -1682,11 +1692,9 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                     .await;
                 }
                 text_metadata::Type::Unknown => {
-                    // Reject transfer
-                    self.reject_transfer(Some(
-						sharing_nearby::connection_response_frame::Status::UnsupportedAttachmentType,
-					))
-					.await?;
+                    return self.reject_transfer(Some(
+                        sharing_nearby::connection_response_frame::Status::UnsupportedAttachmentType,
+                    )).await;
                 }
             }
         } else if introduction.wifi_credentials_metadata.len() == 1 {
@@ -1719,13 +1727,14 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             )
             .await;
         } else {
-            // Reject transfer
-            self.reject_transfer(Some(
-                sharing_nearby::connection_response_frame::Status::UnsupportedAttachmentType,
-            ))
-            .await?;
+            return self
+                .reject_transfer(Some(
+                    sharing_nearby::connection_response_frame::Status::UnsupportedAttachmentType,
+                ))
+                .await;
         }
 
+        self.previews = previews;
         Ok(())
     }
 
@@ -2390,6 +2399,394 @@ mod security_tests {
             }
             assert!(request.state.byte_payloads.is_empty());
             assert!(request.state.transfer_metadata.is_none());
+        }
+    }
+
+    fn preview_request(
+        managed: bool,
+        text: bool,
+    ) -> (
+        TestRequest,
+        tokio::io::DuplexStream,
+        sharing_nearby::V1Frame,
+    ) {
+        let mut request = test_request();
+        let (socket, peer) = tokio::io::duplex(8192);
+        request.socket = socket;
+        request.state.encrypt_key = Some(vec![0; 32]);
+        request.state.send_hmac_key = Some(vec![0; 32]);
+        request.state.remote_device_info = Some(RemoteDeviceInfo {
+            name: "phone".into(),
+            device_type: crate::utils::DeviceType::Phone,
+        });
+        request.state.pin_code = Some("1234".into());
+        if managed {
+            let hub = crate::sessions::SessionHub::new(42).unwrap();
+            request.session = Some(
+                hub.open(
+                    crate::channel::TransferType::Inbound,
+                    None,
+                    tokio_util::sync::CancellationToken::new(),
+                )
+                .unwrap(),
+            );
+        }
+        let mut introduction = if text {
+            introduction_frame(
+                vec![],
+                vec![sharing_nearby::TextMetadata {
+                    payload_id: Some(101),
+                    size: Some(3),
+                    r#type: Some(text_metadata::Type::Text.into()),
+                    text_title: Some("Text".into()),
+                    ..Default::default()
+                }],
+                vec![],
+            )
+        } else {
+            introduction_frame(vec![file_metadata("example.bin", 101, 3)], vec![], vec![])
+        };
+        introduction
+            .introduction
+            .as_mut()
+            .unwrap()
+            .preview_payload_ids = vec![501, 502];
+        (request, peer, introduction)
+    }
+
+    #[tokio::test]
+    async fn given_announced_preview_bytes_when_fragmented_replayed_or_after_consent_then_no_control_content_or_storage_side_effect_occurs(
+    ) {
+        use crate::byte_payload::tests::frame;
+        let cancel = sharing_nearby::Frame {
+            v1: Some(sharing_nearby::V1Frame {
+                r#type: Some(sharing_nearby::v1_frame::FrameType::Cancel.into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+        .encode_to_vec();
+        for managed in [false, true] {
+            for text in [false, true] {
+                for body in [
+                    b"".as_slice(),
+                    b"\x89PNG\r\n\x1a\nopaque",
+                    b"\xff\xfe",
+                    cancel.as_slice(),
+                ] {
+                    for separate_final in [false, true] {
+                        // Arrange: actual supported Introduction and request-owned receive root.
+                        let (mut request, _peer, introduction) = preview_request(managed, text);
+                        request.process_introduction(&introduction).await.unwrap();
+                        assert_eq!(request.state.state, State::WaitingForUserConsent);
+                        assert_eq!(
+                            std::fs::read_dir(request._directory.path())
+                                .unwrap()
+                                .count(),
+                            0
+                        );
+                        // Act: fragmented complete auxiliary payload, including a valid Cancel body.
+                        let split = body.len() / 2;
+                        request
+                            .process_offline_frame(frame(501, body.len(), 0, &body[..split], false))
+                            .await
+                            .unwrap();
+                        assert!(!request.state.byte_payloads.is_empty());
+                        request
+                            .process_offline_frame(frame(
+                                501,
+                                body.len(),
+                                split,
+                                &body[split..],
+                                !separate_final,
+                            ))
+                            .await
+                            .unwrap();
+                        if separate_final {
+                            request
+                                .process_offline_frame(frame(
+                                    501,
+                                    body.len(),
+                                    body.len(),
+                                    b"",
+                                    true,
+                                ))
+                                .await
+                                .unwrap();
+                        }
+                        // Assert: no implicit acceptance, content completion, progress, file or decoder.
+                        assert!(request.state.byte_payloads.is_empty());
+                        assert_eq!(request.state.state, State::WaitingForUserConsent);
+                        assert_eq!(
+                            std::fs::read_dir(request._directory.path())
+                                .unwrap()
+                                .count(),
+                            0
+                        );
+                        let metadata = request.state.transfer_metadata.as_ref().unwrap();
+                        assert_eq!(metadata.total_bytes, 3);
+                        assert_eq!(metadata.ack_bytes, 0);
+                        assert!(metadata.text_payload.is_none());
+                        if let Some(session) = &request.session {
+                            let snapshot = session.control().snapshot();
+                            assert_eq!(
+                                snapshot.details.status,
+                                crate::sessions::details::DetailsStatus::Ready
+                            );
+                            assert!(snapshot.received_text.is_none());
+                            assert!(snapshot.received_files.is_none());
+                            assert_eq!(snapshot.details.transferred_bytes, 0);
+                        }
+                        if managed {
+                            let control = request.session.as_ref().unwrap().control();
+                            let receipt = control
+                                .respond(control.snapshot().consent.unwrap(), 1, true)
+                                .unwrap();
+                            let command = crate::sessions::consent_command(&mut request.session)
+                                .await
+                                .unwrap();
+                            let state = request.state.state.clone();
+                            assert_eq!(
+                                request.session.as_mut().unwrap().apply(command, &state),
+                                Some(true)
+                            );
+                            receipt.wait().await.unwrap();
+                        }
+                        request.accept_transfer().await.unwrap();
+                        for _ in 0..2 {
+                            request
+                                .process_offline_frame(frame(501, body.len(), 0, body, true))
+                                .await
+                                .unwrap();
+                        }
+                        assert!(request.state.byte_payloads.is_empty());
+                        assert_eq!(request.state.state, State::ReceivingFiles);
+                        assert_eq!(
+                            request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                            0
+                        );
+                        assert!(request
+                            .state
+                            .transfer_metadata
+                            .as_ref()
+                            .unwrap()
+                            .text_payload
+                            .is_none());
+                        if !text {
+                            let file = request.state.transferred_files[&101].file.as_ref().unwrap();
+                            assert_eq!(file.metadata().unwrap().len(), 0);
+                            assert_eq!(request.state.transferred_files[&101].bytes_transferred, 0);
+                        }
+                        // An undeclared control payload with the exact same Cancel bytes still works.
+                        let error = request
+                            .process_offline_frame(frame(999, cancel.len(), 0, &cancel, true))
+                            .await
+                            .unwrap_err();
+                        assert!(error.is::<crate::errors::AppError>());
+                        assert_eq!(request.state.state, State::Cancelled);
+                    }
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn given_bad_preview_announcements_or_unknown_bytes_when_received_then_no_auxiliary_authority_or_consent_is_created(
+    ) {
+        use crate::byte_payload::tests::frame;
+        for managed in [false, true] {
+            for case in [
+                "collision",
+                "count",
+                "before",
+                "unknown",
+                "unsupported",
+                "unsupported-text",
+            ] {
+                // Arrange
+                let (mut request, _peer, mut introduction) = preview_request(managed, false);
+                // Act / Assert
+                match case {
+                    "collision" | "count" => {
+                        introduction
+                            .introduction
+                            .as_mut()
+                            .unwrap()
+                            .preview_payload_ids = if case == "collision" {
+                            vec![101]
+                        } else {
+                            vec![501; 257]
+                        };
+                        assert!(request.process_introduction(&introduction).await.is_err());
+                        assert_eq!(request.state.state, State::Initial);
+                        assert!(request.state.transfer_metadata.is_none());
+                    }
+                    "unsupported" | "unsupported-text" => {
+                        if case == "unsupported-text" {
+                            introduction
+                                .introduction
+                                .as_mut()
+                                .unwrap()
+                                .text_metadata
+                                .push(sharing_nearby::TextMetadata {
+                                    payload_id: Some(101),
+                                    size: Some(3),
+                                    r#type: Some(text_metadata::Type::Unknown.into()),
+                                    ..Default::default()
+                                });
+                        }
+                        introduction
+                            .introduction
+                            .as_mut()
+                            .unwrap()
+                            .file_metadata
+                            .clear();
+                        assert_eq!(
+                            request.process_introduction(&introduction).await.is_err(),
+                            managed && case == "unsupported-text"
+                        );
+                        assert!(request.state.transfer_metadata.is_none());
+                    }
+                    _ => {
+                        if case == "unknown" {
+                            request.process_introduction(&introduction).await.unwrap();
+                        }
+                        let id = if case == "before" { 501 } else { 999 };
+                        assert!(request
+                            .process_offline_frame(frame(id, 1, 0, &[255], true))
+                            .await
+                            .is_err());
+                        assert_eq!(
+                            request.state.state,
+                            if case == "before" {
+                                State::Initial
+                            } else {
+                                State::WaitingForUserConsent
+                            }
+                        );
+                    }
+                }
+                assert!(!request.previews.contains(101));
+                if case != "unknown" {
+                    assert!(!request.previews.contains(501));
+                }
+                assert!(request.state.byte_payloads.is_empty());
+                assert_eq!(
+                    std::fs::read_dir(request._directory.path())
+                        .unwrap()
+                        .count(),
+                    0
+                );
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn given_announced_previews_when_framing_or_shared_budgets_are_invalid_then_request_fails_and_pending_ownership_is_released(
+    ) {
+        use crate::byte_payload::tests::frame;
+        for case in [
+            "offset",
+            "size-change",
+            "short",
+            "overrun",
+            "budget",
+            "count",
+            "oversize",
+            "missing-id",
+            "missing-size",
+            "missing-offset",
+        ] {
+            // Arrange
+            let (mut request, _peer, mut introduction) = preview_request(true, true);
+            introduction
+                .introduction
+                .as_mut()
+                .unwrap()
+                .preview_payload_ids = (0..=17)
+                .map(|id| if id == 0 { 0 } else { 500 + id })
+                .collect();
+            request.process_introduction(&introduction).await.unwrap();
+            let invalid = match case {
+                "budget" => {
+                    request
+                        .process_offline_frame(frame(
+                            501,
+                            SANE_FRAME_LENGTH as usize,
+                            0,
+                            b"",
+                            false,
+                        ))
+                        .await
+                        .unwrap();
+                    frame(502, 1, 0, b"", false)
+                }
+                "count" => {
+                    for id in 501..517 {
+                        request
+                            .process_offline_frame(frame(id, 0, 0, b"", false))
+                            .await
+                            .unwrap();
+                    }
+                    frame(517, 0, 0, b"", false)
+                }
+                "oversize" => frame(501, SANE_FRAME_LENGTH as usize + 1, 0, b"", false),
+                "missing-id" | "missing-size" | "missing-offset" => {
+                    let mut packet =
+                        frame(if case == "missing-id" { 0 } else { 501 }, 1, 0, b"a", true);
+                    let payload = packet
+                        .v1
+                        .as_mut()
+                        .unwrap()
+                        .payload_transfer
+                        .as_mut()
+                        .unwrap();
+                    match case {
+                        "missing-id" => payload.payload_header.as_mut().unwrap().id = None,
+                        "missing-size" => {
+                            payload.payload_header.as_mut().unwrap().total_size = None
+                        }
+                        _ => payload.payload_chunk.as_mut().unwrap().offset = None,
+                    }
+                    packet
+                }
+                _ => {
+                    request
+                        .process_offline_frame(frame(501, 3, 0, b"a", false))
+                        .await
+                        .unwrap();
+                    match case {
+                        "offset" => frame(501, 3, 0, b"bc", true),
+                        "size-change" => frame(501, 4, 1, b"bcd", true),
+                        "short" => frame(501, 3, 1, b"b", true),
+                        _ => frame(501, 3, 1, b"bcd", true),
+                    }
+                }
+            };
+            // Act / Assert
+            assert!(
+                request.process_offline_frame(invalid).await.is_err(),
+                "{case}"
+            );
+            assert!(request.state.byte_payloads.is_empty(), "{case}");
+            assert_eq!(request.state.state, State::WaitingForUserConsent);
+            assert_eq!(
+                request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                0
+            );
+            assert!(request
+                .state
+                .transfer_metadata
+                .as_ref()
+                .unwrap()
+                .text_payload
+                .is_none());
+            assert_eq!(
+                std::fs::read_dir(request._directory.path())
+                    .unwrap()
+                    .count(),
+                0
+            );
         }
     }
 

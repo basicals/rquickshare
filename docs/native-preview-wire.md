@@ -73,14 +73,14 @@ boundary. Full preview display/IPC still requires canonical data and its contrac
 ## W3 frozen defensive routing fix (before code)
 
 1. [x] R0: document source evidence, exact safe behavior and focused inventory.
-2. [ ] R1: private request-owned PreviewIds. Bound raw announcements to256 entries
+2. [x] R1: private request-owned PreviewIds. Bound raw announcements to256 entries
    (existing manifest count defensive scale, not a negotiated protocol limit).
    Accept explicit signed64-bit values, including0/negative; normalize duplicates.
    Reject any overlap with file/text/Wi-Fi/app-split/stream content IDs before
    changing state or publishing consent. Use existing getter/default addressing
    when checking content so an absent content ID cannot hide a collision with0.
    No per-file mapping or arbitrary assumption that preview IDs align by position.
-3. [ ] R2: after successful supported Introduction, install the set on that
+3. [x] R2: after successful supported Introduction, install the set on that
    inbound request only. Route its BYTES through the existing exact bounded
    assembler and drop completed opaque ownership immediately. Never try image,
    sharing-frame or text decoding; never copy, persist, publish or count preview
@@ -91,7 +91,7 @@ boundary. Full preview display/IPC still requires canonical data and its contrac
    explicit Accept/Reject/PIN are unchanged. Unsupported Introduction does not
    install preview authority. Outbound has no incoming Introduction/preview list
    and is unchanged.
-4. [ ] R3: focused real parser/handler checks once, strict affected lint/format,
+4. [x] R3: focused real parser/handler checks once, strict affected lint/format,
    measured evidence and atomic commit. No complete preview feature/package10
    claim: native9 stays the last measured binary and does not include this fix.
 
@@ -115,3 +115,40 @@ streams only, no user files/radios. Existing text-consent and byte-assembler sui
 protect unchanged branches. No new time, billing, network retry or persistence
 (N3/N8/N11 not applicable; N12 uses actual temporary destination). No sleeps,
 representative token tests or ten-run development loop. Record observed counts.
+
+
+## R1–R3 source completion and measured checks
+
+Implemented private redacted PreviewIds and request-local inbound routing. Both
+unsupported-attachment and unknown legacy-text exits return before installing the
+ID set. Announced BYTES are validated by the one existing assembler and discarded;
+no new buffer owner, parser, IPC, thumbnail field or UI is introduced. Before
+announcement and unknown IDs retain strict setup parsing. Declared IDs cannot
+shadow any of the five attachment families. Signed IDs/duplicate normalization
+and raw256-ID cap are internal defensive contracts, not peer capability claims.
+
+Four new Rust methods, primarily N7=2,N1=1,N2=1; positive, idempotency, interruption,
+privacy, concurrency and temporary-storage interactions overlap those methods.
+Full core library initial run:636 passed/1 failed in11.12s (637 total,633 previous).
+The strong unsupported-introduction test caught a missed outer rejection branch in
+the introduced boolean guard. Replaced that fragile guard with explicit early
+returns from both rejection branches before installing PreviewIds. Focused preview
+run:3 passed/1 failed in0.02s; the expanded native/legacy unknown-text scenario
+still had the old success unwrap. Corrected it to assert the existing contract
+exactly: native rejects before consent, legacy sends unsupported response without
+installing IDs. Final affected method passed1/0 in0.01s (636 filtered). No assertion
+was weakened and no final full637 green run is claimed. The other three new methods
+passed in the affected run; the633 old methods passed in the initial whole run.
+
+All-features/all-target strict core Clippy passed11.39s; existing upstream bluer
+future-incompatibility notice was emitted. Nightly formatting and diff whitespace
+checks passed. No unchanged GTK/helper/package/legacy checks or ten repetitions.
+Terminal closed; no radio, account, installed-service or release operations.
+
+A final offline scan of every regular file in both archives also checked snake_case
+and camelCase preview identifiers: only sharing/proto/wire_format.proto matched.
+That closes a search spelling blind spot, not the missing canonical codec/mapping
+fixture. Full production preview receive/display remains open. Native9 package and
+its immutable source archive predate this source fix and remain unchanged; do not
+claim the fix is already in that binary. Prepare a successor when the next complete
+reviewable native feature is ready, with fresh source provenance.

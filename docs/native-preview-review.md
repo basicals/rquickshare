@@ -269,3 +269,12 @@ preview routing/native IPC/production card binding; the decoder boundary and its
 offline verification are complete. Do not repeat unchanged checks, Drive recovery,
 signing setup or account-provider alternatives to resume. No install, signature,
 publication or external account/cloud request occurred in this slice.
+
+
+2026-10-16 continuation after native9: complete public source review at the old
+pin and current Google main did not establish image codec/mapping/order. The
+independently authorized defensive inbound routing fix is complete in source:
+announced optional preview bytes cannot be interpreted as sharing control; exact
+bounded reassembly is preserved and completed opaque bytes are discarded.
+See [wire review and measured evidence](native-preview-wire.md). This is not P2
+codec establishment, native production IPC/display or a native9 binary rebuild.

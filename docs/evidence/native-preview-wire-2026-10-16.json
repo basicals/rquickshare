@@ -32,7 +32,21 @@
       "sha": "1c1bcbe8e7c5d40597014789414a6a48c40294a2",
       "commit_date": "2026-10-15T03:17:00Z",
       "url": "https://github.com/google/nearby/commit/1c1bcbe8e7c5d40597014789414a6a48c40294a2"
-    }
+    },
+    "snake_and_camel_archive_search": [
+      {
+        "archive": "google-nearby.tar.gz",
+        "snake_or_camel_preview_matching_files": [
+          "sharing/proto/wire_format.proto"
+        ]
+      },
+      {
+        "archive": "google-nearby-current.tar.gz",
+        "snake_or_camel_preview_matching_files": [
+          "sharing/proto/wire_format.proto"
+        ]
+      }
+    ]
   },
   "finding": "Only schema declares preview_payload_ids; no producer/consumer codec/mapping fixture established in either complete sharing tree or archive token scan.",
   "compatible_preview_codec_established": false,
@@ -40,13 +54,46 @@
   "ordering_established": false,
   "selected_decoder_boundary": 1,
   "runtime_fix": {
-    "status": "planned",
-    "scope": "bounded announced preview IDs are isolated from sharing-control parsing and discarded opaque"
+    "status": "source-implemented-scoped-checks-passed",
+    "scope": "bounded announced preview IDs are isolated from sharing-control parsing and discarded opaque",
+    "new_methods": 4,
+    "primary_category_counts": {
+      "N7": 2,
+      "N1": 1,
+      "N2": 1
+    }
   },
-  "checks": [],
+  "checks": {
+    "initial_core": {
+      "passed": 636,
+      "failed": 1,
+      "total": 637,
+      "seconds": 11.12
+    },
+    "affected_preview": {
+      "passed": 3,
+      "failed": 1,
+      "seconds": 0.02
+    },
+    "final_affected_method": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 636,
+      "seconds": 0.01
+    },
+    "strict_core_all_features_all_targets_clippy": {
+      "passed": true,
+      "seconds": 11.39
+    },
+    "format_passed": true,
+    "diff_passed": true,
+    "whole_final_637_rerun": false,
+    "ten_repetitions": false
+  },
   "installed": false,
   "physical_peer_tested": false,
   "cloud_account_calls": false,
   "release_signed": false,
-  "published": false
+  "published": false,
+  "native9_contains_routing_fix": false
 }

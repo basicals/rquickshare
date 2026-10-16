@@ -84,9 +84,10 @@ preview compatibility from local fixtures.
 
 [Preview wire review](native-preview-wire.md) now records complete public Google
 source inspection at both the earlier pin and current main. No codec/mapping
-fixture was established. A scoped internal inbound routing fix is planned before
-production preview IPC/display: advertised preview bytes must not be decoded as
-sharing control frames. Native9 remains immutable and does not include this fix.
+fixture was established. The scoped internal inbound routing fix is implemented and its focused checks
+passed: declared previews are bounded opaque data, isolated from sharing control
+parsing and discarded. Production preview IPC/display remains gated on canonical
+codec/mapping. Native9 remains immutable and does not include this source fix.
 
 ## Implemented source and remaining acceptance
 

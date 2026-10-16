@@ -40,6 +40,7 @@ pub mod memory_source;
 mod peer_authentication;
 #[cfg(target_os = "linux")]
 pub mod prepared_source;
+mod preview_payload;
 mod protocol;
 #[cfg(target_os = "linux")]
 pub mod service;
