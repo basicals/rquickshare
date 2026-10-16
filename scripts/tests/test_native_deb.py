@@ -43,7 +43,12 @@ class NativeDebTests(unittest.TestCase):
     def test_given_selected_assets_when_validated_then_process_ownership_supports_only_opt_in_login_without_direct_fallback(self):
         # Arrange / Act / Assert: actual shipped service/activation assets.
         package.validate_assets()
-        self.assertEqual(len(package.FILES), 11)
+        self.assertEqual(len(package.FILES), 14)
+        icons = {name for name in package.FILES if name.startswith("usr/share/icons/")}
+        self.assertEqual(icons, {
+            f"usr/share/icons/hicolor/{size}x{size}/apps/rquickshare.png"
+            for size in [32, 128, 256]
+        })
         self.assertFalse(any("autostart" in name for name in package.FILES))
 
     def test_given_elf_header_when_truncated_wrong_type_endian_or_machine_then_reject_relabelled_binary(self):

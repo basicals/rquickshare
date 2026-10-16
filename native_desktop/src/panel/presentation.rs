@@ -110,7 +110,12 @@ impl Panel {
                             .settings
                             .borrow()
                             .as_ref()
-                            .is_some_and(|settings| settings.is_visible()),
+                            .is_some_and(|settings| settings.is_visible())
+                        || self
+                            .about
+                            .borrow()
+                            .as_ref()
+                            .is_some_and(|about| about.is_visible()),
                     automatic: model.automatic,
                     busy: model.dialog.is_some()
                         || model.waiting
@@ -133,6 +138,9 @@ impl Panel {
             self.window.set_visible(false);
             if let Some(settings) = self.settings.borrow().as_ref() {
                 settings.set_visible(false);
+            }
+            if let Some(about) = self.about.borrow().as_ref() {
+                about.set_visible(false);
             }
         } else if requested && !surface.visible {
             self.present_surface();

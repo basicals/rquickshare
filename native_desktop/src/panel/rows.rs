@@ -257,7 +257,7 @@ impl Panel {
             .sources
             .first()
             .map(|source| source_summary(source.kind, source.file_count, source.byte_count))
-            .unwrap_or_else(|| "Ready to share".into());
+            .unwrap_or_default();
         for (page, title) in [
             (
                 "nearby",
@@ -274,7 +274,9 @@ impl Panel {
                 );
                 let entry = rows.entries.entry(key.clone()).or_insert_with(|| {
                     let root = card();
-                    root.append(&label(title));
+                    if !title.is_empty() {
+                        root.append(&label(title));
+                    }
                     if page == "compact" {
                         let button = gtk::Button::with_label(if selection.is_some() {
                             "Choose recipients"

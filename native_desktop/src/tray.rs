@@ -10,6 +10,7 @@ use zbus::{fdo, message::Header, Connection};
 
 const WATCHER: &str = "org.kde.StatusNotifierWatcher";
 const PATH: &str = "/StatusNotifierItem";
+pub const ICON_NAME: &str = "rquickshare";
 type Pixmaps = Vec<(i32, i32, Vec<u8>)>;
 type ToolTip<'a> = (&'a str, Pixmaps, &'a str, &'a str);
 pub mod menu;
@@ -123,7 +124,7 @@ impl Item {
     }
     #[zbus(property)]
     fn icon_name(&self) -> &str {
-        "network-wireless-symbolic"
+        ICON_NAME
     }
     #[zbus(property)]
     fn item_is_menu(&self) -> bool {
@@ -136,7 +137,7 @@ impl Item {
     #[zbus(property)]
     fn tool_tip(&self) -> ToolTip<'_> {
         (
-            "network-wireless-symbolic",
+            ICON_NAME,
             Vec::new(),
             "rQuickShare",
             "Send and receive nearby files",

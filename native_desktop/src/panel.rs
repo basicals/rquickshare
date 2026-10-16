@@ -70,6 +70,7 @@ pub struct Panel {
     actions: gio::SimpleActionGroup,
     context: gtk::PopoverMenu,
     settings: RefCell<Option<gtk::Window>>,
+    about: RefCell<Option<gtk::AboutDialog>>,
     appearance: RefCell<Option<gtk::DropDown>>,
     settings_owner: RefCell<Option<Rc<settings::Editor>>>,
     text_review: RefCell<Option<Rc<text::Review>>>,
@@ -281,7 +282,7 @@ fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'stat
             "Sharing resources are busy. Nothing was queued. Try fewer recipients or wait."
         }
         Some(_) => "The operation was not accepted. Review the current state and try again.",
-        None => "Choose files, a folder or text, then choose a nearby recipient.",
+        None => "",
     }
 }
 
@@ -306,6 +307,7 @@ impl Panel {
         let builder = gtk::Builder::from_string(include_str!("../ui/panel.ui"));
         let window: gtk::Window = builder.object("panel").expect("panel widget");
         window.set_application(Some(application));
+        window.set_icon_name(Some(crate::tray::ICON_NAME));
         if layer {
             window.init_layer_shell();
             window.set_namespace(Some("rquickshare"));
@@ -314,7 +316,7 @@ impl Panel {
             window.set_keyboard_mode(gtk4_layer_shell::KeyboardMode::OnDemand);
         }
         let provider = gtk::CssProvider::new();
-        provider.load_from_string(include_str!("../../docs/prototypes/native-panel.css"));
+        provider.load_from_string(include_str!("../ui/panel.css"));
         gtk::style_context_add_provider_for_display(
             &gtk::prelude::WidgetExt::display(&window),
             &provider,
@@ -349,6 +351,7 @@ impl Panel {
             actions: gio::SimpleActionGroup::new(),
             context: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
             settings: RefCell::new(None),
+            about: RefCell::new(None),
             appearance: RefCell::new(None),
             settings_owner: RefCell::new(None),
             text_review: RefCell::new(None),
@@ -597,6 +600,10 @@ impl Panel {
     pub fn notice(&self, text: &'static str) {
         self.model.borrow_mut().notice = Some(text);
         self.text("status", text);
+        self.builder
+            .object::<gtk::Label>("status")
+            .unwrap()
+            .set_visible(!text.is_empty());
     }
     pub fn close(&self) {
         if self.model.borrow().closing {
@@ -618,6 +625,9 @@ impl Panel {
         }
         if let Some(settings) = self.settings.borrow_mut().take() {
             settings.destroy();
+        }
+        if let Some(about) = self.about.borrow_mut().take() {
+            about.destroy();
         }
         self.appearance.borrow_mut().take();
         self.context.unparent();
@@ -796,8 +806,7 @@ impl Panel {
         } else {
             "Show full view"
         }));
-        self.window
-            .set_default_size(420, if full { 497 } else { 1 });
+        self.window.set_default_size(420, 1);
         let ready = !preview
             && (!model.safety_active || model.safety.manual_allowed())
             && controls_ready(
@@ -815,15 +824,6 @@ impl Panel {
             .as_ref()
             .filter(|view| view.available && view.running && !model.state.disconnected);
         let mode = visibility.map(|view| view.mode);
-        self.text(
-            "visibility",
-            match mode {
-                Some(0) => "Discovery: visible",
-                Some(1) => "Discovery: hidden",
-                Some(2) => "Discovery: visible for up to one minute",
-                _ => "Discovery: unavailable",
-            },
-        );
         let visibility_action = self
             .actions
             .lookup_action("visibility")
@@ -862,6 +862,9 @@ impl Panel {
         self.button("files").set_sensitive(ready && !selected);
         self.button("folder").set_sensitive(ready && !selected);
         self.button("discard").set_sensitive(ready && selected);
+        self.button("files").set_visible(!selected);
+        self.button("folder").set_visible(!selected);
+        self.button("discard").set_visible(selected);
         for (name, enabled) in [
             ("files", ready && !selected),
             ("folder", ready && !selected),
@@ -928,24 +931,11 @@ impl Panel {
             .as_ref()
             .and_then(|view| view.sources.first())
             .map(|source| source_summary(source.kind, source.file_count, source.byte_count));
-        self.text(
-            "selection",
-            summary
-                .as_deref()
-                .unwrap_or("Choose files, a folder or text"),
-        );
-        self.text(
-            "badge",
-            if preview {
-                "Preview"
-            } else if model.state.disconnected {
-                "Disconnected"
-            } else if ready {
-                "Ready"
-            } else {
-                "Waiting"
-            },
-        );
+        self.text("selection", summary.as_deref().unwrap_or(""));
+        self.builder
+            .object::<gtk::Label>("selection")
+            .unwrap()
+            .set_visible(summary.is_some());
         let current = model.state.view.as_ref().and_then(|view| {
             model
                 .automatic_focus
@@ -970,6 +960,8 @@ impl Panel {
             notice
         } else if self.handle.is_none() {
             "Transfer service unavailable. Check installation, then reconnect."
+        } else if model.state.disconnected {
+            "Service connection lost. Reconnect to review its current state."
         } else if model.desktop.staging {
             "Receiving files from the local sender. Abort to release this preparation."
         } else if model.ingress.busy || *self.ingress.gate.subscribe().borrow() {
@@ -1005,6 +997,10 @@ impl Panel {
             error_message(None)
         };
         self.text("status", status);
+        self.builder
+            .object::<gtk::Label>("status")
+            .unwrap()
+            .set_visible(!status.is_empty());
         self.sync_tray_menu();
 
         let Some(view) = &model.state.view else {
@@ -1179,13 +1175,11 @@ impl Panel {
         self.place_at(point)
     }
     fn place_at(&self, point: (i32, i32)) -> bool {
-        let height = self.window.measure(gtk::Orientation::Vertical, 420).0.max(
-            if self.model.borrow().mode == Mode::Full {
-                497
-            } else {
-                1
-            },
-        );
+        let height = self
+            .window
+            .measure(gtk::Orientation::Vertical, 420)
+            .1
+            .max(1);
         let monitors = gtk::prelude::WidgetExt::display(&self.window).monitors();
         for monitor in monitors.iter::<gtk::gdk::Monitor>().filter_map(Result::ok) {
             let geometry = monitor.geometry();
@@ -1340,7 +1334,6 @@ impl Panel {
                 compact.append(&row);
             }
             _ => {
-                compact.append(&label("Ready to share"));
                 let send = gtk::Button::with_label("Send files…");
                 send.set_sensitive(false);
                 compact.append(&send);

@@ -1,0 +1,18 @@
+/* Only the card owns its rounded surface; secondary windows keep their theme. */
+window.rqs-card-window { background: transparent; border: none; box-shadow: none; }
+.rqs-card-body {
+  background-color: @theme_bg_color;
+  color: @theme_fg_color;
+  border: 1px solid alpha(currentColor, 0.12);
+  border-radius: 18px;
+  padding: 14px;
+}
+.card-close { min-width: 28px; min-height: 28px; padding: 0; border-radius: 50%; }
+.selection-card { padding: 10px; border-radius: 12px; background: alpha(currentColor, 0.05); }
+.device-row { padding: 12px; border-radius: 12px; border: 1px solid alpha(currentColor, 0.10); }
+.consent-card { padding: 12px; border-radius: 12px; border: 1px solid alpha(currentColor, 0.10); }
+.row-title { font-weight: 600; }
+.dim-label { opacity: 0.65; }
+.verification-code { font-size: 26px; font-weight: 600; padding: 5px 0; }
+.footer-note { font-size: 11px; }
+.rqs-card-body stackswitcher button { min-width: 70px; }

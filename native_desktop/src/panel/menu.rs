@@ -53,6 +53,7 @@ impl Panel {
             "recover",
             "abort",
             "settings",
+            "about",
             "visibility-retry",
             "reconnect",
             "hide",
@@ -81,6 +82,7 @@ impl Panel {
                     }
                     "discard" | "recover" | "abort" => panel.button(name).emit_clicked(),
                     "settings" => panel.show_settings(),
+                    "about" => panel.show_about(),
                     "visibility-retry" => {
                         if let Some(handle) = panel.handle.as_ref() {
                             panel.submit(|| handle.retry_visibility());
@@ -143,16 +145,13 @@ impl Panel {
         let secondary = gio::Menu::new();
         for (name, title) in [
             ("settings", "Settings…"),
+            ("about", "About rQuickShare"),
             ("hide", "Hide card"),
             ("quit", "Quit panel"),
         ] {
             secondary.append(Some(title), Some(&format!("panel.{name}")));
         }
         menu.append_section(None, &secondary);
-        self.builder
-            .object::<gtk::MenuButton>("menu")
-            .unwrap()
-            .set_menu_model(Some(&menu));
         self.context.set_menu_model(Some(&menu));
         self.context.set_parent(&self.box_widget("root"));
         let gesture = gtk::GestureClick::new();
@@ -228,5 +227,32 @@ impl Panel {
             return;
         }
         super::settings::Editor::open(self);
+    }
+    pub(super) fn show_about(self: &Rc<Self>) {
+        {
+            let model = self.model.borrow();
+            if model.closing || (model.safety_active && !model.safety.manual_allowed()) {
+                return;
+            }
+        }
+        self.mark_manual();
+        if let Some(about) = self.about.borrow().as_ref() {
+            about.present();
+            return;
+        }
+        let about = gtk::AboutDialog::builder()
+            .transient_for(&self.window)
+            .application(&self.window.application().unwrap())
+            .program_name("rQuickShare")
+            .version(env!("CARGO_PKG_VERSION"))
+            .comments("Send and receive nearby files and text")
+            .logo_icon_name(crate::tray::ICON_NAME)
+            .license_type(gtk::License::Gpl30Only)
+            .website("https://github.com/morozhenko-apps/rquickshare")
+            .website_label("Project website")
+            .build();
+        about.set_hide_on_close(true);
+        self.about.replace(Some(about.clone()));
+        about.present();
     }
 }

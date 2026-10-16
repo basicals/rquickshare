@@ -50,7 +50,7 @@ no About surface yet; Settings already has the application name in its title.
    selected source/actions, nearby/request/transfer content, explicit Send footer.
    Compact keeps the focused request/transfer or a direct send entry. Use consistent
    spacing, natural height and bounded lists instead of the fixed497px height.
-   Width/placement policy and existing selection/consent limits stay unchanged.
+   Width/edge-selection policy and existing selection/consent limits stay unchanged.
 
 Navigation/source/recovery controls must remain available after removing the
 duplicated menu. No peer identifiers/PINs/personal contents in evidence. Existing
@@ -61,12 +61,12 @@ not renewed payload-thumbnail development.
 
 - [x] C1: inspect actual builder/CSS/render/actions/tray/legacy icons and document
   user requests, selected layout, invariants, verification and rollback here.
-- [ ] C2: implement scoped transparent/rounded styling, header close, quiet idle
+- [x] C2: implement scoped transparent/rounded styling, header close, quiet idle
   labels and ordered layout; remove obsolete MenuButton bindings. Preserve shared
   hide/actions and safety/readiness logic. No daemon/core behavior changes.
-- [ ] C3: restore standard application icons and add owned About access in the
+- [x] C3: restore standard application icons and add owned About access in the
   tray/Settings, including safety/cleanup. Increment package revision to14.
-- [ ] C4: extend existing single GTK smoke for hide/no shutdown, absence of the
+- [x] C4: extend existing single GTK smoke for hide/no shutdown, absence of the
   removed controls/text, preserved exception/recovery, About reuse/lock cleanup
   and page/source visibility. Adjust existing tray/package contract assertions
   only for the explicitly selected icon/menu/assets. Run appropriate affected
@@ -96,3 +96,83 @@ All prior one-shot commands/observers/builders exited: Terminal closed. Installe
 native13 remains running; no watcher/test terminal is left behind. No key/Drive,
 signing, publication, accounts, preview or advanced protocol work is authorized
 by this presentation slice.
+
+## C2-C3 implementation checkpoint (verification pending)
+
+The actual builder now has a small mode/close header, then tabs, exceptional
+status, source controls, content and the recipient/Send footer. No brand icon/
+name/MenuButton/badge/discovery widget remains on the card. Idle status/selection
+labels are empty/hidden; source replacement buttons hide while a selection exists,
+leaving its summary/clear action. Disconnected/recovery/progress/consent remain.
+Full natural height replaces497px; list bounds and420px width are unchanged.
+
+Only the card window is transparent; its padded body owns themed background,
+border and rounded corners with overflow hidden. Production CSS now lives in
+native_desktop/ui/panel.css, not docs/prototypes. Close activates the existing
+panel.hide action without shutdown or cancellation. A standard owned/reused
+About dialog is reachable from tray/context/Settings, participates in manual
+surface suppression, hides on lock and is destroyed on owner cleanup.
+
+Tray and launcher use rquickshare, restoring the existing32/128/256 legacy blue
+icons via the package allowlist. New About is explicit menu action22; existing
+IDs/signatures/bounds/authentication are preserved. Allowlisted inventory becomes
+14 regular files. Packaging validates matching launcher icon metadata. Revision14
+is reserved; source repair/core/daemon/wire/settings behavior is unchanged.
+
+Focused checks about to run: existing39 native methods with the single GTK smoke
+extended for the requested controls/close/About/safety, existing tray projection/
+real-bus menu assertions, existing native Debian package methods, strict native
+all-target/no-deps lint and formatting/whitespace. No source-suite repetition or
+new Mode B coverage project. Later fixture rendering checks geometry/alpha only;
+actual KDE corners still require the user's installed visual observation.
+
+## C4 observed checks
+
+The39 native methods passed once (0.99s), including the extended single GTK
+smoke, real private-bus icon/About menu behavior, explicit close/hide with an
+acquired preparation gate retained, removed widgets/text, preserved visibility
+action state, About reuse/lock and owner cleanup. The five native Debian methods
+passed once (2.137s), including the14-file/icon inventory and archive tampering
+guards. Strict native all-target/no-deps Clippy passed7.32s; the same nine existing
+nonexperimental-core dependency warnings remain visible. Formatting/whitespace
+passed. No full core-suite or ten-run repetition. Logs:/tmp/rqs-card-cleanup-native.log,
+/tmp/rqs-card-cleanup-package.log, /tmp/rqs-card-cleanup-clippy.log.
+All owned verification commands exited: Terminal closed. An isolated widget-render
+build is a separate currently owned command; no user owner was stopped.
+
+Native packaging owns exact copies of the selected original icons under
+native_desktop/assets/icons, so removing the legacy Tauri tree later cannot break
+native packaging. Original bytes remain unchanged and the legacy baseline is
+preserved. This internal asset-ownership adjustment affects only packaging; rerun
+the affected five package checks once, not the unchanged GTK/core/lint suites.
+
+## C5 first visual review and scoped height correction
+
+Four actual isolated widget PNGs rendered successfully: Compact Nearby420x137,
+Full Nearby420x475, Compact Incoming420x330, Full Transfers420x367. All four
+corner alpha values are0 and center alpha255. No CSS/parser/critical error was
+reported; software Xvfb emitted only DRI3 acceleration warnings. This establishes
+renderer transparency, not an actual KDE compositor signoff.
+
+Visual inspection found surplus space below a short Nearby list. Further source
+inspection found a second fixed497px minimum inside place_at, despite removal of
+window default height. Before this correction, document the final layout choice:
+use a120px minimum,300px maximum natural-height list, nonhomogeneous/nonexpanding
+pages, and the actual widget natural measurement for monitor-fit/edge placement.
+The nearest tray edge, width420, monitor guards and consent/source lifecycle are
+unchanged. This removes a brittle presentation constant rather than masking its
+symptom. Incoming consent text and a long list remain bounded and scrollable.
+
+Only the affected single GTK smoke and native lint are rerun after this height
+change. Package checks after icon ownership relocation passed5/0 in1.960s; their
+code/assets are unchanged by the height correction. Build/verify native14 once
+from the committed final source, then render the final four cases using that
+release binary, avoiding another unrelated debug build/full source suite.
+All owned initial render/build processes exited: Terminal closed.
+
+After the documented height correction, the affected single GTK smoke passed1/0
+(38 filtered) and strict native all-target/no-deps Clippy passed. The prior39
+methods and final five package checks remain measured above; no claim that the
+whole39 were repeated after this small presentation change. Final release rendering
+and installed KDE observation remain pending. Runtime/core source is unchanged.
+All owned affected-check processes exited: Terminal closed.

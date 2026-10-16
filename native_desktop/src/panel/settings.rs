@@ -129,6 +129,15 @@ impl Editor {
             .resizable(false)
             .build();
         let content = gtk::Box::new(gtk::Orientation::Vertical, 10);
+        let about = gtk::Button::with_label("About rQuickShare");
+        about.set_halign(gtk::Align::Start);
+        let weak = Rc::downgrade(panel);
+        about.connect_clicked(move |_| {
+            if let Some(panel) = weak.upgrade() {
+                panel.show_about();
+            }
+        });
+        content.append(&about);
         content.set_margin_top(20);
         content.set_margin_bottom(20);
         content.set_margin_start(20);

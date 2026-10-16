@@ -88,7 +88,25 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.box_widget("compact").get_visible());
     assert!(!panel.pages.get_visible());
     assert!(!panel.box_widget("source").get_visible());
+    for id in ["menu", "badge", "visibility"] {
+        assert!(panel.builder.object::<gtk::Widget>(id).is_none(), "{id}");
+    }
+    assert!(panel.window.has_css_class("rqs-card-window"));
+    assert!(panel.box_widget("root").has_css_class("rqs-card-body"));
+    assert_eq!(panel.box_widget("root").overflow(), gtk::Overflow::Hidden);
+    assert_eq!(
+        panel.button("close").action_name().as_deref(),
+        Some("panel.hide")
+    );
+    for text in labels(&panel.window) {
+        assert!(!["rQuickShare", "Ready", "Ready to share"].contains(&text.text().as_str()));
+        assert!(!text.text().starts_with("Choose files"));
+    }
     let permit = panel.ingress.gate.try_acquire().unwrap();
+    panel.window.present();
+    panel.button("close").emit_clicked();
+    assert!(!panel.window.is_visible() && !panel.model.borrow().closing);
+    assert!(*panel.ingress.gate.subscribe().borrow());
     panel
         .actions
         .activate_action("mode", Some(&"full".to_variant()));
@@ -205,6 +223,19 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.actions.activate_action("settings", None);
     let settings = panel.settings.borrow().as_ref().unwrap().clone();
     assert!(settings.is_visible());
+    panel.actions.activate_action("about", None);
+    let about = panel.about.borrow().as_ref().unwrap().clone();
+    assert!(about.is_visible());
+    assert_eq!(about.program_name().as_deref(), Some("rQuickShare"));
+    assert_eq!(
+        about.logo_icon_name().as_deref(),
+        Some(crate::tray::ICON_NAME)
+    );
+    about.close();
+    assert!(!about.is_visible());
+    panel.actions.activate_action("about", None);
+    assert_eq!(*panel.about.borrow().as_ref().unwrap(), about);
+    assert!(about.is_visible());
     let appearance = panel.appearance.borrow().as_ref().unwrap().clone();
     appearance.set_selected(1);
     assert_eq!(panel.model.borrow().mode, Mode::Full);
@@ -288,8 +319,8 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     }
     panel.render();
     assert_eq!(
-        panel.builder.object::<gtk::Label>("badge").unwrap().text(),
-        "Disconnected"
+        panel.builder.object::<gtk::Label>("status").unwrap().text(),
+        "Transfer service unavailable. Check installation, then reconnect."
     );
     assert!(panel.reconnect_button.get_visible());
     assert!(panel.box_widget("recovery").get_visible());
@@ -305,6 +336,8 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.close();
     assert!(panel.model.borrow().closing);
     assert!(panel.settings.borrow().is_none());
+    assert!(panel.about.borrow().is_none());
+    assert!(!about.is_visible());
     assert!(panel.appearance.borrow().is_none());
     assert!(panel.settings_owner.borrow().is_none());
     assert!(panel.context.parent().is_none());

@@ -8,8 +8,8 @@ pub(super) const PATH: &str = "/Menu";
 #[cfg(test)]
 pub(super) const INTERFACE: &str = "com.canonical.dbusmenu";
 const MAX_PROPERTIES: usize = 16;
-const ROWS: [i32; 21] = [
-    1, 12, 18, 19, 20, 21, 2, 3, 16, 17, 4, 5, 13, 6, 7, 14, 8, 9, 10, 15, 11,
+const ROWS: [i32; 22] = [
+    1, 12, 18, 19, 20, 21, 2, 3, 16, 17, 4, 5, 13, 6, 7, 14, 8, 22, 9, 10, 15, 11,
 ];
 pub type Layout = (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>);
 type Properties = Vec<(i32, HashMap<String, OwnedValue>)>;
@@ -34,6 +34,7 @@ pub enum Action {
     Hidden = 19,
     Temporary = 20,
     RetryVisibility = 21,
+    About = 22,
 }
 impl Action {
     pub fn from_id(id: i32) -> Option<Self> {
@@ -55,6 +56,7 @@ impl Action {
             19 => Self::Hidden,
             20 => Self::Temporary,
             21 => Self::RetryVisibility,
+            22 => Self::About,
             _ => return None,
         })
     }
@@ -74,6 +76,7 @@ impl Action {
             Self::Compact => "Compact view",
             Self::Full => "Full view",
             Self::Settings => "Settings…",
+            Self::About => "About rQuickShare",
             Self::Reconnect => "Reconnect service",
             Self::Hide => "Hide card",
             Self::Quit => "Quit panel",
@@ -91,6 +94,7 @@ impl Action {
             Self::Incoming => Some("incoming"),
             Self::Transfers => Some("transfers"),
             Self::Settings => Some("settings"),
+            Self::About => Some("about"),
             Self::Reconnect => Some("reconnect"),
             Self::Hide => Some("hide"),
             Self::Quit => Some("quit"),
@@ -157,7 +161,7 @@ fn invalid() -> fdo::Error {
     fdo::Error::InvalidArgs("Invalid menu request".into())
 }
 fn known(id: i32) -> bool {
-    (0..=21).contains(&id)
+    (0..=22).contains(&id)
 }
 fn validate_properties(names: &[String]) -> fdo::Result<()> {
     if names.len() > MAX_PROPERTIES
@@ -286,7 +290,7 @@ impl Menu {
         }
         validate_properties(&property_names)?;
         let ids = if ids.is_empty() {
-            (0..=21).collect()
+            (0..=22).collect()
         } else {
             ids
         };

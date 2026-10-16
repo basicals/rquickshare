@@ -32,6 +32,11 @@ for relative in [
 ]:
     FILES["usr/" + relative] = (ASSETS / relative, 0o644)
 
+for size, source in [(32, "32x32.png"), (128, "128x128.png"), (256, "128x128@2x.png")]:
+    FILES[f"usr/share/icons/hicolor/{size}x{size}/apps/rquickshare.png"] = (
+        ROOT / "native_desktop/assets/icons" / source, 0o644,
+    )
+
 
 def run(*args, cwd=None, env=None):
     return subprocess.check_output(args, cwd=cwd, env=env, text=True).strip()
@@ -72,6 +77,9 @@ def validate_elf(header, architecture):
 
 
 def validate_assets():
+    application = configparser.ConfigParser(interpolation=None)
+    application.read(ASSETS / "share/applications/io.github.morozhenko_apps.RQuickShare.desktop")
+    require(application["Desktop Entry"].get("Icon") == "rquickshare", "Unexpected application icon")
     unit = configparser.ConfigParser(interpolation=None)
     unit.read(ASSETS / "lib/systemd/user/rquickshare-daemon.service")
     require(set(unit.sections()) == {"Unit", "Service"}, "Unexpected unit enablement")

@@ -13,7 +13,7 @@ impl Panel {
             && !model.preview
             && ((!self.layer && !model.safety_active) || model.safety.manual_allowed());
         let mut enabled = 0;
-        for id in (1..=11).chain(16..=21) {
+        for id in (1..=11).chain(16..=22) {
             let action = Action::from_id(id).expect("fixed tray action");
             let cleanup = matches!(action, Action::Hide | Action::Quit);
             let allowed = !model.closing
@@ -153,11 +153,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         name_status: 0,
     };
     panel.model.borrow_mut().state.settings = Some(settings);
-    for (mode, target, label) in [
-        (0, "visible", "Discovery: visible"),
-        (1, "hidden", "Discovery: hidden"),
-        (2, "temporary", "Discovery: visible for up to one minute"),
-    ] {
+    for (mode, target) in [(0, "visible"), (1, "hidden"), (2, "temporary")] {
         panel.model.borrow_mut().state.visibility =
             Some(rqs_lib::service::client::visibility::VisibilityView {
                 epoch: format!("{:032x}", 1),
@@ -176,14 +172,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
             .state()
             .unwrap();
         assert_eq!(state.str(), Some(target));
-        assert_eq!(
-            panel
-                .builder
-                .object::<gtk::Label>("visibility")
-                .unwrap()
-                .text(),
-            label
-        );
+        assert!(panel.builder.object::<gtk::Label>("visibility").is_none());
     }
     for case in 0..4 {
         {
@@ -210,6 +199,9 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     assert_eq!(panel.mode(), Mode::Full);
     panel.tray_action(Action::Settings);
     assert!(panel.settings.borrow().as_ref().unwrap().is_visible());
+    assert_ne!(panel.tray_projection().enabled & Action::About.bit(), 0);
+    panel.tray_action(Action::About);
+    assert!(panel.about.borrow().as_ref().unwrap().is_visible());
     panel.safety_update(crate::desktop_guard::SafetyState {
         locked: Some(true),
         inhibited: Some(false),
@@ -221,6 +213,9 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     assert_eq!(panel.mode(), Mode::Full);
     assert!(!panel.tray_context((1, 1)));
     assert!(!panel.settings.borrow().as_ref().unwrap().is_visible());
+    assert!(!panel.about.borrow().as_ref().unwrap().is_visible());
+    panel.tray_action(Action::About);
+    assert!(!panel.about.borrow().as_ref().unwrap().is_visible());
     panel.safety_update(crate::desktop_guard::SafetyState {
         locked: Some(false),
         inhibited: Some(false),

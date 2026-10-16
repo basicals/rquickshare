@@ -8,7 +8,7 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
     // Arrange
     let state = State {
         projection: Projection {
-            enabled: 0x1f87ff,
+            enabled: 0x3f87ff,
             full: false,
             visibility: None,
         },
@@ -21,11 +21,11 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
             layout(0, depth, &[], state).unwrap().2.len(),
             if depth == 0 { 0 } else { ROWS.len() }
         );
-        for id in 1..=21 {
+        for id in 1..=22 {
             assert!(layout(id, depth, &[], state).unwrap().2.is_empty());
         }
     }
-    for id in [-1, 22, i32::MAX] {
+    for id in [-1, 23, i32::MAX] {
         assert!(layout(id, -1, &[], state).is_err());
     }
     assert!(layout(0, -2, &[], state).is_err());
@@ -59,7 +59,7 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
         }
     }
     assert!(checked_event(0, "clicked", state).is_err());
-    for id in (1..=11).chain(16..=21) {
+    for id in (1..=11).chain(16..=22) {
         assert_eq!(
             checked_event(id, "clicked", state).unwrap(),
             Action::from_id(id)
@@ -94,7 +94,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
     let server = broker.connection().await;
     let (state, _) = watch::channel(State {
         projection: Projection {
-            enabled: 0x1f87ff,
+            enabled: 0x3f87ff,
             full: true,
             visibility: None,
         },
@@ -130,7 +130,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .unwrap();
     assert_eq!(revision, 1);
     assert_eq!(tree.0, 0);
-    assert_eq!(tree.2.len(), 21);
+    assert_eq!(tree.2.len(), 22);
     let rows: Vec<i32> = tree
         .2
         .into_iter()
@@ -140,7 +140,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         })
         .collect();
     assert_eq!(rows, ROWS);
-    for id in (1..=11).chain(16..=21) {
+    for id in (1..=11).chain(16..=22) {
         let label: OwnedValue = proxy.call("GetProperty", &(id, "label")).await.unwrap();
         assert_eq!(
             String::try_from(label).unwrap(),
@@ -171,7 +171,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .await
         .unwrap();
     assert!(received.try_recv().is_err());
-    for action in [Action::Text, Action::Image] {
+    for action in [Action::Text, Action::Image, Action::About] {
         proxy
             .call::<_, _, ()>(
                 "Event",

@@ -51,6 +51,10 @@ async fn given_private_kde_watcher_when_registered_activated_and_lost_then_lates
     );
     assert!(!item.get_property::<bool>("ItemIsMenu").await.unwrap());
     assert_eq!(
+        item.get_property::<String>("IconName").await.unwrap(),
+        "rquickshare"
+    );
+    assert_eq!(
         item.get_property::<zbus::zvariant::OwnedObjectPath>("Menu")
             .await
             .unwrap()
