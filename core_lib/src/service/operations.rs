@@ -13,13 +13,15 @@ pub(super) enum Call {
     Commit(UploadId),
     Abort(UploadId),
     Send(SelectionId, String),
+    SendMany(SelectionId, Vec<String>),
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum OperationResult {
     Upload(UploadId),
     Selection(SelectionId),
     Transfer(TransferId),
+    Transfers(Vec<TransferId>),
     Empty,
 }
 
@@ -44,6 +46,7 @@ impl Call {
             Self::Commit(_) => "commit_selection",
             Self::Abort(_) => "abort_selection",
             Self::Send(_, _) => "send_selection",
+            Self::SendMany(_, _) => "send_many",
         }
     }
 
@@ -61,6 +64,15 @@ impl Coordinator {
         client: ClientId,
         sequence: u64,
         call: Call,
+    ) -> Result<OperationReceipt, Error> {
+        self.operation_with_names(client, sequence, call, None)
+    }
+    fn operation_with_names(
+        &mut self,
+        client: ClientId,
+        sequence: u64,
+        call: Call,
+        names: Option<Vec<String>>,
     ) -> Result<OperationReceipt, Error> {
         self.client(client)?;
         let ledger = &self.operations[&client];
@@ -102,6 +114,12 @@ impl Coordinator {
             Call::Send(id, endpoint) => {
                 OperationResult::Transfer(self.enqueue_selection(client, *id, endpoint, None)?)
             }
+            Call::SendMany(id, endpoints) => OperationResult::Transfers(self.enqueue_many(
+                client,
+                *id,
+                endpoints,
+                &names.ok_or(Error::InvalidInput)?,
+            )?),
         };
         let receipt = OperationReceipt {
             kind: call.kind(),
@@ -172,6 +190,31 @@ impl Coordinator {
             _ => Err(Error::InvalidState),
         }
     }
+    pub fn ordered_send_many(
+        &mut self,
+        client: ClientId,
+        selection: SelectionId,
+        recipients: Vec<(String, String)>,
+        sequence: u64,
+    ) -> Result<Vec<TransferId>, Error> {
+        self.client(client)?;
+        if recipients.is_empty() || recipients.len() > super::batch::RECIPIENTS {
+            return Err(Error::InvalidInput);
+        }
+        let (endpoints, names) = recipients.into_iter().unzip();
+        match self
+            .operation_with_names(
+                client,
+                sequence,
+                Call::SendMany(selection, endpoints),
+                Some(names),
+            )?
+            .result
+        {
+            OperationResult::Transfers(ids) => Ok(ids),
+            _ => Err(Error::InvalidState),
+        }
+    }
     pub fn operation_state(&self, client: ClientId) -> Result<(u64, u64), Error> {
         self.client(client)?;
         let ledger = &self.operations[&client];
@@ -218,8 +261,8 @@ impl Coordinator {
             .values()
             .flat_map(|ledger| ledger.receipts.values())
             .filter_map(|(call, receipt)| {
-                call.upload().or(match receipt.result {
-                    OperationResult::Upload(id) => Some(id),
+                call.upload().or(match &receipt.result {
+                    OperationResult::Upload(id) => Some(*id),
                     _ => None,
                 })
             })
@@ -236,7 +279,11 @@ impl Coordinator {
             ledger
                 .receipts
                 .values()
-                .any(|(_, receipt)| receipt.result == OperationResult::Transfer(transfer))
+                .any(|(_, receipt)| match &receipt.result {
+                    OperationResult::Transfer(id) => *id == transfer,
+                    OperationResult::Transfers(ids) => ids.contains(&transfer),
+                    _ => false,
+                })
         })
     }
 }

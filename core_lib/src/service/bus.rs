@@ -22,6 +22,7 @@ use super::uploads::{UploadState, BATCH_FILES};
 use super::{ClientId, Coordinator, Error, SelectionId, TransferId, UploadId};
 use crate::file_source::OpenedFile;
 
+mod batch;
 pub mod files;
 mod state;
 pub mod text;
@@ -1023,6 +1024,87 @@ impl SelectionBus {
                 Err(error) => self.domain_error(&header, error).await,
             };
         }
+        if interface == Some(super::batch::INTERFACE) {
+            if !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            let body = message.body();
+            match member {
+                Some("Send") => {
+                    let result = body
+                        .deserialize::<(String, batch::Recipients, u64)>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|(id, recipients, sequence)| {
+                            let (epoch, counter) = token_parts(&id, coordinator.epoch)?;
+                            let discovered: BTreeMap<_, _> = endpoints.collect();
+                            let recipients = recipients
+                                .0
+                                .into_iter()
+                                .map(|id| {
+                                    let name = discovered
+                                        .get(id.as_str())
+                                        .copied()
+                                        .unwrap_or("")
+                                        .to_owned();
+                                    (id, name)
+                                })
+                                .collect();
+                            coordinator.ordered_send_many(
+                                client,
+                                SelectionId(epoch, counter),
+                                recipients,
+                                sequence,
+                            )
+                        });
+                    return match result {
+                        Ok(ids) => {
+                            self.state_reply(
+                                &header,
+                                &ids.into_iter()
+                                    .map(|id| token(id.0, id.1))
+                                    .collect::<Vec<_>>(),
+                            )
+                            .await
+                        }
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                Some("GetReceipt") => {
+                    let result = body
+                        .deserialize::<u64>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|sequence| coordinator.operation_receipt(client, sequence))
+                        .and_then(|receipt| match receipt.result {
+                            super::operations::OperationResult::Transfers(ids) => Ok((
+                                receipt.kind,
+                                ids.into_iter()
+                                    .map(|id| token(id.0, id.1))
+                                    .collect::<Vec<_>>(),
+                            )),
+                            _ => Err(Error::InvalidState),
+                        });
+                    return match result {
+                        Ok(receipt) => self.state_reply(&header, &receipt).await,
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                Some("GetRecipientPage") => {
+                    let result = body
+                        .deserialize::<(String, u32)>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|(id, offset)| self.state.recipient_page(client, &id, offset));
+                    return match result {
+                        Ok(page) => self.state_reply(&header, &page).await,
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                _ => {
+                    return self
+                        .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                        .await
+                }
+            }
+        }
         if interface == Some(OPERATIONS_INTERFACE) {
             let Some(member) = member else {
                 return self
@@ -1594,6 +1676,7 @@ fn execute_operation(
                 OperationResult::Upload(id) => token(id.0, id.1),
                 OperationResult::Selection(id) => token(id.0, id.1),
                 OperationResult::Transfer(id) => token(id.0, id.1),
+                OperationResult::Transfers(_) => return Err(Error::InvalidState),
                 OperationResult::Empty => String::new(),
             };
             Ok(OperationReply::Receipt((receipt.kind, result)))

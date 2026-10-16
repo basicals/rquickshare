@@ -47,6 +47,7 @@ pub enum ActionResult {
     Settings(super::settings::SettingsView),
     Selection(Selection),
     Transfer(Transfer),
+    Transfers(Vec<Transfer>),
     Completed,
     Recovered(Option<Outcome>),
 }
@@ -72,6 +73,7 @@ enum Action {
     Choose(OpenedSelection),
     ChooseText(NativeText),
     Send(Selection, String),
+    SendMany(Selection, Vec<String>),
     Discard(Selection),
     Respond(Transfer, u64, bool),
     Cancel(Transfer),
@@ -157,6 +159,11 @@ impl PanelHandle {
     }
     pub fn send(&self, selection: Selection, endpoint: String) -> Result<Completion> {
         self.submit(Action::Send(selection, endpoint))
+    }
+    pub fn send_many(&self, selection: Selection, endpoints: Vec<String>) -> Result<Completion> {
+        crate::service::batch::valid_recipients(&endpoints)
+            .map_err(|_| ControllerError::Client(ClientError::InvalidInput))?;
+        self.submit(Action::SendMany(selection, endpoints))
     }
     pub fn discard(&self, selection: Selection) -> Result<Completion> {
         self.submit(Action::Discard(selection))
@@ -510,6 +517,11 @@ impl Worker {
                 self.preparation = None;
                 Ok(ActionResult::Completed)
             }
+            Action::SendMany(selection, endpoints) => self
+                .client
+                .send_many(&selection, endpoints)
+                .await
+                .map(ActionResult::Transfers),
             Action::Send(selection, endpoint) => self
                 .client
                 .send_selection(&selection, &endpoint)

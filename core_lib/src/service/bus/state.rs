@@ -58,6 +58,7 @@ pub(super) type NoticeRow = (String, String, u64, u64);
 pub(super) type SourceRow = (String, &'static str, u32, u64);
 
 struct Capture {
+    recipients: Vec<EndpointRow>,
     sources: Vec<SourceRow>,
     received: Vec<super::files::MetadataRow>,
     text: Vec<super::text::MetadataRow>,
@@ -233,6 +234,19 @@ impl StateCache {
                 )
             })
             .collect();
+        let recipients = snapshot
+            .transfers
+            .iter()
+            .map(|view| {
+                (
+                    token(view.id.0, view.id.1),
+                    coordinator.transfers[&view.id]
+                        .recipient
+                        .clone()
+                        .unwrap_or_default(),
+                )
+            })
+            .collect();
         let transfers: Vec<_> = snapshot
             .transfers
             .into_iter()
@@ -277,6 +291,7 @@ impl StateCache {
             })
             .collect();
         let capture = Capture {
+            recipients,
             sources,
             received,
             text,
@@ -291,6 +306,12 @@ impl StateCache {
         // Fixed reservation includes record storage, owned buffers and conservative map overhead.
         let bytes = size_of::<Capture>()
             + 1024
+            + capture.recipients.capacity() * size_of::<EndpointRow>()
+            + capture
+                .recipients
+                .iter()
+                .map(|(id, name)| id.capacity() + name.capacity())
+                .sum::<usize>()
             + capture.sources.capacity() * size_of::<SourceRow>()
             + capture
                 .sources
@@ -383,6 +404,14 @@ impl StateCache {
         offset: u32,
     ) -> Result<(u32, Vec<NoticeRow>), Error> {
         page(&self.get(client, id)?.notices, offset)
+    }
+    pub(super) fn recipient_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<EndpointRow>), Error> {
+        page(&self.get(client, id)?.recipients, offset)
     }
     pub(super) fn endpoint_page(
         &self,

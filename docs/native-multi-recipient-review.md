@@ -2,8 +2,8 @@
 
 2026-10-16. Mode A, direct dev. Guide: /home/morozhenko/.codex/AGENTS.md,
 sections3/3.1/11/12/13. This is the next independent parity slice while canonical
-preview codec/mapping remains unestablished. No multi-send behavior/API/UI code
-follows selected option1. The user chose daemon-owned queue/results on2026-10-16.
+preview codec/mapping remains unestablished. Implementation follows selected option1. The user chose daemon-owned
+queue/results on2026-10-16.
 
 ## Analysis
 
@@ -57,7 +57,7 @@ recipient remains supported. No hidden immediate sends while building the set.
    request/acknowledgement/reconnect contracts. Preserve supported single-send
    behavior or document the coordinated API extension explicitly. Bound recipient
    projection/receipt storage and disclose existing source mutation semantics.
-3. [ ] M2: implement real coordinator/domain admission and lifetime/receipt logic;
+3. [x] M2: implement real coordinator/domain admission and lifetime/receipt logic;
    inventory branches before deterministic unit/integration regressions. No
    domain mocks or GUI-owned substitute for the selected authority.
 4. [ ] M3: authenticated typed native IPC, exact-retry SDK/controller, safe
@@ -162,3 +162,41 @@ shared-offset or per-recipient resource double charging, replay duplicates, wron
 member pins, lost names on queue dispatch, hidden vanished targets and automatic
 send from selection. This is Mode A, checks once per change/failure, not Mode B
 whole-product coverage or ten-run stability. Update observed counts after execution.
+
+## M2 descriptor-accounting refinement before final source
+
+The initial full645-method check passed644 and caught an incorrect SDK fixture
+assumption: native upload reserves two handles per file (original plus one future
+worker clone), not one. Inspecting prepare_outbound_selection also exposed the
+new batch-specific extension needed before final code: N concurrent peer workers
+can each clone every source descriptor. Shared Arc ownership alone does not make
+those physical handles free. Keep one source/byte reservation, but preflight and
+conservatively extend its handle slots to at least files*(N+1), retaining them
+until the last shared reader/queued owner drops. Check the aggregate existing
+reserved_handles budget before ID allocation or source consumption. Do not raise
+the default1024-handle budget or weaken assertions to hide cloning. Text has no
+file handles. Extend the validation matrix with handle exhaustion and assert the
+exact N+1 reservation in source/SDK lifetime cases. This is scoped admission
+accounting, not a shared-file type or transport architecture refactor.
+
+## M2 observed verification (2026-10-16)
+
+Implemented atomic coordinator admission, shared descriptor reservation, common
+operation ledger/vector receipts and receipt pins. The coordinated Batch1 bus,
+SDK/controller and captured recipient projection are implemented for integration
+verification before the GTK exposure is committed. No parallel transport policy
+or persisted batch owner was added.
+
+Initial compile found missing recipient zvariant Type metadata and a test helper
+match arm; both were corrected. First full core run:645 methods,644 passed, one
+SDK reservation assertion failed (13.96s). All637 pre-existing methods passed in
+that run. The failure led to the descriptor-accounting refinement above. After
+that source/test change, all8 affected new methods passed (0.29s),637 filtered.
+Strict all-feature/all-target Clippy initially caught two byte-slice style errors
+in the new domain assertion; corrected without changing its values. Final strict
+Clippy passed (see command log for elapsed build time). No repeated full-suite or
+ten-run stability claim. Logs: /tmp/rqs-multi-core.log,
+/tmp/rqs-multi-affected.log, /tmp/rqs-multi-core-clippy-final.log.
+
+Terminal commands completed and their owned sessions exited: Terminal closed.
+M3 GTK widgets are in progress; native9 and installed applications are unchanged.

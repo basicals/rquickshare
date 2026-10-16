@@ -220,6 +220,7 @@ struct Replay {
 }
 
 struct Transfer {
+    recipient: Option<String>,
     received_files: Option<Arc<crate::received_files::ReceivedFiles>>,
     received_text: Option<Arc<crate::sessions::text::ReceivedText>>,
     view: TransferSnapshot,
@@ -572,30 +573,7 @@ impl Coordinator {
             .selections
             .remove(&selection)
             .ok_or(Error::UnknownSelection)?;
-        self.transfers.insert(
-            id,
-            Transfer {
-                received_text: None,
-                received_files: None,
-                view: TransferSnapshot {
-                    id,
-                    direction: Direction::Outbound,
-                    phase: Phase::Queued,
-                    consent_revision: None,
-                    pending_control: None,
-                    details: Arc::default(),
-                },
-                source: Arc::downgrade(&pending.resource),
-                owner_closed: true,
-                released: true,
-                control_receipt: false,
-                terminal_revision: None,
-                resource: Some(pending.resource),
-                endpoint: Some(endpoint.to_owned()),
-                answer: None,
-            },
-        );
-        self.queue.push_back(id);
+        self.queue_outbound(id, pending.resource, endpoint.to_owned(), None);
         if let Some(request) = request {
             if let Some(ledger) = self.clients.get_mut(&client) {
                 ledger.insert(
@@ -609,6 +587,40 @@ impl Coordinator {
             }
         }
         Ok(id)
+    }
+
+    fn queue_outbound(
+        &mut self,
+        id: TransferId,
+        resource: Arc<crate::prepared_source::PreparedSource>,
+        endpoint: String,
+        recipient: Option<String>,
+    ) {
+        self.transfers.insert(
+            id,
+            Transfer {
+                recipient,
+                received_text: None,
+                received_files: None,
+                view: TransferSnapshot {
+                    id,
+                    direction: Direction::Outbound,
+                    phase: Phase::Queued,
+                    consent_revision: None,
+                    pending_control: None,
+                    details: Arc::default(),
+                },
+                source: Arc::downgrade(&resource),
+                owner_closed: true,
+                released: true,
+                control_receipt: false,
+                terminal_revision: None,
+                resource: Some(resource),
+                endpoint: Some(endpoint),
+                answer: None,
+            },
+        );
+        self.queue.push_back(id);
     }
 
     pub fn next_send(&mut self) -> Result<Option<SendDispatch>, Error> {
@@ -646,6 +658,7 @@ impl Coordinator {
         self.transfers.insert(
             id,
             Transfer {
+                recipient: None,
                 received_text: None,
                 received_files: None,
                 view: TransferSnapshot {
@@ -992,6 +1005,7 @@ pub mod process;
 pub mod settings_service;
 pub mod visibility_service;
 
+pub mod batch;
 pub mod operations;
 
 mod retention;

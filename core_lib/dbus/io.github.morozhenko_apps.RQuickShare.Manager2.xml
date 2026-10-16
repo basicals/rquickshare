@@ -1,4 +1,23 @@
 <node>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Batch1">
+    <method name="Send">
+      <arg name="selection" type="s" direction="in"/>
+      <arg name="recipients" type="as" direction="in"/>
+      <arg name="sequence" type="t" direction="in"/>
+      <arg name="transfers" type="as" direction="out"/>
+    </method>
+    <method name="GetReceipt">
+      <arg name="sequence" type="t" direction="in"/>
+      <arg name="kind" type="s" direction="out"/>
+      <arg name="transfers" type="as" direction="out"/>
+    </method>
+    <method name="GetRecipientPage">
+      <arg name="snapshot" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next" type="u" direction="out"/>
+      <arg name="recipients" type="a(ss)" direction="out"/>
+    </method>
+  </interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Visibility1">
     <method name="Read">
       <arg name="visibility" type="(sbtby)" direction="out"/>

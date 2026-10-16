@@ -35,8 +35,9 @@ impl fmt::Debug for Endpoint {
         f.debug_struct("Endpoint").finish_non_exhaustive()
     }
 }
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct TransferView {
+    pub recipient: Option<String>,
     pub content_revision: Option<u64>,
     pub reveal_revision: Option<u64>,
     pub transfer: Transfer,
@@ -45,6 +46,15 @@ pub struct TransferView {
     pub consent_revision: Option<u64>,
     pub pending_control: Option<(ControlAction, u64)>,
     pub details: Arc<TransferDetails>,
+}
+impl fmt::Debug for TransferView {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TransferView")
+            .field("transfer", &self.transfer)
+            .field("direction", &self.direction)
+            .field("phase", &self.phase)
+            .finish_non_exhaustive()
+    }
 }
 impl TransferView {
     /// Presentation readiness only; the daemon revalidates the live round.
@@ -252,6 +262,7 @@ impl NativeClient {
             }
         }
         Ok(TransferView {
+            recipient: None,
             content_revision: None,
             reveal_revision: None,
             transfer: Transfer {
@@ -395,6 +406,25 @@ impl NativeClient {
             view.transfers.push(self.transfer_view(row, view.revision)?);
         }
         sorted(view.transfers.iter().map(|v| v.transfer.id()))?;
+        let recipients: Vec<(String, String)> = self
+            .pages_for_on(
+                crate::service::batch::INTERFACE,
+                "GetRecipientPage",
+                &metadata.0,
+                metadata.10,
+                None,
+            )
+            .await?;
+        for (transfer, (id, name)) in view.transfers.iter_mut().zip(recipients) {
+            if id != transfer.transfer.id()
+                || name.len() > 256
+                || name.chars().any(char::is_control)
+                || (!name.is_empty() && transfer.direction != Direction::Outbound)
+            {
+                return Err(ClientError::Protocol);
+            }
+            transfer.recipient = (!name.is_empty()).then_some(name);
+        }
         let headers: Vec<DetailRow> = self
             .pages("GetTransferDetailsPage", &metadata.0, metadata.10)
             .await?;

@@ -76,6 +76,7 @@ fn member(kind: OperationKind) -> &'static str {
         OperationKind::Commit => "CommitSelection",
         OperationKind::Abort => "AbortSelection",
         OperationKind::Send => "SendSelection",
+        OperationKind::SendMany => "Send",
     }
 }
 
@@ -848,3 +849,5 @@ async fn given_untrusted_notice_wire_batches_when_rejected_then_current_notice_a
     })
     .await;
 }
+
+mod batch;
