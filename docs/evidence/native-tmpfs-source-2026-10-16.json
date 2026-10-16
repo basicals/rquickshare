@@ -188,5 +188,14 @@
       "selected_bytes": 0
     },
     "first_observer_assertion_failed": "Observer assumed outgoing terminal metadata includes fixture manifest/bytes; actual metadata unsupported. No source test assertion changed."
+  },
+  "export": {
+    "archive_source_commit": "a8a082ec6f78a512781aa0d82e78357c44cda7e6",
+    "source_archive": "rquickshare-native13-source.zip",
+    "source_sha256": "0d29ac4121e6c0a6da8511093be63e7e0fb669dacdcc2c797f7dbaf9602c5b3e",
+    "tracked_files": 487,
+    "receipt": "rquickshare-native13-export.json",
+    "native12_preserved": true,
+    "apt_staged": false
   }
 }

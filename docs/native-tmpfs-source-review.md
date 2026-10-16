@@ -252,3 +252,16 @@ The outgoing metadata/progress projection limitation is retained for the essenti
 acceptance queue; do not expand the selected cosmetic slice into a new daemon API.
 Native13 source/package/installed tmpfs repair is complete. The next user request
 is the explicit eight-point card/tray cleanup, tracked in native-card-cleanup.md.
+
+## Immutable native13 handoff
+
+Public output package/checksum and487-file Git source archive are exported under
+/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs. Archive source
+a8a082ec6f78a512781aa0d82e78357c44cda7e6; SHA256
+0d29ac4121e6c0a6da8511093be63e7e0fb669dacdcc2c797f7dbaf9602c5b3e.
+Binary source remains1607c8f95e308a533269b31e6ceb8ce7cf21a505. Export receipt:
+rquickshare-native13-export.json. Native12 package/source hashes were rechecked
+and preserved. Mutable current-state/progress/readiness/source pointer refreshed.
+Native13 has no APT staging/signing/request/publication; earlier native12 staging
+is explicitly a retained historical candidate. This later handoff documentation
+does not rebuild binaries or mutate the immutable source archive.
