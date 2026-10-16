@@ -43,20 +43,20 @@ it does not authorize transport restarts while active work exists.
   native15 limitations, pending choices and rollback here.
 - [x] U2: obtain the significant source-extension decision and resolve what the
   single File tray entry contains. No production implementation before answers.
-- [ ] U3: header drag on the existing surface with bounded monitor-relative
+- [x] U3: header/background drag on the existing surface with bounded monitor-relative
   geometry, preserving lock/consent/focus and tray reactivation placement. Record
   geometry invariant tests and actual KDE acceptance separately.
-- [ ] U4: coherent source entry/action layout, plus Add beside Clear for an
+- [x] U4: coherent source entry/action layout, plus Add beside Clear for an
   existing file selection using the approved owner contract. Cancellation,
   invalid names, duplicate names, size/count/FD limits and lost responses must
   preserve the previous selection. Existing transfers keep their source snapshot;
   no selection/edit action sends anything.
-- [ ] U5: simplify both exported tray and GTK context menus. One visibility-aware
+- [x] U5: simplify both exported tray and GTK context menus. One visibility-aware
   Open/Hide action, no Full/Compact menu entries, no routine Reconnect entry.
   Keep appearance toggle on the card; exceptional connection recovery stays
   contextual and uses the existing no-replay owner lifecycle. Freeze the File
   entry after the user's clarification; retain essential folder/text capabilities.
-- [ ] U6: lay out Settings as a wider labeled grid without an internal scroll
+- [x] U6: lay out Settings as a wider labeled grid without an internal scroll
   container; About at the bottom, Cancel/OK in the footer. Editing fields is
   local until OK, including appearance/login start. Cancel/close discards an
   unsubmitted draft. Serialize validated native save then the requested login
@@ -65,7 +65,7 @@ it does not authorize transport restarts while active work exists.
   idle-only service restart. Freeze detailed commit/close state handling before
   implementing this milestone. Do not silently remove recovery for corrupt
   settings or an unavailable service.
-- [ ] U7: extend affected existing contract/GTK checks, run appropriate checks
+- [x] U7: extend affected existing contract/GTK checks, run appropriate checks
   once, inspect isolated actual widget frames, and record observed results.
   No ten-run development loop or full compatibility claim.
 - [ ] U8: atomic scoped commits, distinct native16-or-later candidate, offline
@@ -397,3 +397,23 @@ checks, release package and renderer artifacts are complete and can be exported
 while waiting. Only a fresh idle gate after the user's response permits the
 already-authorized local upgrade. No further architecture question is pending.
 All owned commands exited: Terminal closed; normal native15 app services remain.
+
+## Immutable export and continuation
+
+Exported the verified6,502,012-byte native16 package/checksum and seven actual
+widget frames to /home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs.
+Immutable497-file source archive:rquickshare-native16-source.zip, source commit
+23adf00cb30ed9e826314451c0bcf27e6b6b9942, SHA256
+faeedae18b84d9d6541c3f5671bb0412459f7da374d3c86980defdc527c673c1.
+Binary source remains1a9d675d45196ba11e57b2261830bd882c39f011. Exact export receipt:
+rquickshare-native16-export.json. Mutable source pointer, feature/evidence/current
+state/progress/readiness copies are refreshed; native15 immutable package/archive
+hashes were rechecked and preserved. The older unsigned APT/request is explicitly
+not the current candidate. No cloud/key/signing/publication work occurred.
+
+U3-U7 and M3-M6 are source/offline complete. U8/M7 installed/physical completion
+still waits for the user clearing/sending the existing prepared work or choosing
+to defer. Resume with a fresh known-owner/idle preflight, never by assuming the
+old preparation disappeared. No further rebuilding/testing is needed unless
+source changes or a new defect is found. Source remains direct dev; no push,
+branch/worktree creation or unknown-process termination. Terminal closed.
