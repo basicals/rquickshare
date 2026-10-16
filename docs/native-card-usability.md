@@ -417,3 +417,20 @@ to defer. Resume with a fresh known-owner/idle preflight, never by assuming the
 old preparation disappeared. No further rebuilding/testing is needed unless
 source changes or a new defect is found. Source remains direct dev; no push,
 branch/worktree creation or unknown-process termination. Terminal closed.
+
+## 2026-10-17 user-closed GUI and resumed installation gate
+
+The user reported exiting the tray application and asked whether that released
+the preparation. Fresh read-only inspection confirmed daemon PID1925337 still
+Running/synchronized, desktop unit Inactive/dead with PID0, zero reservations,
+handles, selected bytes and transfers. Exiting the client released its unsent
+capability; no source file was deleted. Native15 remains installed at this gate.
+
+The existing upgrade is authorized and now unblocked. Adapt only the idle-owner
+preflight to allow this verified inactive desktop (PID0, no own tray) as well as
+the previously known active owner. Recheck zero resources immediately before
+joining the known daemon and installing exact verified native16. Do not start
+the old GUI just to satisfy its previous tray predicate. Keep login start off;
+normal post-install launch must restore one desktop/daemon/tray and14 matching
+installed files. Preserve the earlier deferred receipt, no rebuilding/retesting
+of unchanged code, and no automatic transfer/settings replay.
