@@ -66,7 +66,7 @@ items. No new logs contain settings tokens, names or payloads.
 3. [x] L3: exact-retry SDK/controller and thin GTK/card/tray projections/gates.
 4. [x] L4: affected checks once, record observed outcomes and corrections here,
    atomic source commits and continuation index update. No unchanged package build.
-5. [ ] L5: after source checks, prepare a successor native candidate/handoff if
+5. [x] L5: after source checks, prepare a successor native candidate/handoff if
    appropriate. Native8 remains last measured package until a replacement is built.
 
 Risks: same-mode renewal versus replay, disk/live failure, competing editor,
@@ -181,3 +181,24 @@ all package/request/APT digests. Update mutable current handoff docs/readiness,
 preserve native8 and all older named artifacts. Record export facts in a later
 documentation-only commit; do not rebuild or mutate that immutable source archive
 just to include its own later completion receipt.
+
+
+L5 completed. Exported 466 tracked files from
+ba314b6e759b8ef44a32b84907da4b1e89e87b81 to outputs/rquickshare-native9-source.zip;
+SHA256cdd08ec8db17d09386db2036e5b62fad0bb85a526099ba780635752813ef4130.
+CRC/inventory/selected exact source bytes, package/request digests and every one
+of the7 unsigned APT entries passed. Unsigned APT ZIP SHA256
+533d16d47cd042d4c29713e8758f47f0cdb545be01cdad7072841f8e2c14497f.
+The generic source ZIP was refreshed after confirming the prior native8 copy is
+preserved. Exact package/checksum, public unapproved request, receipts and current
+handoff docs/readiness are in the existing workspace outputs. Remote observations
+remain dated2026-10-14, not rechecked. Backup follow-up remains deleted.
+This final documentation-only completion record postdates the immutable source
+archive; binary source remains b1ce2e2. No rebuild, install, signing or publication.
+All owned commands/processes exited; Terminal closed.
+
+Next: installed KDE/Wayland/current native9 physical manual-sharing acceptance
+when the desktop/peers are available, and canonical preview wire/mapping review
+before receive IPC/production card binding. Resume/dedup, advanced payloads,
+account/trust, localization/history/accessibility and signed distribution remain
+open as listed in native-completion-audit.md. No full Google parity/UI signoff.

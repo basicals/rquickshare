@@ -16,7 +16,7 @@ physical peer, account/cloud call, package rebuild or runtime change in this aud
    option1, daemon-owned live visibility and quick controls.
 4. [x] A4: [contract and measured source checks](native-live-visibility.md)
    cover current policy, intent/retry/reconnect and GTK/tray controls. Source
-   implementation and native9 offline verification are complete; export is in progress.
+   implementation, native9 offline verification and exact artifact export are complete.
 
 Rollback of this audit is documentation only. Native8 artifacts remain immutable;
 no unaffected Rust/GTK/package checks are repeated for a documentation change.
@@ -33,7 +33,7 @@ no unaffected Rust/GTK/package checks are repeated for a documentation change.
 | Resume/dedup | Modern wire fields only | Content identity, safe partial storage/integrity/recovery and actual negotiation | Interrupted transfers against supported peers |
 | Other payloads | Modern proto fields and some core/legacy parsing | Streams, multiple recipients, complete Wi-Fi/app/sensitive-content behavior | Versioned capability matrix and physical peers |
 | Trust/account/platform parity | Bounded token/role/certificate verifier; production certificate source explicitly empty | Supported Google certificate acquisition/rotation, remembered trust/auto-accept, Contacts/Your devices, compatible QR and Apple transport work | Supported account authorization and applicable real platform paths |
-| Distribution | Native9 uninstalled Ubuntu26.04 amd64 package/unsigned APT/public unapproved request; source export in progress; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
+| Distribution | Native9 uninstalled Ubuntu26.04 amd64 package/unsigned APT/public unapproved request; source export verified; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
 
 Basic manual workflows and a substantial native shell exist in source. Neither
 "all basic functionality is release accepted" nor "UI is finished" is supported.
@@ -82,7 +82,7 @@ the already selected Glycin decoder boundary must not be asked again.
 
 ## Continuation order
 
-1. Live visibility/quick-control source is complete; native9 offline verification passed, export then installed acceptance.
+1. Live visibility/quick-control source is complete; native9 offline verification/export passed; installed acceptance is next.
 2. Complete installed KDE/Wayland and current-package manual-sharing acceptance
    when the required peer/session is available; failures may reveal source defects.
 3. Obtain canonical preview fixtures and implement the compatible receive/IPC/card

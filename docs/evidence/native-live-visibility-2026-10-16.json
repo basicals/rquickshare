@@ -119,5 +119,31 @@
     "live_empty_baseline_verified": false
   },
   "native8_preserved": true,
-  "owned_processes_exited": true
+  "owned_processes_exited": true,
+  "export": {
+    "source_commit": "ba314b6e759b8ef44a32b84907da4b1e89e87b81",
+    "source_zip": {
+      "name": "rquickshare-native9-source.zip",
+      "sha256": "cdd08ec8db17d09386db2036e5b62fad0bb85a526099ba780635752813ef4130",
+      "tracked_files": 466,
+      "crc_inventory_selected_bytes_verified": true
+    },
+    "package": {
+      "name": "rquickshare_0.11.5+native9_amd64.deb",
+      "sha256": "990251e7e89d483d1a282a782e6682ceb1a779e93a6fcacf83b8abfdc1c18b94",
+      "bytes": 6366716
+    },
+    "unsigned_apt": {
+      "name": "rquickshare-native9-apt-UNSIGNED.zip",
+      "sha256": "533d16d47cd042d4c29713e8758f47f0cdb545be01cdad7072841f8e2c14497f",
+      "files": 7,
+      "signed": false
+    },
+    "signing_request": {
+      "path": "rquickshare-native9-signing-request/request.json",
+      "sha256": "9d0732164d550ac4d1ccf4c6ab1b4ad960eff5bdd22fef8f20cc3425f7af2ab7",
+      "approved": false
+    },
+    "archive_precedes_completion_docs": true
+  }
 }
