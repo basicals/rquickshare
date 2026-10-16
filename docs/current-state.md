@@ -183,3 +183,18 @@ requirements. Do not substitute new accounts/QR/preview work for missing physica
 evidence. Previews are excluded; resume and advanced parity are deferred.
 Development checks run once per affected change/failure. No installation or release
 approval is implied by this ordering.
+
+## Active reliability finding — 2026-10-16
+
+Source review found that incoming files are created under final names before
+content arrives and request drop has no incomplete-file cleanup authority.
+Exclusive creation and short-EOF validation already exist, but do not prevent
+visible empty/truncated files after failure. This is an unexecuted source finding,
+not a new physical-test result or an implemented fix.
+[Receive reliability](native-receive-reliability.md) records the significant
+publication/partial-outcome choice: recommend atomic publication per file, preserve
+complete members and expose partial outcome; alternative is one all-or-nothing
+containing transfer directory. User choice is pending before production changes.
+[Essential acceptance](native-essential-acceptance.md) provides the short current
+Android/Windows/KDE check procedure; all checks remain unexecuted. Native11 and
+its immutable public artifacts are unchanged.

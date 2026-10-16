@@ -80,3 +80,12 @@ priority-only change. Mutable current-state/roadmap/audit/product/preview/priori
 copies and handoff status are refreshed; immutable native11 binaries, source ZIP,
 checksums, unsigned repository and release request remain at their prior measured
 checkpoint. All owned inspection/edit/check commands exited: Terminal closed.
+
+## First reliability review — 2026-10-16
+
+[Receive publication](native-receive-reliability.md) found premature final-name
+creation and no incomplete-file cleanup authority by inspecting the existing
+handler/root/session/receipt lifecycle. R1 is complete; user choice of per-file
+partial success versus an all-or-nothing containing folder is pending. No repair
+or failure-test success is claimed. [Short essential acceptance procedure](native-essential-acceptance.md)
+is prepared; no installation, physical action or test repetition was performed.
