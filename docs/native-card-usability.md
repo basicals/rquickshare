@@ -527,3 +527,15 @@ Clippy passed, with the same nine existing core dependency warnings. Formatting/
 whitespace passed. No core or full native-suite repetition. All owned checks
 exited: Terminal closed. Distinct native17 build/visual/installed checks follow;
 physical bottom alignment is not claimed from the pure/Xvfb checks.
+
+Native17 build checkpoint: the committed source f829937 produced a distinct
+6,508,224-byte package, SHA-256
+cfaa4040b6e9382b7df875a8d052884c2bbebc6b1f3296d0ff8821f9f10fe5e8.
+Offline package verification passed for14 files. The final inert release Compact
+frame is420x141 with transparent extreme corners; visual inspection confirms
+Receive, Send, Full view, Hide. The next step is the previously authorized local
+upgrade, guarded by known native16 service owners2139034/2139035 (or an already
+closed desktop), zero global prepared sources/handles/bytes, no nonterminal
+transfers and the existing single-tray check. Native16 package remains unchanged.
+No user source is discarded; any occupied gate stops before service mutation.
+Build and rendering commands exited: Terminal closed.
