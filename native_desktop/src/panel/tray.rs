@@ -226,6 +226,37 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         model.state.visibility.as_mut().unwrap().running = true;
     }
     panel.render();
+    // Arrange: observe the real visibility action without a connected service writer.
+    let visibility = panel
+        .actions
+        .lookup_action("visibility")
+        .and_downcast::<gio::SimpleAction>()
+        .unwrap();
+    let targets = Rc::new(RefCell::new(Vec::new()));
+    let observed = targets.clone();
+    let observer = visibility.connect_activate(move |_, value| {
+        observed
+            .borrow_mut()
+            .push(value.unwrap().str().unwrap().to_owned());
+    });
+    for mode in [Mode::Compact, Mode::Full] {
+        for shown in [false, true] {
+            panel.set_mode(mode);
+            panel.window.set_visible(shown);
+            let page = panel.pages.visible_child_name();
+            targets.borrow_mut().clear();
+            // Act: the same action bound to Compact Receive, repeated without a pending request.
+            for _ in 0..2 {
+                panel.actions.activate_action("receive", None);
+                // Assert: request temporary visibility, preserving the chosen view and page.
+                assert_eq!(panel.mode(), mode);
+                assert_eq!(panel.pages.visible_child_name(), page);
+                assert!(panel.window.is_visible());
+            }
+            assert_eq!(&*targets.borrow(), &["temporary", "temporary"]);
+        }
+    }
+    visibility.disconnect(observer);
     panel.set_mode(Mode::Full);
     assert!(!panel.tray_action(Action::Compact));
     assert_eq!(panel.mode(), Mode::Full);

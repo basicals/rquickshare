@@ -228,17 +228,19 @@ impl Panel {
                 })
             })
             .map(|transfer| transfer.transfer.id().to_owned());
-        self.set_mode(Mode::Full);
-        self.pages.set_visible_child_name("nearby");
-        if pending.is_none() {
+        if let Some(id) = pending {
+            self.set_mode(Mode::Full);
+            self.pages.set_visible_child_name("nearby");
+            self.render();
+            self.expand_transfer(&id);
+        } else {
             self.actions
                 .activate_action("visibility", Some(&"temporary".to_variant()));
+            self.render();
         }
-        self.render();
-        if let Some(id) = pending {
-            self.expand_transfer(&id);
+        if !self.window.is_visible() {
+            self.present_surface();
         }
-        self.present_surface();
     }
     pub(super) fn show_sending(self: &Rc<Self>) {
         self.set_mode(Mode::Full);

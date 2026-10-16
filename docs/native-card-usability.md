@@ -557,15 +557,17 @@ otherwise request existing one-minute visibility. Current receive() calls
 set_mode(Full) unconditionally before branching, causing this regression. This
 is a scoped correction to the selected flow, not a new product decision.
 
-1. [ ] R1: move Full/list/review navigation exclusively into the pending-request
+1. [x] R1: move Full/list/review navigation exclusively into the pending-request
    branch. With no request, preserve the current mode/page/position and dispatch
    the same existing temporary visibility action. Keep presentation/safety and
    daemon ownership/admission guards; never accept a request automatically.
-2. [ ] R2: extend the existing actual GTK smoke with an observed temporary action
-   activation and real receive() calls in Compact/Full and pending cases. Verify
-   exact one-minute target, no mode change without a request, review expansion
-   with a request, and no visibility request in that branch. Run the affected
-   smoke and strict native lint once; no unchanged core/full-suite repetition.
+2. [x] R2: extend the existing actual GTK smoke with an observed temporary action
+   activation and real Receive action calls. Compact/Full x hidden/visible x
+   repeated clicks preserve the mode/page and dispatch exactly temporary each
+   time. The pending branch retains its code/manifest review; opaque SDK transfer
+   handles are connection-bound and are not fabricated by GTK tests. That branch
+   is source-reviewed and still needs physical incoming acceptance. The affected
+   smoke and strict native lint run once; no unchanged core/full-suite repetition.
 3. [ ] R3: bump distinct native18, build/package verify, upgrade only through
    known-owner/zero-preparation/nonterminal-transfer gates, then record installed
    state and immutable handoff. Preserve native16/native17 rollback artifacts.
@@ -575,3 +577,12 @@ requires explicit consent and the next Receive can open its review. No public
 API/schema/security-boundary changes. Rollback is the scoped source commit and
 previous immutable package when idle. Physical Receive/geometry checks remain
 separate from isolated GTK assertions.
+
+R1-R2 observations: Full/list navigation now occurs only with a pending request.
+No-request Receive dispatches existing temporary visibility and renders without
+changing the mode/page. An already visible card is not re-placed at the old tray
+hint, preserving its pinned position. The actual GTK smoke passed1/0 in0.56s,
+including all eight no-request action invocations and the existing UI/consent
+assertions. Native strict all-target/no-deps Clippy passed; the same nine existing
+core dependency warnings remain. Formatting/whitespace passed. Commands exited:
+Terminal closed. Native18 package and installed gates follow.
