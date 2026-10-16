@@ -726,3 +726,51 @@ frames and rquickshare-native19-export.json are in the existing outputs director
 Native18 package/source are unchanged rollback references. Mutable continuation
 exports follow the final docs commit, distinct from the immutable source ZIP.
 No release signing, APT staging, publication or cloud request was performed.
+
+## Single toolbar and upward device drawer — analysis and decision checkpoint
+
+2026-10-17, Mode A. User requests a quieter green Receive pulse, a second Receive
+click ending temporary visibility early, and removal of the separate Full card.
+The four-action toolbar becomes Receive, Send, Devices, Hide; Devices toggles
+an upward list above the toolbar, retaining the shared bottom edge.
+
+Current owners/invariants: mode currently controls pages, preparation/recipient
+controls, request review, presentation policy and saved card_mode. Settings also
+exposes Compact/Full. Send/chooser/notification review navigate to Full, while the
+shared list contains devices plus explicit consent and transfer actions. Simply
+hiding Full would strand file Add/Clear, recipient selection and PIN/manifest
+review. No source or in-flight transfer may be discarded by collapsing a drawer.
+Visibility uses exact retained daemon requests; existing Hidden matches normal
+one-minute expiry. An early stop must not cancel admitted transfers or auto-accept.
+
+Authorized scope: soften the existing CSS background pulse using a subdued tint;
+keep actual live visibility as authority. A second click during confirmed temporary
+mode requests Hidden through the existing owner, without a UI deadline or optimistic
+success. A pending/uncertain command remains governed by the existing no-replay
+controls. Stopping visibility takes precedence over opening an incoming review
+on that repeat click; pending requests stay reachable through the drawer/tray.
+
+Proposed implementation stages, after the drawer navigation decision:
+1. Replace exclusive Compact/Full presentation with one always-visible four-action
+   toolbar and a collapsible upward content block; retain natural-height/max-list
+   bounds, native bottom anchoring, drag handling and lock/privacy guards.
+2. Reuse the existing device/request/transfer rows, source Add/Clear and explicit
+   recipient Send in the expanded block. Remove obsolete Full header/view selector.
+   Remove the Card view control from Settings. Keep legacy card_mode round-tripped
+   unchanged at the storage/API boundary; it no longer creates a second UI. Drawer
+   expansion is local presentation state, initially collapsed, not a new saved
+   preference or daemon contract.
+3. Soft green feedback and authoritative Receive toggle; retain consent, error/
+   exact retry and one-minute expiry. Update accessible names/descriptions.
+4. Extend affected GTK/state/geometry checks once and inspect collapsed/expanded
+   widget frames. Build a distinct revision and upgrade only through the existing
+   idle/known-owner gate; record14 files/one tray/login state and artifacts.
+
+Pending material UX decision: whether explicit Send/Receive-review actions may
+reveal the same upper block when needed, or only Devices may reveal it. Recommend
+action-driven opening: one surface, existing explicit code/file review remains
+direct and no additional transfer windows are required. Alternative manual-only
+opening is predictable but adds a separate Devices click for recipient/review
+work. No implementation is started until the user resolves this decision.
+Rollback remains native19 source/package; no schema/security-boundary change or
+cloud/signing/publication is proposed. Analysis command exited: Terminal closed.
