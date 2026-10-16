@@ -1,5 +1,10 @@
 # Preview receive/display: decoder boundary review
 
+Scope update2026-10-16: the user excluded preview functionality from active work.
+See [essential priorities](native-essential-priorities.md). The foundation and
+observations below are historical; do not resume codec research, UI/IPC binding
+or thumbnail implementation. Existing bounded opaque routing remains input safety.
+
 2026-10-15. Mode A, dev. Preceding bounded byte reassembly is implemented; this
 document is the continuation SSOT, not a Google-preview compatibility claim.
 The user selected option1 (sandboxed Glycin decoder) on2026-10-15. The significant

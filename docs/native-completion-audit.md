@@ -21,6 +21,14 @@ physical peer, account/cloud call, package rebuild or runtime change in this aud
 Rollback of this audit is documentation only. Native8 artifacts remain immutable;
 no unaffected Rust/GTK/package checks are repeated for a documentation change.
 
+## Active scope update — 2026-10-16
+
+The user excluded previews and requested only necessary work. Follow
+[essential priorities](native-essential-priorities.md) before the broader inventory
+below: ordinary peer interoperability, safe failures/retry, installed tray/card,
+desktop entry points, then install/update lifecycle. Resume, accounts/trust/QR and
+advanced payloads are deferred. This does not revoke existing input/file safety.
+
 ## Readiness matrix
 
 | Area | Implemented source | Still missing implementation | Separate acceptance |
@@ -29,7 +37,7 @@ no unaffected Rust/GTK/package checks are repeated for a documentation change.
 | Text and clipboard | Outbound text/URL and explicit clipboard capture; reviewed immutable PNG image source; incoming text/URL review and explicit Copy | Complete Remote Copy negotiation/peer semantics; native Wi-Fi/app completeness | Current peer/clipboard/portal behavior on installed desktop |
 | Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states; live visibility/quick actions | Localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
 | Settings and desktop | Daemon-owned Settings2/schema2, migration/recovery, live name, receive-directory capability, opt-in daemon+tray login start and Dolphin Send assets | Broader desktop/share-target integration is not complete | Installed context menu, autostart, restart, upgrade/removal, recovery and live-transfer behavior |
-| Preview images | Bounded byte ingress, real isolated Glycin/Bwrap helper, bounded pixels/cancel/deadline/reaping, synthetic Full/Compact fixture | Canonical peer payload encoding/mapping/order, daemon IPC/production-card binding and outgoing previews | Real peer preview interoperability; fixture is not this evidence |
+| Preview images — excluded | Bounded byte ingress, real isolated Glycin/Bwrap helper, bounded pixels/cancel/deadline/reaping, synthetic Full/Compact fixture | No further implementation in the active scope; historical foundations retained | Not an essential-release acceptance gate; fixture is not peer evidence |
 | Resume/dedup | Modern wire fields only | Content identity, safe partial storage/integrity/recovery and actual negotiation | Interrupted transfers against supported peers |
 | Other payloads | Modern proto fields and some core/legacy parsing | Streams, complete Wi-Fi/app/sensitive-content behavior | Versioned capability matrix and physical peers |
 | Trust/account/platform parity | Bounded token/role/certificate verifier; production certificate source explicitly empty | Supported Google certificate acquisition/rotation, remembered trust/auto-accept, Contacts/Your devices, compatible QR and Apple transport work | Supported account authorization and applicable real platform paths |
@@ -80,19 +88,13 @@ saves. No second expiry clock or radio-success claim from the GUI.
 The user selected option1. Implementation follows native-live-visibility.md. This is a new slice;
 the already selected Glycin decoder boundary must not be asked again.
 
-## Continuation order
+## Current continuation order
 
-1. Live visibility/quick-control source is complete; native9 offline verification/export passed; installed acceptance is next.
-2. Complete installed KDE/Wayland and current-package manual-sharing acceptance
-   when the required peer/session is available; failures may reveal source defects.
-3. Obtain canonical preview fixtures and implement the compatible receive/IPC/card
-   slice using the already verified decoder. Do not call synthetic pixels peer support.
-4. Multi-recipient source is complete; continue resume/dedup and remaining payload
-   contracts, then their code.
-5. Localization/history/accessibility/presentation polish alongside supported
-   account/QR/platform research. Supported authorization only remains selected.
-6. Exact release approval/scoped publisher credential, signed APT consumption and
-   installed update lifecycle remain separate; do not sign or publish on "continue".
+Use [essential priorities](native-essential-priorities.md), which supersedes the
+previous preview/resume/account expansion sequence. Existing live visibility and
+multi-recipient source/package work is complete; verify current peer/desktop use
+and fix concrete reliability/lifecycle defects first. No new preview work is
+planned. Release signing/publication remains separately approved.
 
 Actual checks: repository/source inspection and documentation link/whitespace
 verification only. No new tests/builds or external services were needed. Owned

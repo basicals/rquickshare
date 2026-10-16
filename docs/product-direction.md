@@ -1,5 +1,10 @@
 # Product direction: native desktop and Google Quick Share parity
 
+Current scope update2026-10-16: follow [essential priorities](native-essential-priorities.md).
+The user excluded previews and prioritized reliable ordinary sharing, desktop
+usability and installation/updates. Full feature parity below remains a broader
+long-term inventory; resume/accounts/QR/advanced payloads are deferred.
+
 Current implementation and active contract: [current state](current-state.md) and
 [temporary visibility review](native-visibility-review.md). The dated checkpoints
 below are historical; later selections supersede earlier pending-choice claims.

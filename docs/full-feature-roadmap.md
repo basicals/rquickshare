@@ -5,6 +5,11 @@ Current implementation, selected distribution/signing bindings and remaining gat
 
 _Last updated: 2026-10-16_
 
+Active scope is [essential native sharing](native-essential-priorities.md).
+The user excluded previews and requested only necessary work. The comprehensive
+capability matrix below is a long-term inventory, not the active implementation
+queue or a first-release checklist. Resume and advanced parity are deferred.
+
 The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, initial compatibility matrix and migration history. Current choices and implementation gates are indexed in current-state.md.
 
 Implemented capability markers below describe existing core/legacy source and
@@ -226,22 +231,19 @@ A prospective local Ubuntu + physical Pixel/ADB hardware automation harness is s
 
 ## Current implementation order
 
-The native daemon/D-Bus/GTK shell, manual-sharing surfaces, desktop ownership and
-decoder foundation and daemon-owned live visibility/quick controls are implemented.
-See [completion audit](native-completion-audit.md) and [visibility contract](native-live-visibility.md).
-Continue installed/physical acceptance separately and preserve the open account,
-preview wire and resume gates. The list below retains broader feature dependencies;
-it is not a claim that completed foundation slices need implementing again.
+[native-essential-priorities.md](native-essential-priorities.md) is authoritative.
+The native daemon/D-Bus/GTK/manual-sharing and multi-recipient foundations already
+exist; do not implement them again merely because a historical roadmap lists them.
 
-1. Modern protocol model.
-2. Clipboard/text outbound.
-3. Folder hierarchy.
-4. Custom device name.
-5. Trusted devices.
-6. Visibility/tray/theme/i18n polish.
-7. Preview + resume/dedup.
-8. Streams / Remote Copy; native multi-recipient source/package is complete, peer acceptance remains open.
-9. QR/account/AirDrop research.
+1. Verify current Android/Google Windows discovery and ordinary two-way sharing.
+2. Close concrete interruption, storage, partial-file and explicit-retry defects.
+3. Verify installed KDE/Wayland tray/card, consent/progress/cancel and recovery.
+4. Verify file-manager Send, optional login start and single-process lifecycle.
+5. Finish install/upgrade/removal acceptance and the selected signed APT channel.
+
+Previews are excluded. Resume/dedup, accounts/remembered trust/QR, streams/Remote
+Copy, Wi-Fi/app/Apple capabilities and persistent history are outside this essential
+release scope. Existing protocol-input/security handling remains in force.
 
 ## Modern BWU endpoint identity compatibility
 

@@ -2,8 +2,10 @@
 
 Updated2026-10-16. Mode A; direct dev, no branch/worktree/push. This is the current
 status index. Dated entries in other documents remain historical evidence; they
-must not override this index or the linked feature contracts. Goals remain native
-tray/card UX and full Google Quick Share parity, not an achieved compatibility claim.
+must not override this index or the linked feature contracts. The active goal is reliable ordinary nearby sharing with native
+tray/card UX. [Essential priorities](native-essential-priorities.md) supersede
+the broader execution order: previews are excluded and full feature parity is a
+long-term inventory, not an essential-release gate.
 
 [Completion audit](native-completion-audit.md) separates implemented manual flows,
 remaining product work and current-package physical acceptance. The basic native
@@ -82,15 +84,16 @@ Ubuntu26.04 amd64 candidate passed; extracted PNG/JPEG and Full/Compact renderin
 were verified. D6 source/package/unsigned-APT/request public export is verified;
 exact archive/binary provenance and hashes are in the decoder contract/evidence. Remote
 preview encoding/mapping, daemon IPC/production binding and persistent resume
-contracts remain open. Do not ask for the decoder boundary again or claim full
+contracts remain unimplemented. Preview development is now excluded by the user;
+retain this as historical foundation evidence. Do not ask for the decoder boundary again or claim full
 preview compatibility from local fixtures.
 
 [Preview wire review](native-preview-wire.md) now records complete public Google
 source inspection at both the earlier pin and current main. No codec/mapping
 fixture was established. The scoped internal inbound routing fix is implemented and its focused checks
 passed: declared previews are bounded opaque data, isolated from sharing control
-parsing and discarded. Production preview IPC/display remains gated on canonical
-codec/mapping. Native9 remains immutable and does not include this source fix.
+parsing and discarded. Production preview IPC/display is unimplemented and excluded from the active
+scope. Bounded opaque routing remains input-safety behavior. Native9 remains immutable and does not include this source fix.
 
 ## Implemented source and remaining acceptance
 
@@ -102,7 +105,7 @@ codec/mapping. Native9 remains immutable and does not include this source fix.
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
 | Distribution | Verified uninstalled Ubuntu26.04 amd64 native11 package with live visibility controls and private sandbox helper; public source/package/unsigned-APT/unapproved-request handoff verified; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
 | Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
-| Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Installed visibility controls, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
+| Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Installed visibility controls, physical discovery withdrawal and suspend acceptance, Ordinary transfer/desktop acceptance first; account identity, resume, streams, Wi-Fi/app and QR/Apple capabilities are deferred; previews are excluded |
 
 Feature contracts and measured checks: [product history](product-direction.md),
 [settings](native-settings.md), [desktop ingress](native-desktop-ingress.md),
@@ -163,21 +166,20 @@ Remote preview codec/mapping, production preview IPC/card binding and full Googl
 interoperability remain unestablished. Installed/radio/current-peer acceptance is
 separate from these offline source/package observations.
 
-## Work that can proceed without physical peers
+## Current essential work order
 
-1. Continue the remaining parity slices after the completed live name and core
-   visibility policy and PairedKey verifier: authorized certificate provider/
-   rotation research, secure local trust, previews/resume and
-   account/QR research. Freeze each significant contract before code; a crypto
-   verifier alone does not supply operational Google identity, and local trust
-   must remain distinct from Google account membership.
-2. Prepare concrete unsigned release review/provenance and selected publisher
-   credential handoff independently of desktop testing; do not bypass release
-   approval or invent credentials to publish.
-3. Research remaining protocol/account/QR requirements against primary sources
-   before proposing their significant contracts. Do not equate modeled protobuf
-   fields or local substitutes with Google interoperability.
+The authoritative ordered queue and completion criteria are in
+[native-essential-priorities.md](native-essential-priorities.md):
 
-Physical installed KDE/Wayland, BlueZ/discovery and Google peer checks stay explicit
-acceptance work. They are not reasons to rerun unrelated completed checks while
-waiting for the user. Development checks run once per affected change/failure.
+1. Current Android/Google Windows discovery and ordinary two-way sharing acceptance.
+2. Safe interruptions, storage failures, partial-file handling and explicit retry.
+3. Installed KDE/Wayland tray/card, consent, progress/cancel and recovery.
+4. Installed file-manager Send, optional login start and single-process ownership.
+5. Straightforward package lifecycle and the selected signed APT update path.
+
+Without physical peers, inspect existing failure/cleanup/retry paths, fix concrete
+scoped defects, prepare targeted acceptance steps and check package lifecycle
+requirements. Do not substitute new accounts/QR/preview work for missing physical
+evidence. Previews are excluded; resume and advanced parity are deferred.
+Development checks run once per affected change/failure. No installation or release
+approval is implied by this ordering.
