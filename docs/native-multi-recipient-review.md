@@ -254,3 +254,32 @@ Footer repair verification: affected GTK smoke1/0 (0.45s,38 filtered), native
 strict all-target/no-deps Clippy passed1.16s. Logs:
 /tmp/rqs-multi-footer-gtk.log and /tmp/rqs-multi-footer-clippy.log.
 Both owned verification commands exited; Terminal closed.
+
+## M4 corrected candidate observations (2026-10-16)
+
+Final binary source:ebb08cd47ca3db50e012a675b351004838fa0b43; coordinator source:cf27d685b5f00dce87916f7147890d9f3b4c649b.
+Native11 build: cached core0.11s, changed GTK12.49s, cached helper0.17s.
+The earlier native10 build used core113s/GTK33.84s/helper0.76s and is preserved
+as the visual-finding checkpoint. The new package passed all11 exact file,
+ownership/permission, dependency, ELF, checksum, extracted help and private
+settings smoke checks. Package6,407,766 bytes, SHA256
+229d3be15aaa1d812e242b61885fedd80cacdac817806df0b1052c861ad3c293.
+No installation/activation/real tray/radio/account operation was performed.
+
+Inspected the corrected extracted Full Transfers PNG: Nearby-only controls are
+absent, both named independent peer rows/Cancel are visible without clipping.
+Nearby Full and Transfers Compact bytes exactly match the corresponding inspected
+native10 images. All are labeled inert synthetic previews, not hardware evidence.
+
+Fresh unsigned APT staging contains7 files, no InRelease/Release.gpg; metadata
+expires2026-10-23T16:50:53Z. Public canonical request SHA256
+a814d974f95b45dcf332cf5b9e8bb517f57dcd77aea132679884e66c17f9acfb is unapproved,
+with no independent source attestation or live empty-baseline proof supplied.
+No protected-key operation/signature/publication was performed. Native9/native10
+packages and prior source handoffs were preserved. Logs: /tmp/rqs-native11-build.log,
+/tmp/rqs-native11-review.log. Owned offline processes exited; Terminal closed.
+
+M4 exact committed-source/public-artifact export is the remaining handoff step.
+
+Documentation verification:69 relevant local links resolve, JSON evidence parses
+and whitespace check passes. This did not rerun unaffected runtime checks.

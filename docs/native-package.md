@@ -241,3 +241,19 @@ private/user data; LICENSE and the manual native workflow are included. After th
 handoff commit, re-export exact final HEAD; progress stores final ZIP HEAD/hash.
 P1-P3 complete, next review remains a genuine pending product/lifecycle choice.
 All owned terminal commands/brokers/test workers closed. Terminal closed.
+
+
+## Native11 multi-recipient candidate — 2026-10-16
+
+Latest verified uninstalled Ubuntu26.04 amd64 candidate is
+native_desktop/target/packages/rquickshare_0.11.5+native11_amd64.deb,
+6,407,766 bytes, SHA256 229d3be15aaa1d812e242b61885fedd80cacdac817806df0b1052c861ad3c293.
+Binary source:ebb08cd47ca3db50e012a675b351004838fa0b43. Daemon-owned
+atomic recipient admission/vector receipts, source/handle accounting and GTK
+selection/member status are included, alongside the defensive preview routing
+foundation. The eleven-file package and corrected extracted Full/Compact widgets
+passed offline review. Native10 is preserved as a superseded visual-finding
+checkpoint; native9 and older public artifacts are immutable.
+See [multi-recipient contract](native-multi-recipient-review.md) and its JSON
+evidence for measured checks, fresh unsigned APT/request and exact export.
+Installed KDE/Wayland, current Google peers and signed publication remain open.

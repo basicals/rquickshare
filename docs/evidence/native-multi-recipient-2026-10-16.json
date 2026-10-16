@@ -49,6 +49,23 @@
     "native_clippy_after_navigation_fix": {
       "passed": true,
       "seconds": 1.16
+    },
+    "package_build": {
+      "passed": true,
+      "initial_native10_seconds": {
+        "core": 113,
+        "gtk": 33.84,
+        "helper": 0.76
+      },
+      "corrected_native11_seconds": {
+        "core_cached": 0.11,
+        "gtk": 12.49,
+        "helper_cached": 0.17
+      },
+      "files": 11
+    },
+    "format_and_diff": {
+      "passed": true
     }
   },
   "invariants": {
@@ -69,16 +86,16 @@
   "remote_preview_wire_supported": false,
   "release_signed": false,
   "published": false,
-  "visual_inspection_complete": false,
-  "implementation_commit": "4b7e72fc8b0b071c37691989bb9bef08038de52b",
+  "visual_inspection_complete": true,
+  "implementation_commit": "ebb08cd47ca3db50e012a675b351004838fa0b43",
   "core_implementation_commit": "cf27d685b5f00dce87916f7147890d9f3b4c649b",
-  "observed_at_utc": "2026-10-16T16:48:32.508539+00:00",
+  "observed_at_utc": "2026-10-16T16:50:53.748993+00:00",
   "package": {
-    "path": "native_desktop/target/packages/rquickshare_0.11.5+native10_amd64.deb",
-    "version": "0.11.5+native10",
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native11_amd64.deb",
+    "version": "0.11.5+native11",
     "architecture": "amd64",
-    "bytes": 6408016,
-    "sha256": "65c2a1e2154094c42490288946dc414bab130cb0bedaff61db487a36ab606e8d",
+    "bytes": 6407766,
+    "sha256": "229d3be15aaa1d812e242b61885fedd80cacdac817806df0b1052c861ad3c293",
     "expected_files": 11,
     "builder_inventory_metadata_permissions_elf_help_settings_verified": true,
     "installed": false
@@ -87,41 +104,41 @@
     {
       "page": "nearby",
       "mode": "full",
-      "path": "/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs/rquickshare-native10-nearby-full.png",
+      "path": "/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs/rquickshare-native11-nearby-full.png",
       "sha256": "44dd8717b81818b7f5cb29282761c3a7344c1cdc284ee1f0ff5078bc6ebb105a"
     },
     {
       "page": "transfers",
       "mode": "full",
-      "path": "/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs/rquickshare-native10-transfers-full.png",
-      "sha256": "b6062178f8257fc82a6feaa3c7ae356a73b23eaea4be917b8a1aac3f293498cb"
+      "path": "/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs/rquickshare-native11-transfers-full.png",
+      "sha256": "0964a3fbc931605ceb0ce08e9dd7be376a2747c0e11fcbcf098660dbf5b198a8"
     },
     {
       "page": "transfers",
       "mode": "compact",
-      "path": "/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs/rquickshare-native10-transfers-compact.png",
+      "path": "/home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs/rquickshare-native11-transfers-compact.png",
       "sha256": "f940213153515c25e546509a11eaf3b7159f5aa42182b1ebcd299ce4e7ee89e9"
     }
   ],
   "unsigned_apt": {
-    "path": "native_desktop/target/apt-unsigned-native10",
+    "path": "native_desktop/target/apt-unsigned-native11",
     "files": [
       "dists/rquickshare-native-ubuntu26.04/Release",
       "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages",
       "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages.gz",
-      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/1b723d0fddf311d80e19cb33de2f25c656b48c72cb4cba5557772c810c3a80cb",
-      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/64fc51b638bff3447c524f0158522cde8f6010e44c8e7d67720584dd42c97753",
-      "pool/main/r/rquickshare/rquickshare_0.11.5+native10_amd64.deb",
-      "pool/main/r/rquickshare/rquickshare_0.11.5+native10_amd64.deb.sha256"
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/26784a24a4d16accc013d11d825369f384657e510aaad5f578ce26754c2c2833",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/bceec3a60c39e08883d86e47f749df2e88cddf6263b1e23f7b4e7ada413d34c9",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native11_amd64.deb",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native11_amd64.deb.sha256"
     ],
-    "date": "Fri, 16 Oct 2026 16:48:31 GMT",
-    "valid_until": "Fri, 23 Oct 2026 16:48:31 GMT",
-    "valid_until_utc": "2026-10-23T16:48:31Z",
+    "date": "Fri, 16 Oct 2026 16:50:53 GMT",
+    "valid_until": "Fri, 23 Oct 2026 16:50:53 GMT",
+    "valid_until_utc": "2026-10-23T16:50:53Z",
     "signed": false
   },
   "signing_request": {
-    "path": "native_desktop/target/signing-request-native10/request.json",
-    "sha256": "7b840568d6fd476a95d91e4a15964af0cd71941cb9ee962976f74d8f2c84947e",
+    "path": "native_desktop/target/signing-request-native11/request.json",
+    "sha256": "a814d974f95b45dcf332cf5b9e8bb517f57dcd77aea132679884e66c17f9acfb",
     "approved": false,
     "first_release": true,
     "source_attestation_supplied": false,
@@ -188,5 +205,12 @@
     },
     "installed": false,
     "exported_source_or_package": false
-  }
+  },
+  "visual_findings": {
+    "final_transfers_full": "Nearby-only recipient footer is absent; independent recipient rows and Cancel fit without clipping",
+    "nearby_full_and_compact": "Byte-identical to previously inspected native10 images",
+    "synthetic_examples_only": true
+  },
+  "defensive_announced_preview_routing_included": true,
+  "native10_preserved": true
 }

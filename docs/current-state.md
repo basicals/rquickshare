@@ -9,8 +9,11 @@ tray/card UX and full Google Quick Share parity, not an achieved compatibility c
 remaining product work and current-package physical acceptance. The basic native
 shell is substantial but not release accepted or UI-complete.
 [Live visibility/quick controls](native-live-visibility.md) option1 is implemented
-and scoped source checks passed. Native9 offline package and Full/Compact
-rendering and exact public artifact export passed. Native8 remains preserved.
+and scoped source checks passed. The latest completed slice is
+[multi-recipient sharing](native-multi-recipient-review.md): daemon-owned atomic
+admission, exact receipts, GTK selection and per-peer status/cancel. Native11
+offline package and corrected Full/Compact rendering passed; public handoff is
+recorded in that contract/evidence. Native9 remains an immutable earlier checkpoint.
 
 ## Documentation maintenance plan and rationale
 
@@ -66,7 +69,7 @@ the next dependency. No supported third-party scope/client path was established.
 An independent optional Linux provider uses an explicitly unofficial master-token/
 Google Play services exchange, not normal desktop OAuth. The user selected option1:
 supported authorization only; continue independent parity. No sign-in, credentials
-or account API calls. Native9 is the latest measured package. The next scoped
+or account API calls. Native11 is the latest measured package (see current artifact below). The next scoped
 prerequisite [bounded byte ingress](native-byte-ingress.md) is implemented: both
 handlers now share request-owned16-payload/5MiB reservation limits, stable headers,
 exact completion and release-before-dispatch. Nine new methods and scoped checks
@@ -94,12 +97,12 @@ codec/mapping. Native9 remains immutable and does not include this source fix.
 | Area | Current evidence | Remaining work |
 |---|---|---|
 | Native ownership | Rust daemon, authenticated typed D-Bus, GTK4 tray/card, Full/Compact, separate menu/notifications, live visibility status/quick modes, core-owned temporary visibility and owned SDK cleanup implemented | Installed KDE/Wayland lifecycle, placement, lock/DND/focus/scale and physical visibility acceptance |
-| Sharing | File/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal and PairedKey authentication foundation implemented | Current native package with physical Android/Windows peers; operational certificate provider, no full compatibility signoff |
+| Sharing | Daemon-owned1..10-recipient admission/results, file/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal and PairedKey authentication foundation implemented | Current native package with physical Android/Windows peers; operational certificate provider, no full compatibility signoff |
 | Settings | Daemon-owned schema2/Settings2 store, migration/backup/recovery, live device name and GTK editor implemented | Real installed migration/recovery and Google/KDE name refresh |
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
-| Distribution | Verified uninstalled Ubuntu26.04 amd64 native9 package with live visibility controls and private sandbox helper; public source/package/unsigned-APT/unapproved-request handoff verified; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
+| Distribution | Verified uninstalled Ubuntu26.04 amd64 native11 package with live visibility controls and private sandbox helper; public source/package/unsigned-APT/unapproved-request handoff verified; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
 | Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
-| Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Installed visibility controls, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
+| Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Installed visibility controls, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
 
 Feature contracts and measured checks: [product history](product-direction.md),
 [settings](native-settings.md), [desktop ingress](native-desktop-ingress.md),
@@ -130,39 +133,41 @@ on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The 
 confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
 repair observations remain in native-signing-backup.md and its JSON.
 
-No production APT release has been signed/published. Current native9 package SHA256
-990251e7e89d483d1a282a782e6682ceb1a779e93a6fcacf83b8abfdc1c18b94 was built
-fromb1ce2e21ea9e5d2f437d65206882e48d166e3491 and verified offline. Current
-unsigned APT metadata expires2026-10-23T12:08:22Z; canonical first-release request
-9d0732164d550ac4d1ccf4c6ab1b4ad960eff5bdd22fef8f20cc3425f7af2ab7
-is unapproved. Exact artifact/source/check evidence is linked in
-native-live-visibility.md and evidence/native-live-visibility-2026-10-16.json.
+No production APT release has been signed/published. Current native11 package SHA256
+229d3be15aaa1d812e242b61885fedd80cacdac817806df0b1052c861ad3c293 was built
+fromebb08cd47ca3db50e012a675b351004838fa0b43 and verified offline. It includes daemon-owned
+multi-recipient sharing and the defensive announced-preview routing fix.
+Unsigned APT metadata expires2026-10-23T16:50:53Z; canonical
+first-release request a814d974f95b45dcf332cf5b9e8bb517f57dcd77aea132679884e66c17f9acfb
+is unapproved. Exact source/check/artifact evidence is in
+native-multi-recipient-review.md and evidence/native-multi-recipient-2026-10-16.json.
+Native10 is a preserved intermediate package whose visual review exposed the
+Nearby-footer navigation defect corrected in native11; it was not handed off.
+Native9 remains the previous live-visibility checkpoint.
 Native8 is the isolated decoder checkpoint and remains immutable.
 Native7 is the verifier checkpoint, native6 the core visibility checkpoint, native4 the name checkpoint;
 intermediate native5 was superseded by explicit SDK shutdown. Prior artifacts
 remain preserved. Do not confuse a source-commit assertion with proof
 of build provenance or report later documentation-only commits as binary rebuilds.
 
-## Next independent implementation decision
+## Latest implemented parity slice
 
-[Multi-recipient review](native-multi-recipient-review.md) inspects current
-single-use Selection, shared source reservations, ordered receipts and GTK rows.
-Recommended option1 keeps bounded batch/member admission and retry ownership in
-the daemon. Option2 leaves unsent recipient orchestration in GTK. Both introduce
-recipient multi-selection and explicit Send; no automatic acceptance/retry.
-The user selected option1. M1 freezes atomic local admission, independent peer
-outcomes, shared source retention, exact ordered receipts and explicit GTK Send
-before code. Daemon admission, vector receipts, SDK/controller and GTK explicit
-recipient selection are now implemented; scoped core8/0 and native39/0 checks
-passed. Native9 does not include these source changes; corrected candidate is native11 after the visual-review footer fix.
-The defensive preview routing fix is source-only after native9; no new package
-or immutable source export was built for the partial preview foundation.
+[Multi-recipient sharing](native-multi-recipient-review.md) selected option1:
+the daemon admits1..10 recipients atomically using one prepared source and bounded
+per-peer descriptor reservations. Existing ordered receipts recover exact results;
+GTK never loops over sends or silently drops a selected vanished peer. Separate
+transfer rows retain recipient names and independent Cancel. Core8 affected methods
+and native39 passed; final navigation-specific GTK1/0 and strict lints passed.
+Native11 includes these changes and the defensive preview routing foundation.
+Remote preview codec/mapping, production preview IPC/card binding and full Google
+interoperability remain unestablished. Installed/radio/current-peer acceptance is
+separate from these offline source/package observations.
 
 ## Work that can proceed without physical peers
 
 1. Continue the remaining parity slices after the completed live name and core
    visibility policy and PairedKey verifier: authorized certificate provider/
-   rotation research, secure local trust, previews/resume, multi-recipient and
+   rotation research, secure local trust, previews/resume and
    account/QR research. Freeze each significant contract before code; a crypto
    verifier alone does not supply operational Google identity, and local trust
    must remain distinct from Google account membership.

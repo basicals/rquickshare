@@ -161,9 +161,9 @@ everyday UI work and physical acceptance separately.
     - Implement `SharingUseCase.REMOTE_COPY` for clipboard-oriented transfers where Android peers support it.
     - Treat this as protocol capability negotiation, not merely a UI shortcut.
 
-11. **Multi-recipient**
-    - Queue multiple selected devices by default.
-    - Add bounded concurrent transfers after resource/BlueZ testing.
+11. **Multi-recipient** — native daemon/GTK implementation complete; physical-peer acceptance open
+    - Explicit Send atomically admits1..10 selected devices using one source.
+    - Existing transport concurrency policy is unchanged; real resource/BlueZ acceptance remains open.
     - Independent cancellation/progress per recipient.
 
 12. **Application / Wi-Fi payload completeness**
@@ -240,7 +240,7 @@ it is not a claim that completed foundation slices need implementing again.
 5. Trusted devices.
 6. Visibility/tray/theme/i18n polish.
 7. Preview + resume/dedup.
-8. Streams / Remote Copy / multi-recipient.
+8. Streams / Remote Copy; native multi-recipient source/package is complete, peer acceptance remains open.
 9. QR/account/AirDrop research.
 
 ## Modern BWU endpoint identity compatibility
