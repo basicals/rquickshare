@@ -48,6 +48,23 @@
             <property name="orientation">vertical</property>
             <property name="spacing">10</property>
             <child>
+              <object class="GtkBox" id="receive-indicator">
+                <property name="spacing">8</property>
+                <child>
+                  <object class="GtkSpinner" id="receive-spinner">
+                    <property name="width-request">18</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel" id="receive-countdown">
+                    <property name="xalign">0</property>
+                    <property name="wrap">true</property>
+                    <property name="hexpand">true</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkBox" id="source">
                 <property name="spacing">6</property>
                 <style>

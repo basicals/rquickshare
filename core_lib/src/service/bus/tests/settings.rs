@@ -654,7 +654,15 @@ async fn given_live_visibility_when_expired_retried_renewed_or_competing_then_cu
             })
             .await
             .unwrap();
-        assert_eq!(client.read_visibility().await.unwrap(), again_policy);
+        let sampled = client.read_visibility().await.unwrap();
+        assert!(sampled.remaining_ms > 0 && sampled.remaining_ms <= again_policy.remaining_ms);
+        assert_eq!(
+            super::super::super::visibility_service::VisibilityView {
+                remaining_ms: again_policy.remaining_ms,
+                ..sampled
+            },
+            again_policy
+        ); // Metadata is unchanged; a read cannot freeze or renew the countdown.
         assert_eq!(
             client
                 .set_visibility(visibility_intent(&again, 105, 0))
@@ -683,6 +691,11 @@ async fn given_live_visibility_when_expired_retried_renewed_or_competing_then_cu
             .unwrap();
         handle.set_visibility(2).unwrap().wait().await.unwrap();
         assert_eq!(updates.borrow().visibility.as_ref().unwrap().mode, 2);
+        assert!(updates
+            .borrow()
+            .visibility_sampled_at
+            .is_some_and(|sample| sample <= std::time::Instant::now()));
+        assert!(updates.borrow().visibility.as_ref().unwrap().remaining_ms <= 60_000);
         policy.current_and_update();
         tokio::time::pause();
         tokio::time::advance(std::time::Duration::from_secs(60)).await;

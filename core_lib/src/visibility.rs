@@ -56,6 +56,29 @@ impl VisibilityReader {
         (snapshot.mode, snapshot.revision, snapshot.running)
     }
 
+    pub(crate) fn timed_observation(&self) -> (Visibility, u64, bool, u64) {
+        let snapshot = *self.receiver.borrow();
+        let remaining = if snapshot.running && snapshot.mode == Visibility::Temporarily {
+            snapshot
+                .deadline
+                .map(|deadline| {
+                    deadline
+                        .saturating_duration_since(Instant::now())
+                        .as_millis()
+                        .min(60_000) as u64
+                })
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        (
+            snapshot.mode,
+            snapshot.revision,
+            snapshot.running,
+            remaining,
+        )
+    }
+
     pub fn current(&self) -> Visibility {
         self.receiver.borrow().mode
     }

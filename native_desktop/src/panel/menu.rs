@@ -136,7 +136,9 @@ impl Panel {
             let weak = weak.clone();
             glib::idle_add_local_once(move || {
                 if let Some(panel) = weak.upgrade() {
-                    panel.sync_tray_menu();
+                    if !panel.model.borrow().closing {
+                        panel.render();
+                    }
                 }
             });
         });

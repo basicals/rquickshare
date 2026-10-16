@@ -468,7 +468,7 @@ fn run_gui(
                             return;
                         }
                         if let (Some(panel), Some(point)) = (weak.upgrade(), state.activation) {
-                            let placed = if state.context { panel.tray_context(point) } else { panel.show_at(point) };
+                            let placed = if state.context { panel.tray_context(point) } else { panel.activate_at(point) };
                             if !placed {
                                 eprintln!(
                                     "rQuickShare: Cannot place the card on an available monitor"

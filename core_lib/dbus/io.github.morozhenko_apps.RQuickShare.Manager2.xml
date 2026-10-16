@@ -18,9 +18,9 @@
       <arg name="recipients" type="a(ss)" direction="out"/>
     </method>
   </interface>
-  <interface name="io.github.morozhenko_apps.RQuickShare.Visibility1">
+  <interface name="io.github.morozhenko_apps.RQuickShare.Visibility2">
     <method name="Read">
-      <arg name="visibility" type="(sbtby)" direction="out"/>
+      <arg name="visibility" type="(sbtbyt)" direction="out"/>
     </method>
     <method name="Set">
       <arg name="intent" type="(stssy)" direction="in"/>

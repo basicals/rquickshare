@@ -336,6 +336,10 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     );
     panel.window.present();
     assert!(panel.window.is_visible());
+    assert!(panel.activate_at((1, 1)));
+    assert!(!panel.window.is_visible());
+    assert!(panel.activate_at((1, 1)));
+    assert!(panel.window.is_visible());
     panel.window.close();
     assert!(!panel.window.is_visible());
     assert!(!panel.model.borrow().closing);

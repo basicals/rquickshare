@@ -73,6 +73,17 @@ impl Panel {
             handle.publish(self.tray_projection());
         }
     }
+    pub fn activate_at(self: &Rc<Self>, point: (i32, i32)) -> bool {
+        if self.model.borrow().closing {
+            return false;
+        }
+        if self.window.is_visible() {
+            self.hide();
+            true
+        } else {
+            self.show_at(point)
+        }
+    }
     pub fn tray_action(self: &Rc<Self>, action: Action) -> bool {
         if self.tray_projection().enabled & action.bit() == 0 {
             return false;
@@ -188,6 +199,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         name_status: 0,
     };
     panel.model.borrow_mut().state.settings = Some(settings);
+    panel.model.borrow_mut().state.visibility_sampled_at = Some(std::time::Instant::now());
     for (mode, target) in [(0, "visible"), (1, "hidden"), (2, "temporary")] {
         panel.model.borrow_mut().state.visibility =
             Some(rqs_lib::service::client::visibility::VisibilityView {
@@ -196,6 +208,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
                 revision: 1,
                 running: true,
                 mode,
+                remaining_ms: if mode == 2 { 60_000 } else { 0 },
             });
         panel.render();
         assert_eq!(panel.tray_projection().visibility, Some(mode));
@@ -252,6 +265,7 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         model.state = confirmed;
         model.preview = false;
     }
+    super::countdown::verify(panel);
     panel.set_drawer(Drawer::Open);
     panel.render();
     assert!(!panel.box_widget("source").get_visible());

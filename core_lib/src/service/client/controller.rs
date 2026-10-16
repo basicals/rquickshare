@@ -38,6 +38,7 @@ pub struct PanelState {
     pub settings_pending: bool,
     pub visibility: Option<super::visibility::VisibilityView>,
     pub visibility_pending: bool,
+    pub visibility_sampled_at: Option<std::time::Instant>,
     pub text_pending: bool,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -297,11 +298,13 @@ impl Worker {
     async fn refresh(&mut self) -> std::result::Result<(), ClientError> {
         let view = self.client.read_state().await?;
         let settings = self.client.read_settings().await?;
+        let visibility_sampled_at = std::time::Instant::now();
         let visibility = self.client.read_visibility().await?;
         self.state.send_modify(|state| {
             state.view = Some(Arc::new(view));
             state.settings = Some(settings);
             state.visibility = Some(visibility);
+            state.visibility_sampled_at = Some(visibility_sampled_at);
         });
         Ok(())
     }

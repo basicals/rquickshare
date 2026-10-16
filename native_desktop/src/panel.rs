@@ -22,6 +22,7 @@ use std::{
 use tokio::runtime::Handle;
 
 mod compose;
+mod countdown;
 mod image;
 mod incoming_preview;
 mod menu;
@@ -87,6 +88,7 @@ pub struct Panel {
     tray_menu: RefCell<Option<crate::tray::menu::Handle>>,
     login: RefCell<Option<crate::login::Handle>>,
     sending: gtk::PopoverMenu,
+    visibility_tick: RefCell<Option<glib::SourceId>>,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -368,6 +370,7 @@ impl Panel {
             tray_menu: RefCell::new(None),
             login: RefCell::new(None),
             sending: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
+            visibility_tick: RefCell::new(None),
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -553,6 +556,20 @@ impl Panel {
         self.present_surface()
     }
     fn present_surface(&self) -> bool {
+        let allowed = {
+            let model = self.model.borrow();
+            !model.closing
+                && (!model.safety_active
+                    || (model.safety.manual_allowed()
+                        && (!model.automatic || model.safety.automatic_allowed())))
+        };
+        if !allowed {
+            self.window.set_visible(false);
+            return true;
+        }
+        if self.window.is_visible() || self.restore_surface() {
+            return true;
+        }
         let hint = self.model.borrow().last_hint;
         if let Some(hint) = hint {
             if self.place_at(hint) {
@@ -600,6 +617,9 @@ impl Panel {
     pub fn close(&self) {
         if self.model.borrow().closing {
             return;
+        }
+        if let Some(tick) = self.visibility_tick.borrow_mut().take() {
+            tick.remove();
         }
         self.preview_image.cancel();
         self.close_text_review();
@@ -1065,6 +1085,7 @@ impl Panel {
             .object::<gtk::Label>("status")
             .unwrap()
             .set_visible(!status.is_empty());
+        self.sync_countdown();
         self.sync_tray_menu();
 
         let Some(view) = &model.state.view else {
@@ -1244,7 +1265,8 @@ impl Panel {
     pub fn show_at(&self, point: (i32, i32)) -> bool {
         self.mark_manual();
         self.model.borrow_mut().manual_requested = true;
-        self.place_at(point)
+        self.model.borrow_mut().last_hint = Some(point);
+        self.present_surface()
     }
     fn place_at(&self, point: (i32, i32)) -> bool {
         let height = self

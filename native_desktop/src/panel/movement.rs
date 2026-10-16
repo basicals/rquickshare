@@ -15,6 +15,35 @@ pub(super) fn clamp_position(
     ))
 }
 impl Panel {
+    pub(super) fn restore_surface(&self) -> bool {
+        if !self.layer || !self.model.borrow().position_pinned {
+            return false;
+        }
+        let Some(monitor) = self.window.monitor() else {
+            return false;
+        };
+        let present = gtk::prelude::WidgetExt::display(&self.window)
+            .monitors()
+            .iter::<gtk::gdk::Monitor>()
+            .filter_map(Result::ok)
+            .any(|item| item == monitor);
+        let geometry = monitor.geometry();
+        let height = self
+            .window
+            .measure(gtk::Orientation::Vertical, 420)
+            .1
+            .max(1);
+        if !present
+            || clamp_position((0, 0), (420, height), (geometry.width(), geometry.height()))
+                .is_none()
+        {
+            return false;
+        }
+        self.clamp_moved_surface(height);
+        self.window.present();
+        self.sync_tray_menu();
+        true
+    }
     pub(super) fn pin_surface_bottom(&self) {
         if !self.layer || !self.window.is_visible() || self.window.height() <= 0 {
             return;

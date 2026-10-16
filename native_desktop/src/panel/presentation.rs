@@ -10,6 +10,7 @@ impl Panel {
         model.automatic_focus = None;
     }
     pub(super) fn hide(self: &Rc<Self>) {
+        self.pin_surface_bottom();
         self.close_text_review();
         self.close_composer();
         self.close_image();
@@ -63,6 +64,7 @@ impl Panel {
         self.window.set_visible(false);
         drop(model);
         self.sending.popdown();
+        self.sync_countdown();
         self.sync_tray_menu();
     }
     pub fn safety_update(self: &Rc<Self>, safety: crate::desktop_guard::SafetyState) {

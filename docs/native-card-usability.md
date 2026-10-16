@@ -918,26 +918,26 @@ before selection. Analysis commands exited: Terminal closed.
 ### Countdown snapshot option1 selected — native21 implementation plan
 
 The user selected one authoritative snapshot. No pending product/API choice.
-- [ ] T1: version Visibility1 to Visibility2 with remaining_ms appended to the
+- [x] T1: version Visibility1 to Visibility2 with remaining_ms appended to the
   checked view. Derive mode/revision/running/remaining from one copied core
   policy snapshot and its existing monotonic deadline; limit to0..60000ms, zero
   outside running Temporary. Set/Changed retain the existing exact intent owner.
   Daemon and native client ship together; stale versions fail closed rather than
   reinterpret the changed signature. Update the installed XML contract.
-- [ ] T2: SDK stamps a local monotonic sample immediately before Read; pair it
+- [x] T2: SDK stamps a local monotonic sample immediately before Read; pair it
   with the validated response in PanelState. Rendering subtracts elapsed time
   from that conservative sample, preventing RPC delay from extending the display.
   Epoch/mode/lifecycle/unavailable changes invalidate display; no new minute
   deadline, per-second IPC, wall-clock expiry or client visibility write.
-- [ ] T3: an owned weak-reference GTK display tick refreshes a spinner and visible
+- [x] T3: an owned weak-reference GTK display tick refreshes a spinner and visible
   message/countdown only while card and drawer are shown in confirmed Temporary.
   At sampled zero show a transition message rather than claim continued visibility
   or change the daemon. Cancel the tick on collapse/hide/disconnect/close.
-- [ ] T4: primary Activate toggles card visibility; ContextMenu remains explicit.
+- [x] T4: primary Activate toggles card visibility; ContextMenu remains explicit.
   Pin the current bottom/monitor margins on hide and restore only valid monitor/
   size geometry before falling back to current tray placement. Reuse the path
   for menu/Open/explicit presentation; do not persist position across processes.
-- [ ] T5: deterministic paused-clock policy/snapshot boundaries and wire validity;
+- [x] T5: deterministic paused-clock policy/snapshot boundaries and wire validity;
   SDK/service affected checks; pure display elapsed/epoch/format boundaries; actual
   GTK toggle/indicator/tick lifetime and existing geometry bounds. Run affected
   checks/lint once and rerun only source changes/failures. No ten-run dev loop.
@@ -979,3 +979,22 @@ command-helper call site also needed to retain its returned guards. Fix that
 call site before any pass claim. The strict core check reported the same compile
 error; no runtime checks executed in those attempts. Re-run the five failed
 scenarios plus the third helper caller, then amend the owned test-only checkpoint.
+
+T1-T5 completed: Visibility2 `(sbtbyt)` derives mode/generation/remaining from
+one policy snapshot; paused-clock duration and renewed/nonrenewed boundaries
+passed. SDK publishes a conservative monotonic sample. GTK shows a spinner and
+visible message with ceil-second countdown only in the visible expanded drawer;
+zero becomes Updating visibility until the authoritative event. Collapse/hide/
+disconnect/close cancel display ticking. Primary tray Activate toggles and the
+valid monitor/bottom margins survive hide/reopen; unavailable monitor falls back
+to tray placement. Safety and consent remain unchanged.
+Measured checks: corrected visibility run18 passed/1 obsolete timed equality
+failed; subsequent service run292 passed/5 unrelated fixture-lifetime failures.
+All five affected scenarios passed after retaining named source guards, plus the
+third helper caller passed. This is not a fresh all-service green run. Native
+binary42/0 passed0.70s; final affected GTK1/0 passed0.63s. Strict core all-feature/
+all-target lint passed7.66s; only its existing upstream bluer future-compat notice.
+Final strict native lint and formatting/whitespace passed; existing default-core
+dependency warnings remain. The actual expanded spinner/1:00 frame was inspected.
+No core full-suite or ten-run repetition. All owned commands exited: Terminal closed.
+T6 native21 build/installed checks follow.
