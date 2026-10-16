@@ -58,10 +58,66 @@
     "controller_refreshes_on_policy_only_expiry": true,
     "saved_mode_distinct_from_current": true
   },
-  "package": null,
+  "package": {
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native9_amd64.deb",
+    "version": "0.11.5+native9",
+    "architecture": "amd64",
+    "bytes": 6366716,
+    "sha256": "990251e7e89d483d1a282a782e6682ceb1a779e93a6fcacf83b8abfdc1c18b94",
+    "expected_files": 11,
+    "builder_inventory_metadata_permissions_elf_help_settings_verified": true,
+    "installed": false,
+    "build_seconds": {
+      "core": 177,
+      "gtk": 55.15,
+      "helper": 0.94
+    }
+  },
   "installed": false,
   "physical_peer_tested": false,
   "signed": false,
   "published": false,
-  "cloud_calls": false
+  "cloud_calls": false,
+  "implementation_commit": "b1ce2e21ea9e5d2f437d65206882e48d166e3491",
+  "core_implementation_commit": "15dbf089ec733eabaedaf87ff7de549afa0ce11a",
+  "observed_at_utc": "2026-10-16T12:08:23.449969+00:00",
+  "images": [
+    {
+      "mode": "full",
+      "path": "/home/morozhenko/Documents/ChatGPT/quickshare \u0438 nativepair/outputs/rquickshare-native9-incoming-full.png",
+      "sha256": "8612763ddd36438deb0fa187d2f0844b539ecbdc72930bf3f5b6bb12055d1c48"
+    },
+    {
+      "mode": "compact",
+      "path": "/home/morozhenko/Documents/ChatGPT/quickshare \u0438 nativepair/outputs/rquickshare-native9-incoming-compact.png",
+      "sha256": "caa1a3bf40859f4a30bc7e1da3e7712bf083c47bc346c1938f615a995f7776b5"
+    }
+  ],
+  "visual_inspection_complete": true,
+  "unsigned_apt": {
+    "path": "native_desktop/target/apt-unsigned-native9",
+    "files": [
+      "dists/rquickshare-native-ubuntu26.04/Release",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages.gz",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/39e2e7fa363e0fbe392b47567ba12fcbe8aa20af219fe63244241635271f4382",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/58adc7b623de5065d375f4c06f166990ed362a968385237aa885c6134494d171",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native9_amd64.deb",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native9_amd64.deb.sha256"
+    ],
+    "date": "Fri, 16 Oct 2026 12:08:22 GMT",
+    "valid_until": "Fri, 23 Oct 2026 12:08:22 GMT",
+    "signed": false,
+    "valid_until_utc": "2026-10-23T12:08:22Z"
+  },
+  "signing_request": {
+    "path": "native_desktop/target/signing-request-native9/request.json",
+    "sha256": "9d0732164d550ac4d1ccf4c6ab1b4ad960eff5bdd22fef8f20cc3425f7af2ab7",
+    "approved": false,
+    "first_release": true,
+    "source_attestation_supplied": false,
+    "live_empty_baseline_verified": false
+  },
+  "native8_preserved": true,
+  "owned_processes_exited": true
 }

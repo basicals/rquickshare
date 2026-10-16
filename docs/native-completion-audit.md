@@ -12,11 +12,11 @@ physical peer, account/cloud call, package rebuild or runtime change in this aud
    native ingress gates. Separate source support from installed/peer acceptance.
 2. [x] A2: document readiness and remaining work. Correct the old native7 release
    paragraph and obsolete roadmap continuation markers; retain dated evidence.
-3. [x] A3: record the next significant UI/API alternatives before code. User choice
-   is required for the new live-visibility facade and quick-control UX.
-4. [x] A4 selected option1: see [frozen implementation contract](native-live-visibility.md); freeze the concrete current-policy/read/status,
-   settings-intent/idempotency/reconnect and GTK/tray contract before code; then
-   implement and run affected checks once with reversible commits.
+3. [x] A3: record the significant UI/API alternatives before code; user selected
+   option1, daemon-owned live visibility and quick controls.
+4. [x] A4: [contract and measured source checks](native-live-visibility.md)
+   cover current policy, intent/retry/reconnect and GTK/tray controls. Source
+   implementation and native9 offline verification are complete; export is in progress.
 
 Rollback of this audit is documentation only. Native8 artifacts remain immutable;
 no unaffected Rust/GTK/package checks are repeated for a documentation change.
@@ -25,20 +25,20 @@ no unaffected Rust/GTK/package checks are repeated for a documentation change.
 
 | Area | Implemented source | Still missing implementation | Separate acceptance |
 |---|---|---|---|
-| Manual sharing | Native file/folder selection, multiple files, one explicit recipient, PIN/Accept/Reject, progress/cancel; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native8 with real Android/Google Windows; radio failure/large files/interruptions |
+| Manual sharing | Native file/folder selection, multiple files, one explicit recipient, PIN/Accept/Reject, progress/cancel; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native9 with real Android/Google Windows; radio failure/large files/interruptions |
 | Text and clipboard | Outbound text/URL and explicit clipboard capture; reviewed immutable PNG image source; incoming text/URL review and explicit Copy | Complete Remote Copy negotiation/peer semantics; native Wi-Fi/app completeness | Current peer/clipboard/portal behavior on installed desktop |
-| Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states | Live visibility/quick actions now implemented (native-live-visibility.md); localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
+| Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states; live visibility/quick actions | Localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
 | Settings and desktop | Daemon-owned Settings2/schema2, migration/recovery, live name, receive-directory capability, opt-in daemon+tray login start and Dolphin Send assets | Broader desktop/share-target integration is not complete | Installed context menu, autostart, restart, upgrade/removal, recovery and live-transfer behavior |
 | Preview images | Bounded byte ingress, real isolated Glycin/Bwrap helper, bounded pixels/cancel/deadline/reaping, synthetic Full/Compact fixture | Canonical peer payload encoding/mapping/order, admitted core routing, daemon IPC/production-card binding and outgoing previews | Real peer preview interoperability; fixture is not this evidence |
 | Resume/dedup | Modern wire fields only | Content identity, safe partial storage/integrity/recovery and actual negotiation | Interrupted transfers against supported peers |
 | Other payloads | Modern proto fields and some core/legacy parsing | Streams, multiple recipients, complete Wi-Fi/app/sensitive-content behavior | Versioned capability matrix and physical peers |
 | Trust/account/platform parity | Bounded token/role/certificate verifier; production certificate source explicitly empty | Supported Google certificate acquisition/rotation, remembered trust/auto-accept, Contacts/Your devices, compatible QR and Apple transport work | Supported account authorization and applicable real platform paths |
-| Distribution | Native8 uninstalled Ubuntu26.04 amd64 package/source/unsigned APT/public unapproved request; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
+| Distribution | Native9 uninstalled Ubuntu26.04 amd64 package/unsigned APT/public unapproved request; source export in progress; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
 
 Basic manual workflows and a substantial native shell exist in source. Neither
 "all basic functionality is release accepted" nor "UI is finished" is supported.
 Old core/legacy physical observations do not validate the current native package.
-Native8 is locally verified and uninstalled, not a replacement already installed
+Native9 is locally verified and uninstalled, not a replacement already installed
 on the user's desktop. No percentage estimate or full Google compatibility claim.
 
 The shell already uses GTK/theme-relative CSS; do not list all dark/system styling
@@ -47,9 +47,10 @@ are currently fixed English. The daemon retains in-memory transfer rows; do not
 call the Transfers page a completed persistent history product. Background consent
 notifications exist and should not be listed as wholly missing either.
 
-## Next recommended scope: actual visibility and quick control
+## Selected visibility scope: pre-implementation analysis and decision
 
-The core already owns expiry and exposes read-only VisibilityReader. Current
+At A1 (before the selected implementation), the core owned expiry and exposed
+read-only VisibilityReader. Then-current
 native StateView/Manager2 has no live mode/deadline projection. SettingsView has
 the saved visibility intent, not the current expired policy. The GTK editor has
 a visibility dropdown; the native DBusMenu/GTK menu has no visibility action.
@@ -81,7 +82,7 @@ the already selected Glycin decoder boundary must not be asked again.
 
 ## Continuation order
 
-1. Live visibility/quick-control source is complete; verify the changed native9 candidate, then installed acceptance.
+1. Live visibility/quick-control source is complete; native9 offline verification passed, export then installed acceptance.
 2. Complete installed KDE/Wayland and current-package manual-sharing acceptance
    when the required peer/session is available; failures may reveal source defects.
 3. Obtain canonical preview fixtures and implement the compatible receive/IPC/card

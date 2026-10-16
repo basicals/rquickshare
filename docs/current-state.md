@@ -7,10 +7,10 @@ tray/card UX and full Google Quick Share parity, not an achieved compatibility c
 
 [Completion audit](native-completion-audit.md) separates implemented manual flows,
 remaining product work and current-package physical acceptance. The basic native
-shell is substantial but not release accepted or UI-complete. Next recommended
+shell is substantial but not release accepted or UI-complete.
 [Live visibility/quick controls](native-live-visibility.md) option1 is implemented
-and scoped source checks passed. Native9 package verification is next; native8
-remains the measured candidate until that finishes.
+and scoped source checks passed. Native9 offline package and Full/Compact
+rendering passed; public artifact export is next. Native8 remains preserved.
 
 ## Documentation maintenance plan and rationale
 
@@ -86,13 +86,13 @@ preview compatibility from local fixtures.
 
 | Area | Current evidence | Remaining work |
 |---|---|---|
-| Native ownership | Rust daemon, authenticated typed D-Bus, GTK4 tray/card, Full/Compact, separate menu/notifications, core-owned temporary visibility and owned SDK cleanup implemented | Installed KDE/Wayland lifecycle, placement, lock/DND/focus/scale and physical visibility acceptance |
+| Native ownership | Rust daemon, authenticated typed D-Bus, GTK4 tray/card, Full/Compact, separate menu/notifications, live visibility status/quick modes, core-owned temporary visibility and owned SDK cleanup implemented | Installed KDE/Wayland lifecycle, placement, lock/DND/focus/scale and physical visibility acceptance |
 | Sharing | File/folder preparation, consent/PIN, progress/cancel, received text explicit Copy, outgoing text/clipboard/PNG, received-file reveal and PairedKey authentication foundation implemented | Current native package with physical Android/Windows peers; operational certificate provider, no full compatibility signoff |
 | Settings | Daemon-owned schema2/Settings2 store, migration/backup/recovery, live device name and GTK editor implemented | Real installed migration/recovery and Google/KDE name refresh |
 | Desktop integration | Dolphin Send assets, descriptor handoff, systemd activation and opt-in daemon+hidden-card tray login start implemented | Installed context-menu/session/autostart, upgrade/removal/live-transfer acceptance |
-| Distribution | Verified uninstalled Ubuntu26.04 amd64 native8 package with private sandbox helper; public source/package/unsigned-APT/unapproved-request handoff verified; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
+| Distribution | Verified uninstalled Ubuntu26.04 amd64 native9 package with live visibility controls and private sandbox helper; offline package/rendering verified, current public handoff export in progress; publisher and narrow HTTPS Worker route implemented | Exact release approval, bucket-scoped publisher credential, real signed public APT acquisition and installed updates |
 | Signing recovery | Production primary/subkey initialized on existing Linux PC; non-release proof, encrypted local restore and all four independent cloud artifact downloads passed | Recovery checkpoint complete; hourly follow-up deleted; preserve archive password and backup custody |
-| Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Tray/current-visibility UX, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
+| Further parity | Modern wire fields, folder support, native live name and core temporary deadline exist | Installed visibility controls, physical discovery withdrawal and suspend acceptance, trust/account identity, previews/resume, streams/multiple recipients, Wi-Fi/app completeness, QR/Apple/service research and versioned peer evidence |
 
 Feature contracts and measured checks: [product history](product-direction.md),
 [settings](native-settings.md), [desktop ingress](native-desktop-ingress.md),
@@ -123,13 +123,14 @@ on2026-10-15 at13:25:25–13:25:52Z, completing four-file cloud acceptance. The 
 confirmed deletion of the hourly follow-up. Exact evidence and historical quota/
 repair observations remain in native-signing-backup.md and its JSON.
 
-No production APT release has been signed/published. Current native8 package SHA256
-e89c5ed7a5e356228926d139f2585626dd56528fe74c80fe436643a7a6d26842 was built
-fromfb55e8b8fa124cff0911d2deba31ba1bde762441 and verified offline. The current
-unsigned APT metadata expires2026-10-23T06:35:16Z; canonical first-release request
-e206c18cba37b472432c8af37750b259701821b942b1f9c10699c00723383259
+No production APT release has been signed/published. Current native9 package SHA256
+990251e7e89d483d1a282a782e6682ceb1a779e93a6fcacf83b8abfdc1c18b94 was built
+fromb1ce2e21ea9e5d2f437d65206882e48d166e3491 and verified offline. Current
+unsigned APT metadata expires2026-10-23T12:08:22Z; canonical first-release request
+9d0732164d550ac4d1ccf4c6ab1b4ad960eff5bdd22fef8f20cc3425f7af2ab7
 is unapproved. Exact artifact/source/check evidence is linked in
-native-preview-review.md and evidence/native-preview-decoder-2026-10-16.json.
+native-live-visibility.md and evidence/native-live-visibility-2026-10-16.json.
+Native8 is the isolated decoder checkpoint and remains immutable.
 Native7 is the verifier checkpoint, native6 the core visibility checkpoint, native4 the name checkpoint;
 intermediate native5 was superseded by explicit SDK shutdown. Prior artifacts
 remain preserved. Do not confuse a source-commit assertion with proof

@@ -146,3 +146,38 @@ Uncertain/save-but-unapplied outcomes are visible without claiming discovery
 success. No persistent-history/localization/account/remote-preview feature is
 claimed. Prepare changed native9 from the next source commit; native8 remains
 last measured candidate until build/verification completes. No package overwrite.
+
+
+## L5 native9 candidate verification
+
+Built from b1ce2e21ea9e5d2f437d65206882e48d166e3491 (core implementation
+15dbf08 plus native UI/package revision9). Core release177s, GTK55.15s,
+helper0.94s. Package rquickshare_0.11.5+native9_amd64.deb:6366716 bytes,
+SHA256990251e7e89d483d1a282a782e6682ceb1a779e93a6fcacf83b8abfdc1c18b94.
+Exact11-file inventory, root ownership/modes/assets, generated ELF dependencies,
+extracted GUI/daemon/helper help and private offline settings smoke passed.
+Ubuntu26.04 amd64 only; no installed desktop, ARM or physical-peer claim.
+The existing nine core and usrmerge dpkg-shlibdeps warnings remained visible.
+
+Extracted Full/Compact incoming fixtures rendered and were visually inspected.
+Both show the new discovery row without clipping; Full shows the existing synthetic
+thumbnail, Compact retains PIN/details/actions without it. These are offline
+preview-mode images (Discovery unavailable), not live discovery or peer preview
+proof. Live three-mode labels, radio state and safety gates passed GTK smoke.
+
+Unsigned APT native9 has7 exact files, no InRelease/Release.gpg; Date
+2026-10-16T12:08:22Z, Valid-Until2026-10-23T12:08:22Z. Public first-release request
+native_desktop/target/signing-request-native9/request.json SHA256
+9d0732164d550ac4d1ccf4c6ab1b4ad960eff5bdd22fef8f20cc3425f7af2ab7 is
+unapproved, without independent source attestation/live empty-baseline proof.
+No signing/publication/installation. Native8 package hash was checked unchanged.
+[Machine evidence](evidence/native-live-visibility-2026-10-16.json) records exact
+package/request/images and actual source checks. Terminal closed.
+
+Finish L5 by exporting the next documentation commit as an immutable source ZIP,
+exact native9 package/checksum, unsigned7-file APT archive and public request to
+existing outputs. Verify CRC, tracked inventory, selected exact source bytes and
+all package/request/APT digests. Update mutable current handoff docs/readiness,
+preserve native8 and all older named artifacts. Record export facts in a later
+documentation-only commit; do not rebuild or mutate that immutable source archive
+just to include its own later completion receipt.

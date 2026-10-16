@@ -122,7 +122,9 @@ everyday UI work and physical acceptance separately.
      native/legacy consumers and owned mDNS SDK cleanup implemented; native6
      verified offline. See [visibility contract](native-visibility-review.md).
      Physical withdrawal/suspend and native quick-control UX remain acceptance/work.
-   - Tray visibility controls.
+   - Tray visibility controls: source complete with current-policy status and
+     replay-safe daemon commands; see [live visibility](native-live-visibility.md).
+     Installed KDE/radio acceptance remains separate.
    - Background notifications with Accept / Reject / Cancel where supported.
    - Dark/system theme.
    - Localization architecture.
@@ -224,8 +226,8 @@ A prospective local Ubuntu + physical Pixel/ADB hardware automation harness is s
 ## Current implementation order
 
 The native daemon/D-Bus/GTK shell, manual-sharing surfaces, desktop ownership and
-decoder foundation are implemented. The next everyday UI review is authoritative
-live visibility and quick controls in [completion audit](native-completion-audit.md).
+decoder foundation and daemon-owned live visibility/quick controls are implemented.
+See [completion audit](native-completion-audit.md) and [visibility contract](native-live-visibility.md).
 Continue installed/physical acceptance separately and preserve the open account,
 preview wire and resume gates. The list below retains broader feature dependencies;
 it is not a claim that completed foundation slices need implementing again.
