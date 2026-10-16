@@ -310,5 +310,15 @@
     "json_valid": true,
     "runtime_source_matches_binary_commit": true,
     "whitespace_passed": true
+  },
+  "export": {
+    "archive_source_commit": "f3441d0f93b62f041af8ea86a7da847d81266fd3",
+    "source_archive": "rquickshare-native15-source.zip",
+    "source_sha256": "d21e61379baf30ac512b849f18ed9bf854c6800d64b9f56c26f0381d7eaa5160",
+    "tracked_files": 492,
+    "receipt": "rquickshare-native15-export.json",
+    "native13_preserved": true,
+    "native14_diagnostic_preserved": true,
+    "apt_staged": false
   }
 }

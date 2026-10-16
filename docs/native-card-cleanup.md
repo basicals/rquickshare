@@ -251,3 +251,19 @@ JSON parses; runtime/native/core/UI/assets/packaging/build-script source matches
 before the atomic docs checkpoint. No unrelated test suite or dependency warning
 suppression. Mutable handoff files and immutable final artifacts follow this
 committed source/evidence checkpoint; signing/production APT remain separate.
+
+## Immutable native15 export
+
+Public output package/checksum, four inert visual fixtures and492-file source
+archive are saved under /home/morozhenko/Documents/ChatGPT/quickshare и nativepair/outputs.
+Archive commit:f3441d0f93b62f041af8ea86a7da847d81266fd3; SHA256
+d21e61379baf30ac512b849f18ed9bf854c6800d64b9f56c26f0381d7eaa5160.
+Binary source remains344909f36bc06a3cd4582e3cb1c697a549f5a203. Exact receipt:
+rquickshare-native15-export.json. Native13 immutable output package/source and
+the native14 diagnostic package hashes were rechecked and preserved. Current
+mutable source pointer/docs/progress/readiness are refreshed; this later docs
+checkpoint does not rewrite the immutable source archive or rebuild binaries.
+No new APT staging/request/signing/publication or private-key/Drive work.
+All owned artifact commands exited: Terminal closed. C7 actual KDE feedback is
+still awaiting the user's answer; selected source/package/installation changes
+are complete and the broader essential acceptance queue remains open.
