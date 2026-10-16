@@ -7,6 +7,12 @@ settings editor with inconsistent application timing. Analysis/plan is recorded;
 source-extension ownership and the consolidated File entry need the scoped
 decisions in that document before implementation. Existing native15 evidence
 remains historical verification, not acceptance of these newly reported issues.
+The subsequent attached mockup now specifies four-button Compact, one full
+device/request/transfer list with status overlays, and sidebar Settings in the
+existing theme. Its written corrections and actual identity/model limitations
+are recorded in the follow-up's Mockup steering section; Receive behavior and
+the conflicting tray appearance entries await clarification alongside source
+extension. No mockup redesign has been implemented or installed yet.
 
 Updated2026-10-16. Mode A; direct dev, no branch/worktree/push. This is the current
 status index. Dated entries in other documents remain historical evidence; they

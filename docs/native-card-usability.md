@@ -107,3 +107,96 @@ publication, Drive, previews and advanced peer features are outside this slice.
 Observed checks: analysis and documentation only. No new tests/build/install,
 settings mutation, menu event, source preparation or transfer. All owned one-shot
 commands exited: Terminal closed. Implementation is pending the scoped decisions.
+
+## Mockup steering — 2026-10-16
+
+The user supplied /tmp/codex-clipboard-c6f9fbc7-9eae-42c2-a73a-ef9668bcb570.png
+and explicit written corrections. The written corrections govern differences
+from the illustration. Retain the current application/theme styling; the image
+is a layout reference, not a request to reproduce its colors, invented device
+records or logo. No image generation, Figma import or new bitmap assets needed.
+
+This steering supersedes U5/U6 layout proposals, while additive selection, drag,
+single Open/Hide, no routine Reconnect and deferred OK/Cancel requirements remain.
+It also explicitly authorizes the main-card redesign that was previously outside
+the essential-release scope. It does not authorize persistent history, a trust
+database, enrollment or automatic acceptance merely because the image includes
+a Paired and recent section.
+
+### Actual model limitations
+
+`StateView::endpoints` exposes only ephemeral endpoint id/name, without verified
+persistent identity or device type. Transfer details have advertised sender/type;
+`TransferView::recipient` records outbound recipient association. Inbound sender
+names are untrusted display metadata, not an authenticated association to a
+discovery endpoint. Do not merge incoming requests into a named endpoint row by
+string equality, invent phone/laptop kinds for unknown discoveries, or present
+an advertised/green status as paired/trusted. The existing certificate source is
+empty and remembered trust remains separately gated in native-trust-review.md.
+
+Use exact discovery ids and transfer capabilities for keyed rows and actions.
+Current incoming requests and active transfers can appear within the same list,
+with safe per-request detail expansion. A returning-peer group needs a genuine
+identity source; hide unavailable grouping rather than creating fake records.
+Any recent result display must remain daemon-session data, with its lifetime
+made clear; no new durable history store is included in this layout slice.
+
+### Mockup implementation plan before code
+
+1. [x] M1: inspect the image, current keyed rows, recipient controls, typed
+   state/identity limits and existing settings/menu owners. Record scope and
+   deviations here, preserving native15 evidence and installed state.
+2. [ ] M2: resolve Receive semantics, conflicting tray appearance entries and
+   the still-pending additive source owner choice. These are concrete behavior/
+   API questions; implementation remains stopped until the user's response.
+3. [ ] M3: freeze a presentation model for one keyed vertical list. Remove main
+   StackSwitcher tabs and repeated Nearby/Available labels and branding. Header
+   contains Settings, one hide/close control and view toggle, with a drag region.
+   Keep bounded lists and existing source/recipient explicit multi-send behavior.
+   Inline request/transfer actions expand exact code/manifest/progress/cancel/
+   saved-file details without navigating to redundant tabs or losing state.
+   Do not turn a decorative row Receive button into unchecked consent.
+4. [ ] M4: Compact has exactly Receive, Send, Hide and Full view actions; no
+   Settings shortcut. A request requiring review opens the full/details surface,
+   keeping consent explicit. Status dots overlay device icons, occupy no separate
+   status column, and have tooltip/accessibility descriptions. Unavailable,
+   pending, active, completed and failed states must not rely on color alone;
+   critical errors and PIN remain readable in details.
+5. [ ] M5: shorten tray/context to Receive, Send files, incoming requests/active
+   transfers with actual counts, the existing three live visibility choices,
+   Settings, About and Quit, plus the previously requested single Open/Hide if
+   retained after clarification. Remove routine Reconnect, duplicate image
+   action and source-specific menu clutter. No invented counters. Appearance
+   menu entries follow the pending conflict resolution; no theme/icon redesign.
+   Sending entry can expose file/folder/text choices within the sending surface,
+   preserving essential existing capabilities without a separate Image command.
+6. [ ] M6: replace the narrow scrolling Settings column with a separate wider
+   window, branded header and left navigation/right content. Use populated
+   sections for General, Receiving, Advanced and About (last); do not add an
+   empty Transfers category solely to imitate the image. Existing fields only:
+   name, login start, appearance, visibility, receive folder and port. Recovery
+   actions appear contextually in Advanced when needed. Each section fits
+   naturally without an internal scroller. Common Cancel/OK footer owns the
+   staged draft across sections; switching sections never applies values.
+   Preserve the U6 validation/CAS/exact-retry/capability/partial-outcome rules.
+7. [ ] M7: implement the approved additive source contract and integrated source
+   controls, run scoped checks once, inspect real offline GTK frames including
+   all Settings sections and four-button Compact, then distinct package/install
+   verification under U7/U8. Physical KDE/peer results remain separate.
+
+M3-M6 require no persistent history or Google account/trust implementation. Before
+changing row/consent/settings state handling, document its concrete branch and
+interaction checks; do not weaken existing safety, multi-recipient or recovery
+assertions to make a new layout pass. Rollback each model/API/layout milestone
+as a coherent atomic commit. Native15 remains the retained installed baseline.
+
+Pending Receive choices: recommend reviewing a waiting request, otherwise using
+the existing daemon-owned one-minute visibility command to become discoverable.
+Alternative: only open waiting-request details and leave visibility unchanged.
+Neither choice permits auto-accept, opening links or clipboard replacement.
+The illustration includes Compact/Full tray entries, conflicting with the user's
+earlier explicit removal request; ask which instruction to retain.
+
+Observed mockup verification: image/source inspection and documentation only;
+no production edits, tests, builds, service/settings changes or external requests.
+All owned one-shot commands exited: Terminal closed.
