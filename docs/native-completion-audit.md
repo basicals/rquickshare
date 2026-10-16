@@ -96,3 +96,9 @@ the already selected Glycin decoder boundary must not be asked again.
 Actual checks: repository/source inspection and documentation link/whitespace
 verification only. No new tests/builds or external services were needed. Owned
 inspection commands exited; Terminal closed.
+
+
+2026-10-16 continuation: the private defensive preview routing fix is complete in
+source, outside native9 binaries; full codec/mapping/IPC/display remains open.
+The next independent parity decision is [multi-recipient ownership](native-multi-recipient-review.md),
+option1 recommended. No selection/code/package is implied by the review.

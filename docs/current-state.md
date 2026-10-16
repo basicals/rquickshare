@@ -143,6 +143,17 @@ intermediate native5 was superseded by explicit SDK shutdown. Prior artifacts
 remain preserved. Do not confuse a source-commit assertion with proof
 of build provenance or report later documentation-only commits as binary rebuilds.
 
+## Next independent implementation decision
+
+[Multi-recipient review](native-multi-recipient-review.md) inspects current
+single-use Selection, shared source reservations, ordered receipts and GTK rows.
+Recommended option1 keeps bounded batch/member admission and retry ownership in
+the daemon. Option2 leaves unsent recipient orchestration in GTK. Both introduce
+recipient multi-selection and explicit Send; no automatic acceptance/retry.
+Significant ownership/API/UX selection is pending; no multi-send code exists yet.
+The defensive preview routing fix is source-only after native9; no new package
+or immutable source export was built for the partial preview foundation.
+
 ## Work that can proceed without physical peers
 
 1. Continue the remaining parity slices after the completed live name and core

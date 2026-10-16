@@ -95,5 +95,8 @@
   "cloud_account_calls": false,
   "release_signed": false,
   "published": false,
-  "native9_contains_routing_fix": false
+  "native9_contains_routing_fix": false,
+  "implementation_commit": "f69f91a19c5c0e317970c5784c1cc105d8fe8301",
+  "plan_commit": "bc77909",
+  "owned_processes_exited": true
 }
