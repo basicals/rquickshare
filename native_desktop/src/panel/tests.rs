@@ -226,10 +226,16 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(appearance.selected(), 0);
     panel.set_mode(Mode::Full);
     assert!(!panel.box_widget("source").get_visible());
+    assert!(!panel.box_widget("recipients").get_visible());
     panel.pages.set_visible_child_name("nearby");
     assert!(panel.box_widget("source").get_visible());
+    assert!(panel.box_widget("recipients").get_visible());
     panel.pages.set_visible_child_name("incoming");
     assert!(!panel.box_widget("source").get_visible());
+    assert!(!panel.box_widget("recipients").get_visible());
+    panel.pages.set_visible_child_name("transfers");
+    assert!(!panel.box_widget("recipients").get_visible());
+    panel.pages.set_visible_child_name("incoming");
     panel.set_mode(Mode::Compact);
     settings.close();
     assert!(!settings.is_visible());

@@ -235,3 +235,22 @@ to native10 before building; native9 package/export remains immutable. M4 now
 builds the committed source, verifies the eleven-file package and offline
 Full/Compact/Nearby/Transfers fixtures, then exports only public source/artifacts
 and a fresh unsigned APT/unapproved request. No install/sign/publication.
+
+## M4 visual finding and repair plan (before code)
+
+The extracted native10 Nearby/Transfers/Compact captures exposed an actual
+projection defect: the existing visible-child callback updates only source
+visibility, so the new recipient footer remains on Transfers until a full model
+render. Fix that same callback to project both Nearby-only containers; do not add
+recursive rendering. Extend the current GTK navigation assertion to verify both
+containers immediately after page changes. Native10 package6,408,016 bytes/SHA256
+65c2a1e2154094c42490288946dc414bab130cb0bedaff61db487a36ab606e8d
+is retained as a superseded uninstalled intermediate candidate; its images and
+unsigned request remain immutable diagnostic evidence, not final handoff.
+Increment the changed package to native11. Recheck only the affected GTK smoke,
+native lint and corrected package/visual/export; no unaffected core suite rerun.
+
+Footer repair verification: affected GTK smoke1/0 (0.45s,38 filtered), native
+strict all-target/no-deps Clippy passed1.16s. Logs:
+/tmp/rqs-multi-footer-gtk.log and /tmp/rqs-multi-footer-clippy.log.
+Both owned verification commands exited; Terminal closed.

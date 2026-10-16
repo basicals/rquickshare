@@ -402,10 +402,11 @@ impl Panel {
         let weak = Rc::downgrade(&panel);
         panel.pages.connect_visible_child_name_notify(move |pages| {
             if let Some(panel) = weak.upgrade() {
-                panel.box_widget("source").set_visible(
-                    panel.model.borrow().mode == Mode::Full
-                        && pages.visible_child_name().as_deref() == Some("nearby"),
-                );
+                let nearby = panel.model.borrow().mode == Mode::Full
+                    && pages.visible_child_name().as_deref() == Some("nearby");
+                for id in ["source", "recipients"] {
+                    panel.box_widget(id).set_visible(nearby);
+                }
             }
         });
         panel.render();

@@ -154,7 +154,7 @@ The user selected option1. M1 freezes atomic local admission, independent peer
 outcomes, shared source retention, exact ordered receipts and explicit GTK Send
 before code. Daemon admission, vector receipts, SDK/controller and GTK explicit
 recipient selection are now implemented; scoped core8/0 and native39/0 checks
-passed. Native9 does not include these source changes; next candidate is native10.
+passed. Native9 does not include these source changes; corrected candidate is native11 after the visual-review footer fix.
 The defensive preview routing fix is source-only after native9; no new package
 or immutable source export was built for the partial preview foundation.
 
