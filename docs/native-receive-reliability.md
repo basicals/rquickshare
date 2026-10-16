@@ -35,7 +35,7 @@ This is a necessary correctness defect: a failed transfer can leave an ordinary
 filename containing empty or truncated content. Do not patch it by blindly
 deleting display paths; deletion needs verified owned-directory/file authority.
 
-## Significant product/publication choice — pending
+## Significant product/publication choice — option1 selected
 
 | Option | Behavior | Advantages | Costs / risks |
 |---|---|---|---|
@@ -47,15 +47,15 @@ The payload file is the natural independently completed object; validated comple
 work should survive an unrelated member's failure, with an honest partial result.
 Option2 is appropriate only if the user wants a new all-or-nothing transfer-folder
 product flow. Neither option changes peer consent or invents wire resume/dedup.
-The choice changes filesystem publication and visible partial outcomes; wait for
-the user before freezing its implementation contract or modifying production code.
+The user selected option1. The following contract implements that delegated
+per-file publication and explicit partial-outcome scope.
 
 ## Staged plan
 
 1. [x] R1: inspect receive creation/writes/length checks/request drop/session receipts;
    document the defect, alternatives and scope. Prepare a short current-candidate
    ordinary peer acceptance procedure independently of implementation.
-2. [ ] R2: user chooses publication/partial-outcome behavior. Freeze exact directory
+2. [x] R2: user chooses publication/partial-outcome behavior. Freeze exact directory
    and file authority, completion/flush semantics, collision/crash behavior,
    cancellation and receipt/UI contracts before code. Check target filesystem
    support before selecting mechanisms; unsupported storage fails explicitly or
@@ -79,3 +79,83 @@ account, signer or publication changed. All owned commands exited: Terminal clos
 Review verification:29 local documentation links resolve and staged whitespace
 check passed. This documents an inspected defect and pending decision, not an
 executed failure reproduction or a completed repair.
+
+## R2 frozen implementation contract before code
+
+Scope is native/Linux receive ownership, coordinated Files1/SDK/GTK partial receipt
+projection and focused regressions. No preview/resume work, schema migration,
+account, auto-retry, overwrite or group directory. Non-Linux legacy creation is
+unchanged and explicitly not covered by this Linux candidate.
+
+Linux prepares an O_TMPFILE inode on the actual destination filesystem beneath
+the pinned receive root. Keep the destination parent FD/leaf as publication
+authority, the unlinked file FD as write authority; never clean up by a display
+path. A cancelled/dropped process closes unnamed content automatically, including
+SIGKILL; created empty hierarchy directories may remain, with no partial file.
+No hidden named-file fallback or startup scavenger. Unsupported filesystem or
+missing safe publication capability returns a receive error before Accept; do
+not silently stream into final paths. This is a documented target-filesystem
+requirement, not a claim of all-filesystem support.
+
+Prepare all file resources in local owners before sending Accept; preparation
+failure drops all unlinked files. Retain the existing planned collision names;
+a later occupied/symlink/directory leaf causes atomic no-overwrite link failure,
+not overwrite or guessed renaming. For a valid final chunk, check the actual
+regular-file size, sync_data, then link the owned inode through /proc/self/fd and
+linkat(SYMLINK_FOLLOW) into the pinned parent. That specific proc link is internal
+FD authority, not a peer-controlled symlink. Do not require elevated capability.
+Sync the publication directory; a post-link sync error means the complete file
+already exists and is retained/reported, but the group is not reported successful.
+Do not unlink published content to conceal an uncertain durability outcome. No
+absolute power-loss guarantee beyond kernel/filesystem sync semantics.
+
+Reference: Linux man-pages open(2) O_TMPFILE and link(2) document unnamed-inode
+lifetime, filesystem support and capability-free procfs publication:
+https://man7.org/linux/man-pages/man2/open.2.html and
+https://man7.org/linux/man-pages/man2/link.2.html (read2026-10-16).
+
+The request owns staged publication objects separately from shared outbound
+InternalFileInfo; do not add receive deletion capability to outbound sources.
+At terminal transition/request termination, discard remaining staged files and
+freeze a receipt of published complete members, including cancellation or loss.
+Reserve one existing receipt-budget slot at accepted manifest preparation so
+completion does not fail because a later receipt slot is unavailable. Keep256
+files/64KiB manifest/128 receipts and current session limits. Staging adds at most
+one parent FD per admitted file, no payload copy or unbounded historical owner.
+Full success requires every file published; partial failure keeps its actual
+terminal phase and original immutable requested manifest/progress.
+
+A receipt exposes only its sorted completed file names/sizes and original rooted
+identity checks. Add bounded Files1.GetCompletedPage(snapshot,transfer,offset)
+returning existing (next:u, rows:a(st)) page format inside the same immutable
+capture. Existing tuple signatures stay. GetMetadataPage count now means completed
+receipt count for any inbound terminal file transfer; zero means no file authority.
+SDK TransferView gains a redacted completed_files list, validates sorted unique
+subset against requested manifest and terminal phase; Finished requires the whole
+manifest and exact total bytes. AcquireFile indices refer to the completed list,
+never arbitrary original failed members. Existing receipt-index/revision/FD checks
+remain. This coordinated local extension is part of selected partial-outcome scope;
+old native binaries are not run against this changed candidate as acceptance.
+
+GTK retains original manifest and terminal failure/cancellation label. If at least
+one file was published, display Saved N of M files and an explicit list of saved
+members with Show in folder using completed-list indices. Full success keeps the
+existing reveal affordance; failed/partial members never gain file capability.
+No automatic opening/resend or clipboard action. Normal card/lock/stale gates apply.
+
+## R4 focused branch inventory before tests
+
+| Artifact | Branches/invariants | Planned methods / categories |
+|---|---|---|
+| Root/staging | invisible zero/nonzero file; drop; successful publication; actual size mismatch; occupied regular/symlink/directory leaf; root move; unsafe parent; prepare failure | 3 table-driven filesystem / Positive,N1,N2,N5,N7,N9,N12 |
+| Handler/request | real consent; all resources prepared before Accept; short terminal chunk; complete first + truncated second; cancel/disconnect; directory-sync/link errors retain prior members; full out-of-order receipt | 2 new plus affected existing / Positive,N2,N3,N5,N7,N9,N12 |
+| Receipt/session/coordinator | partial sorted subset; budget reserved/released; terminal-only exposure; no outbound/unauthorized/stale index; actual manifest identity; no false Finished | 2 new plus existing affected / Positive,N2,N4,N5,N7,N9,N10 |
+| Bus/SDK/GTK | actual private broker partial snapshot/completed-page/acquire; count/subset/terminal validation; saved list matches reveal index and stale/lock guards | 1 integration + extend GTK/reveal checks / Positive,N1,N2,N6,N7,N9,N10 |
+
+No new wall clock/locale/billing rules (N8/N11 inapplicable). N4 reuses immutable
+receipts and stale-revision checks; no new retry protocol. N6 covers malformed IPC,
+not a stored schema. Use actual anonymous files and real handlers/broker, explicit
+fault seams only at syscall boundary if real deterministic storage failure cannot
+be constructed; no mocked domain logic or sleeps. Assertions must detect premature
+name publication, overwriting, false whole-group success and leaked failed-member
+file authority. Run affected checks once; preserve failures and rerun only fixes.
