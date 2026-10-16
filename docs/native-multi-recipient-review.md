@@ -63,7 +63,7 @@ recipient remains supported. No hidden immediate sends while building the set.
 4. [x] M3: authenticated typed native IPC, exact-retry SDK/controller, safe
    per-recipient projection and GTK selection/summary/status/cancel. No new peer
    wire format, account mode, automatic retry or unrequested trust behavior.
-5. [ ] M4: affected checks once, actual observations in SSOT, atomic commits,
+5. [x] M4: affected checks once, actual observations in SSOT, atomic commits,
    changed complete candidate build and exact handoff. Preserve native9 immutable
    artifacts and keep installed/physical-peer and release gates separate.
 
@@ -279,7 +279,34 @@ No protected-key operation/signature/publication was performed. Native9/native10
 packages and prior source handoffs were preserved. Logs: /tmp/rqs-native11-build.log,
 /tmp/rqs-native11-review.log. Owned offline processes exited; Terminal closed.
 
-M4 exact committed-source/public-artifact export is the remaining handoff step.
+M4 exact committed-source/public-artifact export completed as recorded below.
 
 Documentation verification:69 relevant local links resolve, JSON evidence parses
 and whitespace check passes. This did not rerun unaffected runtime checks.
+
+## M4 completed public handoff
+
+Immutable source archive rquickshare-native11-source.zip contains all477 tracked
+files from13afb892d55c5b67b8de9df2d3d7c02fb3ca6dcb; CRC, exact inventory and
+selected Git bytes passed. SHA256:bce6f864d05b20f40b6bc2d35acffdc0f1e041403298d03afa17ad4b83a8def2.
+Its code matches binary sourceebb08cd47ca3db50e012a675b351004838fa0b43;
+the archive includes the measured pre-handoff documents, while this final handoff
+entry is later documentation only. Do not rewrite that immutable archive.
+Generic rquickshare-native-gtk-source.zip was refreshed to those exact bytes;
+previous named native9 and older source/package artifacts were preserved.
+
+Copied release .deb and sidecar matched the verified package. Unsigned7-file APT
+ZIP CRC/inventory/every file byte passed; ZIP SHA256
+5326d30398bf65ff4e6dd1496ab6546701e8e84aea783bdff7c809efaab69cf1. Public request copy digest matched.
+Current-state/roadmap/audit/feature/package/readme copies, progress and readiness
+were updated in chat outputs. Remote observations remain explicitly dated
+2026-10-14; no new cloud/account request or backup monitor was made.
+
+M0-M4 complete for the selected multi-recipient scope. Existing radios/wire/consent
+remain independent per peer; no crash-resume, automatic resend, persistent group
+history, native UI completeness or full Google interoperability claim. Next
+independent significant contracts are resume/dedup and advanced peer capabilities;
+canonical preview encoding/mapping and installed Android/Windows/KDE acceptance
+remain open. Signing/publication still needs the exact request approval and
+existing selected provenance/publisher gates. All owned processes exited:
+Terminal closed. Rollback the GTK exposure before reverting coordinator/IPC.
