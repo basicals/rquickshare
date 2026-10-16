@@ -230,6 +230,21 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .collect::<Vec<_>>()
         .join(" ");
     assert_eq!(panel.box_widget("compact").observe_children().n_items(), 4);
+    let quick = panel.box_widget("compact").observe_children();
+    for (index, expected) in ["quick-receive", "quick-send", "quick-full", "quick-hide"]
+        .iter()
+        .enumerate()
+    {
+        assert_eq!(
+            quick
+                .item(index as u32)
+                .unwrap()
+                .downcast::<gtk::Widget>()
+                .unwrap(),
+            panel.button(expected).upcast::<gtk::Widget>()
+        );
+    }
+
     for action in ["Receive", "Send", "Hide", "Full view"] {
         assert!(compact_text.contains(action));
     }

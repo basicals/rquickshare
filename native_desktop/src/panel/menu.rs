@@ -298,12 +298,13 @@ impl Panel {
             self.mark_manual();
         }
         {
-            let mut model = self.model.borrow_mut();
+            let model = self.model.borrow();
             if model.closing || model.mode == mode {
                 return;
             }
-            model.mode = mode;
         }
+        self.pin_surface_bottom();
+        self.model.borrow_mut().mode = mode;
         self.actions
             .lookup_action("mode")
             .and_downcast::<gio::SimpleAction>()
@@ -315,7 +316,7 @@ impl Panel {
             appearance.set_selected(u32::from(mode == Mode::Full));
         }
         self.render();
-        if self.layer && self.window.is_visible() && !self.model.borrow().dragged {
+        if self.layer && self.window.is_visible() && !self.model.borrow().position_pinned {
             let hint = self.model.borrow().last_hint;
             if let Some(hint) = hint {
                 self.show_at(hint);

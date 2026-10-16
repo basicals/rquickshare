@@ -54,7 +54,7 @@ struct Model {
     manual_requested: bool,
     preview: bool,
     saved_mode: Option<u8>,
-    dragged: bool,
+    position_pinned: bool,
     recipients: BTreeMap<String, String>,
 }
 pub struct Panel {
@@ -1299,7 +1299,7 @@ impl Panel {
                 }
             }
             self.model.borrow_mut().last_hint = Some(point);
-            self.model.borrow_mut().dragged = false;
+            self.model.borrow_mut().position_pinned = false;
             let model = self.model.borrow();
             if !model.safety_active
                 || (model.safety.manual_allowed()
