@@ -838,3 +838,11 @@ Actual empty/device-expanded and soft-active collapsed frames were inspected;
 these isolated fixtures retain the truthful unavailable-service warning. No core
 changes or repeat full-suite run. All owned checks exited: Terminal closed.
 D6 package/installation verification follows.
+
+D6 build checkpoint: native20 source1d9dca6 produced a distinct package with
+6498134 bytes, SHA-256
+57394bf35e67838282713e295b29bc12ac06140fe3288946fb8a85151205d6e1. Offline verification passed for14 files
+plus dependency/ELF/checksum/help/private-settings gates. The next authorized
+local upgrade requires known native19 service owners2175594/2175595 (or already
+closed GUI), zero global preparation and no active transfer. Native19 package
+remains unchanged for rollback. Build exited: Terminal closed.
