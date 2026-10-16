@@ -774,3 +774,38 @@ opening is predictable but adds a separate Devices click for recipient/review
 work. No implementation is started until the user resolves this decision.
 Rollback remains native19 source/package; no schema/security-boundary change or
 cloud/signing/publication is proposed. Analysis command exited: Terminal closed.
+
+### Drawer option1 selected — implementation plan
+
+The user explicitly selected action-driven opening in addition to Devices toggle.
+No material UX decision remains for this slice.
+
+- [ ] D1: use local Drawer Closed/Open presentation state, one permanent toolbar
+  Receive/Send/Devices/Hide, and source/list/recipient content above it. Remove
+  the old Full header and its duplicate Send/settings/view/close controls. Keep
+  existing consent/progress/Add/Clear rows, safety/focus policy and native bottom
+  anchor. Devices closes/reopens without releasing capabilities or transfers.
+- [ ] D2: explicit Send/chooser/preparation and incoming-review actions open the
+  same drawer. Preserve notification safety policy. Attach Send popover to its
+  toolbar button so an expanding drawer cannot leave a stale absolute anchor.
+- [ ] D3: remove Card view editor and saved-mode application; preserve legacy
+  card_mode from the acknowledged settings base in writes. Local drawer state
+  starts Closed and may survive the existing in-process reconnect only. Keep
+  compact/full aliases solely for the development preview CLI, mapping to drawer
+  Closed/Open; no second production layout or new persisted preference.
+- [ ] D4: subdued theme-relative green pulse; Receive while confirmed temporary
+  requests Hidden before pending-review navigation. Preserve current active
+  transfers and waiting consent; unconfirmed/pending requests do not flip colour
+  optimistically or bypass exact request reconciliation.
+- [ ] D5: affected GTK/source-policy/parser checks once, strict native lint,
+  collapsed/expanded/soft-active actual widget frames. Extend Settings smoke
+  using a staged name edit, not the removed view field. Keep lower-edge bounds
+  and no automatic consent assertions. Rerun only affected failures/source edits.
+- [ ] D6: native20 offline package, known-owner/idle upgrade and14-file/single-tray
+  readback; retain native19 rollback, update evidence and immutable/current handoff.
+
+Risks/rollback: content must never disappear without its actions remaining
+reachable via Devices/Receive/tray. Settings acknowledgements must not reopen the
+drawer or reset it. Existing storage schema/API and daemon remain unchanged;
+legacy card_mode is preserved without affecting presentation. Revert scoped
+source commits/install retained native19 only while idle. No cloud or publication.
