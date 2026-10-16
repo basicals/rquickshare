@@ -146,7 +146,7 @@ made clear; no new durable history store is included in this layout slice.
 1. [x] M1: inspect the image, current keyed rows, recipient controls, typed
    state/identity limits and existing settings/menu owners. Record scope and
    deviations here, preserving native15 evidence and installed state.
-2. [ ] M2: resolve Receive semantics, conflicting tray appearance entries and
+2. [x] M2: resolve Receive semantics, conflicting tray appearance entries and
    the still-pending additive source owner choice. These are concrete behavior/
    API questions; implementation remains stopped until the user's response.
 3. [ ] M3: freeze a presentation model for one keyed vertical list. Remove main
@@ -200,3 +200,14 @@ earlier explicit removal request; ask which instruction to retain.
 Observed mockup verification: image/source inspection and documentation only;
 no production edits, tests, builds, service/settings changes or external requests.
 All owned one-shot commands exited: Terminal closed.
+
+## Selected mockup contracts
+
+The user selected all recommended choices: Receive opens a waiting request for
+review, otherwise explicitly requests the existing one-minute daemon visibility;
+Full/Compact stays only on the card; additive file selection is daemon-owned and
+atomic. No remaining decision gate blocks these selected milestones. The earlier
+File submenu question is superseded by the mockup's single Send entry. Preserve
+file/folder/text choices inside that sending surface, rather than in the tray.
+Implementation starts with [source extension](native-source-extension.md), then
+the documented presentation/settings milestones. No automatic acceptance/replay.
