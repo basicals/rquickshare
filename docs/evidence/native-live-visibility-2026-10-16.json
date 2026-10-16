@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "branch": "dev",
+  "mode": "A",
+  "plan_commit": "1b6e18d",
+  "selected_option": 1,
+  "new_rust_methods": 7,
+  "primary_category_counts": {
+    "N1": 1,
+    "N4": 2,
+    "N7": 2,
+    "N12": 2
+  },
+  "checks": {
+    "initial_core": {
+      "passed": 632,
+      "failed": 1,
+      "seconds": 10.09
+    },
+    "corrected_watchdog_method": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.16
+    },
+    "final_affected_visibility": {
+      "passed": 18,
+      "failed": 0,
+      "filtered": 615,
+      "seconds": 0.47
+    },
+    "core_strict_clippy_seconds": 16.58,
+    "initial_gtk": {
+      "passed": 38,
+      "failed": 1,
+      "seconds": 0.84
+    },
+    "corrected_menu_method": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 38,
+      "seconds": 0.05
+    },
+    "native_strict_no_deps_clippy_seconds": 10.7,
+    "format_passed": true,
+    "diff_passed": true,
+    "ten_repetitions": false
+  },
+  "invariants": {
+    "daemon_single_settings_writer": true,
+    "core_single_expiry_owner": true,
+    "quick_exact_replay_never_renews": true,
+    "fresh_temporary_renews": true,
+    "unrelated_settings_retained": true,
+    "cas_conflicts_not_overwritten": true,
+    "uncertain_write_does_not_enable_discovery": true,
+    "running_admission_atomic_with_policy_write": true,
+    "controller_refreshes_on_policy_only_expiry": true,
+    "saved_mode_distinct_from_current": true
+  },
+  "package": null,
+  "installed": false,
+  "physical_peer_tested": false,
+  "signed": false,
+  "published": false,
+  "cloud_calls": false
+}

@@ -224,7 +224,7 @@ impl SaveIntent {
         })
     }
 }
-fn valid_hex(value: &str, length: usize) -> bool {
+pub(super) fn valid_hex(value: &str, length: usize) -> bool {
     value.len() == length
         && value
             .bytes()
@@ -245,11 +245,13 @@ pub(super) struct Apply {
     pub values: Values,
     pub root: RootUpdate,
     pub apply_visibility: bool,
+    pub renew_visibility: bool,
     pub reply: oneshot::Sender<ApplyReceipt>,
 }
 pub(super) enum Command {
     Save(Edit, Message),
     Reload(Message),
+    Visibility(super::visibility_service::VisibilityIntent, Message),
 }
 
 type IdentitySource = Arc<Mutex<Option<crate::identity::IdentityPolicy>>>;
@@ -290,6 +292,7 @@ pub(super) struct SettingsOwner {
     pub apply: mpsc::Receiver<Apply>,
     view: Arc<Mutex<SettingsView>>,
     identity: IdentitySource,
+    visibility: Arc<Mutex<Option<crate::VisibilityReader>>>,
     stop: CancellationToken,
     task: Option<JoinHandle<()>>,
     outstanding: Arc<AtomicUsize>,
@@ -353,6 +356,7 @@ impl SettingsOwner {
                 running_port,
                 active_directory,
                 active_visibility,
+                last_visibility_applied: None,
                 connection,
                 stop: stop.clone(),
                 outstanding: outstanding.clone(),
@@ -364,6 +368,7 @@ impl SettingsOwner {
             apply,
             view,
             identity,
+            visibility: Arc::new(Mutex::new(None)),
             stop,
             task: Some(task),
             outstanding,
@@ -376,6 +381,13 @@ impl SettingsOwner {
             .unwrap_or_else(|poison| poison.into_inner())
             .clone();
         project_name(view, &self.identity)
+    }
+    pub fn bind_visibility(&self, reader: crate::VisibilityReader) {
+        *self.visibility.lock().unwrap_or_else(|p| p.into_inner()) = Some(reader);
+    }
+    pub fn visibility_view(&self) -> super::visibility_service::VisibilityView {
+        let reader = self.visibility.lock().unwrap_or_else(|p| p.into_inner());
+        super::visibility_service::VisibilityView::project(&self.view().epoch, reader.as_ref())
     }
     pub fn bind_identity(&self, identity: Option<crate::identity::IdentityPolicy>) {
         *self
@@ -430,6 +442,7 @@ struct Writer<I> {
     running_port: i32,
     active_directory: Option<super::native_settings::DirectoryRecord>,
     active_visibility: Option<u8>,
+    last_visibility_applied: Option<String>,
     connection: Connection,
     stop: CancellationToken,
     outstanding: Arc<AtomicUsize>,
@@ -452,55 +465,63 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
                 tokio::select! { biased; _ = self.stop.cancelled() => { self.requests.close(); self.requests.recv().await }, command = self.requests.recv() => command }
             };
             let Some(command) = command else { break };
-            let (edit, message) = match command {
-                Command::Save(edit, message) => (Some(edit), message),
-                Command::Reload(message) => (None, message),
+            let (edit, quick, message) = match command {
+                Command::Save(edit, message) => (Some(edit), None, message),
+                Command::Reload(message) => (None, None, message),
+                Command::Visibility(intent, message) => (None, Some(intent), message),
             };
             let store = self.store.take().expect("one owned store operation");
-            let save = edit.is_some();
+            let is_quick = quick.is_some();
+            let save = edit.is_some() || is_quick;
             let active_directory = self.active_directory.clone();
             let work = tokio::task::spawn_blocking(move || {
-                let result = match edit {
-                    Some(edit) => {
-                        let root = match &edit.directory {
-                            DirectoryIntent::Retain => Ok(RootUpdate::Retain),
-                            DirectoryIntent::Default => Ok(RootUpdate::Default),
-                            DirectoryIntent::Replace(file) => file
-                                .try_clone()
-                                .map_err(|_| StoreError::Directory)
-                                .and_then(Directory::adopt)
-                                .map(RootUpdate::Replace),
-                        };
-                        root.and_then(|root| {
-                            store.save(edit).map(|snapshot| {
-                                let root = match root {
-                                    RootUpdate::Retain => match snapshot
-                                        .values
-                                        .as_ref()
-                                        .and_then(|values| values.directory.as_ref())
-                                    {
-                                        Some(record)
-                                            if active_directory.as_ref().is_some_and(
-                                                |active| active.same_object(record),
-                                            ) =>
+                let result = if let Some(intent) = quick {
+                    store
+                        .save_visibility(intent.base(), intent.request, intent.mode)
+                        .map(|(snapshot, fresh)| (snapshot, Ok(RootUpdate::Retain), fresh))
+                } else {
+                    match edit {
+                        Some(edit) => {
+                            let root = match &edit.directory {
+                                DirectoryIntent::Retain => Ok(RootUpdate::Retain),
+                                DirectoryIntent::Default => Ok(RootUpdate::Default),
+                                DirectoryIntent::Replace(file) => file
+                                    .try_clone()
+                                    .map_err(|_| StoreError::Directory)
+                                    .and_then(Directory::adopt)
+                                    .map(RootUpdate::Replace),
+                            };
+                            root.and_then(|root| {
+                                store.save(edit).map(|snapshot| {
+                                    let root = match root {
+                                        RootUpdate::Retain => match snapshot
+                                            .values
+                                            .as_ref()
+                                            .and_then(|values| values.directory.as_ref())
                                         {
-                                            Ok(RootUpdate::Retain)
-                                        }
-                                        Some(record) => record
-                                            .open()
-                                            .and_then(Directory::adopt)
-                                            .map(RootUpdate::Replace),
-                                        None => Ok(RootUpdate::Default),
-                                    },
-                                    root => Ok(root),
-                                };
-                                (snapshot, root)
+                                            Some(record)
+                                                if active_directory.as_ref().is_some_and(
+                                                    |active| active.same_object(record),
+                                                ) =>
+                                            {
+                                                Ok(RootUpdate::Retain)
+                                            }
+                                            Some(record) => record
+                                                .open()
+                                                .and_then(Directory::adopt)
+                                                .map(RootUpdate::Replace),
+                                            None => Ok(RootUpdate::Default),
+                                        },
+                                        root => Ok(root),
+                                    };
+                                    (snapshot, root, false)
+                                })
                             })
-                        })
+                        }
+                        None => store
+                            .load()
+                            .map(|snapshot| (snapshot, Ok(RootUpdate::Retain), false)),
                     }
-                    None => store
-                        .load()
-                        .map(|snapshot| (snapshot, Ok(RootUpdate::Retain))),
                 };
                 (store, result)
             })
@@ -511,7 +532,10 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
             };
             self.store = Some(store);
             let response = match result {
-                Ok((snapshot, root)) => {
+                Ok((snapshot, root, fresh_quick)) => {
+                    let before = self.view();
+                    let full_was_applied =
+                        before.error == 0 && before.applied_live_revision == before.revision;
                     {
                         let mut view = self
                             .view
@@ -527,7 +551,7 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
                         }
                     }
                     let running = self.view().running;
-                    if save && running {
+                    if save && running && (!is_quick || fresh_quick) {
                         let (reply, receive) = oneshot::channel();
                         let receipt = if let (Some(values), Ok(root)) =
                             (snapshot.values.clone(), root)
@@ -535,17 +559,23 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
                             let apply_visibility =
                                 self.active_visibility != Some(values.visibility);
                             tokio::select! { biased; _ = self.stop.cancelled() => ApplyReceipt::default(), result = async {
-                                self.apply.send(Apply { values, root, apply_visibility, reply }).await.map_err(|_| ())?;
+                                self.apply.send(Apply { values, root, apply_visibility, renew_visibility: is_quick, reply }).await.map_err(|_| ())?;
                                 receive.await.map_err(|_| ())
                             } => result.unwrap_or_default() }
                         } else {
                             ApplyReceipt::default()
                         };
+                        if is_quick && receipt.policy_applied {
+                            self.last_visibility_applied =
+                                snapshot.last_request().map(str::to_owned);
+                        }
                         if receipt.policy_applied {
-                            self.active_directory = snapshot
-                                .values
-                                .as_ref()
-                                .and_then(|values| values.directory.clone());
+                            if !is_quick {
+                                self.active_directory = snapshot
+                                    .values
+                                    .as_ref()
+                                    .and_then(|values| values.directory.clone());
+                            }
                             self.active_visibility =
                                 snapshot.values.as_ref().map(|values| values.visibility);
                         }
@@ -553,12 +583,26 @@ impl<I: super::native_settings::PersistenceIo + Send + 'static> Writer<I> {
                             .view
                             .lock()
                             .unwrap_or_else(|poison| poison.into_inner());
-                        if receipt.policy_applied && receipt.name_applied {
+                        if receipt.policy_applied
+                            && receipt.name_applied
+                            && (!is_quick || full_was_applied)
+                        {
                             view.applied_live_revision = snapshot.base.revision;
                             view.visibility_recovered = false;
                         } else {
                             view.error = 4;
                         }
+                    }
+                    if is_quick
+                        && (!running
+                            || (!fresh_quick
+                                && self.last_visibility_applied.as_deref()
+                                    != snapshot.last_request()))
+                    {
+                        self.view.lock().unwrap_or_else(|p| p.into_inner()).error = 4;
+                    }
+                    if is_quick && !fresh_quick && before.error == 4 {
+                        self.view.lock().unwrap_or_else(|p| p.into_inner()).error = 4;
                     }
                     Ok(self.view())
                 }

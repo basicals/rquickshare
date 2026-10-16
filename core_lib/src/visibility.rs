@@ -51,6 +51,11 @@ pub struct VisibilityReader {
 }
 
 impl VisibilityReader {
+    pub(crate) fn observation(&self) -> (Visibility, u64, bool) {
+        let snapshot = *self.receiver.borrow();
+        (snapshot.mode, snapshot.revision, snapshot.running)
+    }
+
     pub fn current(&self) -> Visibility {
         self.receiver.borrow().mode
     }
@@ -108,8 +113,23 @@ impl VisibilityPolicy {
     }
 
     pub(crate) fn set(&self, mode: Visibility, renew_same: bool) -> Result<(), VisibilityError> {
-        let mut outcome = Ok(());
+        self.set_inner(mode, renew_same, false).map(|_| ())
+    }
+    pub(crate) fn set_running(&self, mode: Visibility) -> bool {
+        self.set_inner(mode, true, true) == Ok(true)
+    }
+    fn set_inner(
+        &self,
+        mode: Visibility,
+        renew_same: bool,
+        require_running: bool,
+    ) -> Result<bool, VisibilityError> {
+        let mut outcome = Ok(true);
         self.sender.send_if_modified(|state| {
+            if require_running && !state.running {
+                outcome = Ok(false);
+                return false;
+            }
             if !renew_same && state.mode == mode {
                 return false;
             }

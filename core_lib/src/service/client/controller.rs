@@ -36,6 +36,8 @@ pub struct PanelState {
     pub disconnected: bool,
     pub settings: Option<super::settings::SettingsView>,
     pub settings_pending: bool,
+    pub visibility: Option<super::visibility::VisibilityView>,
+    pub visibility_pending: bool,
     pub text_pending: bool,
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -64,6 +66,8 @@ enum Action {
     SettingsSave(super::settings::SettingsEdit),
     SettingsReload,
     SettingsRetry,
+    VisibilitySet(u8),
+    VisibilityRetry,
     Dismiss(Vec<super::notices::Notice>),
     Choose(OpenedSelection),
     ChooseText(NativeText),
@@ -113,6 +117,15 @@ impl PanelHandle {
     }
     pub fn retry_settings(&self) -> Result<Completion> {
         self.submit(Action::SettingsRetry)
+    }
+    pub fn set_visibility(&self, mode: u8) -> Result<Completion> {
+        if mode > 2 {
+            return Err(ClientError::InvalidInput.into());
+        }
+        self.submit(Action::VisibilitySet(mode))
+    }
+    pub fn retry_visibility(&self) -> Result<Completion> {
+        self.submit(Action::VisibilityRetry)
     }
     pub fn subscribe(&self) -> watch::Receiver<PanelState> {
         self.state.clone()
@@ -261,6 +274,7 @@ impl Worker {
             state.busy = busy;
             state.pending = self.client.has_pending() || self.preparation.is_some();
             state.settings_pending = self.client.has_pending_settings();
+            state.visibility_pending = self.client.has_pending_visibility();
             state.text_pending = self.client.has_pending_text();
             state.disconnected |= error.is_some_and(fatal);
         });
@@ -268,9 +282,11 @@ impl Worker {
     async fn refresh(&mut self) -> std::result::Result<(), ClientError> {
         let view = self.client.read_state().await?;
         let settings = self.client.read_settings().await?;
+        let visibility = self.client.read_visibility().await?;
         self.state.send_modify(|state| {
             state.view = Some(Arc::new(view));
             state.settings = Some(settings);
+            state.visibility = Some(visibility);
         });
         Ok(())
     }
@@ -402,6 +418,31 @@ impl Worker {
             Action::SettingsReload => self
                 .client
                 .reload_settings()
+                .await
+                .map(ActionResult::Settings),
+            Action::VisibilitySet(mode) => {
+                let view = self
+                    .state
+                    .borrow()
+                    .settings
+                    .clone()
+                    .ok_or(ClientError::Protocol)?;
+                let request =
+                    crate::service::process::fresh_epoch().map_err(|_| ClientError::Source)?;
+                self.client
+                    .set_visibility(super::visibility::VisibilityIntent {
+                        epoch: view.epoch,
+                        revision: view.revision,
+                        token: view.token,
+                        request: format!("{request:032x}"),
+                        mode,
+                    })
+                    .await
+                    .map(ActionResult::Settings)
+            }
+            Action::VisibilityRetry => self
+                .client
+                .retry_visibility()
                 .await
                 .map(ActionResult::Settings),
             Action::SettingsRetry => self

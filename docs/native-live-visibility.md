@@ -61,7 +61,7 @@ items. No new logs contain settings tokens, names or payloads.
 ## Stages, risks and rollback
 
 1. [x] L1: inspect owners and replay/lifecycle paths; freeze this selected contract.
-2. [ ] L2: visibility-only durable operation, coherent read seam, bounded daemon
+2. [x] L2: visibility-only durable operation, coherent read seam, bounded daemon
    facade/application/change signals; preserve old settings signatures and behavior.
 3. [ ] L3: exact-retry SDK/controller and thin GTK/card/tray projections/gates.
 4. [ ] L4: affected checks once, record observed outcomes and corrections here,
@@ -97,3 +97,41 @@ focused verification, not a whole-product Mode B coverage/stability claim.
 L1 is source/document inspection only. No new tests have run yet. All owned shell
 invocations have exited (Terminal closed). Native8 remains the immutable measured
 package; no installed desktop or peer compatibility evidence is added here.
+
+L2/L3 implementation inspection found a stop/admission race: checking running in
+bus dispatch alone cannot protect a queued command if the core owner stops during
+disk work. Before final code, require running inside the same policy write lock as
+quick admission. Keep existing public pre-start set behavior unchanged; use a
+private running-only seam and add its stopped rejection to the view regression.
+The controller expiry integration will also wait for the actual GTK-independent
+PanelState update after a policy-only signal, not infer notification from a read.
+
+
+## L2 measured source verification
+
+Seven new Rust test methods (three Store, one read-view, three private-broker/SDK
+scenarios), plus extended existing GTK/menu smoke assertions. Primary categories:
+N1=1, N4=2, N7=2, N12=2; positive/privacy/concurrency interactions overlap rather
+than add methods. The existing full core library inventory is633 (626 previous).
+
+Initial compilation caught a borrowed temporary in the cancellable signal branch;
+fixed with an owned event binding before tests ran. First core execution:632/1,
+10.09s. The new minute simulation exceeded its outer30-second test watchdog;
+changed only that scenario's watchdog to180 simulated seconds (it now deliberately
+advances two minutes), not production timers or assertions. Affected method then
+passed1/0 in0.16s. After adding atomic running-only admission and controller-only
+expiry invalidation, final affected visibility group passed18/0 in0.47s (615
+filtered). Whole633 was not repeated or claimed as a final full green run.
+Core all-features/all-target strict Clippy passed16.58s. Its existing bluer future
+compatibility warning remains visible. Old public settings signatures/schema2 and
+full-save fingerprints are preserved. Policy-only signals drive controller
+updates; no GUI polling clock or transport-success promise was introduced.
+
+Initial GTK binary run:38/1 in0.84s. The remaining menu fixture still expected18
+group rows after adding four actions. Corrected to ROWS.len()+1 (including root),
+then that affected method passed1/0 in0.05s,38 filtered. The existing GTK smoke
+passed all newly extended mode/radio/label/pending/disconnect/lock gates. Final
+native all-target no-deps strict Clippy passed10.70s. Nine existing core warnings
+without experimental features and Xvfb EGL/DRI3 warnings were emitted, not hidden.
+Formatting/diff checks passed. No ten repetitions, workstation radios, installed
+services, cloud access, signing or publication. Terminal closed after each check.

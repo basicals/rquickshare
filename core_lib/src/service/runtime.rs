@@ -132,6 +132,15 @@ impl NativeRuntime {
         }
         self.sender.sessions().close_if_idle() == Ok(true)
     }
+    pub(super) fn visibility_reader(&self) -> crate::VisibilityReader {
+        self.core.subscribe_visibility()
+    }
+    pub(super) fn apply_visibility(&mut self, mode: u8) -> bool {
+        self.started
+            && crate::Visibility::try_from_raw_value(mode.into())
+                .is_some_and(|mode| self.core.visibility.set_running(mode))
+    }
+
     pub(super) fn identity_policy(&self) -> Option<crate::identity::IdentityPolicy> {
         self.core.identity.clone()
     }

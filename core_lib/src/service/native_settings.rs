@@ -380,6 +380,45 @@ impl<I: PersistenceIo> Store<I> {
         })
     }
     pub fn save(&self, edit: Edit) -> Result<Snapshot> {
+        self.save_inner(edit, None).map(|(snapshot, _)| snapshot)
+    }
+
+    /// A partial operation with its own replay fingerprint, using the same writer/schema.
+    pub(super) fn save_visibility(
+        &self,
+        base: Base,
+        request: String,
+        visibility: u8,
+    ) -> Result<(Snapshot, bool)> {
+        if !valid_id(&request) || !valid_hash(&base.token) || visibility > 2 {
+            return Err(StoreError::InvalidInput);
+        }
+        let fingerprint = hash(&[
+            b"visibility1",
+            &serde_json::to_vec(&(&base, visibility)).map_err(|_| StoreError::InvalidInput)?,
+        ]);
+        let current = self.load()?;
+        let values = current.values.ok_or(StoreError::RecoveryRequired)?;
+        self.save_inner(
+            Edit {
+                base,
+                request,
+                visibility,
+                port: values.port,
+                card_mode: values.card_mode,
+                device_name: values.device_name,
+                directory: DirectoryIntent::Retain,
+                recover: false,
+            },
+            Some(fingerprint),
+        )
+    }
+
+    fn save_inner(
+        &self,
+        edit: Edit,
+        partial_fingerprint: Option<String>,
+    ) -> Result<(Snapshot, bool)> {
         if !valid_id(&edit.request) || !valid_hash(&edit.base.token) || edit.visibility > 2 {
             return Err(StoreError::InvalidInput);
         }
@@ -395,7 +434,7 @@ impl<I: PersistenceIo> Store<I> {
         let identity = selected
             .as_ref()
             .map(|record| (record.device, record.inode));
-        let fingerprint = hash(&[&serde_json::to_vec(&(
+        let fingerprint = partial_fingerprint.unwrap_or(hash(&[&serde_json::to_vec(&(
             &edit.base,
             edit.visibility,
             edit.port,
@@ -405,7 +444,7 @@ impl<I: PersistenceIo> Store<I> {
             identity,
             edit.recover,
         ))
-        .map_err(|_| StoreError::InvalidInput)?]);
+        .map_err(|_| StoreError::InvalidInput)?]));
         let directory = self.open_directory(true)?.ok_or(StoreError::Write)?;
         let current = self.load_at(Some(&directory))?;
         if let Some(receipt) = &current.receipt {
@@ -416,7 +455,7 @@ impl<I: PersistenceIo> Store<I> {
                 self.io
                     .sync_directory(&directory)
                     .map_err(|_| StoreError::Indeterminate)?;
-                return Ok(current);
+                return Ok((current, false));
             }
         }
         if current.base != edit.base {
@@ -470,18 +509,21 @@ impl<I: PersistenceIo> Store<I> {
             return Err(StoreError::Conflict);
         }
         self.replace(&directory, FILE, &bytes)?;
-        Ok(Snapshot {
-            base: Base {
-                revision,
-                token: hash(&[b"native", &bytes]),
+        Ok((
+            Snapshot {
+                base: Base {
+                    revision,
+                    token: hash(&[b"native", &bytes]),
+                },
+                source: Source::Native,
+                values: Some(document.values),
+                visibility_recovered: false,
+                raw: Some(bytes),
+                schema: 2,
+                receipt: Some(document.receipt),
             },
-            source: Source::Native,
-            values: Some(document.values),
-            visibility_recovered: false,
-            raw: Some(bytes),
-            schema: 2,
-            receipt: Some(document.receipt),
-        })
+            true,
+        ))
     }
     fn open_directory(&self, create: bool) -> Result<Option<File>> {
         if !self.directory.is_absolute() {

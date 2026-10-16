@@ -111,6 +111,20 @@ impl WatchOwner {
         let mut settings = MessageStream::for_match_rule(settings_rule, connection, Some(8))
             .await
             .map_err(|_| ClientError::Transport)?;
+        let visibility_rule = MatchRule::builder()
+            .msg_type(MessageType::Signal)
+            .sender(owner)
+            .map_err(|_| ClientError::Protocol)?
+            .path(PATH)
+            .map_err(|_| ClientError::Protocol)?
+            .interface(crate::service::visibility_service::INTERFACE)
+            .map_err(|_| ClientError::Protocol)?
+            .member("Changed")
+            .map_err(|_| ClientError::Protocol)?
+            .build();
+        let mut visibility = MessageStream::for_match_rule(visibility_rule, connection, Some(8))
+            .await
+            .map_err(|_| ClientError::Transport)?;
         let mut owners = MessageStream::for_match_rule(owner_rule, connection, Some(8))
             .await
             .map_err(|_| ClientError::Transport)?;
@@ -129,6 +143,10 @@ impl WatchOwner {
                     },
                     message=states.next()=>match message {
                         Some(Ok(message))=>hint(&message,&owner).map(|(epoch,revision)|Some((Some(epoch),revision,None,false))),
+                        _=>Err(ClientError::Transport),
+                    },
+                    message=visibility.next()=>match message {
+                        Some(Ok(message))=>policy_hint(&message,&owner).map(|epoch|Some((Some(epoch),0,None,true))),
                         _=>Err(ClientError::Transport),
                     },
                     message=settings.next()=>match message {
@@ -176,16 +194,35 @@ impl WatchOwner {
 }
 
 fn settings_hint(message: &Message, owner: &str) -> Result<u128> {
+    invalidation_hint(
+        message,
+        owner,
+        crate::service::settings_service::INTERFACE,
+        "SettingsChanged",
+    )
+}
+fn policy_hint(message: &Message, owner: &str) -> Result<u128> {
+    invalidation_hint(
+        message,
+        owner,
+        crate::service::visibility_service::INTERFACE,
+        "Changed",
+    )
+}
+fn invalidation_hint(
+    message: &Message,
+    owner: &str,
+    interface: &str,
+    member: &str,
+) -> Result<u128> {
     reply_sender(message, owner)?;
     let header = message.header();
     if message.message_type() != MessageType::Signal
         || header.path().is_none_or(|value| value.as_str() != PATH)
         || header
             .interface()
-            .is_none_or(|value| value.as_str() != crate::service::settings_service::INTERFACE)
-        || header
-            .member()
-            .is_none_or(|value| value.as_str() != "SettingsChanged")
+            .is_none_or(|value| value.as_str() != interface)
+        || header.member().is_none_or(|value| value.as_str() != member)
         || !message.data().fds().is_empty()
     {
         return Err(ClientError::Protocol);

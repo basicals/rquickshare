@@ -1,4 +1,17 @@
 <node>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Visibility1">
+    <method name="Read">
+      <arg name="visibility" type="(sbtby)" direction="out"/>
+    </method>
+    <method name="Set">
+      <arg name="intent" type="(stssy)" direction="in"/>
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
+    </method>
+    <signal name="Changed">
+      <arg name="epoch" type="s"/>
+      <arg name="revision" type="t"/>
+    </signal>
+  </interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Settings2">
     <method name="Restart">
       <arg name="epoch" type="s" direction="in"/>

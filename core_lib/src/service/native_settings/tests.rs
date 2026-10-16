@@ -625,3 +625,115 @@ fn given_write_sync_or_rename_failure_when_committing_then_precommit_preserves_o
         );
     }
 }
+
+#[test]
+fn given_visibility_partial_edit_when_saved_replayed_or_competing_then_other_fields_and_cas_remain_intact(
+) {
+    for mode in 0..=2 {
+        // Arrange
+        let f = Fixture::new();
+        let root = tempfile::tempdir().unwrap();
+        let mut initial = f.edit(&f.store.load().unwrap(), 1);
+        initial.directory = DirectoryIntent::Replace(File::open(root.path()).unwrap());
+        initial.device_name = Some(crate::identity::DeviceName::new("Retained").unwrap());
+        let before = f.store.save(initial).unwrap();
+        let request = format!("{:032x}", 2);
+        // Act
+        let (saved, fresh) = f
+            .store
+            .save_visibility(before.base.clone(), request.clone(), mode)
+            .unwrap();
+        let bytes = f.bytes();
+        let (replayed, fresh_retry) = f
+            .store
+            .save_visibility(before.base.clone(), request.clone(), mode)
+            .unwrap();
+        // Assert
+        assert!(fresh);
+        assert!(!fresh_retry);
+        assert_eq!(replayed.base, saved.base);
+        assert_eq!(f.bytes(), bytes);
+        let mut expected = before.values.clone().unwrap();
+        expected.visibility = mode;
+        assert_eq!(saved.values, Some(expected));
+        assert!(matches!(
+            f.store
+                .save_visibility(before.base.clone(), request.clone(), (mode + 1) % 3),
+            Err(StoreError::ReplayConflict)
+        ));
+        let next = f.store.save(f.edit(&saved, 3)).unwrap();
+        assert!(matches!(
+            f.store.save_visibility(before.base, request, mode),
+            Err(StoreError::Conflict)
+        ));
+        assert_eq!(f.store.load().unwrap().base, next.base);
+    }
+}
+
+#[test]
+fn given_invalid_or_corrupt_visibility_intent_when_saved_then_original_settings_are_preserved() {
+    // Arrange
+    let f = Fixture::new();
+    let before = f.store.load().unwrap();
+    // Act / Assert
+    for mode in [3, u8::MAX] {
+        assert!(matches!(
+            f.store
+                .save_visibility(before.base.clone(), format!("{:032x}", 1), mode),
+            Err(StoreError::InvalidInput)
+        ));
+    }
+    for bad in ["", "abc", &"g".repeat(32), &"A".repeat(32), &"0".repeat(33)] {
+        assert!(matches!(
+            f.store.save_visibility(before.base.clone(), bad.into(), 1),
+            Err(StoreError::InvalidInput)
+        ));
+    }
+    let mut bad = before.base.clone();
+    bad.token = "x".repeat(64);
+    assert!(matches!(
+        f.store.save_visibility(bad, format!("{:032x}", 1), 1),
+        Err(StoreError::InvalidInput)
+    ));
+    assert!(!f.store.directory.join(FILE).exists());
+    let saved = f.store.save(f.edit(&before, 1)).unwrap();
+    std::fs::write(f.store.directory.join(FILE), b"corrupt").unwrap();
+    assert!(matches!(
+        f.store
+            .save_visibility(saved.base, format!("{:032x}", 2), 0),
+        Err(StoreError::RecoveryRequired)
+    ));
+    assert_eq!(f.bytes(), b"corrupt");
+}
+
+#[test]
+fn given_visibility_disk_failure_when_saved_then_precommit_is_unchanged_and_uncertain_replay_is_not_fresh(
+) {
+    for step in 0..4 {
+        // Arrange
+        let f = Fixture::new();
+        let before = f.store.save(f.edit(&f.store.load().unwrap(), 1)).unwrap();
+        let bytes = f.bytes();
+        let store = Store::with_io(
+            f.store.directory.clone(),
+            f.store.legacy.clone(),
+            FaultIo {
+                fail: Cell::new(Some(step)),
+            },
+        );
+        let edit = || store.save_visibility(before.base.clone(), format!("{:032x}", 2), 2);
+        // Act / Assert
+        let result = edit();
+        if step < 3 {
+            assert!(matches!(result, Err(StoreError::Write)));
+            assert_eq!(f.bytes(), bytes);
+        } else {
+            assert!(matches!(result, Err(StoreError::Indeterminate)));
+            assert_eq!(store.load().unwrap().values.unwrap().visibility, 2);
+            store.io.fail.set(None);
+            let (recovered, fresh) = edit().unwrap();
+            assert!(!fresh);
+            assert_eq!(recovered.base.revision, before.base.revision + 1);
+        }
+    }
+}

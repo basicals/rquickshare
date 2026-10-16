@@ -19,7 +19,7 @@ impl NativeClient {
             .deserialize::<()>()
             .map_err(|_| ClientError::Protocol)
     }
-    fn checked_settings(&self, reply: Message) -> Result<SettingsView> {
+    pub(super) fn checked_settings(&self, reply: Message) -> Result<SettingsView> {
         if !reply.data().fds().is_empty() {
             return Err(ClientError::Protocol);
         }
@@ -44,7 +44,7 @@ impl NativeClient {
         self.pending_settings.is_some()
     }
     pub async fn save_settings(&mut self, edit: SettingsEdit) -> Result<SettingsView> {
-        if self.pending_settings.is_some() {
+        if self.pending_settings.is_some() || self.pending_visibility.is_some() {
             return Err(ClientError::PendingOperation);
         }
         if !edit.intent.valid(self.epoch)

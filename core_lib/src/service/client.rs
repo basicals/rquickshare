@@ -43,6 +43,7 @@ pub mod notices;
 pub mod settings;
 pub mod state;
 pub mod text;
+pub mod visibility;
 mod watch;
 
 type Result<T> = std::result::Result<T, ClientError>;
@@ -162,6 +163,7 @@ pub struct NativeClient {
     last_view: Option<state::StateView>,
     view_incomplete: bool,
     pending_settings: Option<settings::SettingsEdit>,
+    pending_visibility: Option<visibility::VisibilityIntent>,
     pending_text: Option<text::PendingText>,
     settings_seen: u64,
     #[cfg(test)]
@@ -277,6 +279,7 @@ impl NativeClient {
             last_view: None,
             view_incomplete: true,
             pending_settings: None,
+            pending_visibility: None,
             pending_text: None,
             settings_seen: 0,
             #[cfg(test)]

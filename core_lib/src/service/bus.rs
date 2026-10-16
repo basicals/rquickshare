@@ -311,7 +311,9 @@ impl SelectionBus {
     ) -> Result<(), BusError> {
         let failure = self.failed.clone();
         self.configuration_only = runtime.is_configuration_only();
+        let mut visibility = runtime.visibility_reader();
         if let Some(settings) = self.settings.as_ref() {
+            settings.bind_visibility(visibility.clone());
             settings.bind_identity(runtime.identity_policy());
         }
         loop {
@@ -319,6 +321,19 @@ impl SelectionBus {
                 _ = stop.cancelled() => return Ok(()),
                 _ = failure.cancelled() => return Err(BusError::Transport),
                 result = runtime.step(), if !self.configuration_only => result.map_err(BusError::Runtime)?,
+                changed = visibility.changed() => {
+                    changed.map_err(|_| BusError::Transport)?;
+                    let (_, revision, _) = visibility.observation();
+                    let epoch = format!("{:032x}", runtime.selection_coordinator().epoch);
+                    let connection = self.connection.as_ref().ok_or(BusError::Transport)?;
+                    let event = (epoch, revision);
+                    tokio::select! { biased;
+                        _ = stop.cancelled() => return Ok(()),
+                        _ = failure.cancelled() => return Err(BusError::Transport),
+                        result = connection.emit_signal(None::<&str>, PATH, super::visibility_service::INTERFACE,
+                            "Changed", &event) => result.map_err(|_| BusError::Transport)?,
+                    }
+                }
                 request = async {
                     match &mut self.settings {
                         Some(settings) => settings.apply.recv().await,
@@ -326,6 +341,14 @@ impl SelectionBus {
                     }
                 } => {
                     let request = request.ok_or(BusError::Transport)?;
+                    if request.renew_visibility {
+                        let applied = runtime.apply_visibility(request.values.visibility);
+                        let _ = request.reply.send(super::settings_service::ApplyReceipt {
+                            policy_applied: applied, name_applied: true,
+                        });
+                        if applied { self.visibility_recovered = false; }
+                        continue;
+                    }
                     let applied = runtime.apply_live_settings(&request.values, request.root, request.apply_visibility);
                     if applied { self.visibility_recovered = false; }
                     if applied {
@@ -670,6 +693,55 @@ impl SelectionBus {
         }
         let interface = header.interface().map(|interface| interface.as_str());
         let member = header.member().map(|member| member.as_str());
+        if interface == Some(super::visibility_service::INTERFACE) {
+            use super::visibility_service::{VisibilityIntent, VisibilityView};
+            if !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            match member {
+                Some("Read") => {
+                    if message.body().deserialize::<()>().is_err() {
+                        return self.domain_error(&header, Error::InvalidInput).await;
+                    }
+                    let view = self
+                        .settings
+                        .as_ref()
+                        .map(|owner| owner.visibility_view())
+                        .unwrap_or_else(|| {
+                            VisibilityView::project(&format!("{:032x}", coordinator.epoch), None)
+                        });
+                    return self.state_reply(&header, &(view,)).await;
+                }
+                Some("Set") => {
+                    let result = message
+                        .body()
+                        .deserialize::<VisibilityIntent>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|intent| {
+                            if !intent.valid(coordinator.epoch) {
+                                return Err(Error::InvalidInput);
+                            }
+                            let owner = self.settings.as_ref().ok_or(Error::NotRunning)?;
+                            if !owner.visibility_view().running {
+                                return Err(Error::NotRunning);
+                            }
+                            owner.submit(super::settings_service::Command::Visibility(
+                                intent,
+                                message.clone(),
+                            ))
+                        });
+                    return match result {
+                        Ok(()) => Ok(()),
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
+                _ => {
+                    return self
+                        .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                        .await
+                }
+            }
+        }
         if interface == Some(super::settings_service::INTERFACE) {
             use super::settings_service::{Command, SaveIntent, SettingsView};
             let invalid = || Error::InvalidInput;
