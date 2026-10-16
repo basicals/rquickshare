@@ -998,3 +998,10 @@ Final strict native lint and formatting/whitespace passed; existing default-core
 dependency warnings remain. The actual expanded spinner/1:00 frame was inspected.
 No core full-suite or ten-run repetition. All owned commands exited: Terminal closed.
 T6 native21 build/installed checks follow.
+
+T6 build checkpoint: native21 is6501196 bytes, SHA-256
+16486a5277b64362722a714e92590f9971ba7be20f38e227cc943a4ce318fc4b. Offline14-file/dependency/ELF/checksum/help/
+private-settings verification passed. Release daemon took2m09s, GTK46.13s and
+helper0.83s. Binary source15d8c5f; native20 package retained. Upgrade next requires
+known native20 service owners2180773/2180775 (or already closed GUI), zero global
+preparation and no active transfer. Build exited: Terminal closed.

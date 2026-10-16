@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "scope": "tray activation toggle, same-session position and authoritative visibility countdown",
+  "binary_source_commit": "15d8c5f5a9cf81f327d023c4d8fac1031ce75535",
+  "implementation_complete": true,
+  "package": {
+    "name": "rquickshare_0.11.5+native21_amd64.deb",
+    "bytes": 6501196,
+    "sha256": "16486a5277b64362722a714e92590f9971ba7be20f38e227cc943a4ce318fc4b",
+    "regular_files": 14,
+    "offline_verified": true
+  },
+  "checks": {
+    "initial_core_compile": {
+      "passed": false,
+      "tests_executed": false,
+      "reason": "duration validation accidentally applied to VisibilityIntent; corrected without changing intent contract"
+    },
+    "initial_visibility": {
+      "passed": 18,
+      "failed": 1,
+      "seconds": 0.05,
+      "reason": "prior exact full-view equality ignored newly sampled elapsed duration"
+    },
+    "service": {
+      "passed": 292,
+      "failed": 5,
+      "seconds": 7.12,
+      "reason": "extension fixtures unlinked tmpfs sources before descriptor revalidation; production adoption gate retained"
+    },
+    "repaired_fixture_scenarios": {
+      "passed": 5,
+      "failed": 0,
+      "seconds": [
+        0.25,
+        0.27,
+        0.1,
+        0.05,
+        0
+      ]
+    },
+    "third_fixture_caller": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.03
+    },
+    "fixture_repair_initial_compile": {
+      "passed": false,
+      "tests_executed": false,
+      "reason": "third command helper call needed returned source guards; fixed before pass claim"
+    },
+    "native_binary": {
+      "passed": 42,
+      "failed": 0,
+      "seconds": 0.7
+    },
+    "final_affected_gtk": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.63
+    },
+    "strict_core_all_features_all_targets": {
+      "passed": true,
+      "seconds": 7.66,
+      "notice": "existing upstream bluer future compatibility"
+    },
+    "strict_native_all_targets_no_deps": {
+      "passed": true,
+      "seconds": 4.87,
+      "existing_core_dependency_warnings": 9
+    },
+    "format_and_whitespace": true,
+    "fresh_full_service_or_core_pass_claimed": false,
+    "ten_repetitions": false
+  },
+  "countdown": {
+    "interface": "io.github.morozhenko_apps.RQuickShare.Visibility2",
+    "view_signature": "(sbtbyt)",
+    "remaining_ms_range": [
+      0,
+      60000
+    ],
+    "source": "one core monotonic deadline snapshot",
+    "sample": "SDK monotonic stamp immediately before Read; conservative interpolation",
+    "periodic_ipc": false,
+    "display_tick_seconds": 1,
+    "display_tick_lifetime": "visible card and open drawer in confirmed temporary mode; removed on collapse/hide/disconnect/close",
+    "at_sampled_zero": "Updating visibility; no client expiry or optimistic visible claim"
+  },
+  "frames": [
+    {
+      "name": "devices-expanded.png",
+      "width": 420,
+      "height": 557,
+      "sha256": "1041857d6c124d141c646e5e1eae6cf47f79073a1686908c6bf79efbb9a2de3e",
+      "source": "actual isolated GTK widgets; no connected service writer; unavailable warning retained"
+    },
+    {
+      "name": "empty-expanded.png",
+      "width": 420,
+      "height": 288,
+      "sha256": "8c953baaf7f4067b473b92e0b93a6b2f951e93a67d566793475b0f499e6878bd",
+      "source": "actual isolated GTK widgets; no connected service writer; unavailable warning retained"
+    },
+    {
+      "name": "temporary-collapsed.png",
+      "width": 420,
+      "height": 203,
+      "sha256": "def63c4335ece95644b8dabea4925186f54ccd6d41921d2d210c1f85c2ea3bfc",
+      "source": "actual isolated GTK widgets; no connected service writer; unavailable warning retained"
+    }
+  ],
+  "installation": {
+    "candidate_installed": false,
+    "current_version": "0.11.5+native20"
+  },
+  "acceptance": {
+    "physical_primary_toggle_position_countdown_verified": false,
+    "physical_check_requested": false,
+    "native20_appearance": "explicit user acceptance, historical"
+  },
+  "signed": false,
+  "published": false,
+  "apt_staged": false
+}
