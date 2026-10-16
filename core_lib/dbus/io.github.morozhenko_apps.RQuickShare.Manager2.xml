@@ -157,6 +157,12 @@
       <arg name="operation_seq" type="t" direction="in"/>
       <arg name="upload_id" type="s" direction="out"/>
     </method>
+    <method name="CommitExtension">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="base_selection_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
     <method name="CommitSelection">
       <arg name="upload_id" type="s" direction="in"/>
       <arg name="operation_seq" type="t" direction="in"/>

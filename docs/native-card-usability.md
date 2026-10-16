@@ -211,3 +211,63 @@ File submenu question is superseded by the mockup's single Send entry. Preserve
 file/folder/text choices inside that sending surface, rather than in the tray.
 Implementation starts with [source extension](native-source-extension.md), then
 the documented presentation/settings milestones. No automatic acceptance/replay.
+
+## Presentation and settings state contract before implementation
+
+The main surface is one list. Internal Incoming/Active filters may remain as
+navigation destinations for the shortened tray, without visible notebook tabs;
+normal opening returns to the combined list. Incoming rows are keyed by exact
+transfer capability, not joined to discovery names. A request's Receive/Review
+action expands its code/manifest and explicit Accept/Decline controls. Active
+rows expose progress/cancel in details; terminal results remain accessible for
+the current daemon session, especially retained partial files and explicit Copy.
+No full persistent history screen or empty Paired section is introduced.
+
+Discovered rows have a generic device icon until a real typed device kind exists,
+name, an icon-overlay status and Send action. Existing checkboxes/explicit batch
+Send preserve multi-recipient capability. Row Send with a prepared source sends
+only that exact available endpoint; without a source it selects that recipient
+and opens sending choices, never auto-sending after a file dialog completes.
+The sending surface offers Files, Folder and Text, replacing separate tray image
+entries; a normal image file remains sendable. Add is available for file sources,
+not text. All final actions reuse SDK safety/readiness/recovery guards.
+
+Compact always contains four quick actions; receiving requests requires opening
+full review, never accepting directly. Badge/count/exception text can describe
+pending work without adding another quick action. Changing visibility uses the
+existing daemon command/receipt and one-minute clock. Known status colors overlay
+icons and include shape/tooltip/accessibility descriptions; no separate status
+column or claim that a colored dot proves identity/trust.
+
+Dragging uses a header-only gesture and current monitor-relative anchors/margins,
+clamped against actual card dimensions. Account for the widget moving under the
+pointer rather than repeatedly applying relative gesture deltas. No global input
+capture or native toplevel protocol assumption. Drag marks manual presentation;
+tray activation resets placement beside the tray. Content resizing clamps the
+position; no persistent position schema or cross-monitor pointer tracking.
+
+Settings keeps one draft across populated sidebar sections, branded header and
+shared Cancel/OK. Appearance no longer previews while editing. Close/Escape acts
+as Cancel before submission; reopening reads the current acknowledged state.
+While an OK/save/login operation is admitted, prevent draft edits and premature
+close; cancellation cannot revoke an admitted writer. Validate all native fields
+and the requested login target before saving. Native save (when changed or an
+import/apply is needed) runs first, then login start only if changed. Close only
+after both requested owners acknowledge success; a partial/uncertain outcome
+keeps the editor open with explicit status and the successful stage retained.
+Retry native uncertainty uses the original SDK intent. Login uncertainty requires
+readback, not automatic Set replay. Port changes retain explicit idle-only restart
+in Advanced; OK never interrupts active transfers. Invalid/unavailable sources
+keep contextual repair/reload paths. About is the last sidebar page, not a routine
+card action. Removing routine Reconnect leaves the existing exceptional fresh
+connection recovery on an unavailable card, with no automatic transfer replay.
+
+Focused verification plan: existing GTK smoke exercises four Compact actions,
+no main tabs, header/settings/hide, inline consent and retained-file controls,
+add readiness, exact row actions, stage-only appearance/Cancel and sidebar/footer
+layout; existing private tray checks cover actual counts and visibility-aware
+Open/Hide with removed entries absent. Pure geometry covers clamping/negative
+origins/size boundaries. Settings state checks cover native/login success, partial
+failure, uncertainty, close inhibition and retry/readback. Renderer review checks
+actual compact/full/request/settings sections and theme-relative rounded styling.
+Each check runs once after its source changes; failures trigger affected reruns.

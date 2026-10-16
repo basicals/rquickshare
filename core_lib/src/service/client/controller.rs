@@ -71,6 +71,7 @@ enum Action {
     VisibilityRetry,
     Dismiss(Vec<super::notices::Notice>),
     Choose(OpenedSelection),
+    Extend(Selection, OpenedSelection),
     ChooseText(NativeText),
     Send(Selection, String),
     SendMany(Selection, Vec<String>),
@@ -157,6 +158,12 @@ impl PanelHandle {
     pub fn choose_text(&self, text: NativeText) -> Result<Completion> {
         self.submit(Action::ChooseText(text))
     }
+    pub fn extend(&self, base: Selection, files: OpenedSelection) -> Result<Completion> {
+        if !super::desktop::valid_selection(&files) {
+            return Err(ClientError::InvalidInput.into());
+        }
+        self.submit(Action::Extend(base, files))
+    }
     pub fn send(&self, selection: Selection, endpoint: String) -> Result<Completion> {
         self.submit(Action::Send(selection, endpoint))
     }
@@ -231,6 +238,7 @@ impl Drop for PanelController {
 
 struct Preparation {
     source: PreparedSource,
+    base: Option<Selection>,
     upload: Option<Upload>,
     next: u32,
 }
@@ -379,7 +387,11 @@ impl Worker {
                     )
                     .await?;
             } else {
-                let selection = self.client.commit_selection(upload).await?;
+                let selection = if let Some(base) = &preparation.base {
+                    self.client.extend_selection(upload, base).await?
+                } else {
+                    self.client.commit_selection(upload).await?
+                };
                 self.preparation = None;
                 return Ok(ActionResult::Selection(selection));
             }
@@ -473,6 +485,7 @@ impl Worker {
                 }
                 self.preparation = Some(Preparation {
                     source: PreparedSource::Text(text),
+                    base: None,
                     upload: None,
                     next: 0,
                 });
@@ -488,6 +501,16 @@ impl Worker {
                 }
                 self.preparation = Some(Preparation {
                     source: PreparedSource::from(source),
+                    base: None,
+                    upload: None,
+                    next: 0,
+                });
+                self.prepare().await
+            }
+            Action::Extend(base, source) => {
+                self.preparation = Some(Preparation {
+                    source: PreparedSource::from(source),
+                    base: Some(base),
                     upload: None,
                     next: 0,
                 });

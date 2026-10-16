@@ -64,6 +64,14 @@ async fn command(client: &mut NativeClient, kind: OperationKind) -> Command {
     if kind == OperationKind::Commit {
         return Command::Commit(upload);
     }
+    if kind == OperationKind::Extend {
+        let base = client.commit_selection(&upload).await.unwrap();
+        let delta = client.begin_selection().await.unwrap();
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let added = OpenedFile::adopt(File::open(file.path()).unwrap(), "added".into()).unwrap();
+        client.append_batch(&delta, 0, &[added]).await.unwrap();
+        return Command::Extend(delta, base);
+    }
     Command::Send(
         client.commit_selection(&upload).await.unwrap(),
         "peer".into(),
@@ -74,6 +82,7 @@ fn member(kind: OperationKind) -> &'static str {
         OperationKind::Begin => "BeginSelection",
         OperationKind::BeginText => "BeginText",
         OperationKind::Commit => "CommitSelection",
+        OperationKind::Extend => "CommitExtension",
         OperationKind::Abort => "AbortSelection",
         OperationKind::Send => "SendSelection",
         OperationKind::SendMany => "Send",
@@ -344,6 +353,7 @@ async fn given_interrupted_mutation_before_or_after_acceptance_when_reconciled_t
         for kind in [
             OperationKind::Begin,
             OperationKind::Commit,
+            OperationKind::Extend,
             OperationKind::Abort,
             OperationKind::Send,
         ] {
@@ -385,6 +395,7 @@ async fn given_lost_ack_before_or_after_retirement_when_resumed_then_recorded_re
         for kind in [
             OperationKind::Begin,
             OperationKind::Commit,
+            OperationKind::Extend,
             OperationKind::Abort,
             OperationKind::Send,
         ] {

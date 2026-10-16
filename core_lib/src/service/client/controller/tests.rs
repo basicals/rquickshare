@@ -581,3 +581,53 @@ async fn given_anonymous_source_when_prepared_over_actual_broker_then_seals_byte
     })
     .await;
 }
+
+#[tokio::test]
+async fn given_extension_interrupted_at_each_preparation_boundary_when_recovered_then_exact_aggregate_is_admitted_without_sending(
+) {
+    scenario(async {
+        // Arrange / Act / Assert: actual private broker, held descriptors and cancellation barriers.
+        for method in ["BeginSelection", "AppendFiles", "CommitExtension"] {
+            for after in [false, true] {
+                let (_bus, host, mut client) = fixture().await;
+                let (original, files) = source();
+                let upload = client.begin_selection().await.unwrap();
+                client.append_batch(&upload, 0, &files).await.unwrap();
+                let base = client.commit_selection(&upload).await.unwrap();
+                let added = tempfile::NamedTempFile::new().unwrap();
+                added.as_file().set_len(7).unwrap();
+                let delta = OpenedSelection::from_files(
+                    vec![
+                        OpenedFile::adopt(File::open(added.path()).unwrap(), "added".into())
+                            .unwrap(),
+                    ],
+                    SelectionLimits::default(),
+                )
+                .unwrap();
+                let reached = hook(&mut client, method, after);
+                let (state, _updates) = watch::channel(PanelState::default());
+                let mut worker = Worker {
+                    client,
+                    preparation: None,
+                    state,
+                };
+                interrupted(worker.act(Action::Extend(base.clone(), delta)), reached).await;
+                assert!(worker.preparation.is_some());
+                let ActionResult::Selection(updated) = worker.act(Action::Recover).await.unwrap()
+                else {
+                    panic!("Missing extension receipt")
+                };
+                assert_ne!(updated, base);
+                let view = worker.client.read_state().await.unwrap();
+                assert_eq!(view.selections, vec![updated]);
+                assert_eq!(view.resources.reserved_handles, 4);
+                assert_eq!(view.resources.selected_bytes, 21);
+                assert!(view.transfers.is_empty());
+                assert!(original.path().is_file() && added.path().is_file());
+                worker.client.close().await.unwrap();
+                assert_eq!(host.finish().await.1, Ok(()));
+            }
+        }
+    })
+    .await;
+}

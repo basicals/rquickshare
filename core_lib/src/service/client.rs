@@ -76,6 +76,7 @@ pub enum OperationKind {
     Begin,
     BeginText,
     Commit,
+    Extend,
     Abort,
     Send,
     SendMany,
@@ -86,6 +87,7 @@ impl OperationKind {
             Self::Begin => "begin_selection",
             Self::BeginText => "begin_text",
             Self::Commit => "commit_selection",
+            Self::Extend => "commit_extension",
             Self::Abort => "abort_selection",
             Self::Send => "send_selection",
             Self::SendMany => "send_many",
@@ -118,6 +120,7 @@ enum Command {
     Begin,
     BeginText(u32),
     Commit(Upload),
+    Extend(Upload, Selection),
     Abort(Upload),
     Send(Selection, String),
     SendMany(Selection, Vec<String>),
@@ -128,6 +131,7 @@ impl Command {
             Self::Begin => OperationKind::Begin,
             Self::BeginText(_) => OperationKind::BeginText,
             Self::Commit(_) => OperationKind::Commit,
+            Self::Extend(..) => OperationKind::Extend,
             Self::Abort(_) => OperationKind::Abort,
             Self::Send(_, _) => OperationKind::Send,
             Self::SendMany(_, _) => OperationKind::SendMany,
@@ -473,7 +477,7 @@ impl NativeClient {
                 id: value,
                 connection,
             }),
-            Command::Commit(_) => OperationValue::Selection(Selection {
+            Command::Commit(_) | Command::Extend(..) => OperationValue::Selection(Selection {
                 id: value,
                 connection,
             }),
@@ -537,6 +541,14 @@ impl NativeClient {
     }
     async fn execute(&mut self, command: &Command, sequence: u64) -> Result<Receipt> {
         let reply = match command {
+            Command::Extend(upload, base) => {
+                self.wire(
+                    OPERATIONS_INTERFACE,
+                    "CommitExtension",
+                    &(upload.id(), base.id(), sequence),
+                )
+                .await?
+            }
             Command::SendMany(id, endpoints) => {
                 let reply = self
                     .wire(
@@ -644,6 +656,10 @@ impl NativeClient {
             };
         }
         match &command {
+            Command::Extend(upload, base) => {
+                self.owned(upload.id(), &upload.connection)?;
+                self.owned(base.id(), &base.connection)?;
+            }
             Command::Commit(id) | Command::Abort(id) => self.owned(id.id(), &id.connection)?,
             Command::SendMany(id, endpoints) => {
                 self.owned(id.id(), &id.connection)?;
@@ -726,6 +742,20 @@ impl NativeClient {
         self.mutation(Command::Abort(upload.clone()))
             .await
             .map(|_| ())
+    }
+    pub async fn extend_selection(
+        &mut self,
+        upload: &Upload,
+        base: &Selection,
+    ) -> Result<Selection> {
+        match self
+            .mutation(Command::Extend(upload.clone(), base.clone()))
+            .await?
+            .result
+        {
+            OperationValue::Selection(id) => Ok(id),
+            _ => Err(ClientError::Protocol),
+        }
     }
     pub async fn send_selection(
         &mut self,

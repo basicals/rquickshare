@@ -11,6 +11,7 @@ pub(super) enum Call {
     Begin,
     BeginText(u32),
     Commit(UploadId),
+    Extend(UploadId, SelectionId),
     Abort(UploadId),
     Send(SelectionId, String),
     SendMany(SelectionId, Vec<String>),
@@ -44,6 +45,7 @@ impl Call {
             Self::Begin => "begin_selection",
             Self::BeginText(_) => "begin_text",
             Self::Commit(_) => "commit_selection",
+            Self::Extend(..) => "commit_extension",
             Self::Abort(_) => "abort_selection",
             Self::Send(_, _) => "send_selection",
             Self::SendMany(_, _) => "send_many",
@@ -52,7 +54,7 @@ impl Call {
 
     fn upload(&self) -> Option<UploadId> {
         match self {
-            Self::Commit(id) | Self::Abort(id) => Some(*id),
+            Self::Commit(id) | Self::Extend(id, _) | Self::Abort(id) => Some(*id),
             _ => None,
         }
     }
@@ -105,6 +107,14 @@ impl Coordinator {
             Call::Commit(id) => {
                 self.check_upload_origin(client, *id, true)?;
                 OperationResult::Selection(self.commit_upload(client, *id)?)
+            }
+            Call::Extend(id, base) => {
+                self.check_upload_origin(client, *id, true)?;
+                OperationResult::Selection(self.commit_upload_with_base(
+                    client,
+                    *id,
+                    Some(*base),
+                )?)
             }
             Call::Abort(id) => {
                 self.check_upload_origin(client, *id, true)?;
@@ -174,6 +184,21 @@ impl Coordinator {
     ) -> Result<(), Error> {
         self.operation(client, sequence, Call::Abort(id))
             .map(|_| ())
+    }
+    pub fn ordered_extend(
+        &mut self,
+        client: ClientId,
+        upload: UploadId,
+        base: SelectionId,
+        sequence: u64,
+    ) -> Result<SelectionId, Error> {
+        match self
+            .operation(client, sequence, Call::Extend(upload, base))?
+            .result
+        {
+            OperationResult::Selection(id) => Ok(id),
+            _ => Err(Error::InvalidState),
+        }
     }
     pub fn ordered_send(
         &mut self,

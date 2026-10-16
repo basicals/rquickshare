@@ -20,7 +20,8 @@ preparing nonempty file upload and the base must still be an owned file selectio
 Changed arguments at the same sequence are ReplayConflict; exact replies replay
 the same new token even after the old token is removed. Retired receipts never
 authorize new work. Existing CommitSelection and legacy selection calls retain
-their contracts; older daemons reject the new method without losing the base.
+their contracts. Older daemons report incompatibility; coordinated daemon/client
+installation is required and the GUI must not claim extension success.
 
 Validate the complete old+delta names/count/bytes before mutation (256 files,
 1 TiB per source, existing path/name bounds); duplicates fail without renaming.
@@ -50,8 +51,8 @@ gate continues to exclude conflicting CLI/dialog work.
 
 ## Milestones, checks and rollback
 
-- [ ] E1: coordinator atomic extension and ordered ledger, exact kind/fingerprint.
-- [ ] E2: bus allowlist/decoder/XML and SDK mutation/recovery/controller support.
+- [x] E1: coordinator atomic extension and ordered ledger, exact kind/fingerprint.
+- [x] E2: bus allowlist/decoder/XML and SDK mutation/recovery/controller support.
 - [ ] E3: GTK acquisition supports optional extension target and Add file/folder
   source controls under the same gate/readiness guards. Main mockup layout follows.
 - [ ] E4: scoped real-resource checks once; record failures and actual results.
@@ -74,3 +75,33 @@ reviewable. No installed-service changes until a distinct verified package passe
 the existing idle-owner gate. Native15 remains installed and retained.
 
 Observed checks: plan/analysis only. No implementation or new test claim yet.
+
+## E1-E2 actual implementation and core verification
+
+CommitExtension validates/retains the old source, reserves worst-case aggregate
+capabilities/memory, clones held old descriptors and moves staged added files into
+one new manifest. Only successful commit removes the base token. Ordered receipt
+fingerprints include both upload/base; SDK recovery and controller preparation
+retain that intent. Existing send admission consumes its unsent selection, so
+extending an already-sent token is a stale-base rejection; other transfers and
+retained source Arcs are untouched. No path reconstruction or wire change.
+
+Initial affected service suite passed293/0 in15.52s, including five new aggregate/
+replay/negative/count/text/size/abort methods and the existing SDK reply-loss and
+ack-loss tables extended for CommitExtension. Subsequent new bus/controller
+fixtures initially failed compilation because the existing append helper takes
+borrowed File pairs; corrected the fixture call, without changing assertions.
+Four extension-filter methods then passed4/0 in0.98s, including strict no-FD/
+signature/foreign-owner rejection and actual controller recovery before/after
+BeginSelection, AppendFiles and CommitExtension. The added aggregate byte/memory
+boundary method passed1/0 in0.16s. Strict core all-features/all-target Clippy passed
+12.85s; only the existing bluer future-incompatibility notice remains.
+
+Eight new methods total: primary Positive1, N1=1, N2=2, N4=1, N7=2, N12=1;
+secondary interruption/race/capability cases are described in the plan. No claim
+that all663 core methods were freshly run. Logs:/tmp/rqs-source-extension-core.log,
+/tmp/rqs-source-extension-extra.log, /tmp/rqs-source-extension-budgets.log and
+/tmp/rqs-source-extension-clippy.log. Formatting/whitespace passed. All owned
+commands exited: Terminal closed. GTK acquisition changes are in progress and
+their verification belongs to the subsequent native mockup milestone. Native15
+remains installed; no real file selection, peer transfer or user settings change.

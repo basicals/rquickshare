@@ -307,10 +307,20 @@ impl Coordinator {
         client: ClientId,
         id: UploadId,
     ) -> Result<SelectionId, Error> {
+        self.commit_upload_with_base(client, id, None)
+    }
+
+    pub(super) fn commit_upload_with_base(
+        &mut self,
+        client: ClientId,
+        id: UploadId,
+        base: Option<SelectionId>,
+    ) -> Result<SelectionId, Error> {
         self.running()?;
         let upload = self.owned_upload(client, id)?;
         match upload.state {
-            UploadState::Committed(selection) => return Ok(selection),
+            UploadState::Committed(selection) if base.is_none() => return Ok(selection),
+            UploadState::Committed(_) => return Err(Error::InvalidState),
             UploadState::Aborted => return Err(Error::InvalidState),
             UploadState::Preparing => (),
         }
@@ -324,6 +334,46 @@ impl Coordinator {
         } else if upload.files.is_empty() {
             return Err(Error::InvalidInput);
         }
+        let mut prefix = Vec::new();
+        if let Some(base) = base {
+            let selected = self.selections.get(&base).ok_or(Error::UnknownSelection)?;
+            if selected.owner != client {
+                return Err(Error::WrongOwner);
+            }
+            if selected.resource.text().is_some() || upload.text.is_some() {
+                return Err(Error::InvalidState);
+            }
+            let files = selected.resource.files();
+            validate_files(
+                files.iter().chain(upload.files.iter()),
+                SelectionLimits::default(),
+            )
+            .map_err(|_| Error::InvalidInput)?;
+            let usage = self.usage();
+            if usage
+                .reserved_handles
+                .checked_add(files.len() * 2)
+                .is_none_or(|n| n > self.limits.reserved_handles)
+                || usage
+                    .selected_bytes
+                    .checked_add(selected.resource.total_bytes())
+                    .is_none_or(|n| n > self.limits.selected_bytes)
+            {
+                return Err(Error::Capacity);
+            }
+            self.reserve_memory(files.iter().map(OpenedFile::memory_bytes).sum())?;
+            for file in files {
+                let cloned = OpenedFile::adopt(
+                    file.clone_handle().map_err(|_| Error::Capacity)?,
+                    file.relative_name().to_owned(),
+                )
+                .map_err(|_| Error::InvalidInput)?;
+                if cloned.size() != file.size() || cloned.memory_bytes() != file.memory_bytes() {
+                    return Err(Error::InvalidInput);
+                }
+                prefix.push(cloned);
+            }
+        }
         // Append already reserved both original handles and eventual worker clones.
         // Advance before taking ownership so exhaustion cannot consume a preparation.
         let selection = SelectionId(self.epoch, self.advance()?);
@@ -336,9 +386,10 @@ impl Coordinator {
                     .ok_or(Error::InvalidInput)?,
                 )
             } else {
+                prefix.extend(std::mem::take(&mut upload.files));
+                let bytes = prefix.iter().map(OpenedFile::size).sum();
                 crate::prepared_source::PreparedSource::from(OpenedSelection::from_validated_files(
-                    std::mem::take(&mut upload.files),
-                    upload.bytes,
+                    prefix, bytes,
                 ))
             };
             let resource = Arc::new(source);
@@ -364,6 +415,9 @@ impl Coordinator {
                     resource,
                 },
             );
+            if let Some(base) = base {
+                self.selections.remove(&base);
+            }
         }
         Ok(selection)
     }

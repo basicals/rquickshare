@@ -820,3 +820,336 @@ fn given_memory_owners_when_aborted_cancelled_or_finished_then_only_actual_reade
         assert_eq!(service.memory_usage(), 0);
     }
 }
+
+#[test]
+fn given_file_extension_when_committed_then_base_is_replaced_atomically_and_receipts_are_exact() {
+    // Arrange
+    let (mut service, client) = setup(Limits::default());
+    let base = service
+        .create_selection(
+            client,
+            OpenedSelection::from_files(vec![file("old", 3)], SelectionLimits::default()).unwrap(),
+        )
+        .unwrap();
+    let retained = service.selections[&base].resource.clone();
+    let upload = service.ordered_begin(client, 1).unwrap();
+    service
+        .append_files(client, upload, 0, vec![file("new", 7)])
+        .unwrap();
+    let before = service.snapshot(client).unwrap();
+    assert_eq!(before.selections, vec![base]);
+    // Act
+    let updated = service.ordered_extend(client, upload, base, 2).unwrap();
+    // Assert
+    let state = service.snapshot(client).unwrap();
+    assert_eq!(state.selections, vec![updated]);
+    assert!(state.transfers.is_empty());
+    assert_ne!(base, updated);
+    let source = &service.selections[&updated].resource;
+    assert_eq!(
+        source
+            .files()
+            .iter()
+            .map(|file| (file.relative_name(), file.size()))
+            .collect::<Vec<_>>(),
+        [("old", 3), ("new", 7)]
+    );
+    assert_eq!(retained.files().len(), 1);
+    assert_eq!(retained.total_bytes(), 3);
+    assert_eq!(state.resources.reserved_handles, 6); // Retained old + full replacement.
+    assert_eq!(service.ordered_extend(client, upload, base, 2), Ok(updated));
+    assert_eq!(
+        service.ordered_extend(client, upload, updated, 2),
+        Err(Error::ReplayConflict)
+    );
+    assert_eq!(
+        service.ordered_commit(client, upload, 2),
+        Err(Error::ReplayConflict)
+    );
+    assert_eq!(service.snapshot(client).unwrap(), state);
+    service.acknowledge_operations(client, 2).unwrap();
+    assert_eq!(
+        service.ordered_extend(client, upload, base, 2),
+        Err(Error::RequestExpired)
+    );
+    drop(retained);
+    assert_eq!(
+        service.snapshot(client).unwrap().resources.reserved_handles,
+        4
+    );
+}
+
+#[test]
+fn given_invalid_extension_when_rejected_then_previous_selection_and_delta_remain_intact() {
+    // Arrange / Act / Assert: every case uses fresh actual coordinator and file capabilities.
+    for case in 0..10 {
+        let (mut service, client) = setup(Limits::default());
+        let base = service
+            .create_selection(
+                client,
+                OpenedSelection::from_files(vec![file("old", 3)], SelectionLimits::default())
+                    .unwrap(),
+            )
+            .unwrap();
+        let upload = service.ordered_begin(client, 1).unwrap();
+        if case != 0 {
+            service
+                .append_files(
+                    client,
+                    upload,
+                    0,
+                    vec![file(
+                        if case == 1 {
+                            "old"
+                        } else if case == 2 {
+                            "old/child"
+                        } else {
+                            "new"
+                        },
+                        7,
+                    )],
+                )
+                .unwrap();
+        }
+        let mut target = base;
+        let mut owner = client;
+        let expected = match case {
+            0..=2 => Error::InvalidInput,
+            3 => {
+                service.limits.reserved_handles = 4;
+                Error::Capacity
+            }
+            4 => {
+                service.limits.selected_bytes = 10;
+                Error::Capacity
+            }
+            5 => {
+                target = SelectionId(123, 9999);
+                Error::UnknownSelection
+            }
+            6 => {
+                service.discard_selection(client, base).unwrap();
+                Error::UnknownSelection
+            }
+            7 => {
+                owner = service.connect().unwrap();
+                Error::WrongOwner
+            }
+            8 => {
+                service.ordered_abort(client, upload, 2).unwrap();
+                Error::InvalidState
+            }
+            9 => {
+                service.lifecycle = Lifecycle::Stopped;
+                Error::NotRunning
+            }
+            _ => unreachable!(),
+        };
+        let before = service.snapshot(client).unwrap();
+        let sequence = if case == 8 {
+            3
+        } else if case == 7 {
+            1
+        } else {
+            2
+        };
+        assert_eq!(
+            service.ordered_extend(owner, upload, target, sequence),
+            Err(expected),
+            "case {case}"
+        );
+        assert_eq!(service.snapshot(client).unwrap(), before, "case {case}");
+        if case != 6 {
+            assert_eq!(service.selections[&base].resource.total_bytes(), 3);
+        }
+    }
+}
+
+#[test]
+fn given_aggregate_file_limits_when_extending_then_max_is_accepted_and_max_plus_one_preserves_base()
+{
+    // Arrange / Act / Assert
+    for (count, accepted) in [(254, true), (255, true), (256, false)] {
+        let (mut service, client) = setup(Limits::default());
+        service.limits.reserved_handles = 2048; // Isolate the per-selection count boundary.
+        let files = (0..count)
+            .map(|index| file(&format!("old-{index}"), 0))
+            .collect();
+        let base = service
+            .create_selection(
+                client,
+                OpenedSelection::from_files(files, SelectionLimits::default()).unwrap(),
+            )
+            .unwrap();
+        let upload = service.ordered_begin(client, 1).unwrap();
+        service
+            .append_files(client, upload, 0, vec![file("new", 0)])
+            .unwrap();
+        let before = service.snapshot(client).unwrap();
+        let result = service.ordered_extend(client, upload, base, 2);
+        if accepted {
+            let updated = result.unwrap();
+            assert_eq!(
+                service.selections[&updated].resource.files().len(),
+                count + 1
+            );
+        } else {
+            assert_eq!(result, Err(Error::InvalidInput));
+            assert_eq!(service.snapshot(client).unwrap(), before);
+        }
+    }
+}
+
+#[test]
+fn given_text_or_committed_delta_when_extended_then_no_mixed_source_or_base_loss_occurs() {
+    // Arrange / Act / Assert
+    for case in 0..3 {
+        let (mut service, client) = setup(Limits::default());
+        let base = if case == 0 {
+            let text = service.ordered_begin_text(client, 1, 1).unwrap();
+            service.append_text(client, text, 0, b"x").unwrap();
+            service.ordered_commit(client, text, 2).unwrap()
+        } else {
+            service
+                .create_selection(
+                    client,
+                    OpenedSelection::from_files(vec![file("old", 3)], SelectionLimits::default())
+                        .unwrap(),
+                )
+                .unwrap()
+        };
+        let seq = if case == 0 { 3 } else { 1 };
+        let upload = if case == 1 {
+            let text = service.ordered_begin_text(client, 1, seq).unwrap();
+            service.append_text(client, text, 0, b"x").unwrap();
+            text
+        } else {
+            let upload = service.ordered_begin(client, seq).unwrap();
+            service
+                .append_files(client, upload, 0, vec![file("new", 7)])
+                .unwrap();
+            upload
+        };
+        if case == 2 {
+            service.ordered_commit(client, upload, seq + 1).unwrap();
+        }
+        let before = service.snapshot(client).unwrap();
+        assert_eq!(
+            service.ordered_extend(client, upload, base, seq + if case == 2 { 2 } else { 1 }),
+            Err(Error::InvalidState)
+        );
+        assert_eq!(service.snapshot(client).unwrap(), before);
+    }
+}
+
+#[test]
+fn given_changed_base_size_or_aborted_delta_when_extending_then_original_capability_is_not_replaced(
+) {
+    // Arrange / Act / Assert
+    for changed in [false, true] {
+        let (mut service, client) = setup(Limits::default());
+        let original = tempfile::NamedTempFile::new().unwrap();
+        original.as_file().set_len(3).unwrap();
+        let base = service
+            .create_selection(
+                client,
+                OpenedSelection::from_files(
+                    vec![
+                        OpenedFile::adopt(File::open(original.path()).unwrap(), "old".into())
+                            .unwrap(),
+                    ],
+                    SelectionLimits::default(),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        let upload = service.ordered_begin(client, 1).unwrap();
+        service
+            .append_files(client, upload, 0, vec![file("new", 7)])
+            .unwrap();
+        if changed {
+            original.as_file().set_len(4).unwrap();
+            let before = service.snapshot(client).unwrap();
+            assert_eq!(
+                service.ordered_extend(client, upload, base, 2),
+                Err(Error::InvalidInput)
+            );
+            assert_eq!(service.snapshot(client).unwrap(), before);
+        }
+        service.ordered_abort(client, upload, 2).unwrap();
+        let after = service.snapshot(client).unwrap();
+        assert_eq!(after.selections, vec![base]);
+        assert_eq!(after.resources.reserved_handles, 2);
+        assert_eq!(after.resources.selected_bytes, 3);
+    }
+}
+
+#[test]
+fn given_aggregate_byte_and_memory_budgets_when_extended_then_boundaries_preserve_reservations() {
+    // Arrange / Act / Assert
+    for added in [0, 1, 2] {
+        let (mut service, client) = setup(Limits::default());
+        let max = SelectionLimits::default().max_bytes;
+        let base = service
+            .create_selection(
+                client,
+                OpenedSelection::from_files(vec![file("old", max - 1)], SelectionLimits::default())
+                    .unwrap(),
+            )
+            .unwrap();
+        let upload = service.ordered_begin(client, 1).unwrap();
+        service
+            .append_files(client, upload, 0, vec![file("new", added)])
+            .unwrap();
+        let before = service.snapshot(client).unwrap();
+        let result = service.ordered_extend(client, upload, base, 2);
+        if added <= 1 {
+            assert_eq!(
+                service.selections[&result.unwrap()].resource.total_bytes(),
+                max - 1 + added
+            );
+        } else {
+            assert_eq!(result, Err(Error::InvalidInput));
+            assert_eq!(service.snapshot(client).unwrap(), before);
+        }
+    }
+    for delta in [0, 1] {
+        let (mut service, client) = setup(Limits::default());
+        let size = crate::memory_source::MAX_MEMORY_FILE_BYTES;
+        let payload = vec![7; size];
+        let base = service
+            .create_selection(
+                client,
+                OpenedSelection::from_files(
+                    (0..2)
+                        .map(|n| {
+                            crate::memory_source::create(&payload, format!("old-{n}")).unwrap()
+                        })
+                        .collect(),
+                    SelectionLimits::default(),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        let upload = service.ordered_begin(client, 1).unwrap();
+        let added = if delta == 0 {
+            file("new", 0)
+        } else {
+            crate::memory_source::create(b"x", "new".into()).unwrap()
+        };
+        service
+            .append_files(client, upload, 0, vec![added])
+            .unwrap();
+        let before = service.snapshot(client).unwrap();
+        let result = service.ordered_extend(client, upload, base, 2);
+        if delta == 0 {
+            assert_eq!(
+                service.selections[&result.unwrap()].resource.files().len(),
+                3
+            );
+        } else {
+            assert_eq!(result, Err(Error::Capacity));
+            assert_eq!(service.snapshot(client).unwrap(), before);
+        }
+    }
+}

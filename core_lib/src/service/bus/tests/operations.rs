@@ -141,3 +141,56 @@ async fn given_operation_wire_abuse_when_dispatched_then_bad_bodies_fds_sequence
         assert_eq!(host.finish().await.1,Ok(()));
     }).await;
 }
+
+#[tokio::test]
+async fn given_extension_wire_with_invalid_signatures_or_foreign_tokens_when_called_then_no_source_is_changed(
+) {
+    scenario(async {
+        // Arrange
+        let private = PrivateBus::new();
+        let host = Harness::with_coordinator(
+            SelectionBus::connect(private.socket().await).await.unwrap(),
+            Coordinator::new(123, Limits::default()).unwrap(),
+        );
+        let client = private.client().await;
+        let foreign = private.client().await;
+        let source = tempfile::NamedTempFile::new().unwrap();
+        let file = File::open(source.path()).unwrap();
+        let upload = id(ordered(&client, "BeginSelection", &1u64).await).await;
+        append(&client, &upload, 0, &[(&file, "old")])
+            .await
+            .unwrap();
+        let base = id(ordered(&client, "CommitSelection", &(&upload, 2u64)).await).await;
+        let delta = id(ordered(&client, "BeginSelection", &3u64).await).await;
+        append(&client, &delta, 0, &[(&file, "new")]).await.unwrap();
+        // Act / Assert
+        rejected(
+            ordered(&client, "CommitExtension", &(&delta, 4u64)).await,
+            "InvalidInput",
+        );
+        rejected(
+            ordered(&client, "CommitExtension", &(Fd::from(&file), &base, 4u64)).await,
+            "InvalidInput",
+        );
+        rejected(
+            ordered(&client, "CommitExtension", &(&delta, "invalid", 4u64)).await,
+            "InvalidInput",
+        );
+        rejected(
+            ordered(&foreign, "CommitExtension", &(&delta, &base, 1u64)).await,
+            "WrongOwner",
+        );
+        let updated = id(ordered(&client, "CommitExtension", &(&delta, &base, 4u64)).await).await;
+        assert_ne!(updated, base);
+        assert_eq!(
+            id(ordered(&client, "CommitExtension", &(&delta, &base, 4u64)).await).await,
+            updated
+        );
+        drop(client);
+        drop(foreign);
+        let (coordinator, outcome) = host.finish().await;
+        assert_eq!(outcome, Ok(()));
+        assert!(coordinator.transfers.is_empty());
+    })
+    .await;
+}

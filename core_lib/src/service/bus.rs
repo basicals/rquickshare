@@ -1130,6 +1130,7 @@ impl SelectionBus {
                 "BeginText",
                 "BeginSelection",
                 "CommitSelection",
+                "CommitExtension",
                 "AbortSelection",
                 "SendSelection",
                 "GetOperationState",
@@ -1646,6 +1647,19 @@ fn execute_operation(
     let body = message.body();
     let invalid = |_| Error::InvalidInput;
     match method {
+        "CommitExtension" => {
+            let (upload, base, sequence): (&str, &str, u64) =
+                body.deserialize().map_err(invalid)?;
+            let upload = upload_id(upload, coordinator.epoch)?;
+            let (epoch, counter) = token_parts(base, coordinator.epoch)?;
+            let id = coordinator.ordered_extend(
+                client,
+                upload,
+                SelectionId(epoch, counter),
+                sequence,
+            )?;
+            Ok(OperationReply::Token(token(id.0, id.1)))
+        }
         "BeginText" => {
             let (count, sequence): (u32, u64) = body.deserialize().map_err(invalid)?;
             let id = coordinator.ordered_begin_text(client, count, sequence)?;
