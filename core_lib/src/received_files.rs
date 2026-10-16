@@ -79,7 +79,7 @@ pub(crate) struct PendingFiles {
     root: Root,
     ids: Vec<i64>,
     records: Vec<Option<Record>>,
-    budget: ReceiptBudget,
+    reservation: Reservation,
 }
 impl std::fmt::Debug for PendingFiles {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -98,7 +98,7 @@ impl PendingFiles {
             root,
             ids,
             records,
-            budget,
+            reservation: budget.reserve()?,
         })
     }
     pub(crate) fn record(
@@ -143,7 +143,16 @@ impl PendingFiles {
         Ok(())
     }
     pub(crate) fn finish(self) -> Option<Arc<ReceivedFiles>> {
-        let mut records: Vec<Record> = self.records.into_iter().collect::<Option<_>>()?;
+        if self.records.iter().any(Option::is_none) {
+            return None;
+        }
+        self.finish_partial()
+    }
+    pub(crate) fn finish_partial(self) -> Option<Arc<ReceivedFiles>> {
+        let mut records: Vec<Record> = self.records.into_iter().flatten().collect();
+        if records.is_empty() {
+            return None;
+        }
         records.sort_unstable_by(|a, b| {
             (&a.relative, a.identity.size).cmp(&(&b.relative, b.identity.size))
         });
@@ -155,11 +164,10 @@ impl PendingFiles {
         {
             return None;
         }
-        let reservation = self.budget.reserve()?;
         Some(Arc::new(ReceivedFiles {
             root: self.root,
             records,
-            _reservation: reservation,
+            _reservation: self.reservation,
         }))
     }
 }
@@ -193,6 +201,33 @@ impl ReceivedFiles {
                 .all(|(record, detail)| {
                     record.relative == detail.name && record.identity.size == detail.size
                 })
+    }
+    pub(crate) fn subset_of(&self, details: &TransferDetails) -> bool {
+        !self.records.is_empty()
+            && self.records.iter().all(|record| {
+                details
+                    .files
+                    .iter()
+                    .any(|file| file.name == record.relative && file.size == record.identity.size)
+            })
+    }
+    pub(crate) fn details(&self) -> Vec<crate::sessions::details::FileDetail> {
+        self.records
+            .iter()
+            .map(|record| crate::sessions::details::FileDetail {
+                name: record.relative.clone(),
+                size: record.identity.size,
+            })
+            .collect()
+    }
+    pub(crate) fn display_bytes(&self) -> usize {
+        self.records
+            .iter()
+            .map(|record| {
+                std::mem::size_of::<crate::sessions::details::FileDetail>() + record.relative.len()
+            })
+            .sum::<usize>()
+            + 64
     }
     pub(crate) fn open(&self, index: u32) -> io::Result<File> {
         let record = self

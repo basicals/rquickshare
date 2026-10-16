@@ -1,5 +1,50 @@
 use super::*;
 use crate::service::{Limits, Phase};
+
+#[test]
+fn given_partial_receipt_when_attached_to_each_phase_then_only_terminal_inbound_manifest_subset_is_authorized(
+) {
+    for phase in [
+        Phase::Receiving,
+        Phase::Finished,
+        Phase::Cancelled,
+        Phase::Failed,
+        Phase::Disconnected,
+    ] {
+        // Arrange
+        let (_directory, received, mut details) = crate::received_files::tests::fixture();
+        let mut manifest = details.files.to_vec();
+        manifest.push(crate::sessions::details::FileDetail {
+            name: "not-received.bin".into(),
+            size: 1,
+        });
+        manifest.sort_by(|a, b| a.name.cmp(&b.name));
+        details.files = manifest.into();
+        details.total_bytes += 1;
+        let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+        let client = coordinator.connect().unwrap();
+        let target = coordinator.register_inbound().unwrap();
+        coordinator
+            .observe_details(target, phase, Arc::new(details))
+            .unwrap();
+        // Act / Assert
+        let result = coordinator.retain_received_files(target, Some(received.clone()));
+        if matches!(phase, Phase::Receiving | Phase::Finished) {
+            assert_eq!(result, Err(Error::InvalidState));
+        } else {
+            result.unwrap();
+            let revision = coordinator.transfers[&target].terminal_revision.unwrap();
+            assert!(Arc::ptr_eq(
+                &resource(&coordinator, client, target, revision, 0).unwrap(),
+                &received
+            ));
+            assert_eq!(
+                resource(&coordinator, client, target, revision, 1).unwrap_err(),
+                Error::InvalidInput
+            );
+        }
+    }
+}
 #[test]
 fn given_completed_file_receipt_when_revision_index_or_owner_is_invalid_then_live_lookup_fails_closed(
 ) {

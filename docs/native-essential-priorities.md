@@ -85,7 +85,7 @@ checkpoint. All owned inspection/edit/check commands exited: Terminal closed.
 
 [Receive publication](native-receive-reliability.md) found premature final-name
 creation and no incomplete-file cleanup authority by inspecting the existing
-handler/root/session/receipt lifecycle. R1 is complete; user choice of per-file
-partial success versus an all-or-nothing containing folder is pending. No repair
-or failure-test success is claimed. [Short essential acceptance procedure](native-essential-acceptance.md)
+handler/root/session/receipt lifecycle. The user selected per-file atomic publication and retained completed members.
+Implementation and focused verification are recorded in the receive contract;
+source/package acceptance is distinct from physical-peer signoff. [Short essential acceptance procedure](native-essential-acceptance.md)
 is prepared; no installation, physical action or test repetition was performed.

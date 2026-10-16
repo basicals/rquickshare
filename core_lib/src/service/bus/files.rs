@@ -2,10 +2,7 @@
 use std::{fs::File, sync::Arc};
 
 use super::*;
-use crate::{
-    received_files::ReceivedFiles,
-    service::{Direction, Phase},
-};
+use crate::{received_files::ReceivedFiles, service::Direction};
 pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Files1";
 pub(crate) type Resolver = dyn Fn(Arc<ReceivedFiles>, u32) -> Result<File, Error> + Send + Sync;
 pub(super) struct Request {
@@ -38,7 +35,7 @@ pub(super) fn resource(
     if revision == 0 || transfer.terminal_revision != Some(revision) {
         return Err(Error::StaleControl);
     }
-    if transfer.view.direction != Direction::Inbound || transfer.view.phase != Phase::Finished {
+    if transfer.view.direction != Direction::Inbound || !transfer.view.phase.is_terminal() {
         return Err(Error::InvalidState);
     }
     let files = transfer.received_files.clone().ok_or(Error::InvalidState)?;

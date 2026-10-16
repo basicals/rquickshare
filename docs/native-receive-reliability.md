@@ -60,9 +60,9 @@ per-file publication and explicit partial-outcome scope.
    cancellation and receipt/UI contracts before code. Check target filesystem
    support before selecting mechanisms; unsupported storage fails explicitly or
    uses a documented safe strategy, never direct final-name streaming.
-3. [ ] R3: implement only the selected receive ownership/projection slice with
+3. [x] R3: implement only the selected receive ownership/projection slice with
    reversible atomic commits; preserve single consent and path/descriptor safety.
-4. [ ] R4: inventory affected branches and add focused real filesystem/handler
+4. [x] R4: inventory affected branches and add focused real filesystem/handler
    regressions for incomplete drop/cancel, preparation failure after an earlier
    member, write/completion failure, complete success and collision/replacement.
    No subject mocks, no sleep-based waits, no full unrelated suite repetitions.
@@ -159,3 +159,66 @@ fault seams only at syscall boundary if real deterministic storage failure canno
 be constructed; no mocked domain logic or sleeps. Assertions must detect premature
 name publication, overwriting, false whole-group success and leaked failed-member
 file authority. Run affected checks once; preserve failures and rerun only fixes.
+
+R3 source checkpoint: anonymous creation and capability-free no-overwrite link
+were actually exercised in both /tmp and the task test filesystem before coding;
+both supported the mechanism. These probes used only owned temporary directories
+and closed their files. This does not establish support for every user-selected
+filesystem. Initial development compilation caught a cfg expression and nested
+test-module path error; corrected before tests executed. Final source also rejects
+duplicate completed names independently of advertised size.
+
+R3 partial-card clarification: cancelled/disconnected/failed inbound file rows
+show Saved N of M even when N=0, and explicitly direct an intentional sender
+retry of remaining files. A zero-member result has no reveal list or capability.
+Rejected and outbound transfers do not get this receive-only guidance. No automatic
+retry or false Completed label is added. The extracted saved-list renderer is
+covered in the existing GTK smoke thread, including completed-list index0 for a
+member whose requested-manifest position differs.
+
+## Development observations before final candidate
+
+Full core run:653 methods,652 passed/1 failed (27.12s). The one failure was
+an existing assertion that Accept immediately creates an ordinary empty final
+file, which contradicts selected atomic publication. Updated that regression to
+require absence before EOF, then exact abc bytes/Finished under the original
+pinned receive root after rename or policy replacement, including non-UTF8 root.
+Affected method passed1/0 (0.06s). The SDK private-broker partial receipt/acquire
+method passed1/0 (0.12s) after the final duplicate-name validation refinement.
+All8 new methods passed in the full run; the other644 prior methods also passed.
+There is no final whole653-green or ten-repetition claim.
+
+Initial module/cfg compilation errors were corrected before any core tests ran.
+Strict core lint then found a now-unused Phase import; removed it from production
+and imported it explicitly in the affected test module, with no lint suppression.
+Logs: /tmp/rqs-receive-core.log, /tmp/rqs-receive-core-final.log,
+/tmp/rqs-receive-root.log, /tmp/rqs-receive-sdk.log,
+/tmp/rqs-receive-core-clippy.log. Owned sessions exited: Terminal closed.
+
+R3/R4 implementation is complete. Core strict all-feature/all-target Clippy
+passed32.68s. Native39/0 passed1.70s on the isolated broker/display, including
+existing GTK/reveal smoke extended with Saved1of2/Saved0of2 and safe file indices.
+Directory-sync failure is exercised through an actual O_PATH directory FD after
+publication (fsync rejects it); the complete file must remain intact. This is a
+filesystem boundary regression, not a physical power-loss simulation or whole
+handler storage-fault exhaustiveness claim. Logs and final affected result are
+recorded at R5. Current candidate revision will become native12; native11 and
+previous exported source/checksums remain immutable. No thumbnail work is added.
+
+## R5 source verification checkpoint
+
+Final affected directory-sync boundary regression passed1/0 (0.03s),652 filtered;
+log /tmp/rqs-receive-sync.log. After that final test extension, strict core
+all-feature/all-target Clippy passed31.21s. Native strict all-target/no-deps Clippy
+passed20.58s; nine pre-existing nonexperimental-core dependency warnings remain
+visible. Both nightly format checks and whitespace verification passed. No ten-run
+or full-product coverage claim. Logs: /tmp/rqs-receive-clippy-final.log,
+/tmp/rqs-receive-native.log, /tmp/rqs-receive-native-clippy.log.
+All owned sessions exited: Terminal closed.
+
+Native12 is the changed next candidate. Build and verify its committed code with
+the existing eleven-file Debian inventory/dependency/ELF/help/private-settings
+smoke, then export exact public Git source/package/unsigned APT/unapproved request.
+Existing helper/dependencies are preserved; no new thumbnail feature/fixture work
+is part of this receive fix. Do not install, sign or publish. Preserve native11
+and earlier immutable source/package checkpoints.

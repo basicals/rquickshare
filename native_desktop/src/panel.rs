@@ -191,6 +191,37 @@ fn details_card_mode_with_files(
     row
 }
 
+fn saved_files_card(
+    files: Arc<[rqs_lib::sessions::details::FileDetail]>,
+    total: usize,
+    full: bool,
+    action: Option<Rc<FileAction>>,
+) -> gtk::Box {
+    let row = gtk::Box::new(gtk::Orientation::Vertical, 4);
+    row.append(&label(&format!("Saved {} of {} files", files.len(), total)));
+    if full && !files.is_empty() {
+        let saved = gtk::Expander::new(Some("Saved files"));
+        saved.connect_expanded_notify(move |saved| {
+            if saved.is_expanded() {
+                let list = gtk::Box::new(gtk::Orientation::Vertical, 4);
+                for (index, file) in files.iter().enumerate() {
+                    let item = gtk::Box::new(gtk::Orientation::Vertical, 4);
+                    item.append(&label(&format!("{} · {} bytes", file.name, file.size)));
+                    if let Some(action) = &action {
+                        action(&item, index as u32);
+                    }
+                    list.append(&item);
+                }
+                saved.set_child(Some(&list));
+            } else {
+                saved.set_child(gtk::Widget::NONE);
+            }
+        });
+        row.append(&saved);
+    }
+    row
+}
+
 fn source_summary(
     kind: rqs_lib::sessions::details::PayloadKind,
     file_count: u32,
@@ -1037,8 +1068,35 @@ impl Panel {
         ready: bool,
         full: bool,
     ) -> gtk::Box {
-        let row =
-            details_card_mode_with_files(&transfer.details, full, self.file_action(transfer, full));
+        let row = details_card_mode_with_files(
+            &transfer.details,
+            full,
+            if transfer.phase == Phase::Finished {
+                self.file_action(transfer, full)
+            } else {
+                None
+            },
+        );
+        if transfer.direction == Direction::Inbound
+            && matches!(
+                transfer.phase,
+                Phase::Cancelled | Phase::Disconnected | Phase::Failed
+            )
+            && transfer.details.kind == rqs_lib::sessions::details::PayloadKind::Files
+            && transfer.details.status == DetailsStatus::Ready
+        {
+            row.append(&saved_files_card(
+                transfer.completed_files.clone(),
+                transfer.details.files.len(),
+                full,
+                self.file_action(transfer, full),
+            ));
+            row.append(&label(if transfer.completed_files.is_empty() {
+                "No complete files were saved. Ask the sender to send again."
+            } else {
+                "Completed files were kept. Ask the sender to resend the remaining files."
+            }));
+        }
         if let Some(recipient) = &transfer.recipient {
             row.prepend(&label(&format!("Recipient: {recipient}")));
         }

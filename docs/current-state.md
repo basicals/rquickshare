@@ -194,7 +194,11 @@ not a new physical-test result or an implemented fix.
 [Receive reliability](native-receive-reliability.md) records the significant
 publication/partial-outcome choice: recommend atomic publication per file, preserve
 complete members and expose partial outcome; alternative is one all-or-nothing
-containing transfer directory. User choice is pending before production changes.
+containing transfer directory. The user selected option1; implementation now stages unnamed files, publishes
+complete members without overwrite and exposes terminal partial receipts through
+the existing native file capability. Scoped verification/candidate handoff is
+in progress; native11 remains the last immutable exported package until that
+handoff completes.
 [Essential acceptance](native-essential-acceptance.md) provides the short current
 Android/Windows/KDE check procedure; all checks remain unexecuted. Native11 and
 its immutable public artifacts are unchanged.

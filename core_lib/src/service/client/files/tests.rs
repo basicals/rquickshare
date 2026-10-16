@@ -2,8 +2,80 @@ use super::*;
 use crate::service::{
     bus::tests::{Harness, PrivateBus},
     bus::SelectionBus,
-    Coordinator, Limits,
+    Coordinator, Limits, Phase,
 };
+
+#[tokio::test]
+async fn given_partial_receive_when_private_sdk_reads_and_reveals_then_original_manifest_and_only_completed_file_authority_are_preserved(
+) {
+    super::super::tests::scenario(async {
+        // Arrange
+        let (_directory, received, mut details) = crate::received_files::tests::fixture();
+        let mut manifest = details.files.to_vec();
+        manifest.push(crate::sessions::details::FileDetail {
+            name: "a-missing.bin".into(),
+            size: 2,
+        });
+        manifest.sort_by(|a, b| a.name.cmp(&b.name));
+        details.files = manifest.into();
+        details.total_bytes += 2;
+        let mut coordinator = Coordinator::new(123, Limits::default()).unwrap();
+        let target = coordinator.register_inbound().unwrap();
+        coordinator
+            .observe_details(target, Phase::Disconnected, Arc::new(details))
+            .unwrap();
+        coordinator
+            .retain_received_files(target, Some(received))
+            .unwrap();
+        let private = PrivateBus::new();
+        let host = Harness::with_coordinator(
+            SelectionBus::connect(private.socket().await).await.unwrap(),
+            coordinator,
+        );
+        let mut client = NativeClient::connect(private.socket().await).await.unwrap();
+        // Act / Assert
+        let view = client.read_state().await.unwrap();
+        let row = &view.transfers[0];
+        assert_eq!(row.phase, Phase::Disconnected);
+        assert_eq!(row.details.files.len(), 2);
+        assert_eq!(row.completed_files.len(), 1);
+        assert_eq!(row.completed_files[0].name, "nested/actual (1).txt");
+        assert_eq!(row.details.transferred_bytes, 8);
+        assert_eq!(row.details.total_bytes, 10);
+        assert!(!format!("{view:?}").contains("actual (1)"));
+        let revision = row.reveal_revision.unwrap();
+        let file = client
+            .acquire_received_file(&row.transfer, revision, 0)
+            .await
+            .unwrap();
+        let mut bytes = [0; 8];
+        std::os::unix::fs::FileExt::read_exact_at(file.file(), &mut bytes, 0).unwrap();
+        assert_eq!(&bytes, b"received");
+        assert!(client
+            .acquire_received_file(&row.transfer, revision, 1)
+            .await
+            .is_err());
+        assert!(client
+            .acquire_received_file(&row.transfer, revision + 1, 0)
+            .await
+            .is_err());
+        let fd = tempfile::tempfile().unwrap();
+        assert_eq!(
+            client
+                .wire(
+                    bus::files::INTERFACE,
+                    "GetCompletedPage",
+                    &Fd::from(fd.as_fd())
+                )
+                .await
+                .unwrap_err(),
+            ClientError::Rejected(DomainError::InvalidInput)
+        );
+        client.close().await.unwrap();
+        assert_eq!(host.finish().await.1, Ok(()));
+    })
+    .await;
+}
 #[tokio::test]
 async fn given_actual_files_api_when_acquired_twice_or_abused_then_only_verified_readonly_file_is_returned_and_state_stays_private(
 ) {

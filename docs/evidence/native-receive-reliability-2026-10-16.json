@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "scope": "essential-receive-reliability",
+  "choice": 1,
+  "checks": {
+    "core_initial_compilation": {
+      "passed": false,
+      "tests_executed": false,
+      "reason": "cfg expression and nested test-module path corrected"
+    },
+    "core_full": {
+      "total": 653,
+      "passed": 652,
+      "failed": 1,
+      "seconds": 27.12,
+      "reason": "Existing test expected premature final-name creation; strengthened to check absence until EOF then exact bytes under pinned root"
+    },
+    "core_affected_root": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 652,
+      "seconds": 0.06
+    },
+    "core_affected_sdk": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 652,
+      "seconds": 0.12
+    },
+    "core_strict_clippy": {
+      "passed": true,
+      "seconds": 32.68,
+      "all_features": true,
+      "all_targets": true
+    },
+    "native": {
+      "passed": 39,
+      "failed": 0,
+      "seconds": 1.7
+    },
+    "native_strict_clippy": {
+      "passed": true,
+      "seconds": 20.58,
+      "all_targets": true,
+      "no_deps": true
+    },
+    "affected_directory_sync": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 652,
+      "seconds": 0.03
+    },
+    "final_core_strict_clippy_after_test_extension": {
+      "passed": true,
+      "seconds": 31.21
+    },
+    "format_and_whitespace": {
+      "passed": true
+    }
+  },
+  "new_core_methods": 8,
+  "invariants": {
+    "native_linux_receive_scope": true,
+    "anonymous_unpublished_content": true,
+    "no_display_path_deletion": true,
+    "publish_after_exact_size_and_data_sync": true,
+    "atomic_no_overwrite_link": true,
+    "partial_complete_files_preserved": true,
+    "one_reserved_receipt_slot": true,
+    "immutable_requested_manifest": true,
+    "completed_list_indices_only": true,
+    "explicit_remaining_file_retry": true,
+    "automatic_retry": false,
+    "preview_work_added": false
+  },
+  "filesystem_support": {
+    "local_probe_paths": [
+      "/tmp",
+      "core_lib/target/disk-test-tmp"
+    ],
+    "anonymous_create_and_fd_link_passed": true,
+    "all_filesystems_supported": false,
+    "unsupported_safe_staging_fails_before_accept": true,
+    "empty_created_directories_may_remain": true
+  },
+  "installed": false,
+  "physical_peer_acceptance": false,
+  "release_signed": false,
+  "published": false
+}

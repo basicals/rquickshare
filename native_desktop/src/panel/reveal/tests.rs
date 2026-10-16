@@ -33,6 +33,7 @@ fn given_reveal_identity_when_epoch_revision_index_or_completion_differs_then_ex
         direction: Direction::Inbound,
         phase: Phase::Finished,
         details: &details,
+        completed_count: 2,
     };
     assert!(matches(123, "transfer", 7, 0, &observed));
     assert!(matches(123, "transfer", 7, 1, &observed));
@@ -49,7 +50,6 @@ fn given_reveal_identity_when_epoch_revision_index_or_completion_differs_then_ex
     for (direction, phase, revision) in [
         (Direction::Outbound, Phase::Finished, Some(7)),
         (Direction::Inbound, Phase::Receiving, Some(7)),
-        (Direction::Inbound, Phase::Failed, Some(7)),
         (Direction::Inbound, Phase::Finished, None),
     ] {
         assert!(!matches(
@@ -61,6 +61,41 @@ fn given_reveal_identity_when_epoch_revision_index_or_completion_differs_then_ex
                 direction,
                 phase,
                 revision,
+                ..observed
+            }
+        ));
+    }
+    for phase in [Phase::Failed, Phase::Cancelled, Phase::Disconnected] {
+        assert!(matches(
+            123,
+            "transfer",
+            7,
+            0,
+            &Observation {
+                phase,
+                completed_count: 1,
+                ..observed
+            }
+        ));
+        assert!(!matches(
+            123,
+            "transfer",
+            7,
+            1,
+            &Observation {
+                phase,
+                completed_count: 1,
+                ..observed
+            }
+        ));
+        assert!(!matches(
+            123,
+            "transfer",
+            7,
+            0,
+            &Observation {
+                phase,
+                completed_count: 0,
                 ..observed
             }
         ));
@@ -141,4 +176,66 @@ pub(in crate::panel) fn verify_reveal_smoke() {
     expander.set_expanded(false);
     assert!(expander.child().is_none());
     assert_eq!(*calls.borrow(), vec![0, 1]);
+    // Partial results use completed-list indices, not the original manifest positions.
+    let saved_calls = Rc::new(RefCell::new(Vec::new()));
+    let captured = saved_calls.clone();
+    let saved_action: Rc<FileAction> = Rc::new(move |row, index| {
+        let calls = captured.clone();
+        row.append(&file_button(index, true, move |index| {
+            calls.borrow_mut().push(index)
+        }));
+    });
+    let completed: Arc<[FileDetail]> = vec![FileDetail {
+        name: "nested/empty".into(),
+        size: 0,
+    }]
+    .into();
+    let saved = saved_files_card(completed.clone(), 2, true, Some(saved_action));
+    assert_eq!(
+        saved
+            .first_child()
+            .unwrap()
+            .downcast::<gtk::Label>()
+            .unwrap()
+            .text(),
+        "Saved 1 of 2 files"
+    );
+    let expander = saved
+        .last_child()
+        .unwrap()
+        .downcast::<gtk::Expander>()
+        .unwrap();
+    assert!(expander.child().is_none());
+    expander.set_expanded(true);
+    assert!(saved_calls.borrow().is_empty());
+    let list = expander.child().unwrap();
+    let file = list.first_child().unwrap();
+    assert!(file.next_sibling().is_none());
+    assert_eq!(
+        file.first_child()
+            .unwrap()
+            .downcast::<gtk::Label>()
+            .unwrap()
+            .text(),
+        "nested/empty · 0 bytes"
+    );
+    file.last_child()
+        .unwrap()
+        .downcast::<gtk::Button>()
+        .unwrap()
+        .emit_clicked();
+    assert_eq!(*saved_calls.borrow(), vec![0]);
+    let compact = saved_files_card(completed, 2, false, None);
+    assert_eq!(compact.first_child(), compact.last_child());
+    let empty = saved_files_card(Arc::default(), 2, true, None);
+    assert_eq!(empty.first_child(), empty.last_child());
+    assert_eq!(
+        empty
+            .first_child()
+            .unwrap()
+            .downcast::<gtk::Label>()
+            .unwrap()
+            .text(),
+        "Saved 0 of 2 files"
+    );
 }

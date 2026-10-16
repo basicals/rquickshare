@@ -2,7 +2,7 @@
 use std::{fs::File, sync::Arc};
 
 use super::*;
-use crate::service::{Direction, Phase};
+use crate::service::Direction;
 use crate::sessions::details::{DetailsStatus, PayloadKind};
 
 #[derive(Clone)]
@@ -57,12 +57,12 @@ impl NativeClient {
             .find(|row| &row.transfer == target)
             .ok_or(ClientError::Rejected(DomainError::UnknownTransfer))?;
         if transfer.direction != Direction::Inbound
-            || transfer.phase != Phase::Finished
+            || !transfer.phase.is_terminal()
             || transfer.reveal_revision != Some(revision)
             || revision == 0
             || transfer.details.kind != PayloadKind::Files
             || transfer.details.status != DetailsStatus::Ready
-            || index as usize >= transfer.details.files.len()
+            || index as usize >= transfer.completed_files.len()
         {
             return Err(ClientError::Rejected(DomainError::InvalidState));
         }

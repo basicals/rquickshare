@@ -33,6 +33,64 @@ pub(crate) fn fixture() -> (tempfile::TempDir, Arc<ReceivedFiles>, TransferDetai
     };
     (directory, receipt, details)
 }
+
+#[test]
+fn given_partly_published_manifest_when_freezing_receipt_then_only_recorded_members_and_one_reserved_slot_survive(
+) {
+    // Arrange
+    let directory = tempfile::tempdir().unwrap();
+    let root = ReceivePolicy::new(Some(directory.path().to_owned()))
+        .snapshot()
+        .pin()
+        .unwrap();
+    let budget = ReceiptBudget::default();
+    let mut pending = PendingFiles::new(root.clone(), vec![101, 102], budget.clone()).unwrap();
+    assert_eq!(budget.0.load(Ordering::Acquire), 1);
+    let path = directory.path().join("b.bin");
+    let (mut file, publication) = root.stage_file(&path).unwrap();
+    file.write_all(b"done").unwrap();
+    publication.publish(&file, 4).unwrap();
+    publication.sync().unwrap();
+    pending.record(102, &path, &file, 4).unwrap();
+    // Act / Assert
+    let receipt = pending.finish_partial().unwrap();
+    assert_eq!(receipt.len(), 1);
+    assert_eq!(receipt.details()[0].name, "b.bin");
+    assert!(receipt.open(1).is_err());
+    let details = TransferDetails {
+        files: vec![
+            crate::sessions::details::FileDetail {
+                name: "a.bin".into(),
+                size: 1,
+            },
+            crate::sessions::details::FileDetail {
+                name: "b.bin".into(),
+                size: 4,
+            },
+        ]
+        .into(),
+        ..Default::default()
+    };
+    assert!(receipt.subset_of(&details));
+    assert!(!receipt.valid_for(&details));
+    let mismatched = TransferDetails {
+        files: vec![crate::sessions::details::FileDetail {
+            name: "b.bin".into(),
+            size: 5,
+        }]
+        .into(),
+        ..details
+    };
+    assert!(!receipt.subset_of(&mismatched));
+    assert_eq!(budget.0.load(Ordering::Acquire), 1);
+    drop(receipt);
+    assert_eq!(budget.0.load(Ordering::Acquire), 0);
+    assert!(PendingFiles::new(root, vec![101], budget.clone())
+        .unwrap()
+        .finish_partial()
+        .is_none());
+    assert_eq!(budget.0.load(Ordering::Acquire), 0);
+}
 #[test]
 fn given_actual_completed_records_when_root_moves_then_original_authority_and_manifest_order_are_preserved(
 ) {
@@ -154,7 +212,7 @@ fn given_receipt_budget_when_snapshots_outlive_history_then_only_final_drop_rele
     let file = root.create_file(&path).unwrap();
     let budget = ReceiptBudget::default();
     let make = || {
-        let mut pending = PendingFiles::new(root.clone(), vec![101], budget.clone()).unwrap();
+        let mut pending = PendingFiles::new(root.clone(), vec![101], budget.clone())?;
         pending.record(101, &path, &file, 0).unwrap();
         pending.finish()
     };

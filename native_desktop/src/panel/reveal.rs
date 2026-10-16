@@ -19,6 +19,7 @@ struct Observation<'a> {
     direction: Direction,
     phase: Phase,
     details: &'a TransferDetails,
+    completed_count: usize,
 }
 fn matches(epoch: u128, id: &str, revision: u64, index: u32, observed: &Observation<'_>) -> bool {
     observed.epoch == epoch
@@ -26,11 +27,12 @@ fn matches(epoch: u128, id: &str, revision: u64, index: u32, observed: &Observat
         && observed.revision == Some(revision)
         && revision != 0
         && observed.direction == Direction::Inbound
-        && observed.phase == Phase::Finished
+        && observed.phase.is_terminal()
         && observed.details.kind == PayloadKind::Files
         && observed.details.status == DetailsStatus::Ready
-        && observed.details.transferred_bytes == observed.details.total_bytes
-        && (index as usize) < observed.details.files.len()
+        && (observed.phase != Phase::Finished
+            || observed.details.transferred_bytes == observed.details.total_bytes)
+        && (index as usize) < observed.completed_count
 }
 fn current(key: &Key, state: &PanelState) -> bool {
     !state.disconnected
@@ -54,6 +56,7 @@ fn current(key: &Key, state: &PanelState) -> bool {
                                 direction: row.direction,
                                 phase: row.phase,
                                 details: &row.details,
+                                completed_count: row.completed_files.len(),
                             },
                         )
                 })
@@ -128,7 +131,7 @@ impl Panel {
         let revision = transfer.reveal_revision?;
         if !full
             || transfer.direction != Direction::Inbound
-            || transfer.phase != Phase::Finished
+            || !transfer.phase.is_terminal()
             || transfer.details.kind != PayloadKind::Files
         {
             return None;

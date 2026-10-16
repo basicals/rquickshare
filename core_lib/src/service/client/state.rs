@@ -37,6 +37,7 @@ impl fmt::Debug for Endpoint {
 }
 #[derive(Clone, Eq, PartialEq)]
 pub struct TransferView {
+    pub completed_files: Arc<[FileDetail]>,
     pub recipient: Option<String>,
     pub content_revision: Option<u64>,
     pub reveal_revision: Option<u64>,
@@ -265,6 +266,7 @@ impl NativeClient {
             recipient: None,
             content_revision: None,
             reveal_revision: None,
+            completed_files: Arc::default(),
             transfer: Transfer {
                 id: row.0,
                 connection: self.identity.clone(),
@@ -498,14 +500,41 @@ impl NativeClient {
             transfer.reveal_revision = optional_revision(files.1 != 0, files.1, view.revision)?;
             if files.1 != 0
                 && (transfer.direction != Direction::Inbound
-                    || transfer.phase != Phase::Finished
+                    || !transfer.phase.is_terminal()
                     || details.0.kind != crate::sessions::details::PayloadKind::Files
                     || details.0.status != DetailsStatus::Ready
-                    || details.0.transferred_bytes != details.0.total_bytes
-                    || files.2 as usize != details.0.files.len())
+                    || files.2 as usize > details.0.files.len()
+                    || (transfer.phase == Phase::Finished
+                        && (details.0.transferred_bytes != details.0.total_bytes
+                            || files.2 as usize != details.0.files.len())))
             {
                 return Err(ClientError::Protocol);
             }
+            let completed: Vec<(String, u64)> = self
+                .pages_for_on(
+                    bus::files::INTERFACE,
+                    "GetCompletedPage",
+                    &metadata.0,
+                    files.2,
+                    Some(transfer.transfer.id()),
+                )
+                .await?;
+            if completed.windows(2).any(|rows| rows[0].0 >= rows[1].0)
+                || completed.iter().any(|(name, size)| {
+                    !details
+                        .0
+                        .files
+                        .iter()
+                        .any(|file| &file.name == name && file.size == *size)
+                })
+            {
+                return Err(ClientError::Protocol);
+            }
+            transfer.completed_files = completed
+                .into_iter()
+                .map(|(name, size)| FileDetail { name, size })
+                .collect::<Vec<_>>()
+                .into();
             transfer.details = Arc::new(details.0);
         }
         self.read_notices(&metadata.0, &mut view).await?;

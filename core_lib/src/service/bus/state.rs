@@ -58,6 +58,7 @@ pub(super) type NoticeRow = (String, String, u64, u64);
 pub(super) type SourceRow = (String, &'static str, u32, u64);
 
 struct Capture {
+    completed: Vec<(String, Arc<[crate::sessions::details::FileDetail]>)>,
     recipients: Vec<EndpointRow>,
     sources: Vec<SourceRow>,
     received: Vec<super::files::MetadataRow>,
@@ -140,6 +141,14 @@ impl StateCache {
             .try_fold(BASE_BYTES, |bytes, transfer| {
                 bytes
                     .checked_add(transfer.view.details.retained_bytes())
+                    .and_then(|bytes| {
+                        bytes.checked_add(
+                            transfer
+                                .received_files
+                                .as_ref()
+                                .map_or(0, |files| files.display_bytes()),
+                        )
+                    })
                     .ok_or(Error::Capacity)
             })?;
         let retained = self
@@ -196,6 +205,19 @@ impl StateCache {
             .transfers
             .iter()
             .map(|view| (token(view.id.0, view.id.1), view.details.clone()))
+            .collect();
+        let completed = snapshot
+            .transfers
+            .iter()
+            .map(|view| {
+                (
+                    token(view.id.0, view.id.1),
+                    coordinator.transfers[&view.id]
+                        .received_files
+                        .as_ref()
+                        .map_or_else(|| Arc::from([]), |files| Arc::from(files.details())),
+                )
+            })
             .collect();
         let received = snapshot
             .transfers
@@ -291,6 +313,7 @@ impl StateCache {
             })
             .collect();
         let capture = Capture {
+            completed,
             recipients,
             sources,
             received,
@@ -306,6 +329,13 @@ impl StateCache {
         // Fixed reservation includes record storage, owned buffers and conservative map overhead.
         let bytes = size_of::<Capture>()
             + 1024
+            + capture.completed.capacity()
+                * size_of::<(String, Arc<[crate::sessions::details::FileDetail]>)>()
+            + capture
+                .completed
+                .iter()
+                .map(|(id, _)| id.capacity())
+                .sum::<usize>()
             + capture.recipients.capacity() * size_of::<EndpointRow>()
             + capture
                 .recipients
@@ -385,6 +415,25 @@ impl StateCache {
         offset: u32,
     ) -> Result<(u32, Vec<super::files::MetadataRow>), Error> {
         page(&self.get(client, id)?.received, offset)
+    }
+    pub(super) fn completed_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        transfer: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<FileRow>), Error> {
+        let capture = self.get(client, id)?;
+        let (_, files) = capture
+            .completed
+            .iter()
+            .find(|(id, _)| id == transfer)
+            .ok_or(Error::UnknownTransfer)?;
+        let rows: Vec<_> = files
+            .iter()
+            .map(|file| (file.name.clone(), file.size))
+            .collect();
+        page(&rows, offset)
     }
     pub(super) fn text_page(
         &self,

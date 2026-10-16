@@ -129,7 +129,35 @@ impl Root {
             ResolveFlags::BENEATH | ResolveFlags::NO_SYMLINKS | ResolveFlags::NO_MAGICLINKS,
         )?))
     }
+    #[cfg(any(test, not(target_os = "linux")))]
     pub(crate) fn create_file(&self, destination: &Path) -> io::Result<File> {
+        #[cfg(target_os = "linux")]
+        {
+            let (parent, leaf) = self.destination_parent(destination)?;
+            Ok(File::from(rustix::fs::openat(
+                parent,
+                leaf,
+                rustix::fs::OFlags::WRONLY
+                    | rustix::fs::OFlags::CREATE
+                    | rustix::fs::OFlags::EXCL
+                    | rustix::fs::OFlags::NOFOLLOW
+                    | rustix::fs::OFlags::CLOEXEC,
+                rustix::fs::Mode::from_raw_mode(0o666),
+            )?))
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let destination =
+                crate::hdl::inbound::materialize_safe_destination_at(&self.display, destination)
+                    .map_err(|_| io::ErrorKind::PermissionDenied)?;
+            std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(destination)
+        }
+    }
+    #[cfg(target_os = "linux")]
+    fn destination_parent(&self, destination: &Path) -> io::Result<(File, std::ffi::OsString)> {
         let relative = destination
             .strip_prefix(&self.display)
             .map_err(|_| io::ErrorKind::InvalidInput)?;
@@ -141,13 +169,12 @@ impl Root {
             })
             .collect::<io::Result<Vec<_>>>()?;
         let (leaf, parents) = components.split_last().ok_or(io::ErrorKind::InvalidInput)?;
-        #[cfg(target_os = "linux")]
         {
             use rustix::fs::{mkdirat, openat, Mode, OFlags};
             let mut parent: Option<File> = None;
             for name in parents {
                 let directory = parent.as_ref().unwrap_or(&self.authority);
-                let flags = OFlags::PATH | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
+                let flags = OFlags::RDONLY | OFlags::DIRECTORY | OFlags::NOFOLLOW | OFlags::CLOEXEC;
                 let opened = match openat(directory, *name, flags, Mode::empty()) {
                     Ok(fd) => fd,
                     Err(rustix::io::Errno::NOENT) => {
@@ -161,25 +188,64 @@ impl Root {
                 };
                 parent = Some(File::from(opened));
             }
-            let directory = parent.as_ref().unwrap_or(&self.authority);
-            Ok(File::from(openat(
-                directory,
-                *leaf,
-                OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-                Mode::from_raw_mode(0o666),
-            )?))
+            let directory = match parent {
+                Some(parent) => parent,
+                None => File::from(openat(
+                    &self.authority,
+                    ".",
+                    OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
+                    Mode::empty(),
+                )?),
+            };
+            Ok((directory, (*leaf).to_owned()))
         }
-        #[cfg(not(target_os = "linux"))]
-        {
-            let _ = (leaf, parents);
-            let destination =
-                crate::hdl::inbound::materialize_safe_destination_at(&self.display, destination)
-                    .map_err(|_| io::ErrorKind::PermissionDenied)?;
-            std::fs::OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(destination)
+    }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn stage_file(&self, destination: &Path) -> io::Result<(File, Publication)> {
+        use rustix::fs::{openat, Mode, OFlags};
+        let (parent, leaf) = self.destination_parent(destination)?;
+        // No pathname exists to clean up, even after an abrupt process exit.
+        let file = File::from(openat(
+            &parent,
+            ".",
+            OFlags::TMPFILE | OFlags::RDWR | OFlags::CLOEXEC,
+            Mode::from_raw_mode(0o600),
+        )?);
+        Ok((file, Publication { parent, leaf }))
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) struct Publication {
+    parent: File,
+    leaf: std::ffi::OsString,
+}
+#[cfg(target_os = "linux")]
+impl fmt::Debug for Publication {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ReceivePublication").finish_non_exhaustive()
+    }
+}
+#[cfg(target_os = "linux")]
+impl Publication {
+    pub(crate) fn publish(&self, file: &File, size: u64) -> io::Result<()> {
+        use std::os::fd::AsRawFd;
+        let metadata = file.metadata()?;
+        if !metadata.is_file() || metadata.len() != size {
+            return Err(io::ErrorKind::InvalidData.into());
         }
+        file.sync_data()?;
+        rustix::fs::linkat(
+            rustix::fs::CWD,
+            format!("/proc/self/fd/{}", file.as_raw_fd()),
+            &self.parent,
+            &self.leaf,
+            rustix::fs::AtFlags::SYMLINK_FOLLOW,
+        )?;
+        Ok(())
+    }
+    pub(crate) fn sync(&self) -> io::Result<()> {
+        self.parent.sync_all()
     }
 }
 

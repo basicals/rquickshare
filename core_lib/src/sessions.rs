@@ -518,16 +518,20 @@ impl SessionLease {
         let details_changed = *status.snapshot.details != details;
         #[cfg(target_os = "linux")]
         let files_changed = {
-            let files = if *actual == State::Finished
+            let files = if terminal(actual)
                 && status.snapshot.direction == TransferType::Inbound
                 && status.decision.is_some_and(|decision| decision.accept)
                 && details.status == details::DetailsStatus::Ready
                 && details.kind == details::PayloadKind::Files
-                && details.transferred_bytes == details.total_bytes
             {
-                self.completed_files
-                    .clone()
-                    .filter(|files| files.valid_for(&details))
+                self.completed_files.clone().filter(|files| {
+                    if *actual == State::Finished {
+                        details.transferred_bytes == details.total_bytes
+                            && files.valid_for(&details)
+                    } else {
+                        files.subset_of(&details)
+                    }
+                })
             } else {
                 None
             };

@@ -848,6 +848,21 @@ impl SelectionBus {
                 return self.domain_error(&header, Error::InvalidInput).await;
             }
             match member {
+                Some("GetCompletedPage") => {
+                    let result = message
+                        .body()
+                        .deserialize::<(&str, &str, u32)>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|(id, transfer, offset)| {
+                            token_parts(id, coordinator.epoch)?;
+                            token_parts(transfer, coordinator.epoch)?;
+                            self.state.completed_page(client, id, transfer, offset)
+                        });
+                    return match result {
+                        Ok(page) => self.state_reply(&header, &page).await,
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
                 Some("GetMetadataPage") => {
                     let result = message
                         .body()

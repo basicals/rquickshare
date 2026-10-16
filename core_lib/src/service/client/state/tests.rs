@@ -622,6 +622,7 @@ fn given_detail_header_and_consent_readiness_boundaries_when_decoded_then_malfor
     }]
     .into();
     let mut transfer = TransferView {
+        completed_files: Arc::default(),
         content_revision: None,
         reveal_revision: None,
         recipient: None,

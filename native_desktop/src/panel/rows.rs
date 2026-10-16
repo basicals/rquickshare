@@ -31,6 +31,7 @@ fn named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
 }
 fn same_description(a: &TransferView, b: &TransferView) -> bool {
     a.transfer == b.transfer
+        && a.completed_files == b.completed_files
         && a.recipient == b.recipient
         && a.direction == b.direction
         && a.phase == b.phase
@@ -134,7 +135,7 @@ impl Panel {
                 button.set_sensitive(enabled);
             }
         }
-        for index in 0..transfer.details.files.len() {
+        for index in 0..transfer.completed_files.len() {
             if let Some(button) = named(root.upcast_ref(), &format!("reveal-{index}")) {
                 button.set_sensitive(ready && transfer.reveal_revision.is_some());
             }

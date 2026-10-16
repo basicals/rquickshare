@@ -508,6 +508,8 @@ pub struct InboundRequest<S = TcpStream> {
     receive_root: Option<crate::receive::Root>,
     #[cfg(target_os = "linux")]
     pending_files: Option<crate::received_files::PendingFiles>,
+    #[cfg(target_os = "linux")]
+    publications: std::collections::HashMap<i64, crate::receive::Publication>,
 }
 
 impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
@@ -538,6 +540,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
             receive_root: None,
             #[cfg(target_os = "linux")]
             pending_files: None,
+            #[cfg(target_os = "linux")]
+            publications: std::collections::HashMap::new(),
         }
     }
 
@@ -567,8 +571,29 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
     pub(crate) fn record_termination(&mut self, state: State) {
         if !crate::sessions::terminal(&self.state.state) {
             self.state.state = state;
+            self.finish_received();
             if let Some(session) = self.session.as_mut() {
-                session.observe(&self.state.state);
+                session.observe_state(&self.state);
+            }
+        }
+    }
+
+    fn finish_received(&mut self) {
+        #[cfg(target_os = "linux")]
+        if crate::sessions::terminal(&self.state.state) {
+            // Unlinked incomplete members disappear on close; completed links remain.
+            for file in self.state.transferred_files.values_mut() {
+                file.file.take();
+            }
+            self.publications.clear();
+            if let Some(pending) = self.pending_files.take() {
+                if let Some(session) = self.session.as_mut() {
+                    session.completed_files = if self.state.state == State::Finished {
+                        pending.finish()
+                    } else {
+                        pending.finish_partial()
+                    };
+                }
             }
         }
     }
@@ -1340,28 +1365,32 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                                 return Err(anyhow!("File payload ended before its declared size"));
                             }
                             #[cfg(target_os = "linux")]
+                            if let Some(publication) = self.publications.get(&payload_id) {
+                                publication
+                                    .publish(file, file_internal.total_size as u64)
+                                    .map_err(|_| anyhow!("Cannot finish received file safely"))?;
+                            }
+                            #[cfg(target_os = "linux")]
                             if let Some(pending) = self.pending_files.as_mut() {
-                                if pending
+                                pending
                                     .record(
                                         payload_id,
                                         &file_internal.file_url,
                                         file,
                                         file_internal.total_size as u64,
                                     )
-                                    .is_err()
-                                {
-                                    self.pending_files = None;
-                                }
+                                    .map_err(|_| {
+                                        anyhow!("Cannot record completed received file")
+                                    })?;
+                            }
+                            #[cfg(target_os = "linux")]
+                            if let Some(publication) = self.publications.remove(&payload_id) {
+                                publication
+                                    .sync()
+                                    .map_err(|_| anyhow!("Received file directory sync failed"))?;
                             }
                             self.state.transferred_files.remove(&payload_id);
                             if self.state.transferred_files.is_empty() {
-                                #[cfg(target_os = "linux")]
-                                if let Some(session) = self.session.as_mut() {
-                                    session.completed_files = self
-                                        .pending_files
-                                        .take()
-                                        .and_then(|pending| pending.finish());
-                                }
                                 info!("Transfer finished");
                                 self.update_state(
                                     |e| {
@@ -1590,6 +1619,9 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         .collect(),
                     session.file_budget.clone(),
                 );
+                if self.pending_files.is_none() {
+                    return Err(anyhow!("Received file tracking capacity is unavailable"));
+                }
             }
             let planning = root.planning_path();
             let PreparedInboundFiles {
@@ -1761,7 +1793,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
 
     async fn accept_transfer(&mut self) -> Result<(), anyhow::Error> {
         let ids: Vec<i64> = self.state.transferred_files.keys().cloned().collect();
-
+        #[cfg(target_os = "linux")]
+        let mut prepared = Vec::with_capacity(ids.len());
         for id in ids {
             let mfi = self
                 .state
@@ -1773,11 +1806,29 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                 .receive_root
                 .as_ref()
                 .ok_or_else(|| anyhow!("Receive directory is unavailable"))?;
-            let file = root
-                .create_file(&mfi.file_url)
-                .map_err(|_| anyhow!("Cannot create received file safely"))?;
-            info!("Created received file in the selected directory");
-            mfi.file = Some(file);
+            #[cfg(not(target_os = "linux"))]
+            {
+                let file = root
+                    .create_file(&mfi.file_url)
+                    .map_err(|_| anyhow!("Cannot create received file safely"))?;
+                mfi.file = Some(file);
+            }
+            #[cfg(target_os = "linux")]
+            {
+                let (file, publication) = root
+                    .stage_file(&mfi.file_url)
+                    .map_err(|_| anyhow!("Receive filesystem cannot prepare a safe file"))?;
+                prepared.push((id, file, publication));
+            }
+        }
+        #[cfg(target_os = "linux")]
+        for (id, file, publication) in prepared {
+            self.state
+                .transferred_files
+                .get_mut(&id)
+                .expect("prepared file")
+                .file = Some(file);
+            self.publications.insert(id, publication);
         }
 
         let frame = sharing_nearby::Frame {
@@ -2143,6 +2194,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
         F: FnOnce(&mut InnerState),
     {
         f(&mut self.state);
+        self.finish_received();
 
         if let Some(session) = self.session.as_mut() {
             session.observe_state(&self.state);
@@ -3010,6 +3062,11 @@ mod security_tests {
         assert!(send_plain_frame_on(&mut writer, &[]).await.is_err());
     }
 
+    #[cfg(target_os = "linux")]
+    mod receive_reliability {
+        include!("inbound/receive_reliability.rs");
+    }
+
     struct TestRequest {
         request: InboundRequest<tokio::io::DuplexStream>,
         _directory: tempfile::TempDir,
@@ -3102,10 +3159,26 @@ mod security_tests {
             }
             request.accept_transfer().await.unwrap();
             let target = if rename { &moved } else { &selected };
-            assert!(target.join("Trip/nested/file.bin").is_file());
+            assert!(!target.join("Trip/nested/file.bin").exists());
             assert!(std::fs::read_dir(&other).unwrap().next().is_none());
             assert!(request.state.transferred_files[&101].file.is_some());
             assert_eq!(request.state.state, State::ReceivingFiles);
+            request
+                .process_offline_frame(received_file_frame(101, 3, 0, b"abc", 0))
+                .await
+                .unwrap();
+            assert!(!target.join("Trip/nested/file.bin").exists());
+            let completed = request
+                .process_offline_frame(received_file_frame(101, 3, 3, &[], 1))
+                .await
+                .unwrap_err();
+            assert!(completed.is::<crate::errors::AppError>());
+            assert_eq!(request.state.state, State::Finished);
+            assert_eq!(
+                std::fs::read(target.join("Trip/nested/file.bin")).unwrap(),
+                b"abc"
+            );
+            assert!(std::fs::read_dir(&other).unwrap().next().is_none());
         }
     }
 

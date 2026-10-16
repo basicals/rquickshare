@@ -706,12 +706,17 @@ impl Coordinator {
         };
         let transfer = self.transfers.get(&id).ok_or(Error::UnknownTransfer)?;
         if transfer.view.direction != Direction::Inbound
-            || transfer.view.phase != Phase::Finished
+            || !transfer.view.phase.is_terminal()
             || transfer.view.details.status != crate::sessions::details::DetailsStatus::Ready
             || transfer.view.details.kind != crate::sessions::details::PayloadKind::Files
-            || transfer.view.details.transferred_bytes != transfer.view.details.total_bytes
+            || (transfer.view.phase == Phase::Finished
+                && transfer.view.details.transferred_bytes != transfer.view.details.total_bytes)
             || transfer.terminal_revision.is_none()
-            || !received.valid_for(&transfer.view.details)
+            || !(if transfer.view.phase == Phase::Finished {
+                received.valid_for(&transfer.view.details)
+            } else {
+                received.subset_of(&transfer.view.details)
+            })
         {
             return Err(Error::InvalidState);
         }
