@@ -89,7 +89,7 @@ and full Stage 12 mapping remain OPEN.
    test in existing inbound reliability fixture.
 3. [x] Verify both variants on same-source CI, no
    weakening; correct test fixture only if needed.
-4. [ ] Record evidence and update `current-state.md`
+4. [x] Record evidence and update `current-state.md`
    with critical backlog next, keeping hardware
    cancellation/retry UNTESTED.
 Rollback removes one test method and this ledger,
@@ -192,3 +192,23 @@ still UNTESTED in physical installed-device
 acceptance. The mandatory final full MODE B 10×
 on the final post-hardware source and global
 Stage 12 branch inventory also remain OPEN.
+
+## Final exact CI verdict
+
+Corrected-source
+[Preflight 39076613994](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076613994)
+completed **5/5 SUCCESS**, including legacy Tauri
+Clippy and desktop unit tests, formatter, frontend,
+Core strict Clippy and the Rust Core test job.
+[Native GTK 39076614010](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076614010)
+also completed **SUCCESS**. The source-only P0
+remote-Cancel scenario is fully implemented and green.
+The first failed test iteration was preserved and
+explained above; the corrected test follows the
+unchanged domain semantics precisely.
+
+Next essential user-led acceptance remains
+Pixel-to-Linux/Windows real Cancel in-flight,
+completion-hash/partial-file comparison, explicit
+new send on retry, and ordinary text and folder
+roundtrip. None are marked physically passed.
