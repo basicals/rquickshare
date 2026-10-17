@@ -36,7 +36,16 @@ was changed**. Corrected test-only source
 `b69a6581` is being revalidated on GitHub
 [Preflight 39076613994](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076613994)
 and [Native GTK 39076614010](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076614010).
-Neither running job is claimed successful yet.
+The corrected source's
+[Preflight 39076613994](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076613994)
+has now completed **5/5 SUCCESS**, including legacy Tauri.
+The [Native GTK 39076614010](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076614010)
+job also completed **SUCCESS**. The genuine protocol
+`Cancel` test passes both variants; Core Rust 699 stable
+cases 1x + eight × 10 risk-sensitive cases (80/0) and
+the 4+4 integration tests are all green. Source-only
+P0 decline and in-flight Cancel checks are closed;
+physical Peer Cancel and explicit retry remain UNTESTED.
 Full MODE B 10x previously passed at prior source
 `f8e5d2d0`; after new P0 tests, strict current-source
 10x/post-hardware acceptance remains to be redone.
