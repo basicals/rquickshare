@@ -85,7 +85,7 @@ fail or become visibly unsupported. No mutation tool run.
 
 1. [x] Read exact existing workflow and full strict job results;
    establish isolation and test-count/risk/matrix before code.
-2. [ ] Create a separate opt-in GitHub workflow for GTK
+2. [x] Create a separate opt-in GitHub workflow for GTK
    llvm-cov with 26.04 runner, no product changes and
    no duplicate complete 10x workload.
 3. [ ] Observe the exact-source job and record per-file
@@ -96,4 +96,14 @@ fail or become visibly unsupported. No mutation tool run.
 
 ## Execution
 
-Pending source commit and GitHub job.
+Workflow created `668917d8`, then corrected the exact
+Rust output-matching regex `3bb41cb6` (the script initially
+double-escaped its literal dot). Both are workflow-only
+GitHub commits. The first file-trigger run was superseded,
+not counted as coverage evidence. Exact corrected-source
+[Native GTK instrumented coverage](https://github.com/morozhenko-apps/rquickshare/actions/runs/39071770811)
+is running at the initial checkpoint. Job success,
+reported percentages and the 52-case instrumented test summary
+must be read from the complete result, not guessed from its
+start. All product code, prior 10x validation, installed
+host and Google peer acceptance remain unchanged.
