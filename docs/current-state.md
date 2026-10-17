@@ -1,12 +1,14 @@
 # Current implementation and continuation state
 
-2026-10-17 follow-up source checkpoint: flat live Transfers rows now expose checked
-result/text/cancel actions directly, without a row Expander. The affected panel
-scope19/0 and strict native lint passed. Native26 package verification and an
-idle-gated installation are in progress; native25 remains installed until receipt.
-See [native26 plan](native26-flat-transfers-2026-10-17.md). The reported extra
-sender confirmation is still unidentified; no sender-consent/editor change has
-been made without the exact path/window.
+2026-10-17 installed checkpoint: native26 installed with14-file/tray/API checks
+passed; login startup remains disabled. See [evidence](evidence/native26-installation-2026-10-17.json).
+The user clarified with a screenshot that the extra confirmation was incoming
+Receive -> expanded consent controls. Native27's approved scoped plan removes
+all row disclosure and immediately places guarded Decline/Accept beside type/code;
+see [continuation plan](native26-flat-transfers-2026-10-17.md). No automatic
+acceptance or sender-flow change is authorized or needed by this clarification.
+
+Historical native25 checkpoint:
 
 2026-10-17 installed checkpoint: native25 is installed and running. Binary source
 4b6d98cdacb267335efa79fc32d3c2f8525acc02; exact package, installed14-file/tray/API

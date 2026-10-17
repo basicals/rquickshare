@@ -37,7 +37,7 @@ additional sender dialog; keep the independently authorized history work moving.
 - [x] S2: record flat-row contract, preservation rules and focused verification.
 - [x] S3: flatten history rows; retain direct result/review/cancel controls.
 - [x] S4: run affected real GTK scope and strict native lint once; record observations.
-- [ ] S5: commit source, build a distinct package and perform an idle-gated upgrade.
+- [x] S5: commit source, build a distinct package and perform an idle-gated upgrade.
 - [ ] S6: record exact installed/export receipts and request physical acceptance.
 
 Main risks: losing partial-file/cancel/consent actions while removing the detail
@@ -77,3 +77,36 @@ Binary source4436332; package inventory/dependencies/ELF/checksums/offline check
 passed. Upgrade script pins native25 known owners2699373/2699377, exact old/new
 package hashes and fresh global idle gate. It preserves login settings and starts
 normal units after APT; it adds no trace override (receiver correction unchanged).
+
+## Installed receipt and clarified request
+
+APT exited0; native26 is installed. All14 regular files match, both units run
+(PIDs2738171/2738175), one14-entry Active tray and passive Visibility2/Journal1/
+AcquireResult checks passed. Login startup remains disabled; no runtime trace
+override was added. See evidence/native26-installation-2026-10-17.json.
+
+The user supplied a screenshot clarifying that the reported extra confirmation
+is the incoming card's Receive -> expanded consent area, not an outbound chooser.
+The new explicit request supersedes the earlier disclosure contract: no row
+Expander or lower detail screen; incoming Decline/Accept appear immediately in
+the same row beside peer/type/code. Keep explicit receiver consent, exact
+revision/readiness validation, before-bytes code and progress-during-bytes.
+
+## Native27 scoped continuation plan before code
+
+- [ ] C1: remove row disclosure construction/state; attach existing guarded consent
+  and current control callbacks directly to the heading on all live row surfaces.
+- [ ] C2: keep manifest names/sizes as plain tooltip/accessibility description;
+  no additional lower screen. Preserve inline result/text/cancel actions and
+  partial receipt capabilities from native26. Receive focuses existing Accept
+  rather than expanding content. Remove obsolete expansion state/tests.
+- [ ] C3: verify real widget inline consent, no Expander/Receive indirection,
+  callbacks/readiness, code/progress stages and unchanged retained row ordering
+  once; strict native lint once. Update synthetic incoming preview to the actual
+  same row builder instead of a historical expanded fixture.
+- [ ] C4: commit, build distinct27, idle-gated upgrade, record measured receipts.
+
+This is the user's specified layout change, not automatic acceptance. No new
+protocol/API/security authority or BLE change. Reuse the existing bounded
+manifest and exact Respond callback. Retain original content checks. Rollback26
+remains immutable; do not interrupt an incoming request/active transfer to update.

@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "source_commit": "4436332",
+  "package": {
+    "name": "rquickshare_0.11.5+native26_amd64.deb",
+    "bytes": 6653320,
+    "sha256": "5f8baac1fa56479ec7014dfb2bd71eaa5b2b16537fd05d76d23d94fa6d8bf448"
+  },
+  "installation": {
+    "observed_at": "2026-10-17T13:26:47.186538+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native25",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2699373"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2699377"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 2,
+      "owned_selections": 0,
+      "transfers": 1
+    },
+    "terminal_history_count": 1,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native26",
+    "normal_launch_restored": true,
+    "temporary_trace_override_absent": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2738171"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2738175"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "passive_installed_checks": {
+    "observed_at": "2026-10-17T13:29:31.369359+00:00",
+    "installed_version": "0.11.5+native26",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true,
+    "endpoint_association_read": {
+      "total": 0,
+      "rows": 0,
+      "passed": true
+    },
+    "visibility2_read": {
+      "running": true,
+      "mode": 2,
+      "valid": true
+    },
+    "journal_read": {
+      "error": 0,
+      "records": 5,
+      "valid": true
+    },
+    "queue_and_journal_retry_supported": true,
+    "whole_result_supported": true
+  },
+  "checks": {
+    "panel_passed": 19,
+    "panel_failed": 0,
+    "panel_seconds": 0.54,
+    "strict_native_clippy_seconds": 1.55
+  },
+  "physical_acceptance_pending": true,
+  "no_public_release": true
+}
