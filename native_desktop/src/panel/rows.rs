@@ -420,7 +420,8 @@ impl Panel {
         let mut active_rows = Vec::new();
         let mut terminal_rows = Vec::new();
         let mut grouped: BTreeMap<String, Vec<gtk::Box>> = BTreeMap::new();
-        let discovered: BTreeSet<&str> = view.endpoints.iter().map(|peer| peer.id.as_str()).collect();
+        let discovered: BTreeSet<&str> =
+            view.endpoints.iter().map(|peer| peer.id.as_str()).collect();
         let recent: BTreeSet<_> = view
             .transfers
             .iter()
@@ -470,10 +471,12 @@ impl Panel {
         // result to discovery. Inbound advertised names are never identity.
         for endpoint in &view.endpoints {
             let key = ("nearby".to_owned(), endpoint.id.clone());
-            let Some(entry) = rows.entries.get(&key) else { continue };
+            let Some(entry) = rows.entries.get(&key) else {
+                continue;
+            };
             let root = entry.root.clone();
-            let existing = named(root.upcast_ref(), "device-activity")
-                .and_downcast::<gtk::Expander>();
+            let existing =
+                named(root.upcast_ref(), "device-activity").and_downcast::<gtk::Expander>();
             if let Some(operations) = grouped.remove(&endpoint.id) {
                 let expander = existing.unwrap_or_else(|| {
                     let expander = gtk::Expander::new(Some("Completed operations"));
@@ -497,7 +500,9 @@ impl Panel {
                     root.append(&expander);
                     expander
                 });
-                let body = expander.child().and_downcast::<gtk::Box>()
+                let body = expander
+                    .child()
+                    .and_downcast::<gtk::Box>()
                     .expect("device activity container");
                 arrange(&body, &operations);
             } else if let Some(expander) = existing {
@@ -687,7 +692,10 @@ pub(super) fn verify_keyed_layout() {
         bound_current_endpoint(Direction::Inbound, Some("ep-1"), &live),
         None
     );
-    assert_eq!(bound_current_endpoint(Direction::Outbound, None, &live), None);
+    assert_eq!(
+        bound_current_endpoint(Direction::Outbound, None, &live),
+        None
+    );
     let untrusted_header = section_title("<Mercury> is not a verified identity");
     assert_eq!(
         untrusted_header
