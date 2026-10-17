@@ -85,14 +85,14 @@ layout, Send flow and honest terminal-state repairs do not require this change.
 
 - [x] A1: inspect SSOT, native GTK, core recipient projection, current tests
   and CI. Record the user's B selection and API limitation before editing code.
-- [ ] A2: repair GTK expansion, height measurement and upward anchor; add
+- [x] A2: repair GTK expansion, height measurement and upward anchor; add
   bounded-height and state-preservation regressions.
-- [ ] A3: make Send enter explicit device selection before source choice, keeping
+- [x] A3: make Send enter explicit device selection before source choice, keeping
   the existing source flows available and tested.
 - [ ] A4: repair terminal text/status projection and safely separate unlinked
   operations; implement connected grouping only after the peer-association
   decision, otherwise mark the blocked portion OPEN.
-- [ ] B1: complete and update affected artifact/branch inventories,
+- [x] B1: complete and update affected artifact/branch inventories,
   Positive/N1-N12 and interaction/coverage matrices **before** adding tests.
 - [ ] B2: implement complete planned contract/widget assertions; run native GTK
   test suite, strict Rust format/Clippy and whole affected CI when possible.
@@ -194,3 +194,29 @@ Expected count in the new targeted slice: around 34 explicit positive/negative
 scenario assertions plus existing GTK, geometry and core regressions; adjust the
 actual count to the implemented inventory, not the other way around. Do not
 claim 100% branches, 10 successful runs or exact coverage until measured.
+
+## Incremental source checkpoint (2026-10-17; verification pending)
+
+- `panel/rows.rs`: expanding transfer rows now pins before toggling and
+  remeasures after GTK idle allocation; phase/status replacement recovers the
+  previous expander state. Header requests receive a fixed right-aligned review
+  control. The GTK Expander is configured to resize its top-level window.
+- `panel.rs`: nearby scroll height adapts to the current monitor (120..760
+  logical pixels after reserving 220), and finished/failed transfers with
+  unsupported metadata display a neutral explanation rather than the
+  inappropriate pre-consent warning. Optional `RQUICKSHARE_UI_DEBUG=1` prints
+  numeric geometry, scroll maximum and placement state only, never payloads,
+  filenames, advertised names or PINs.
+- `panel/menu.rs`: Send first opens the nearby recipient list; choosing a
+  current endpoint with no prepared source opens the existing source menu.
+  No automatic transmission, discovery identity or entitlement is implied.
+- `panel/rows.rs`: current transfers, discovered endpoints, and unlinked
+  completed activity are separate. Completed entries are nested in a collapsed
+  `Recent activity · device not verified` expander and remain available for
+  explicit text/file review. This is the safe fallback for option B, **not**
+  verified grouping by device. Endpoint association remains blocked by the
+  documented API decision.
+- `panel/tests.rs` and `rows.rs`: added assertions for scroll cap, Send
+  device-first flow, terminal unsupported metadata, and expander state. The
+  isolated native GTK CI now exists on dev and runs the GTK suite ten times.
+  Whole-repository Mode B coverage and native installed acceptance remain OPEN.
