@@ -1,5 +1,45 @@
 # Current implementation and continuation state
 
+
+## Verified complete ten-pass automated Mode B — 2026-10-17
+
+At exact source `f8e5d2d0`, strict
+[Mode B workflow 39066477128](https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477128)
+completed **SUCCESS (3/3 jobs)**. Its logs show precisely ten
+complete consecutive attempts each: Core library 704/0 plus
+8/0 integration; legacy Tauri 10/0; frontend Vitest; pinned
+Python publication/contract tests 54/0; and independently
+ten GTK 52/0 isolated X11/D-Bus tests. A dependent job
+then successfully measured core, Vue and legacy Tauri
+instrumented coverage. This closes the **current source's
+strict automated Stage 11 ten-run subgate**, not overall
+Mode B or physical-device product acceptance.
+
+Core Rust `cargo llvm-cov`: **89.35% lines / 85.30%
+functions / 86.20% regions**. Vue V8: **56.00% lines
+and statements / 75.86% functions / 88.04% branches**.
+Legacy Tauri `cargo llvm-cov`: **23.86% lines /
+19.29% functions / 24.98% regions**. Rust source
+reports are not full branch analysis, and the core
+instrumented denominator also counts test fixture code.
+Native GTK's 52 cases passed ten times but had no own
+instrumented coverage in this run; separate
+[read-only isolated GTK coverage](mode-b-native-gtk-coverage-plan-2026-10-17.md)
+was initiated. Full per-source measured baseline and next
+risk-oriented test areas:
+[mode-b-coverage-baseline-2026-10-17.md](mode-b-coverage-baseline-2026-10-17.md).
+
+The 2026-10-17 strict run on `7107339e` had failed on an
+OS botocore version mismatch; the identical-source corrected
+run `f8e5d2d0` pinned the dependencies and passed all ten
+iterations. Preflight for this source also passed all **5/5**
+jobs, including stable/race-sensitive split. All public
+methods/branches, N1–N12, mutation, full native GTK coverage,
+hardware KDE/Wayland, Pixel and Google Windows interoperability,
+native30 install/package and signed release gates are still
+OPEN. `master`, user machine and installed native29 unchanged.
+
+
 ## Ordinary stable/stress CI final verdict — 2026-10-17
 
 Exact-source source `f8e5d2d0`, GitHub Actions
