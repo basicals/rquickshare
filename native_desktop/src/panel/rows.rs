@@ -162,6 +162,7 @@ pub(super) fn transfer_row(
     title.set_width_request(0);
     heading.append(&title);
     let expander = gtk::Expander::new(None);
+    expander.set_resize_toplevel(true);
     expander.set_widget_name("transfer-details");
     expander.set_child(Some(details));
     expander.set_expanded(expanded);
@@ -461,6 +462,7 @@ impl Panel {
             let entry = rows.entries.entry(key.clone()).or_insert_with(|| {
                 let root = card();
                 let expander = gtk::Expander::new(Some("Recent activity · device not verified"));
+                expander.set_resize_toplevel(true);
                 expander.set_widget_name("unlinked-activity");
                 expander.set_expanded(false);
                 let body = gtk::Box::new(gtk::Orientation::Vertical, 8);
