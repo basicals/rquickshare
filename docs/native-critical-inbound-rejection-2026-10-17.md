@@ -128,7 +128,7 @@ remapped here. Stage 12 **overall NO** remains.
    race-sensitive 10x) and separate Native GTK if needed
    (no GTK production changes). Record exact outcomes;
    do not mark running jobs successful.
-4. [ ] Update this ledger and `docs/current-state.md`;
+4. [x] Update this ledger and `docs/current-state.md`;
    preserve physical Pixel refusal and Windows checks
    as UNTESTED unless the user personally runs them.
 
@@ -211,3 +211,16 @@ negative cases pass. **Physical Pixel reject and
 abort, text/folder and Google Windows protocols
 remain UNTESTED**. No installed program changed.
 No new measured coverage claimed.
+
+## Final same-source ordinary CI closure
+
+Preflight run 39075819730 **5/5 SUCCESS** (including legacy
+Tauri Clippy and desktop Rust tests). Native GTK run
+39075819773 **SUCCESS**. Exact new inbound rejection source
+`da71cdcd` passed both named tests. Core library 698
+stable + 8 risk-sensitive (10× each) + 8 integration,
+all with zero errors. This closes the *source-only*
+critical incoming-reject regression scope, not actual
+phone/Windows rejection acceptance or full repository
+MODE B after the source edit. Stage 12 and physical
+confirmation remain NO.
