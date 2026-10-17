@@ -12,6 +12,23 @@ The repository has historical coverage, regression tests, a targeted mutation au
 
 No new tests may be added without a complete inventory/branch/matrix/interaction/count/coverage plan for their scoped artifacts. The offline analyzer's preregistered scope is recorded in `docs/offline-maintenance.md`.
 
+## 2026-10-17 completed Native GTK instrumented measurement
+
+An independent [Native GTK coverage run
+39071770811](https://github.com/morozhenko-apps/rquickshare/actions/runs/39071770811)
+ran all **52/0** isolated GTK4/Xvfb/D-Bus tests under
+`cargo llvm-cov` and completed successfully: **67.00%
+lines / 63.09% functions / 65.35% regions**.
+This is an instrumented one-shot run following the
+separate **GTK 10/10** stability evidence. All 33
+file-level GTK lines/functions/regions, including
+`panel/reveal.rs` 10.87% lines and `panel/outbound.rs`
+47.42%, are recorded in
+[native-gtk-coverage-baseline-2026-10-17.md](native-gtk-coverage-baseline-2026-10-17.md).
+No product source changes or hidden fake UI contracts.
+Hardware acceptance, branch/mutation inventory and
+Stage 12 remain incomplete.
+
 ## 2026-10-17 completed strict automated stability gate
 
 At exact tested code SHA `f8e5d2d0`, GitHub Actions
