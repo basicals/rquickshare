@@ -39,3 +39,15 @@ button.quick-action.receive-active {
 
 /* The primary drawer is one flat list, including transient incoming peer rows. */
 .rqs-card-body .device-row { padding: 8px 0; border: none; border-radius: 0; }
+
+/* Inbound consent requests stay visible in long lists without changing consent. */
+.rqs-card-body .incoming-request {
+  animation: receive-pulse 1.8s ease-in-out infinite;
+}
+button.selection-curtain {
+  background-image: none;
+  background-color: alpha(@theme_bg_color, 0.62);
+  border: 1px solid alpha(currentColor, 0.12);
+  border-radius: 10px;
+  font-weight: 600;
+}

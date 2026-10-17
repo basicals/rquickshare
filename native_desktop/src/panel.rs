@@ -20,6 +20,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 
+mod backdrop;
 mod compose;
 mod countdown;
 mod image;
@@ -88,6 +89,8 @@ pub struct Panel {
     login: RefCell<Option<crate::login::Handle>>,
     sending: gtk::PopoverMenu,
     visibility_tick: RefCell<Option<glib::SourceId>>,
+    backdrop: backdrop::Backdrop,
+    curtain: gtk::Button,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -135,9 +138,11 @@ fn details_card_mode_with_files(
                 sender.set_ellipsize(gtk::pango::EllipsizeMode::End);
                 sender.set_max_width_chars(38);
             }
+            sender.set_widget_name("detail-peer");
             row.append(&sender);
             if !details.pin.is_empty() {
                 let pin = label(&format!("Code: {}", details.pin));
+                pin.set_widget_name("detail-code");
                 pin.add_css_class("verification-code");
                 row.append(&pin);
                 row.append(&label(
@@ -145,7 +150,7 @@ fn details_card_mode_with_files(
                 ));
             }
             if details.kind != rqs_lib::sessions::details::PayloadKind::Files {
-                row.append(&label(&format!(
+                let summary = label(&format!(
                     "{} · {} bytes",
                     if details.kind == rqs_lib::sessions::details::PayloadKind::Url {
                         "Link"
@@ -153,10 +158,12 @@ fn details_card_mode_with_files(
                         "Text"
                     },
                     details.total_bytes
-                )));
+                ));
+                summary.set_widget_name("detail-summary");
+                row.append(&summary);
                 return row;
             }
-            row.append(&label(&format!(
+            let summary = label(&format!(
                 "{} {} · {} bytes",
                 details.files.len(),
                 if details.files.len() == 1 {
@@ -165,11 +172,14 @@ fn details_card_mode_with_files(
                     "files"
                 },
                 details.total_bytes
-            )));
+            ));
+            summary.set_widget_name("detail-summary");
+            row.append(&summary);
             if !full {
                 return row;
             }
             let expander = gtk::Expander::new(Some("Review all files"));
+            expander.set_widget_name("detail-manifest");
             let files = details.files.clone();
             // File widgets are materialized only while expanded, bounded by the manifest limit.
             expander.connect_expanded_notify(move |expander| {
@@ -345,6 +355,24 @@ impl Panel {
             .object::<gtk::Box>("recovery")
             .unwrap()
             .append(&reconnect_button);
+        let compact = builder
+            .object::<gtk::Box>("compact")
+            .expect("bottom controls");
+        let root = builder.object::<gtk::Box>("root").expect("card root");
+        root.remove(&compact);
+        let overlay = gtk::Overlay::new();
+        overlay.set_widget_name("controls-overlay");
+        let backdrop = backdrop::Backdrop::new(&compact);
+        overlay.set_child(Some(&backdrop));
+        let curtain = gtk::Button::with_label("Choose target devices\nClear prepared files");
+        curtain.set_widget_name("selection-curtain");
+        curtain.set_action_name(Some("panel.discard"));
+        curtain.add_css_class("selection-curtain");
+        curtain.set_hexpand(true);
+        curtain.set_vexpand(true);
+        curtain.set_visible(false);
+        overlay.add_overlay(&curtain);
+        root.append(&overlay);
         let panel = Rc::new(Self {
             pages: builder.object("pages").expect("pages widget"),
             window,
@@ -386,6 +414,8 @@ impl Panel {
             login: RefCell::new(None),
             sending: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
             visibility_tick: RefCell::new(None),
+            backdrop,
+            curtain,
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -849,7 +879,7 @@ impl Panel {
         let mode = visibility.map(|view| view.mode);
         let receiving = temporary_receiving(&model);
         let receive = self.button("quick-receive");
-        if receiving {
+        if receiving && !full {
             receive.add_css_class("receive-active");
         } else {
             receive.remove_css_class("receive-active");
@@ -930,6 +960,9 @@ impl Panel {
                 .set_enabled(enabled);
         }
         let selected = selection.is_some();
+        self.backdrop.set_blurred(selected);
+        self.curtain.set_visible(selected);
+        self.curtain.set_sensitive(ready);
         let can_add = !selected
             || model
                 .state

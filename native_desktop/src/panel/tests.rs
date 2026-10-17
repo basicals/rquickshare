@@ -87,6 +87,12 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     css.load_from_string(include_str!("../../ui/panel.css"));
     assert!(css_errors.borrow().is_empty(), "{:?}", css_errors.borrow());
     rows::verify_keyed_layout();
+    let child = gtk::Button::with_label("Behind curtain");
+    let backdrop = backdrop::Backdrop::new(&child);
+    backdrop.set_blurred(true);
+    assert!(!child.is_sensitive());
+    backdrop.set_blurred(false);
+    assert!(child.is_sensitive());
     reveal::tests::verify_reveal_smoke();
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let application = gtk::Application::new(
@@ -128,6 +134,18 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.button("quick-devices").emit_clicked();
     assert_eq!(panel.model.borrow().drawer, Drawer::Open);
     assert!(panel.pages.get_visible());
+    assert_eq!(
+        panel.pages.next_sibling(),
+        Some(panel.box_widget("source").upcast())
+    );
+    assert_eq!(
+        panel.box_widget("source").next_sibling(),
+        Some(panel.box_widget("receive-indicator").upcast())
+    );
+    assert_eq!(
+        panel.curtain.action_name().as_deref(),
+        Some("panel.discard")
+    );
     assert!(!panel.box_widget("source").get_visible());
     for removed in ["header", "mode", "settings-button", "close", "send-entry"] {
         assert!(panel.builder.object::<gtk::Widget>(removed).is_none());
@@ -135,7 +153,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.box_widget("compact").get_visible());
     assert_eq!(
         panel.box_widget("device-drawer").next_sibling(),
-        Some(panel.box_widget("compact").upcast())
+        panel.backdrop.parent()
     );
     let scroll = panel
         .builder
@@ -381,7 +399,9 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
             notices: vec![],
         }));
     panel.model.borrow_mut().preview = false;
+    panel.set_drawer(Drawer::Closed);
     panel.show_sending();
+    assert_eq!(panel.drawer(), Drawer::Closed);
     assert!(
         panel.sending.is_visible(),
         "content choice must precede recipient Send"

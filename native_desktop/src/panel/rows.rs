@@ -64,6 +64,27 @@ fn card_transfer_visible(
 ) -> bool {
     !phase.is_terminal() && bound_current_endpoint(direction, associated, discovered).is_none()
 }
+fn payload_label(details: &TransferDetails) -> String {
+    use rqs_lib::sessions::details::PayloadKind;
+    match details.kind {
+        PayloadKind::Files if details.files.len() == 1 => details.files[0]
+            .name
+            .rsplit_once('.')
+            .map(|(_, ext)| ext)
+            .filter(|ext| {
+                !ext.is_empty() && ext.len() <= 12 && ext.bytes().all(|b| b.is_ascii_alphanumeric())
+            })
+            .map(|ext| ext.to_ascii_uppercase())
+            .unwrap_or_else(|| "File".into()),
+        PayloadKind::Files => format!("{} files", details.files.len()),
+        PayloadKind::Text => "Text".into(),
+        PayloadKind::Url => "Link".into(),
+        _ => "Content".into(),
+    }
+}
+fn transferring(phase: Phase) -> bool {
+    matches!(phase, Phase::Sending | Phase::Receiving)
+}
 fn progress_fraction(done: u64, total: u64) -> f64 {
     if total == 0 {
         0.0
@@ -191,21 +212,27 @@ pub(super) fn transfer_row(
     title.set_max_width_chars(20);
     title.set_width_request(0);
     heading.append(&title);
+    let summary = label("");
+    summary.set_widget_name("row-summary");
+    summary.set_selectable(false);
+    summary.set_wrap(false);
+    heading.append(&summary);
     let progress = gtk::ProgressBar::new();
     progress.set_widget_name("row-progress");
     progress.set_width_request(72);
     progress.set_valign(gtk::Align::Center);
-    progress.set_visible(!phase.is_terminal());
+    progress.set_visible(matches!(phase, Phase::Sending | Phase::Receiving));
     heading.append(&progress);
     let status = label(phase_text(phase));
     status.set_widget_name("row-status");
+    status.set_visible(phase.is_terminal());
     heading.append(&status);
     let expander = gtk::Expander::new(None);
     expander.set_resize_toplevel(true);
     expander.set_widget_name("transfer-details");
     expander.set_child(Some(details));
     expander.set_expanded(expanded);
-    let review = gtk::Button::with_label(if incoming { "Review" } else { "Details" });
+    let review = gtk::Button::with_label("Review");
     review.set_widget_name("row-action");
     review.set_hexpand(false);
     review.set_halign(gtk::Align::End);
@@ -213,7 +240,10 @@ pub(super) fn transfer_row(
     review.connect_clicked(move |_| {
         expanded.set_expanded(!expanded.is_expanded());
     });
-    heading.append(&review);
+    // The history expander already provides the only disclosure control.
+    if incoming {
+        heading.append(&review);
+    }
     expander.set_label_widget(Some(&heading));
     root.append(&expander);
     root
@@ -290,6 +320,34 @@ impl Panel {
                     }
                 });
             }
+            if page == "nearby" && incoming {
+                root.add_css_class("incoming-request");
+            }
+            for name in [
+                "detail-peer",
+                "detail-summary",
+                "detail-code",
+                "phase",
+                "progress",
+            ] {
+                if let Some(duplicate) = named(details.upcast_ref(), name) {
+                    duplicate.set_visible(false);
+                }
+            }
+            // One disclosure exposes the manifest directly; no nested Review-all toggle.
+            if let Some(manifest) =
+                named(details.upcast_ref(), "detail-manifest").and_downcast::<gtk::Expander>()
+            {
+                manifest.set_expanded(true);
+                if let (Some(list), Some(parent)) = (
+                    manifest.child(),
+                    manifest.parent().and_downcast::<gtk::Box>(),
+                ) {
+                    manifest.set_child(None::<&gtk::Widget>);
+                    parent.insert_child_after(&list, manifest.prev_sibling().as_ref());
+                    parent.remove(&manifest);
+                }
+            }
             rows.entries.insert(
                 key.clone(),
                 Entry {
@@ -345,9 +403,30 @@ impl Panel {
                 }
             ));
         }
+        if let Some(summary) = named(root.upcast_ref(), "row-summary").and_downcast::<gtk::Label>()
+        {
+            let text = if transfer.phase.is_terminal() {
+                format!(
+                    "{} · {} bytes",
+                    payload_label(&transfer.details),
+                    transfer.details.total_bytes
+                )
+            } else if !transfer.details.pin.is_empty() {
+                format!(
+                    "{} · {}",
+                    payload_label(&transfer.details),
+                    transfer.details.pin
+                )
+            } else {
+                payload_label(&transfer.details)
+            };
+            summary.set_text(&text);
+            summary.set_visible(!transferring(transfer.phase));
+        }
         if let Some(progress) =
             named(root.upcast_ref(), "row-progress").and_downcast::<gtk::ProgressBar>()
         {
+            progress.set_visible(transferring(transfer.phase));
             progress.set_fraction(progress_fraction(
                 transfer.details.transferred_bytes,
                 transfer.details.total_bytes,

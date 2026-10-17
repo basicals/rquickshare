@@ -145,6 +145,9 @@ pub(super) fn verify(panel: &Rc<Panel>) {
     panel.window.present();
     panel.sync_countdown();
     assert!(panel.box_widget("receive-indicator").get_visible());
+    assert!(!panel
+        .button("quick-receive")
+        .has_css_class("receive-active"));
     assert!(panel.visibility_tick.borrow().is_some());
     assert!(panel
         .builder
@@ -153,6 +156,9 @@ pub(super) fn verify(panel: &Rc<Panel>) {
         .text()
         .contains("1:00"));
     panel.set_drawer(Drawer::Closed);
+    assert!(panel
+        .button("quick-receive")
+        .has_css_class("receive-active"));
     assert!(!panel.box_widget("receive-indicator").get_visible());
     assert!(panel.visibility_tick.borrow().is_none());
     panel.set_drawer(Drawer::Open);

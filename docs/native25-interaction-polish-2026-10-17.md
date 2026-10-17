@@ -86,8 +86,8 @@ valid independent timer regressions.
 
 - [x] P1: inspect screenshot, live-row/composer/reveal ownership and privacy-safe
   discovery events; record explicit requirements and missing decisions.
-- [ ] P2: freeze clipboard/completion contracts, branch/risk inventory and rollback.
-- [ ] P3: simplify history rows; move source controls and implement prepared curtain.
+- [x] P2: freeze clipboard/completion contracts, branch/risk inventory and rollback.
+- [x] P3: simplify history rows; move source controls and implement prepared curtain.
 - [ ] P4: implement the endpoint-bound inline action strip and one-shot acquisition;
   preserve the daemon FIFO, immutable source snapshots and explicit receiver consent.
 - [ ] P5: stage-aware incoming rows and guarded once-only completion presentation.
@@ -147,3 +147,19 @@ summary/progress; preparation/clipboard priority/cancel/limits and one-shot inte
 checks; result baseline/success/replay/hide/security cases. Preserve measured
 results per milestone and commit before the next stage. No native install until
 the new package passes checks and a fresh known-owner/global-idle gate.
+
+P3 observed: source/countdown moved after peer list, actual GTK snapshot blur
+curtain disables underlying controls and reuses explicit source discard; main
+Send preserves drawer state. Pending inbound rows pulse softly, Receive pulses
+only when the drawer is closed. History uses its single expander, without Details;
+peer/status/byte duplicates are hidden, manifests exposed directly after one
+disclosure. Header carries type/code before transfer and progress during bytes.
+No installed binary changed.
+
+First affected GTK smoke failed an old tray-Send-opens-drawer assertion; changed
+it to the approved closed-drawer plus visible-popover contract. Follow-up compile
+found an invalid Image enum assumption: protocol images are Files, so removed
+the nonexistent branch and use filename type. Final affected real widget smoke
+passed1/0 in0.66s, including source/countdown order, blur input blocking and
+drawer-aware Receive indication. Isolated Layer Shell warnings are expected,
+not physical KDE proof. No ten-run/full Mode B claim. Terminal commands exited.

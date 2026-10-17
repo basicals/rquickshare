@@ -255,9 +255,10 @@ impl Panel {
     }
     pub(super) fn show_sending(self: &Rc<Self>) {
         // Choose content first; a later device-row Send is the sole admission action.
-        self.sending.popdown();
-        self.set_drawer(Drawer::Open);
-        self.pages.set_visible_child_name("nearby");
+        if self.sending.is_visible() {
+            self.sending.popdown();
+            return;
+        }
         self.render();
         if !self.window.is_visible() {
             self.present_surface();

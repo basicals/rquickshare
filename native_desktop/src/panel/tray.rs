@@ -363,7 +363,8 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
     panel.update(current);
     assert_eq!(panel.drawer(), Drawer::Closed); // An acknowledgement cannot resurrect Full or reopen the drawer.
     panel.actions.activate_action("send", None);
-    assert_eq!(panel.drawer(), Drawer::Open);
+    assert_eq!(panel.drawer(), Drawer::Closed);
+    assert!(panel.sending.is_visible());
     assert_eq!(
         panel.sending.parent(),
         Some(panel.button("quick-send").upcast())
