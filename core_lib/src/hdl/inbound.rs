@@ -3835,11 +3835,7 @@ mod security_tests {
                 );
                 assert_eq!(
                     std::fs::read(destination.path()).unwrap(),
-                    if body.len() as i64 <= size {
-                        body
-                    } else {
-                        b"".as_slice()
-                    }
+                    if completes { body } else { b"".as_slice() }
                 );
             }
         }
