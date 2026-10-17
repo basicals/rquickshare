@@ -120,7 +120,7 @@ remapped here. Stage 12 **overall NO** remains.
 
 1. [x] Inspect real priority and code; record negative
    consent branch and invariant inventory first.
-2. [ ] Implement 2 exact, single-scenario regression tests
+2. [x] Implement 2 exact, single-scenario regression tests
    under the established `receive_reliability.rs` fixture.
    If failure shows production defect, stop Mode B and
    separately plan Mode A fix. Never weaken assertions.
@@ -135,3 +135,29 @@ remapped here. Stage 12 **overall NO** remains.
 Rollback removes only two test methods and ledger;
 no product behavior, filesystem API, network protocol,
 packaging or release changes anticipated.
+
+## Source-only execution checkpoint
+
+Test-only source `da71cdcd4c79c214d78b6080291710867141fb8f`
+implements both preregistered managed negative-consent scenarios
+in `core_lib/src/hdl/inbound/receive_reliability.rs`.
+The original accept/reliability assertions and all product code
+are unchanged. Test 1 uses the real two-chunk encrypted Nearby
+frame and a peer-side `decrypt_secure_message` to assert exact
+`Response::Reject` and terminal offset/flag, with no extra
+frame. Test 2 destroys the duplex peer before Reject is sent and
+asserts sticky `Rejected` and zero visible file/result authority.
+
+Exact-source CI:
+[Preflight run 39075819730](https://github.com/morozhenko-apps/rquickshare/actions/runs/39075819730),
+[Native GTK UI verification 39075819773](https://github.com/morozhenko-apps/rquickshare/actions/runs/39075819773).
+At the initial checkpoint the **stable Core Rust suite**, Rust
+format, frontend, core Clippy and Native GTK were successful;
+the Core stress repetitions and legacy Tauri Clippy were
+still active. Those unfinished jobs must not be marked green
+until their final statuses/logs are checked.
+
+Hardware status remains **UNTESTED** for actual Pixel rejection,
+peer app close during Reject and Google Windows compatibility.
+The existing installed native29 was not changed; the newly
+tested source is not an installed device-acceptance result.
