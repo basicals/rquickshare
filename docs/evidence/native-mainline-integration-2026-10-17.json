@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "scope": "source integration only",
+  "pull_request": "https://github.com/morozhenko-apps/rquickshare/pull/6",
+  "candidate_commit": "fa28d1835922ee694d280970af816807c5e8c9b3",
+  "merge_commit": "b93ac02d8d923f5cf5a4d83be41c2aff9510e217",
+  "merged_at": "2026-10-17T10:07:45Z",
+  "merge_tree_matches_candidate": true,
+  "preflight": {
+    "run_id": 39023412094,
+    "conclusion": "success",
+    "substantive_jobs": 5
+  },
+  "native_gtk": {
+    "source_commit": "29322530d47f8406d99c2dff0293e71373c0e41a",
+    "run_id": 38989181732,
+    "conclusion": "success",
+    "unique_tests": 42,
+    "iterations": 10,
+    "subsequent_differences": "docs/evidence only"
+  },
+  "receipt_commit_ci": "intentionally skipped; docs/evidence only; checked source trees unchanged",
+  "installed_version_unchanged": "0.11.5+native21",
+  "working_branch": "dev",
+  "full_mode_b": "open",
+  "full_native_library_gate": {
+    "run_id": 38987892134,
+    "conclusion": "failure",
+    "reason": "real Bubblewrap/Glycin preview decoder unavailable in container; test unchanged; outside essential UI scope"
+  },
+  "remaining": [
+    "physical KDE acceptance of newer source",
+    "Android and Google Windows bidirectional content/consent/cancel/interruption",
+    "optional old-daemon/adversarial page cases and measured coverage",
+    "desktop/package lifecycle and settings recovery",
+    "native README/download/build documentation",
+    "approved signed APT publication"
+  ],
+  "installed_rebuilt_or_restarted": false,
+  "release_signed_or_published": false,
+  "cloud_access": false
+}

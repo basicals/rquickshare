@@ -1,14 +1,19 @@
 # Current implementation and continuation state
 
-2026-10-17 renewed integration: the user authorized including the additional
-41 dev commits in master. The current source candidate adds recipient-first
-Send, retained upward expansion and ephemeral endpoint-based completed-operation
-grouping. Preflight passed at dev 7e5e793; native GTK format/Clippy and 42 tests
-ten times passed at source-equivalent 29322530 (later changes are docs only).
-This is source integration, not an installed upgrade or release. Full native
-package preview-sandbox validation, broader Mode B coverage and physical
-KDE/Android/Windows acceptance remain open. Follow the
-[renewed integration plan](native-mainline-integration-2026-10-17.md#renewed-integration-card-operations-and-endpoint-association).
+2026-10-17 current source checkpoint: the additional card/endpoint-association
+work is merged into master by [PR #6](https://github.com/morozhenko-apps/rquickshare/pull/6),
+merge b93ac02d8d923f5cf5a4d83be41c2aff9510e217. Exact candidate fa28d183 passed
+all five Preflight jobs (39023412094); native GTK strict lint and 42 tests ten
+times passed at source-equivalent 29322530 (subsequent changes are docs only).
+Local master/dev are synchronized; work continues on dev. Source and installed
+versions differ: native21 remains installed, while the latest source adds
+recipient-first Send, retained upward expansion and session-endpoint grouping.
+Full native package preview-sandbox validation, broader Mode B coverage and
+physical KDE/Android/Windows acceptance remain open. A docs-only receipt skips
+unchanged CI; it does not claim a new test run. No install or public release.
+See the [completed integration record](native-mainline-integration-2026-10-17.md#renewed-integration-receipt).
+
+Historical dev checkpoint before PR #6:
 
 2026-10-17 later dev-only checkpoint: the user approved optional
 session-scoped outbound endpoint association (B) with a clean path toward a
@@ -43,7 +48,7 @@ remote dev was fast-forwarded to that merge checkpoint without force. The exact
 pre-merge dev HEAD passed all five Preflight jobs (run 38984114755), including
 the fixed Python fixture/runtime contract checks. The separate post-merge master
 run is 38984886879. A documentation-only follow-up records these results; local
-workstation branches still require normal fetch/fast-forward. See
+workstation synchronization was pending at that earlier checkpoint and is now complete in the PR #6 receipt. See
 [integration checkpoint](native-mainline-integration-2026-10-17.md). Installed
 native21 and its accepted UI stay unchanged. Current physical Android/Windows
 peer, KDE lifecycle, full Mode B ten-run and approved signed-release gates

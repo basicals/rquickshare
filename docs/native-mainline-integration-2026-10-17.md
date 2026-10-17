@@ -37,7 +37,7 @@ those results do not validate the new native21 revision. Failure roots:
 - [x] M4: push dev normally; inspect exact-head Preflight. Prepare a dev-to-master
   PR and attach it to this task. Merge only once the substantive exact dev-head
   checks are green; same-repository dev PR checks intentionally skip duplicates.
-- [ ] M5: synchronize local master, return to dev and confirm both remote branches
+- [x] M5: synchronize local master, return to dev and confirm both remote branches
   contain the verified source. Record merge/check URLs and remaining work.
 
 No release tag, signing, APT publication, Cloudflare/Drive access, service restart
@@ -90,7 +90,7 @@ application publication, force push or dev branch deletion.
 - [PR #4](https://github.com/morozhenko-apps/rquickshare/pull/4) merged `dev` into `master` with a normal merge commit `25cf7dd17ea28e98b2765efd09e0474d0028334a`. Commit history was preserved without force pushes. The dev remote ref was then fast-forwarded to that exact merge commit without force. Both remote branches were synchronized at that checkpoint.
 - The post-merge `master` Preflight run is [38984886879](https://github.com/morozhenko-apps/rquickshare/actions/runs/38984886879). Its completion is tracked independently from the already-passing exact `dev` head.
 - No signed release, tag, production APT publication, native package deployment, device test or full Mode B ten-run claim is implied. All three essential-release gates above remain open.
-- M5 remote synchronization is complete. **Local** `master`/`dev` checkout synchronization requires the workstation (not accessible from this GitHub-only operation): `git fetch origin`, `git switch master && git pull --ff-only`, `git switch dev && git pull --ff-only`. Preserve local work and avoid resets. The doc-only follow-up needs a regular PR to place this record in `master` as well.
+- Historical status at the first merge (superseded by the renewed local receipt below): M5 remote synchronization is complete. **Local** `master`/`dev` checkout synchronization requires the workstation (not accessible from this GitHub-only operation): `git fetch origin`, `git switch master && git pull --ff-only`, `git switch dev && git pull --ff-only`. Preserve local work and avoid resets. The doc-only follow-up needs a regular PR to place this record in `master` as well.
 
 
 ## Renewed integration: card operations and endpoint association
@@ -115,10 +115,10 @@ new branch/worktree, no force push, and no running application changes.
   run 38989181732. The difference from 29322530 to 7e5e793 is three docs/evidence
   files only; the native/core/test/workflow trees are identical. Do not repeat
   these unaffected ten-run checks for documentation changes.
-- [ ] R3: commit this plan/current-status clarification, push dev normally,
+- [x] R3: commit this plan/current-status clarification, push dev normally,
   create and attach a dev-to-master PR. Check the candidate head and ancestry
   before a normal merge commit preserving all 41 incoming commits.
-- [ ] R4: fast-forward existing local master/dev and remote dev to the merge,
+- [x] R4: fast-forward existing local master/dev and remote dev to the merge,
   record the actual receipt, and synchronize docs-only handoff artifacts. Keep
   the installed native21 binaries and immutable archives unchanged.
 
@@ -141,3 +141,32 @@ as part of this source merge. The signed APT channel is still unpublished.
 Documentation-only receipt commits may follow the verified merge without
 rerunning unchanged production suites. Record their source-equivalent checked
 commit and explicitly distinguish skipped or pending CI from observed success.
+
+
+### Renewed integration receipt
+
+- PR #6: https://github.com/morozhenko-apps/rquickshare/pull/6,
+  merged 2026-10-17T10:07:45Z as
+  b93ac02d8d923f5cf5a4d83be41c2aff9510e217. All additional source commits are
+  preserved. Integration candidate fa28d1835922ee694d280970af816807c5e8c9b3
+  passed all five substantive jobs in
+  https://github.com/morozhenko-apps/rquickshare/actions/runs/39023412094.
+- The merge tree is byte-identical to the checked candidate (git diff empty).
+  Existing local master and dev were fast-forwarded to the merge, staying on
+  dev. The subsequent receipt-only commit is mirrored normally to both remote
+  refs and local master; no new branch, reset, force push or deletion.
+- The receipt-only commit uses [skip ci] because it changes docs/evidence only;
+  production/native/core/test/workflow trees remain those of the verified merge.
+  This does not claim a separate CI pass on the receipt commit. The automatic
+  master merge run is independent of the already-passing candidate result.
+- Latest source handoff archive/status exports include the newer source while
+  native20/native21 immutable packages and source archives remain preserved.
+  Installed native21 acceptance does not cover the newer source behavior.
+- R1-R4 and M5 are complete for source integration. Release acceptance, the
+  full-native preview-library failure and broader Mode B gaps listed above
+  remain open. No package rebuild/install, service restart, signing, tag,
+  publication or cloud access occurred in this renewed integration.
+
+See evidence/native-mainline-integration-2026-10-17.json for exact source/CI
+receipts. Roll back the integrated source with a normal revert of the merge;
+keep documentation evidence and incoming history recoverable.
