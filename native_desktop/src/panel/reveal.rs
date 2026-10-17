@@ -306,18 +306,25 @@ impl Panel {
                         return;
                     }
                     panel.close_reveal();
-                    panel.notice(match result {
-                        Ok(Ok(())) => "Containing folder shown.",
-                        Ok(Err(crate::portal::Error::Cancelled)) => "Folder request cancelled.",
-                        _ => "Your desktop could not show this folder. Try again.",
-                    });
+                    match result {
+                        Ok(Ok(())) if matches!(key.scope, Scope::Result) => {
+                            panel.model.borrow_mut().notice = None
+                        }
+                        Ok(Ok(())) => panel.notice("Containing folder shown."),
+                        Ok(Err(crate::portal::Error::Cancelled)) => {
+                            panel.notice("Folder request cancelled.")
+                        }
+                        _ => panel.notice("Your desktop could not show this folder. Try again."),
+                    }
                     panel.render();
                 }
             }
         });
         pending.task.replace(Some(task));
         self.reveal.replace(Some(pending));
-        self.notice("Opening containing folder…");
+        if matches!(scope, Scope::File(_)) {
+            self.notice("Opening containing folder…");
+        }
         self.mark_manual();
         self.render();
     }

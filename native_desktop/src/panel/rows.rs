@@ -322,6 +322,11 @@ impl Panel {
             if page == "nearby" && incoming {
                 root.add_css_class("incoming-request");
             }
+            if page != "nearby" {
+                if let Some(disclosure) = named(root.upcast_ref(), "row-action") {
+                    disclosure.set_visible(false);
+                }
+            }
             for name in [
                 "detail-peer",
                 "detail-summary",
@@ -412,7 +417,7 @@ impl Panel {
                 )
             } else if !transfer.details.pin.is_empty() {
                 format!(
-                    "{} · {}",
+                    "{} · Code: {}",
                     payload_label(&transfer.details),
                     transfer.details.pin
                 )
