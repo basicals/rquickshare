@@ -213,3 +213,24 @@ Core strict Clippy first identified a redundant borrow introduced while extracti
 the unchanged private-directory helper; remove that borrow and rerun only lint.
 No protocol/runtime behavior changed in that correction. A5 receiver timing and
 A7 package/physical acceptance remain open; installed native22 remains unchanged.
+
+## Receiver discovery timing root cause and scoped repair
+
+Native daemon startup has no log subscriber, explaining the missing BLE/GATT/mDNS
+stage evidence. Add opt-in RQUICKSHARE_RECEIVER_TRACE=1 diagnostics containing
+only allowlisted stage names and monotonic elapsed milliseconds. Default is off;
+no peer addresses/names, service data, PINs, paths or payloads. A temporary per-unit
+runtime environment override may enable it during the authorized idle upgrade;
+never change the global user-manager environment or shipped autostart defaults.
+
+Code inspection found two independently reproducible timer-starvation defects in
+ReceiverAdvertiser: select rebuilt sleep(periodic_secs) after every other event,
+and every Deferred request replaced the previous two-second deadline. Therefore
+neither recovery was guaranteed to run amid continuing events. Preserve absolute
+per-advertisement periodic and earliest deferred deadlines, clearing both only
+when the advertisement handle is replaced/stopped. Keep the existing30-second
+release fallback and two-second deferred interval; no new timing magic or consent
+change. Refresh touches only the advertisement, not the separate GATT/session
+owner. Paused-clock regressions must prove repeated events cannot postpone either
+recovery and stop/restart resets their lifetimes. This fixes those code defects;
+real Android discovery latency still needs a measured phone reproduction.

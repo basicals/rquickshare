@@ -42,6 +42,8 @@ mod peer_authentication;
 pub mod prepared_source;
 mod preview_payload;
 mod protocol;
+#[doc(hidden)]
+pub mod receiver_trace;
 #[cfg(target_os = "linux")]
 pub mod service;
 pub mod sessions;

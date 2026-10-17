@@ -259,6 +259,11 @@ impl ReceiverGattServer {
                                 let mdns_refresh_sender = slot_mdns_refresh_sender.clone();
                                 Box::pin(async move {
                                     let offset = usize::from(request.offset);
+                                    if offset == 0 {
+                                        crate::receiver_trace::event(
+                                            crate::receiver_trace::Event::GattRead,
+                                        );
+                                    }
                                     let response = advertisement
                                         .lock()
                                         .await

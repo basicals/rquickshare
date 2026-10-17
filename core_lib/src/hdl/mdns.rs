@@ -94,10 +94,12 @@ impl MDnsServer {
             )?;
             if Self::identity_visible(&self.visibility_receiver) {
                 self.daemon.register(self.service_info.clone())?;
+                crate::receiver_trace::event(crate::receiver_trace::Event::MdnsRegister);
             }
             consumer.acknowledge(snapshot.revision)?;
         } else if Self::identity_visible(&self.visibility_receiver) {
             self.daemon.register(self.service_info.clone())?;
+            crate::receiver_trace::event(crate::receiver_trace::Event::MdnsRegister);
         }
 
         loop {
@@ -118,6 +120,7 @@ impl MDnsServer {
                     self.service_info = Self::renamed_service(&self.service_info, self.endpoint_id, snapshot.name.as_str())?;
                     if Self::identity_visible(&self.visibility_receiver) {
                         self.daemon.register(self.service_info.clone())?;
+                crate::receiver_trace::event(crate::receiver_trace::Event::MdnsRegister);
                     }
                     consumer.acknowledge(snapshot.revision)?;
                 }
@@ -133,11 +136,13 @@ impl MDnsServer {
                     }
                     let visibility = self.visibility_receiver.current_and_update();
                     debug!("{INNER_NAME}: visibility changed: {visibility:?}");
+                    crate::receiver_trace::event(if visibility==Visibility::Invisible {crate::receiver_trace::Event::Hidden}else{crate::receiver_trace::Event::Visible});
                     if visibility == Visibility::Invisible {
                         let receiver = self.daemon.unregister(self.service_info.get_fullname())?;
                         let _ = receiver.recv_async().await;
                     } else {
                         self.daemon.register(self.service_info.clone())?;
+                crate::receiver_trace::event(crate::receiver_trace::Event::MdnsRegister);
                     }
                 }
                 _ = ble_receiver.recv() => {
@@ -152,8 +157,10 @@ impl MDnsServer {
                         // was running BEFORE Android started the Discovery phase for QuickShare.
                         // So resend a broadcast if there's a android device sending.
                         self.daemon.register_resend(self.service_info.get_fullname())?;
+                        crate::receiver_trace::event(crate::receiver_trace::Event::MdnsResend);
                     } else {
                         self.daemon.register(self.service_info.clone())?;
+                crate::receiver_trace::event(crate::receiver_trace::Event::MdnsRegister);
                     }
                 },
                 refresh = receiver_refresh_receiver.recv(), if receiver_refresh_open => {
@@ -166,6 +173,7 @@ impl MDnsServer {
 
                             debug!("{INNER_NAME}: receiver slot0 requested mDNS resend");
                             self.daemon.register_resend(self.service_info.get_fullname())?;
+                        crate::receiver_trace::event(crate::receiver_trace::Event::MdnsResend);
                         }
                         ReceiverRefreshAction::Disable => {
                             receiver_refresh_open = false;
