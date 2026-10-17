@@ -1,2 +1,2 @@
 # Increment for every changed native package at the same Rust version.
-revision = 21
+revision = 22
