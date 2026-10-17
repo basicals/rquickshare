@@ -1,6 +1,28 @@
 # Current implementation and continuation state
 
 
+## Offline inbound final-chunk reliability — 2026-10-17
+
+After native30 source-only UI work, dev now handles an inbound FILE data frame
+whose final flag and final body bytes arrive together; formerly only a separate
+empty lastChunk finalized. Early or oversized final chunks fail before writing,
+while exact valid chunks follow existing O_TMPFILE publication/receipt/sync
+ownership and no-overwrite rules. Both managed and legacy framing regressions
+and real staged multi-file/partial cases were added. Exact-source dev CI at
+`1d286316` passed 696 core library methods plus eight integration tests,
+core Clippy and formatting, with 52/0 isolated native GTK checks. Separate
+legacy Tauri Clippy was still running at this checkpoint; do not infer overall
+Preflight completion until that job reports. See
+[final-chunk ledger](native-file-final-chunk-2026-10-17.md).
+
+The fix is NOT installed and is not current Android interoperability evidence.
+Native29 stays installed. Native30 source package is not built or installed;
+the existing pinned idle/source-owner, release-artifact and real-peer checks
+are still pending. No physical device, running process or signing/publication
+state was touched during this headless continuation.
+
+
+
 ## Offline-only continuation — 2026-10-17
 
 Development proceeds remotely against `dev` without access to the installed
