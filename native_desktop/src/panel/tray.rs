@@ -15,8 +15,10 @@ impl Panel {
         let mut enabled = 0;
         for id in [1, 2, 4, 5, 8, 11, 18, 19, 20, 22, 23] {
             let action = Action::from_id(id).expect("fixed tray action");
-            let cleanup =
-                action == Action::Quit || (action == Action::Open && self.window.is_visible());
+            let cleanup = action == Action::Quit
+                || (action == Action::Open
+                    && !model.preview
+                    && self.window.is_visible());
             let allowed = !model.closing
                 && (cleanup || safe)
                 && action.name().is_none_or(|name| {
