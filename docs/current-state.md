@@ -5,8 +5,9 @@ still slow. User requested inline per-device content actions/direct send, incomi
 code/type-to-progress staging, automatic safe received-result presentation and
 history row deduplication. Analysis/plan is in
 [native25 interaction polish](native25-interaction-polish-2026-10-17.md).
-Clipboard representation and transient completion lifetime await explicit product
-choices before code. Installed native24 remains unchanged.
+User approved clipboard files > image > text and Completed until drawer/card
+hide. The additional pulse/strip/main-Send behavior is frozen in that plan;
+implementation proceeds in scoped milestones. Installed native24 remains unchanged.
 
 2026-10-17 installed checkpoint: native24 is installed and running. Release
 source d3cd9d3; exact package and installed receipts are in

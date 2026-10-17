@@ -67,7 +67,7 @@ an explicit live reproduction. Do not lower retry intervals or reset the adapter
 without locating the responsible stage. Existing periodic/deferred fixes remain
 valid independent timer regressions.
 
-## Pending product choices
+## Product choices (approved A/A)
 
 1. Clipboard: recommended supported local copied files/folders, image, then
    plain text/link, with deterministic structured-file > image > text priority.
@@ -104,3 +104,46 @@ Copy only. External portal/clipboard dependencies use existing test seams; domai
 logic is real. No whole Mode B or repeated ten-run development gate.
 Rollback each independent UI/flow/result/discovery commit. Do not weaken existing
 source limits, receipt authority or code/manifest consent to simplify the UI.
+
+## Approved implementation ledger and additional feedback
+
+User chose A for both clipboard and completion lifetime. Clipboard supports local
+file/folder lists, image, then text/link in that priority; unsupported/nonlocal
+structured entries fail without a different-format fallback. Completed remains
+on the card until the card/device drawer is hidden, then only in Transfers.
+
+Additional explicit requirements: softly pulse the actual pending inbound peer
+row green, without name-based association. Pulse Receive only with the device
+drawer closed; the open drawer already has a visibility spinner/countdown. Move
+that strip after the device list, before bottom controls, alongside prepared
+source controls. Main Send opens its type popover without opening the drawer;
+open devices only after a global source is successfully prepared. The contextual
+per-device strip is a distinct direct-send flow and does not use the popover.
+
+Implement P3 first: reorder source/countdown after the list; one real blurred
+backdrop around the bottom controls with a clear-source curtain; deduplicate live
+history metadata and expansion controls; incoming row pulse and drawer-aware
+Receive pulse. Use a small GTK snapshot wrapper for actual blur (no CSS property
+guessing), forwarding child allocation and owning its lifetime. Existing discard
+releases preparation only; admitted queue payloads remain daemon-owned.
+
+P4 uses exact epoch/endpoint intent and the explicit preparation completion's
+Selection, never a render-triggered guess at the first source. Reuse existing
+consuming Send for a one-shot contextual source and retained Queue for a global
+source. One owned GUI wait and existing joined ingress worker hold preparation
+permits across acquisition. Cancellation or stale authority never auto-sends.
+
+P5 tracks live phase transitions by epoch/transfer ID, seeds the first snapshot
+as a baseline and never launches desktop effects from history/reconnect replay.
+Result handling uses existing checked content/file capabilities and lock guards;
+received content is never executed, links are never opened, clipboard replacement
+requires Copy. Directory-level result capability, if required beyond existing
+file portal authority, must be reviewed before changing a security/API boundary.
+
+Affected verification per logical milestone, once: existing isolated GTK smoke
+plus explicit assertions for child order, main Send preserving drawer state,
+curtain/clear state, pulse classes, single history expansion/status and staged row
+summary/progress; preparation/clipboard priority/cancel/limits and one-shot intent
+checks; result baseline/success/replay/hide/security cases. Preserve measured
+results per milestone and commit before the next stage. No native install until
+the new package passes checks and a fresh known-owner/global-idle gate.
