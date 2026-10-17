@@ -1,5 +1,18 @@
 # Current implementation and continuation state
 
+2026-10-17 later dev-only checkpoint: the user approved optional
+session-scoped outbound endpoint association (B) with a clean path toward a
+future independently verified durable identity (C). The immutable association
+survives dispatch/terminal status, is exposed through an additive authenticated
+Batch1 snapshot method and validated by the SDK. GTK nests completed outgoing
+operations under an exactly matching currently discovered endpoint; inbound and
+unmatched operations remain separate. This is not pairing or stable trust.
+Contract/UI regressions are committed; exact-head native GTK and core CI
+verification is still pending. The broader MODE B completion gate, real peer
+testing and release publication remain open. See
+[native card operation contract](native-card-operations-2026-10-17.md).
+
+
 2026-10-17 follow-up (dev only, no master promotion): user selected B for
 completed operation grouping, with only provable device association. The current
 D-Bus recipient projection supplies names but not endpoint IDs, so no safe
