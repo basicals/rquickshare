@@ -32,12 +32,12 @@ zero-size FILE payload.
 
 1. [x] Inspect actual file sending, prepared handles, tests, frame/EOF
    protocol, local failure mapping and active priorities; record plan.
-2. [ ] Add actual encrypted native sender/peer regressions for one zero-byte
+2. [x] Add actual encrypted native sender/peer regressions for one zero-byte
    file, mixed zero and nonzero members and failure before terminal write.
    Validate introduction IDs/manifest, each EOF once, exact bytes/progress,
    disconnect and source preservation. Tests use real loopback sockets,
    original captured descriptors and current protocol encoding.
-3. [ ] Factor the already existing empty-body FILE terminal-frame constructor
+3. [x] Factor the already existing empty-body FILE terminal-frame constructor
    into a private helper used by both the zero-size and nonzero paths.
    Send before retiring the corresponding working entry. A failed frame send
    propagates an error before removing the member or reporting Finished.
@@ -71,4 +71,34 @@ not full Mode B, branch-percentage coverage or ten-cycle stability evidence.
 
 ## Observations
 
-Pending execution.
+Implementation commits: `a04df075` introduced two encrypted loopback
+regressions, `c2b6ec4a` factored the existing terminal FILE frame into
+`final_file_frame` and sent it before retirement for an empty member,
+`289442da` applied three nightly rustfmt-only corrections.
+
+- Table case one: only an empty regular file. Verify one encrypted FILE
+  Data(lastChunk=1,offset=0,body=empty), then Disconnection; original file
+  must remain on disk.
+- Table case two: empty, three-byte and empty sources with arbitrary map
+  iteration. Match received payload IDs to advertised metadata, validate
+  one EOF per file, exactly one positive body only for the three-byte
+  member, and exact total progress. Same source preservation.
+- Failed-send test: deliberately remove the local encryption key after
+  valid introduction and before Accept handling. The terminal frame must
+  not be sent, the error must propagate, state must not become Finished,
+  the file must remain in the working map and its on-disk contents must
+  remain unchanged. This is a deterministic *pre-wire crypto failure*,
+  **not** a proven TCP socket-write failure. TCP peer disconnect remains
+  separately unverified on this slice.
+
+The first source Preflight at `c2b6ec4a` failed Rust format on three exact
+layout differences in the new helper/tests. The corrections were made
+without logic changes. Exact-source CI for `289442da` is
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39057293853
+and native GTK
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39057293868.
+At the first subsequent check, Rust format and frontend were green;
+core tests, core/legacy Clippy and GTK remained in progress.
+No final complete pass, Mode B ten-repeat evidence or real Android/Windows
+compatibility is claimed at this checkpoint.
+
