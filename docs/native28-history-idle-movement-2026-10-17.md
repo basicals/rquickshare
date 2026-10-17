@@ -43,7 +43,7 @@ movement repairs may proceed. Hide means card only, never stop/cancel daemon wor
   footer actions, no healthy-state prose, preserved error/recovery controls.
 - [x] A4: common draggable-target/cursor predicate and capture-phase admission.
 - [x] A5: implement only the user-selected idle policy after response.
-- [ ] A6: affected checks once, exact-package visual inspection, reversible commits,
+- [x] A6: affected checks once, exact-package visual inspection, reversible commits,
   distinct package and fresh idle-gated upgrade; installed/evidence/export receipts.
 
 Focused checks: card has no manual result action but history retains it; equal
@@ -122,3 +122,15 @@ global idle/zero-preparation gate before joining only those two units; APT local
 authorization then normal launch,14-file readback and one14-entry tray/API checks.
 Preserve startup preference and all received files/journal. No diagnostic override,
 BLE/protocol change, cloud/signing/public release or master merge.
+
+## Installed and user-accepted checkpoint
+
+APT upgraded27 to28 successfully. Both units active (2885495/2885499), all14
+installed files match, one14-entry Active tray and passive Visibility2/Journal1/
+AcquireResult checks passed. Login startup remains disabled; no trace override.
+The user accepted the current result and requested mainline integration. Record
+this general UI acceptance separately from unperformed exhaustive peer/failure/
+KDE cases. Evidence: evidence/native28-installation-2026-10-17.json.
+Mainline work follows native28-mainline-integration-2026-10-17.md. Existing exact
+package/visual outputs are retained; local source-export receipt follows separately.
+All prior installer/check terminals exited with Terminal closed.

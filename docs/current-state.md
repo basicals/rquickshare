@@ -1,14 +1,15 @@
 # Current implementation and continuation state
 
-2026-10-17 native28 source checkpoint: user confirmed native27 inline incoming
-consent and automatic folder reveal work. New approved UI removes manual result
-actions from the card, aligns live/metadata history columns and moves controls
-to the footer. Background drag admission/cursor share one predicate, including
-inert scroll content. User approved15s card-only idle dismissal outside the pointer,
-paused during pending requests/transfers/sources/menus/dialogs/recovery. Local
-monotonic one-shot logic is implemented; no daemon work is stopped by dismissal.
-Scoped panel20/0, final affected widget1/0 and strict native lint passed. Package
-and installed KDE acceptance remain pending. See [native28 plan](native28-history-idle-movement-2026-10-17.md).
+2026-10-17 native28 is installed and user-accepted as the current UI iteration.
+Binary source2c14d26; package SHA-256 and14-file/tray/API receipts are in
+[native28 evidence](evidence/native28-installation-2026-10-17.json). Live/history
+columns, footer controls, background movement and guarded15s free-card dismissal
+are implemented; the user's general acceptance is not an exhaustive case matrix.
+Current source promotion to the actual master default branch is explicitly
+approved and follows [integration plan](native28-mainline-integration-2026-10-17.md).
+No new signed/public release or Google parity claim. The installed package stays
+unchanged during integration. See [essential acceptance](native-essential-acceptance.md)
+for remaining peer/failure/lifecycle work; avoid relisting completed UI as missing.
 
 Historical native27 installed checkpoint:
 

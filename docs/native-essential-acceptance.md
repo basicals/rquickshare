@@ -1,17 +1,19 @@
 # Essential installed/peer acceptance
 
-Updated2026-10-17. Native22 is installed on the existing KDE/Wayland host.
-Native21 toolbar/tray/same-session position/countdown acceptance is historical;
-the newer native22 card-operation/endpoint grouping requires physical review.
-The native13 Android one-file outbound/code match is also historical. Remaining
-transfer/failure/lifecycle matrix entries are untested unless explicitly recorded.
-See [native22 installation](native22-installation-2026-10-17.md) and
+Updated2026-10-17. Native28 is installed on the existing KDE/Wayland host.
+Current UI iteration is user-accepted: flat incoming consent, compact device
+surface, automatic result location, aligned Transfers and latest idle/movement
+polish. This is general feedback, not a measured per-case checklist. The user
+confirmed fast Android discovery and successful sending on native25. Earlier
+native13 one-file outbound/code match remains historical. Broader transfer,
+failure and lifecycle entries are UNTESTED unless explicitly recorded below.
+See [native28 evidence](evidence/native28-installation-2026-10-17.json) and
 [priorities](native-essential-priorities.md).
 
 ## Preconditions
 
-Use the exact installed native22 package/hash from
-[evidence](evidence/native22-installation-2026-10-17.json), with the actual Android
+Use the exact installed native28 package/hash from
+[evidence](evidence/native28-installation-2026-10-17.json), with the actual Android
 and Google Quick Share for Windows versions recorded before checking each peer.
 The package targets Ubuntu26.04 amd64; unavailable peers/platforms remain UNTESTED.
 Use disposable files/destination and preserve content/hash evidence locally
