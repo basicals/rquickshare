@@ -159,6 +159,7 @@ fn device_icon(
         _ => "computer-symbolic",
     });
     image.set_pixel_size(28);
+    overlay.set_widget_name("row-icon");
     overlay.set_child(Some(&image));
     let (symbol, class) = badge_style(badge);
     let marker = gtk::Label::new(Some(symbol));
@@ -196,6 +197,8 @@ pub(super) fn transfer_row(
     } else {
         sender
     });
+    title.set_widget_name("row-peer");
+    title.set_selectable(false);
     title.set_hexpand(true);
     title.set_wrap(false);
     title.set_ellipsize(gtk::pango::EllipsizeMode::End);
@@ -214,6 +217,7 @@ pub(super) fn transfer_row(
     progress.set_visible(matches!(phase, Phase::Sending | Phase::Receiving));
     heading.append(&progress);
     let status = label(phase_text(phase));
+    status.set_selectable(false);
     status.set_widget_name("row-status");
     status.set_visible(phase.is_terminal());
     heading.append(&status);
@@ -280,6 +284,45 @@ impl Panel {
             }
         }
     }
+    fn align_history_row(&self, root: &gtk::Box, transfer: &TransferView) {
+        let heading = root.first_child().and_downcast::<gtk::Box>().unwrap();
+        let peer = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let status = named(heading.upcast_ref(), "row-status").unwrap();
+        status.set_visible(true);
+        while let Some(child) = heading.first_child() {
+            heading.remove(&child);
+            match child.widget_name().as_str() {
+                "row-icon" => {
+                    child.set_width_request(32);
+                    peer.append(&child);
+                }
+                "row-peer" => peer.append(&child),
+                "row-summary" | "row-progress" => content.append(&child),
+                "row-status" => (),
+                _ => actions.append(&child),
+            }
+        }
+        let direction = label(if transfer.direction == Direction::Inbound {
+            "Receive"
+        } else {
+            "Send"
+        });
+        direction.set_wrap(false);
+        let date = transfers::timestamp(None);
+        date.set_widget_name("history-date");
+        let row = self.history_columns.row([
+            peer.upcast_ref(),
+            direction.upcast_ref(),
+            content.upcast_ref(),
+            &status,
+            date.upcast_ref(),
+            actions.upcast_ref(),
+        ]);
+        root.remove(&heading);
+        root.append(&row);
+    }
     pub(super) fn focus_transfer(&self, id: &str) {
         if let Some(entry) = self
             .rows
@@ -340,7 +383,20 @@ impl Panel {
                 summary.set_tooltip_text(Some(&description));
                 summary.update_property(&[gtk::accessible::Property::Description(&description)]);
             }
-            self.append_result_actions(&root, transfer, ready);
+            if page == "transfers" {
+                self.append_result_actions(&root, transfer, ready);
+                self.align_history_row(&root, transfer);
+            } else {
+                for name in ["review-text", "cancel-reveal"] {
+                    if let Some(action) = named(root.upcast_ref(), name) {
+                        action
+                            .parent()
+                            .and_downcast::<gtk::Box>()
+                            .unwrap()
+                            .remove(&action);
+                    }
+                }
+            }
             rows.entries.insert(
                 key.clone(),
                 Entry {
@@ -351,6 +407,27 @@ impl Panel {
             );
         }
         let root = rows.entries[&key].root.clone();
+        if page == "transfers" {
+            if let Some(date) =
+                named(root.upcast_ref(), "history-date").and_downcast::<gtk::Label>()
+            {
+                let updated = self
+                    .model
+                    .borrow()
+                    .state
+                    .journal
+                    .as_ref()
+                    .and_then(|journal| {
+                        journal
+                            .records
+                            .iter()
+                            .find(|r| r.id == transfer.transfer.id())
+                            .map(|r| r.updated)
+                    });
+                date.set_text(&transfers::timestamp(updated).text());
+            }
+        }
+
         for (name, enabled) in [
             ("result-reveal", ready && transfer.reveal_revision.is_some()),
             ("review-text", ready && transfer.content_revision.is_some()),
@@ -456,6 +533,7 @@ impl Panel {
                     state,
                 ));
                 let title = label(&projection.0);
+                title.set_selectable(false);
                 title.set_selectable(false);
                 title.set_hexpand(true);
                 title.set_wrap(false);
@@ -621,7 +699,9 @@ impl Panel {
                 let entry = rows.entries.entry(key.clone()).or_insert_with(|| {
                     let root = card();
                     if !title.is_empty() {
-                        root.append(&label(title));
+                        let text = label(title);
+                        text.set_selectable(false);
+                        root.append(&text);
                     }
                     Entry {
                         root,

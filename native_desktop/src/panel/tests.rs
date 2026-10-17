@@ -87,6 +87,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     css.load_from_string(include_str!("../../ui/panel.css"));
     assert!(css_errors.borrow().is_empty(), "{:?}", css_errors.borrow());
     rows::verify_keyed_layout();
+    transfers::verify_columns();
     let child = gtk::Button::with_label("Behind curtain");
     let backdrop = backdrop::Backdrop::new(&child);
     backdrop.set_blurred(true);
