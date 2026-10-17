@@ -172,7 +172,7 @@ a protocol regression or evidence of peer interoperability.
 Plan:
 1. [x] Inspect the failed CI job log and current file; identify the only emitted
    diff instead of changing formatter configuration or unrelated code.
-2. [ ] Apply the exact import-order/blank-line correction in the existing test
+2. [x] Apply the exact import-order/blank-line correction in the existing test
    module. Preserve all test assertions and production logic.
 3. [ ] Verify the next dev Preflight format, Python contract and remaining jobs;
    record observed results without claiming a local nightly build.
@@ -182,3 +182,16 @@ Plan:
 Risk is limited to incidental source-test formatting. Rollback is an ordinary
 revert of the standalone formatting commit. No wire, security, privacy, stored
 data, UI, packaging, daemon state, or platform behavior changes.
+
+### Verified headless follow-up
+
+The standalone test-only import change is commit `3c606db`. At that exact
+commit, dev Preflight run 39048444812 passed the nightly Rust format job,
+including 54 offline Python contract tests. Its core Rust job passed 693
+library tests and 8 integration tests; core Clippy and frontend jobs passed.
+Native GTK run 39048444825 passed formatting, strict lint and all 52 isolated
+widget/controller tests once. Those are CI observations, not local machine
+or physical peer evidence, and do not constitute the 10-run Mode B gate.
+Native30 remains source-only; installed native29 is unchanged.
+The separate legacy Tauri Clippy job was still in progress when these results
+were first recorded.
