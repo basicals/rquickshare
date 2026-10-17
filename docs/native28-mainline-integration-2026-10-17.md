@@ -27,7 +27,7 @@ fits the user's current policy and does not alter installed binaries.
 
 - [x] I1: inspect actual default branch, ancestry, installed receipts, CI and remaining
   priorities; preserve source and user feedback in SSOT before mutation.
-- [ ] I2: record native28 installed/user acceptance and immutable local export receipt;
+- [x] I2: record native28 installed/user acceptance and immutable local export receipt;
   update the essential acceptance index to current facts without inventing coverage.
 - [ ] I3: correct development CI repetition default, push dev normally, obtain substantive
   exact-head Preflight and one-run GTK results. Fix concrete failures at their roots.
@@ -68,3 +68,11 @@ GTK suite; only workflow_dispatch stability=true selects ten repetitions. Format
 strict lint, helper build, sandbox restrictions and all test assertions remain
 unchanged. Bash syntax/whitespace validation is performed locally; exact remote
 source checks will validate the candidate. This does not rebuild installed28.
+
+Immutable native28 local handoff exported at documentation/source-tree commit
+32fb59eea0f9e0b1df40b3b117c61f38117c0ca2;650 ZIP entries, SHA-256
+e858a54870acba830184400d10fa98e9613e0258d535d199259c75eb21d2824b.
+Binary source remains2c14d26; this includes later docs/CI only, not new installed
+bytes. External native28 export/installed JSONs and generic source/status copies
+were refreshed. Exact native25/26/27 packages and source archives are unchanged.
+Bash syntax and git diff --check passed for the small CI policy change.
