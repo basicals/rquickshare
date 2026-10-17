@@ -191,6 +191,39 @@ fn prepare_outbound_text(text: &str) -> Result<PreparedOutboundText, anyhow::Err
     })
 }
 
+/// The protocol requires a lastChunk FILE frame even when the file has no data.
+fn final_file_frame(file: &InternalFileInfo) -> OfflineFrame {
+    OfflineFrame {
+        version: Some(location_nearby_connections::offline_frame::Version::V1.into()),
+        v1: Some(location_nearby_connections::V1Frame {
+            r#type: Some(
+                location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into(),
+            ),
+            payload_transfer: Some(PayloadTransferFrame {
+                packet_type: Some(PacketType::Data.into()),
+                payload_chunk: Some(PayloadChunk {
+                    offset: Some(file.total_size),
+                    flags: Some(1), // lastChunk
+                    body: Some(Vec::new()),
+                }),
+                payload_header: Some(PayloadHeader {
+                    id: Some(file.payload_id),
+                    r#type: Some(payload_header::PayloadType::File.into()),
+                    total_size: Some(file.total_size),
+                    is_sensitive: Some(false),
+                    file_name: file
+                        .file_url
+                        .file_name()
+                        .map(|name| name.to_string_lossy().into_owned()),
+                    parent_folder: file.parent_folder.clone(),
+                }),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }),
+    }
+}
+
 fn byte_payload_frames(payload_id: i64, body: &[u8]) -> Result<Vec<OfflineFrame>, anyhow::Error> {
     const CHUNK_SIZE: usize = 256 * 1024;
 
@@ -1434,7 +1467,10 @@ impl OutboundRequest {
 
                             info!("> Currently sending {:?}", curr_state.file_url);
                             if curr_state.bytes_transferred == curr_state.total_size {
-                                debug!("File {current} finished");
+                                // Empty files still need the protocol's explicit EOF.
+                                // Retire ownership only after the terminal frame is sent.
+                                let terminal_frame = final_file_frame(curr_state);
+                                self.encrypt_and_send(&terminal_frame).await?;
                                 self.update_state(
                                     |e| {
                                         e.transferred_files.remove(&current);
@@ -1535,27 +1571,7 @@ impl OutboundRequest {
                                 curr_state.total_size
                             );
 
-                            let wrapper = location_nearby_connections::OfflineFrame {
-								version: Some(location_nearby_connections::offline_frame::Version::V1.into()),
-								v1: Some(location_nearby_connections::V1Frame {
-									r#type: Some(
-										location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into(),
-									),
-									payload_transfer: Some(PayloadTransferFrame {
-										packet_type: Some(PacketType::Data.into()),
-										payload_chunk: Some(PayloadChunk {
-											offset: Some(curr_state.total_size),
-											flags: Some(1), // lastChunk
-											body: Some(vec![]),
-										}),
-										payload_header: Some(payload_header),
-										..Default::default()
-									}),
-									..Default::default()
-								}),
-							};
-
-                            self.encrypt_and_send(&wrapper).await?;
+                            self.encrypt_and_send(&final_file_frame(&curr_state)).await?;
                             self.update_state(
                                 |state| {
                                     state.transferred_files.remove(&current);
