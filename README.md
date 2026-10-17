@@ -1,7 +1,9 @@
 # rQuickShare
 
-Nearby file, folder and text sharing for Linux. The current development version
-uses a native GTK4 tray card and a separate user-session daemon. Incoming requests
+Independently maintained nearby sharing, with full Google Quick Share
+interoperability and Linux, Windows and macOS as target platforms.
+The current development build is Linux-specific and uses a native GTK4 tray
+card and a separate user-session daemon. Incoming requests
 show explicit Decline/Accept controls and a verification code; admitted transfers
 continue when the card is hidden. The Transfers window keeps bounded operation
 metadata and provides checked access to received results.
@@ -14,6 +16,15 @@ Windows, interruption and desktop lifecycle checklist remains open. See the
 [current state](docs/current-state.md) and
 [acceptance checklist](docs/native-essential-acceptance.md) for exact evidence.
 
+## Product direction and release identity
+
+The project follows an independent roadmap toward Google Quick Share feature
+parity. The intended first stable release is `v1.0.0`, but it has **not**
+been released, and Windows/macOS application builds are **not** currently
+supported. The product name is simply **rQuickShare**, independent of the
+platform-specific package format. See the
+[product identity, platform and distribution contract](docs/product-release-strategy.md).
+
 ## Native build and distribution
 
 Start with the [native development guide](native_desktop/README.md) for dependencies
@@ -22,7 +33,9 @@ how to build and verify a local Debian package, install the selected artifact an
 use the package-owned systemd user services. This candidate targets the declared
 build ABI; it does not establish Ubuntu 24.04, ARM64 or other desktop acceptance.
 
-The signed APT channel is being prepared and has not been published. Local
+The signed APT channel is being prepared and has not been published. Future
+direct .deb downloads and APT updates may reference one verified package in the
+same R2 bucket; direct installation does not implicitly configure APT. Local
 verified packages and source checkpoints are distinct from a public signed release.
 The [essential priorities](docs/native-essential-priorities.md) list the remaining
 work before that release.
@@ -32,7 +45,7 @@ work before that release.
 This is a maintained fork of [Martichou/rquickshare](https://github.com/Martichou/rquickshare).
 Upstream attribution, legacy Tauri/macOS sources and the [GPL-3.0 license](LICENSE)
 are retained. The material below describes the earlier application and its
-distribution paths; use the native guides above for the current Linux candidate.
+distribution paths; use the current guides above for the supported desktop build.
 
 <details>
 <summary>Legacy Tauri application, downloads and macOS reference</summary>
@@ -41,7 +54,7 @@ distribution paths; use the native guides above for the current Linux candidate.
   <h1>rquickshare</h1>
 
   <p>
-    <strong>NearbyShare/QuickShare for Linux and MacOS</strong>
+    <strong>Legacy NearbyShare/QuickShare desktop client</strong>
   </p>
   <p>
 

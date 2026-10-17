@@ -1,5 +1,18 @@
 # Current implementation and continuation state
 
+## Approved product identity and release direction — 2026-10-18
+
+Product name **rQuickShare**, maintained independently from
+Martichou/rquickshare. Long-term objective: full Google Quick Share
+interoperability; target desktop platforms: **Linux, Windows, macOS**.
+No "for Linux" or "Native" public product suffix, no beta tag, and the
+intended first stable Git tag is `v1.0.0`, **not yet released**.
+The Linux-native candidate, existing `0.11.5+nativeN` package identity,
+source/legacy versions and signed-R2 APT publisher are **unchanged in
+code**. Next engineering task: version/package identity migration with
+tests, then approved signed distribution after physical and Mode B gates.
+Canonical strategy and direct-download/APT coexistence:
+[product-release-strategy.md](product-release-strategy.md).
 
 ## Corrected MODE B Stage 12 truth — 2026-10-18
 

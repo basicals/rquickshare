@@ -3,14 +3,27 @@
 Current implementation, selected distribution/signing bindings and remaining gates:
 [current state](current-state.md). Dated checkpoints below retain historical observations.
 
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-18 for product direction; dated implementation checkpoints retained._
+
+**Current product contract:** [product-release-strategy.md](product-release-strategy.md).
+rQuickShare targets Linux, Windows and macOS, and full Google Quick Share
+interoperability remains the long-term objective. The intended public product
+tag is `v1.0.0`, subject to release acceptance; this is not a parity claim.
+The current native GTK implementation and Debian package remain Linux-specific,
+and no Windows/macOS native-port acceptance is implied.
 
 Active scope is [essential native sharing](native-essential-priorities.md).
 The user excluded previews and requested only necessary work. The comprehensive
 capability matrix below is a long-term inventory, not the active implementation
 queue or a first-release checklist. Resume and advanced parity are deferred.
 
-The product goal is a native Linux client with feature parity and full interoperability with Google Quick Share. The user reconfirmed on 2026-10-12 that the intended desktop is in the notification/system-tray area near the clock and must migrate from Tauri to NativePair's Rust daemon / D-Bus / GTK4 direction. See [product-direction.md](product-direction.md) for the authoritative goals, initial compatibility matrix and migration history. Current choices and implementation gates are indexed in current-state.md.
+The product goal is a cross-platform rQuickShare application with full feature
+parity and interoperability with Google Quick Share. The initial supported
+desktop implementation uses a Linux-specific Rust daemon, D-Bus and GTK4 shell.
+Windows and macOS ports require separately designed and validated adapters.
+The user reconfirmed the compact desktop tray direction on 2026-10-12; see
+[product-direction.md](product-direction.md) for its architecture and history.
+Current implementation and acceptance gates are indexed in current-state.md.
 
 Implemented capability markers below describe existing core/legacy source and
 scoped checks; they do not establish native GTK feature parity or current-package

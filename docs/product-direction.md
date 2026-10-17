@@ -1,4 +1,14 @@
-# Product direction: native desktop and Google Quick Share parity
+# Product direction: rQuickShare and Google Quick Share parity
+
+2026-10-18 approved direction: **rQuickShare** is the platform-neutral
+product brand. Linux, Windows and macOS are target desktop platforms; full
+Google Quick Share parity is the long-term goal, not a claim about shipped
+support. The current native desktop implementation remains Linux-specific.
+First stable product tag target: `v1.0.0` after evidence-based acceptance.
+See [product-release-strategy.md](product-release-strategy.md) for the
+authoritative identity, upstream/provenance and dual R2/APT distribution
+contract. The 2026-10-16 essential Linux work order remains the immediate
+release gate; dated notes below describe historical implementation choices.
 
 Current scope update2026-10-16: follow [essential priorities](native-essential-priorities.md).
 The user excluded previews and prioritized reliable ordinary sharing, desktop

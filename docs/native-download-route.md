@@ -1,5 +1,13 @@
 # Shared download hostname, isolated rQuickShare APT prefix
 
+Current product and distribution policy:
+[product-release-strategy.md](product-release-strategy.md).
+The selected R2 archive serves both versioned direct .deb downloads and
+signed APT clients from the same immutable package objects, once published.
+The existing Worker still accepts only the historical rquickshare
+package/version pattern; adapting it to the selected future package
+identity is a separate implementation, not an accomplished rollout.
+
 Current implementation, selected distribution/signing bindings and remaining gates:
 [current state](current-state.md). Dated checkpoints below retain historical observations.
 
