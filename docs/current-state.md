@@ -1,6 +1,47 @@
 # Current implementation and continuation state
 
 
+## Critical scenarios before full strict Mode B — 2026-10-18
+
+The user requires **critical sharing scenarios first, then
+the complete MODE B 10×**. The P0 text/link, nested-folder
+and interrupted manual retry scenarios are now implemented
+and tested in `core_lib/src/hdl/inbound/receive_reliability.rs`
+alongside the preceding inbound Reject/Cancel regressions.
+Tested code `940a3a9f`: three new cases individually
+`ok`; Core stable **702/0**, integration **4+4/0**,
+and exactly eight race-sensitive tests ×10 (**80/0**).
+Native GTK for that source also passed. The previous
+Preflight legacy Tauri job was superseded/cancelled
+by the following workflow commit, not claimed 5/5.
+
+Strict full MODE B started for the final same
+production source at workflow-only commit
+`5776e0ea`:
+[run 39078162262](https://github.com/morozhenko-apps/rquickshare/actions/runs/39078162262).
+The workflow now fails before ten-run execution if
+any of six prioritized consent, Cancel, text, folder,
+retry P0 tests are missing/duplicated. Its original
+**ten full Core/desktop/Vue/Python suites,
+ten Native GTK suites, then coverage** remains intact.
+[Preflight 39078162267](https://github.com/morozhenko-apps/rquickshare/actions/runs/39078162267)
+is also running on the identical workflow/source
+commit. As recorded here, the new complete run has
+not yet produced a final 10/10 verdict.
+
+See [critical text/folder/retry plan and evidence](native-critical-text-folder-retry-2026-10-18.md).
+The user-operated Android/Google Windows two-way
+discovery, actual remote Cancel/retry, nested
+folder and text/URL acceptance remain pending
+as separate **physical interoperability gates**.
+Installed native29, systemd services, `master`,
+packaging, signing and releases unchanged. The
+overall Stage 12 public-branch, all N1–N12,
+mutation and physical acceptance gates remain
+NO until independently checked.
+
+
+
 ## P0-first critical sharing reliability — 2026-10-17
 
 The user's explicit execution order is **critical real
