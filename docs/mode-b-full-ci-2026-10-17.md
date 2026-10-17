@@ -97,11 +97,11 @@ the orchestration. No product files or test assertions to change.
    X11/D-Bus test runs. Coverage must explicitly depend on BOTH
    ten-run jobs. Add narrowly scoped dev workflow-file push trigger.
    No new broad dev push, no token scope, no release artifacts.
-3. [ ] Observe GitHub Actions on exact source. Verify 10 attempts
+3. [x] Observe GitHub Actions on exact source. Verify 10 attempts
    in each branch by run logs; if red, classify root cause and
    repair CI/test fixture only, never weaken assertions. Do not
    claim ten green runs until observed.
-4. [ ] Record source SHA, exact jobs, coverage summaries, GTK
+4. [x] Record source SHA, exact jobs, coverage summaries, GTK
    inclusion, limitations and YES/NO completion gate in this ledger
    and `docs/current-state.md`. Keep the final physical and
    all-branches/100%-inventory gate OPEN unless independently proven.
@@ -172,3 +172,57 @@ see [stable/stress partition and CI evidence](ci-stable-race-sensitive-2026-10-1
 A future product defect must never be hidden by calling a
 failing test 'flaky' or silently skipping it.
 
+
+## Exact completed ten-run execution and measured coverage
+
+**Strict automated Stage 11 stability subgate PASSED**, but Stage
+12 and hardware acceptance remain OPEN. Exact tested source:
+`f8e5d2d01d62200fcfd570c7bdf1f9051874845d`.
+Workflow:
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477128.
+Read and verified all three job statuses and exact attempt/test
+summaries from GitHub Actions:
+
+- Full-suites job 117495109038: **SUCCESS**. Exactly ten
+  sequential iterations with all four attempt markers each.
+  Each iteration: 704/0 core library tests, 4+4 integration,
+  10/0 legacy Tauri Rust, successful Vue/Vitest, 54/0 Python
+  publication/contract tests in an isolated pinned venv.
+- Native GTK job 117499392551: **SUCCESS**. Exactly ten
+  separate isolated X11/D-Bus attempts, each 52/0 native GTK
+  widget/controller tests; formatter and strict GTK Clippy
+  also succeeded.
+- Coverage job 117499829172: **SUCCESS**, started after both
+  ten-pass gates and measured exactly this source:
+  core Rust 86.20% regions / 85.30% functions /
+  **89.35% lines**;
+  Vue/Vitest 56.00% statements and lines /
+  75.86% functions / 88.04% branches;
+  legacy Tauri 24.98% regions / 19.29% functions /
+  **23.86% lines**.
+
+Source-by-source/region/function/line detail, limits of those
+denominators, coverage holes, priorities and a formal unclosed
+Stage 12 matrix are in
+[the exact-source coverage baseline](mode-b-coverage-baseline-2026-10-17.md).
+**Native GTK was tested ten times but not instrumented in
+this workflow**; an independent real GTK4 llvm-cov job is
+being established to close that measurement gap, not rerun
+unchanged full suites needlessly.
+
+The corrected Mode B workflow was validated after the first
+environment-parity failure (old system `botocore` did not
+support a required configuration option); the final successful
+run uses pinned `scripts/requirements-r2.txt`.
+Normal dev Preflight is separately 5/5 at the exact code SHA
+with 696 stable Rust library tests once, eight risk-sensitive
+tests ×10, and 4+4 integration. No production source or
+installed artifacts were modified for this CI investigation.
+
+**Remaining explicitly NO:** every current public business
+method/branch, all applicable N1–N12 and interaction combinations,
+mutation coverage, real BlueZ/GATT/FEF3/FE2C discovery and
+installed KDE/Wayland/Pixel/Windows acceptance. Correctness
+for an isolated CI environment is not proof of Google Quick Share
+interoperability. The 10 consecutive clean runs prove that
+specific subgate only.
