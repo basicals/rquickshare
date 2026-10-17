@@ -51,15 +51,24 @@ mod tests {
     }
 
     #[test]
-    fn given_legacy_gatt_slot_when_offset_or_advertisement_changes_then_current_bytes_are_read_without_peer_state() {
+    fn given_legacy_gatt_slot_when_offset_or_advertisement_changes_then_current_bytes_are_read_without_peer_state(
+    ) {
         // Arrange: the old non-coherent advertising contract never pins a peer.
         let mut slot = SlotValue::new(b"Old".to_vec(), false);
 
         // Act / Assert: out-of-range reads are empty, not a cached or stale tail.
         for offset in [0, 1, 2, 3, 4, usize::MAX] {
             let expected = b"Old".get(offset..).unwrap_or_default();
-            assert_eq!(slot.read(peer(1), offset).unwrap(), expected, "offset={offset}");
-            assert_eq!(slot.read(peer(2), offset).unwrap(), expected, "offset={offset}");
+            assert_eq!(
+                slot.read(peer(1), offset).unwrap(),
+                expected,
+                "offset={offset}"
+            );
+            assert_eq!(
+                slot.read(peer(2), offset).unwrap(),
+                expected,
+                "offset={offset}"
+            );
             assert!(slot.reads.is_empty());
         }
 
@@ -74,7 +83,8 @@ mod tests {
     }
 
     #[test]
-    fn given_coherent_unprimed_or_empty_slot_when_peer_reads_then_continuation_needs_owned_snapshot() {
+    fn given_coherent_unprimed_or_empty_slot_when_peer_reads_then_continuation_needs_owned_snapshot(
+    ) {
         // Arrange / Assert: a peer cannot request bytes without slot-zero setup.
         let mut slot = SlotValue::new(b"Hello".to_vec(), true);
         for offset in [1, 5, 6, usize::MAX] {
@@ -100,7 +110,8 @@ mod tests {
     }
 
     #[test]
-    fn given_coherent_peer_restart_when_advertisement_rotates_then_no_peer_splices_or_replays_a_foreign_epoch() {
+    fn given_coherent_peer_restart_when_advertisement_rotates_then_no_peer_splices_or_replays_a_foreign_epoch(
+    ) {
         // Arrange: each peer owns a distinct coherent long-read snapshot.
         let mut slot = SlotValue::new(b"first".to_vec(), true);
         assert_eq!(slot.read(peer(1), 0).unwrap(), b"first");
@@ -123,7 +134,8 @@ mod tests {
     }
 
     #[test]
-    fn given_coherent_slot_capacity_when_thirty_third_peer_arrives_then_oldest_is_evicted_without_dropping_other_owners() {
+    fn given_coherent_slot_capacity_when_thirty_third_peer_arrives_then_oldest_is_evicted_without_dropping_other_owners(
+    ) {
         // Arrange: all 32 admitted owners retain the same old revision.
         let mut slot = SlotValue::new(b"old".to_vec(), true);
         for index in 0..READ_LIMIT {
