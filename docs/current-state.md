@@ -1,5 +1,34 @@
 # Current implementation and continuation state
 
+
+## Offline-only continuation — 2026-10-17
+
+Development proceeds remotely against `dev` without access to the installed
+Ubuntu desktop, real Pixel, user systemd units, local files or signing keys.
+Installed native29 remains untouched. Native30 card/History source changes and
+the tracked package revision30 are in dev, but no native30 package, upgrade or
+installed acceptance has occurred.
+
+An offline reliability follow-up fixed the sole nightly rustfmt check failure:
+test-only imports in `core_lib/src/hdl/frame_header.rs` were reordered with no
+behavior change (`3c606db`). Exact-source dev Preflight run
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39048444812
+passed Rust formatting, 54 offline Python contract tests, 693 core library
+tests plus 8 integration tests, frontend checks and core Clippy; the separate
+legacy Tauri Clippy was still running at this written checkpoint.
+Native GTK run
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39048444825
+passed its strict source checks and 52 isolated widget/controller tests.
+Both source receipts are single runs, not ten-repeat Mode B evidence.
+See [frame follow-up](native-frame-interruption-2026-10-17.md) and
+[native30 ledger](native30-card-history-polish-2026-10-17.md).
+
+Next strictly non-hardware work may cover scoped static/reliability review and
+deterministic tests from the active essential priorities. Native30 locked
+release packaging, owner/prepared-source checks, installation, screenshot
+acceptance and current Android/Windows physical tests remain distinct OPEN gates.
+Do not auto-promote to master or sign/publish on the strength of headless CI.
+
 2026-10-17 native29 passed a real two-file Linux -> Android -> Linux roundtrip.
 The user confirmed both receipts and automatic file-manager reveal. Bounded,
 snapshot/revision-bound Files1 descriptor reads verified exact sizes/SHA-256 and
