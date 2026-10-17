@@ -106,3 +106,19 @@ and idle-lifecycle commits. Full affected panel20/0 is before the test-only lint
 repair/minimum-slot addition; final widget covers those actual column allocations.
 No core/BLE changes or full-repository/Mode B claim. All check terminals closed.
 Packaging revision28 uniquely identifies the new GUI bytes.
+
+## Verified package and idle upgrade gate
+
+Release package6656952 bytes, SHA-256
+db330c61122505b815c38a97c2ed16212568c56dabe690a938af5fd127974ec0,
+binary source2c14d26. Locked builder verified inventory14 files, dependencies/ELF/
+checksums and offline extracted commands. Exact package Transfers and incoming
+previews were visually inspected: no upper guidance/title, footer Refresh/Clear,
+aligned data with reserved action space, direct incoming consent retained. Synthetic
+rendering does not prove real KDE movement/idle acceptance.
+
+Upgrade pins native27 package/hash and known owners2808363/2808365. Require fresh
+global idle/zero-preparation gate before joining only those two units; APT local
+authorization then normal launch,14-file readback and one14-entry tray/API checks.
+Preserve startup preference and all received files/journal. No diagnostic override,
+BLE/protocol change, cloud/signing/public release or master merge.
