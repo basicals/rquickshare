@@ -42,7 +42,7 @@ changing any source contract, and fix code only if the real regressions fail.
 
 1. [x] Inspect the error flow and existing handler/manager/receipt tests;
    inventory concrete hypotheses and select the missing transport boundary.
-2. [ ] Add deterministic accepted-file tests using the actual `DuplexStream`
+2. [x] Add deterministic accepted-file tests using the actual `DuplexStream`
    from the existing `admitted()` fixture: finish file A, write incomplete
    bytes of file B, close the peer before/within length/body of its next frame.
    Require actual `handle()` error (UnexpectedEof) before terminal mapping.
@@ -105,6 +105,27 @@ forgetting FD cleanup, manufacturing Finished or replaying Send.
 Full repository-wide MODE B inventory/coverage, 10 full runs and real device
 acceptance remain separate gates.
 
-## Results
+## Results and failure triage
 
-Not executed yet.
+First exact-source run at `a3d08591` passed Rust format, frontend
+and core strict Clippy. The full core library run was 696 passed / 1 failed
+in the new EOF regression; the new test stopped on `unwrap_err()` because
+one `handle()` iteration legitimately returned `Ok(())` before processing
+the EOF. Native GTK CI completed successfully. This was not evidence of
+lost received bytes.
+
+The shared `admitted()` fixture manually adds a managed `SessionLease` to
+a legacy `test_request()`, leaving the old broadcast subscriber enabled.
+`process_introduction` and `accept_transfer` also emit legacy UI events;
+one of those ready events wins the first `handle()` select and is ignored,
+returning `Ok(())`. The real managed constructor calls `attach_session`,
+which disables the legacy receiver. Corrected only the new test setup with
+`request.receiver = None` at `7820b155`. The EOF and filesystem
+assertions remain unchanged and no production code was modified.
+
+The resulting headless Preflight and native GTK checks are in progress:
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39052547406
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39052547479
+
+No completed pass is claimed for the corrected test at this checkpoint.
+
