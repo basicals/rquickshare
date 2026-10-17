@@ -456,7 +456,10 @@ fn given_released_source_reservation_when_captured_then_metadata_uses_refreshed_
     // Assert
     assert_eq!((header.5, header.6, header.7), (0, 0, 0));
     assert_eq!(
-        cache.transfer_endpoint_page(client, &header.0, 0).unwrap().1,
+        cache
+            .transfer_endpoint_page(client, &header.0, 0)
+            .unwrap()
+            .1,
         vec![(token(transfer.0, transfer.1), "nearby".to_owned())],
     );
     assert_eq!(header.2, coordinator.revision);

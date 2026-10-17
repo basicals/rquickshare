@@ -480,7 +480,10 @@ async fn given_foreign_or_pending_selection_when_discarded_then_only_owner_idle_
         assert!(view.selections.is_empty());
         assert_eq!(view.transfers.len(), 1);
         assert_eq!(view.transfers[0].phase, Phase::Queued);
-        assert_eq!(view.transfers[0].associated_endpoint.as_deref(), Some("peer"));
+        assert_eq!(
+            view.transfers[0].associated_endpoint.as_deref(),
+            Some("peer")
+        );
         other.cancel(&view.transfers[0].transfer).await.unwrap();
         let cancelled = client.read_state().await.unwrap();
         assert_eq!(cancelled.transfers[0].phase, Phase::Cancelled);
