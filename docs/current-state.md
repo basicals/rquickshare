@@ -1,6 +1,34 @@
 # Current implementation and continuation state
 
 
+## Mode B whole-suite Linux GTK gate — 2026-10-17
+
+Mode B execution coverage previously omitted the active native GTK
+Linux UI from its ten consecutive full-suite iterations. Source
+`7107339e` adds a fifth native GTK ten-run gate using the existing
+Ubuntu 26.04 + isolated X11/D-Bus harness after all four core/desktop/
+frontend/Python ten-run suites pass. Coverage now waits for **both**
+ten-run jobs before measuring core/legacy desktop/frontend. The
+workflow retains tag/manual invocation and additionally accepts only
+an explicit `dev` push that changes its **own** YAML file, never a
+normal source push. No product source, protocol, native binary,
+packages, permissions or public contracts changed.
+
+The exact-source execution is
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39063291246,
+running after commit `7107339e`; ordinary Preflight also runs on
+that source. Exact ten-of-ten and coverage values are **pending
+successful job results** and must not be asserted early. See
+[Mode B full-CI plan and evidence](mode-b-full-ci-2026-10-17.md).
+Even a green five-suite 10x run cannot establish all public branches,
+measured native GTK file coverage or physical Android/Windows/KDE
+interoperability. The 2026-10-12 inventory and current later
+per-feature ledgers still have open gaps; the global completion gate
+remains OPEN. User installed native29, native30 package/update,
+`master`, system services, signer and release all remain untouched.
+
+
+
 ## Offline pre-Accept storage admission and rollback — 2026-10-17
 
 MODE B verified that errors in the Linux receive directory or anonymous
