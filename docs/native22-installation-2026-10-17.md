@@ -21,11 +21,11 @@ once, with the existing isolated broker. Never disable sandboxing or assertions.
   inventory, dependency metadata, ELF, checksums and extracted offline commands.
 - [x] I3: run the exact real sandbox fixture once on this host; record the actual
   result separately from GUI and interoperability acceptance.
-- [ ] I4: fresh same-owner/global-idle preflight: no source reservations, handles,
+- [x] I4: fresh same-owner/global-idle preflight: no source reservations, handles,
   prepared bytes/selections or nonterminal transfers. Never discard user work.
   Join only the identified idle rQuickShare services; use the system package
   authorizer to install the exact package. User enters any password locally.
-- [ ] I5: normal launch; compare all14 installed regular files, versions, one
+- [x] I5: normal launch; compare all14 installed regular files, versions, one
   real tray and unchanged login-start state. Record source/package/install
   evidence, export the candidate and leave physical acceptance to the user.
 
@@ -60,3 +60,39 @@ and LD_LIBRARY_PATH to $PKG_CONFIG_SYSROOT_DIR/usr/lib/x86_64-linux-gnu. Run
 python3 scripts/native_deb.py build --shlibs-file /tmp/rqs-native13-layer-shell.shlibs
 --library-dir "$LD_LIBRARY_PATH". This is a task-local environment, not installed
 runtime search configuration. Actual GTK4/Layer Shell versions:4.22.4/1.3.0.
+
+
+Historical authorization wait: the fresh known-owner/global-idle gate passed
+and the two idle rQuickShare units were joined. The exact native22 package then
+waited for local administrator authentication. The user confirmed the system
+password window; installation subsequently completed successfully.
+
+## Installed observations and handoff
+
+Apt exited0 and upgraded0.11.5+native21 to0.11.5+native22. Normal launch restored
+one daemon (observed PID2495491) and one desktop (2495492). All14 installed regular
+files match package bytes, modes and root ownership. Login start remains disabled.
+Preflight found zero prepared resources and no nonterminal transfers; two prior
+terminal records were released by the documented restart, not received files.
+
+Passive post-install readback found exactly one Active rquickshare tray, the
+expected15 menu rows, valid running Visibility2 and the new authenticated Batch1
+endpoint-association read. No agent send, clipboard change, automatic acceptance
+or discovery-mode change was performed. A later passive snapshot had one transfer
+row; only counts are recorded, with no peer names, source contents or PINs.
+See evidence/native22-installation-2026-10-17.json for measured receipts.
+
+I1-I5 are complete for local package/install verification. Physical KDE layout,
+recipient-first chooser, expanded details and live endpoint grouping are ready
+for user testing, not marked accepted. Real Android/Windows and broader Mode B
+acceptance remain open. The exact preview sandbox fixture passed on this host;
+that does not prove the previously failing CI container or full native suite.
+
+Only the native package revision and documentation changed from the previously
+checked production source. The actual locked package build/verification and
+single affected host sandbox test were run; unchanged core/GTK suites were not
+repeated. The final documentation receipt uses [skip ci] to avoid repeating
+unchanged CI/ten-run GTK work on this local packaging checkpoint. No CI pass
+is claimed for that receipt; the package revision was checked in the real build.
+All observer/installer commands exited (Terminal closed). The normal installed
+application services intentionally remain running for the user's tests.

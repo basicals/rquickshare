@@ -1,17 +1,17 @@
 # Essential installed/peer acceptance
 
-Updated2026-10-17. Native21 is installed on the existing KDE/Wayland host.
-The requested single toolbar/drawer, primary tray hide/show, same-session position
-and visibility countdown checks are user-confirmed. The native13 one-file Android
-outbound/code match is historical; it does not pass current native21 peer checks.
-Remaining transfer/failure/lifecycle matrix entries below are untested unless
-explicitly recorded in current evidence. See [priorities](native-essential-priorities.md)
-and [mainline integration](native-mainline-integration-2026-10-17.md).
+Updated2026-10-17. Native22 is installed on the existing KDE/Wayland host.
+Native21 toolbar/tray/same-session position/countdown acceptance is historical;
+the newer native22 card-operation/endpoint grouping requires physical review.
+The native13 Android one-file outbound/code match is also historical. Remaining
+transfer/failure/lifecycle matrix entries are untested unless explicitly recorded.
+See [native22 installation](native22-installation-2026-10-17.md) and
+[priorities](native-essential-priorities.md).
 
 ## Preconditions
 
-Use the exact installed native21 package/hash from
-[evidence](evidence/native-tray-countdown-2026-10-17.json), with the actual Android
+Use the exact installed native22 package/hash from
+[evidence](evidence/native22-installation-2026-10-17.json), with the actual Android
 and Google Quick Share for Windows versions recorded before checking each peer.
 The package targets Ubuntu26.04 amd64; unavailable peers/platforms remain UNTESTED.
 Use disposable files/destination and preserve content/hash evidence locally

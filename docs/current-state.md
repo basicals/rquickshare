@@ -1,16 +1,29 @@
 # Current implementation and continuation state
 
-2026-10-17 authorized native22 installation is in progress for user testing.
-Native21 remains installed until the package/idle gates pass. Follow the
-[local installation plan](native22-installation-2026-10-17.md).
+2026-10-17 current installed checkpoint: native22 is installed and running for
+user testing. Binary/package source0f34808537a2b40a22dc8f56a227b5801dc74b61,
+6502732-byte package SHA-256
+a3fcdc0118782de16e50b276f2260b39cce9c8fd5d1cdd23704ea703f3803194.
+All14 installed files and one Active15-row tray passed, along with passive
+Visibility2 and the new Batch1 endpoint-association read. Login start stays off.
+The exact real Bubblewrap/Glycin PNG/JPEG fixture passed once on this host; the
+previous CI container failure remains a separate unresolved environment gate.
+The newer recipient-first Send, retained upward expansion and session-endpoint
+grouping are now installed, with physical user acceptance pending. Native21
+package/source rollback artifacts remain unchanged. See
+[installation record](native22-installation-2026-10-17.md) and
+[evidence](evidence/native22-installation-2026-10-17.json). No signed/public release.
+
+Historical source integration checkpoint before the native22 installation:
 
 2026-10-17 current source checkpoint: the additional card/endpoint-association
 work is merged into master by [PR #6](https://github.com/morozhenko-apps/rquickshare/pull/6),
 merge b93ac02d8d923f5cf5a4d83be41c2aff9510e217. Exact candidate fa28d183 passed
 all five Preflight jobs (39023412094); native GTK strict lint and 42 tests ten
 times passed at source-equivalent 29322530 (subsequent changes are docs only).
-Local master/dev are synchronized; work continues on dev. Source and installed
-versions differ: native21 remains installed, while the latest source adds
+At that checkpoint local master/dev were synchronized; subsequent native22
+packaging and install records continue on dev. Native21 was then installed,
+while the merged source added
 recipient-first Send, retained upward expansion and session-endpoint grouping.
 Full native package preview-sandbox validation, broader Mode B coverage and
 physical KDE/Android/Windows acceptance remain open. A docs-only receipt skips
