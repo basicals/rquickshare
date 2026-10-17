@@ -273,3 +273,22 @@ private-bus SDK Retry passed; strict core all-feature/all-target lint passed
 Retry persists them without changing sharing authority. Native23 remains
 uninstalled:6578400 bytes, SHA-256
 9b76e356c4e05159227c200d68cc92106488a8c22580d8f84f257312ab7f7eec.
+
+## Native24 local installation stage
+
+Release source d3cd9d3, package 6582328 bytes, SHA-256
+26d6b4cf2e6d2791c1dda512c6036d5739b46fedcb933c03a5d8c7d369b70805. Locked release builder verified all14 package files, dependencies,
+ELF/checksums and extracted offline commands. Native strict lint passed3.91s.
+The native24 journal scope passed9/0 in0.20s; the real SDK/bus scenario passed
+1/0 in0.07s. A6 is complete for affected development checks, not full Mode B.
+
+Read-only idle gate at2026-10-17T11:51:40Z found installed native22, the known
+daemon2495491 and desktop2495492, zero reserved/prepared resources and only
+two terminal transfer rows. No active work will be discarded. Recheck this gate
+immediately before joining those units and installing this exact package through
+APT/pkexec. Preserve native22 for rollback; its in-memory terminal history cannot
+be imported retrospectively. Received files/settings are untouched. Enable only
+the documented temporary per-unit privacy-safe receiver trace after the idle
+stop, then launch normally. Keep login start disabled and verify all14 installed
+files plus one14-entry tray and the new Journal1/Queue interfaces. Real phone
+timing/queue and KDE visual acceptance remain separate user checks.
