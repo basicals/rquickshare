@@ -26,7 +26,7 @@ async fn read_bounded(stream: &gio::InputStream) -> Result<NativeText, ()> {
     }
     NativeText::new(String::from_utf8(body).map_err(|_| ())?).ok_or(())
 }
-async fn clipboard_text(clipboard: &gtk::gdk::Clipboard) -> Result<NativeText, ()> {
+pub(super) async fn clipboard_text(clipboard: &gtk::gdk::Clipboard) -> Result<NativeText, ()> {
     let (stream, mime) = clipboard
         .read_future(
             &["text/plain;charset=utf-8", "text/plain"],
@@ -53,13 +53,14 @@ pub(super) struct Composer {
     paste: gtk::Button,
     prepare: gtk::Button,
     status: gtk::Label,
+    heading: gtk::Label,
     permit: RefCell<Option<PreparationPermit>>,
     task: RefCell<Option<glib::JoinHandle<()>>>,
     busy: Cell<bool>,
     closed: Cell<bool>,
     guard: Box<dyn Fn() -> bool>,
     submit: Box<Prepare>,
-    prepared: Box<dyn Fn(bool)>,
+    prepared: Box<dyn Fn(Option<rqs_lib::service::client::Selection>)>,
     epoch: u128,
 }
 impl Composer {
@@ -69,7 +70,7 @@ impl Composer {
         permit: PreparationPermit,
         guard: impl Fn() -> bool + 'static,
         submit: impl Fn(NativeText) -> Result<Completion, ControllerError> + 'static,
-        prepared: impl Fn(bool) + 'static,
+        prepared: impl Fn(Option<rqs_lib::service::client::Selection>) + 'static,
     ) -> Rc<Self> {
         let window = gtk::Window::builder()
             .title("Send text")
@@ -117,6 +118,7 @@ impl Composer {
             paste,
             prepare,
             status,
+            heading,
             permit: RefCell::new(Some(permit)),
             task: RefCell::new(None),
             busy: Cell::new(false),
@@ -266,12 +268,14 @@ impl Composer {
                 if composer.closed.get() {
                     return;
                 }
-                let successful = matches!(
-                    result,
-                    Ok(rqs_lib::service::client::controller::ActionResult::Selection(_))
-                );
+                let selection = match result {
+                    Ok(rqs_lib::service::client::controller::ActionResult::Selection(
+                        selection,
+                    )) => Some(selection),
+                    _ => None,
+                };
                 composer.close();
-                (composer.prepared)(successful);
+                (composer.prepared)(selection);
             }
         });
         if let Some(previous) = self.task.replace(Some(task)) {
@@ -346,6 +350,10 @@ impl Panel {
         }
     }
     pub(super) fn show_composer(self: &Rc<Self>) {
+        self.show_composer_for(None);
+    }
+    pub(super) fn show_composer_for(self: &Rc<Self>, target: Option<outbound::Target>) {
+        self.sending.popdown();
         if let Some(composer) = self
             .composer
             .borrow()
@@ -375,6 +383,8 @@ impl Panel {
         let weak = Rc::downgrade(self);
         let submit = Rc::downgrade(self);
         let done = Rc::downgrade(self);
+        let generation = self.input_generation.borrow().clone();
+        let direct = target.is_some();
         let composer = Composer::new(
             self.window.application().as_ref(),
             epoch,
@@ -389,31 +399,20 @@ impl Panel {
                     .and_then(|panel| panel.handle.as_ref().map(|handle| handle.choose_text(text)))
                     .unwrap_or(Err(ControllerError::Closed))
             },
-            move |successful| {
+            move |selection| {
                 if let Some(panel) = done.upgrade() {
-                    let safe = {
-                        let model = panel.model.borrow();
-                        !model.closing
-                            && model.safety.manual_allowed()
-                            && model
-                                .state
-                                .view
-                                .as_ref()
-                                .is_some_and(|view| view.epoch == epoch)
-                    };
-                    if !safe {
-                        return;
-                    }
-                    if !successful {
-                        panel.notice("Text preparation did not complete. Review Recover or discard the pending preparation.");
-                    }
-                    panel.set_drawer(Drawer::Open);
-                    panel.pages.set_visible_child_name("nearby");
-                    panel.render();
-                    panel.apply_presentation();
+                    panel.finish_prepared(epoch, target.clone(), generation.clone(), selection);
                 }
             },
         );
+        composer
+            .prepare
+            .set_label(if direct { "Send" } else { "Prepare text" });
+        if direct {
+            composer
+                .heading
+                .set_text("Write or paste text, then send it to the selected device.");
+        }
         composer.window.set_transient_for(Some(&self.window));
         self.mark_manual();
         composer.window.present();

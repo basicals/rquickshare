@@ -79,7 +79,6 @@ fn payload_label(details: &TransferDetails) -> String {
         PayloadKind::Files => format!("{} files", details.files.len()),
         PayloadKind::Text => "Text".into(),
         PayloadKind::Url => "Link".into(),
-        _ => "Content".into(),
     }
 }
 fn transferring(phase: Phase) -> bool {
@@ -489,6 +488,38 @@ impl Panel {
                 progress.set_width_request(72);
                 progress.set_valign(gtk::Align::Center);
                 controls.append(&progress);
+                let strip = gtk::Revealer::new();
+                strip.set_widget_name("send-strip");
+                strip.set_transition_type(gtk::RevealerTransitionType::SlideLeft);
+                strip.set_transition_duration(160);
+                let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 3);
+                for (kind, icon, title) in [
+                    (outbound::Kind::Files, "text-x-generic-symbolic", "File"),
+                    (outbound::Kind::Folder, "folder-symbolic", "Folder"),
+                    (outbound::Kind::Text, "insert-text-symbolic", "Text"),
+                    (
+                        outbound::Kind::Clipboard,
+                        "edit-paste-symbolic",
+                        "Clipboard",
+                    ),
+                ] {
+                    let button = gtk::Button::from_icon_name(icon);
+                    button.set_tooltip_text(Some(title));
+                    button.update_property(&[gtk::accessible::Property::Label(title)]);
+                    let weak = Rc::downgrade(self);
+                    let target = outbound::Target {
+                        epoch: view.epoch,
+                        endpoint: id.clone(),
+                    };
+                    button.connect_clicked(move |_| {
+                        if let Some(panel) = weak.upgrade() {
+                            panel.input_for(kind, target.clone());
+                        }
+                    });
+                    inputs.append(&button);
+                }
+                strip.set_child(Some(&inputs));
+                controls.append(&strip);
                 let send = gtk::Button::with_label("Send");
                 send.set_widget_name("send-device");
                 let weak = Rc::downgrade(self);
@@ -513,6 +544,15 @@ impl Panel {
                 );
             }
             let root = rows.entries[&key].root.clone();
+            if let Some(strip) =
+                named(root.upcast_ref(), "send-strip").and_downcast::<gtk::Revealer>()
+            {
+                strip.set_reveal_child(
+                    selection.is_none()
+                        && self.model.borrow().strip_target.as_deref() == Some(id.as_str()),
+                );
+                strip.set_sensitive(ready);
+            }
             let active = view.transfers.iter().find(|transfer| {
                 transfer.direction == Direction::Outbound
                     && !transfer.phase.is_terminal()

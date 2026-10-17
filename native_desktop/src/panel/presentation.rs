@@ -11,6 +11,7 @@ impl Panel {
     }
     pub(super) fn hide(self: &Rc<Self>) {
         self.pin_surface_bottom();
+        self.close_input();
         self.close_text_review();
         self.close_composer();
         self.close_image();
@@ -74,6 +75,7 @@ impl Panel {
             model.safety_active = true;
         }
         if !safety.manual_allowed() {
+            self.close_input();
             self.close_text_review();
             self.close_composer();
             self.close_image();

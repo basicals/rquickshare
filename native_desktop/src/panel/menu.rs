@@ -50,6 +50,7 @@ impl Panel {
             "folder",
             "send-text",
             "send-image",
+            "send-clipboard",
             "discard",
             "recover",
             "abort",
@@ -122,9 +123,8 @@ impl Panel {
                     "send" => panel.show_sending(),
                     "send-text" => panel.show_composer(),
                     "send-image" => panel.show_image(),
+                    "send-clipboard" => panel.capture_clipboard(None),
                     "files" | "folder" => {
-                        panel.set_drawer(Drawer::Open);
-                        panel.pages.set_visible_child_name("nearby");
                         panel.choose(name == "folder");
                     }
                     "discard" | "recover" | "abort" => panel.button(name).emit_clicked(),
@@ -194,7 +194,7 @@ impl Panel {
             ("files", "Files…"),
             ("folder", "Folder…"),
             ("send-text", "Text or link…"),
-            ("send-image", "Clipboard image…"),
+            ("send-clipboard", "Clipboard"),
         ] {
             sending.append(Some(title), Some(&format!("panel.{name}")));
         }
@@ -280,6 +280,7 @@ impl Panel {
             if !controls_ready(
                 &model.state,
                 model.waiting
+                    || model.input_active
                     || model.closing
                     || model.ingress.busy
                     || model.dialog.is_some()
@@ -301,8 +302,14 @@ impl Panel {
                 self.submit(|| handle.queue_recipient(selection, endpoint.to_owned()));
             }
         } else {
-            // Choosing content never binds a recipient or transmits it automatically.
-            self.show_sending();
+            let mut model = self.model.borrow_mut();
+            model.strip_target = if model.strip_target.as_deref() == Some(endpoint) {
+                None
+            } else {
+                Some(endpoint.to_owned())
+            };
+            drop(model);
+            self.render();
         }
     }
     pub fn set_drawer(self: &Rc<Self>, drawer: Drawer) {
@@ -311,6 +318,7 @@ impl Panel {
             return;
         }
         self.pin_surface_bottom();
+        self.model.borrow_mut().strip_target = None;
         self.model.borrow_mut().drawer = drawer;
         self.actions
             .lookup_action("devices")

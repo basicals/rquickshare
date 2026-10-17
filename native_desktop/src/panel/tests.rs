@@ -417,6 +417,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         }
     }
     assert_no_choices(panel.box_widget("nearby").upcast_ref());
+    outbound::verify(&panel);
     panel.show_transfers();
     assert!(panel.transfers.borrow().is_some());
     assert_eq!(panel.pages.visible_child_name().as_deref(), Some("nearby"));

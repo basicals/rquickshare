@@ -27,6 +27,7 @@ mod image;
 mod incoming_preview;
 mod menu;
 mod movement;
+mod outbound;
 mod presentation;
 mod reveal;
 mod rows;
@@ -44,6 +45,8 @@ struct Model {
     desktop: DesktopState,
     last_hint: Option<(i32, i32)>,
     waiting: bool,
+    input_active: bool,
+    strip_target: Option<String>,
     closing: bool,
     notice: Option<&'static str>,
     drawer: Drawer,
@@ -91,6 +94,9 @@ pub struct Panel {
     visibility_tick: RefCell<Option<glib::SourceId>>,
     backdrop: backdrop::Backdrop,
     curtain: gtk::Button,
+    input_task: RefCell<Option<glib::JoinHandle<()>>>,
+    input_generation: RefCell<Rc<()>>,
+    input_cancel: RefCell<Option<tokio_util::sync::CancellationToken>>,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -416,6 +422,9 @@ impl Panel {
             visibility_tick: RefCell::new(None),
             backdrop,
             curtain,
+            input_task: RefCell::new(None),
+            input_generation: RefCell::new(Rc::new(())),
+            input_cancel: RefCell::new(None),
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -529,6 +538,8 @@ impl Panel {
             .map(|view| view.epoch);
         let current_epoch = state.view.as_ref().map(|view| view.epoch);
         if state.disconnected || previous_epoch != current_epoch {
+            self.close_input();
+            self.rows.borrow_mut().clear();
             self.close_text_review();
             self.close_composer();
             self.close_image();
@@ -648,6 +659,7 @@ impl Panel {
             tick.remove();
         }
         self.preview_image.cancel();
+        self.close_input();
         self.close_text_review();
         self.close_composer();
         self.close_image();
@@ -689,6 +701,7 @@ impl Panel {
             let model = self.model.borrow();
             if self.handle.is_none()
                 || model.waiting
+                || model.input_active
                 || model.closing
                 || model.state.busy
                 || model.state.disconnected
@@ -737,12 +750,17 @@ impl Panel {
         self.completion.replace(Some(task));
     }
     fn choose(self: &Rc<Self>, folder: bool) {
+        self.choose_for(folder, None);
+    }
+    fn choose_for(self: &Rc<Self>, folder: bool, target: Option<outbound::Target>) {
+        self.sending.popdown();
         let base;
         {
             let mut model = self.model.borrow_mut();
             if !controls_ready(
                 &model.state,
                 model.waiting
+                    || model.input_active
                     || (model.safety_active && !model.safety.manual_allowed())
                     || model.ingress.busy
                     || model.dialog.is_some()
@@ -769,6 +787,10 @@ impl Panel {
                 .and_then(|view| view.selections.first())
                 .cloned();
         }
+        let Some(epoch) = self.model.borrow().state.view.as_ref().map(|v| v.epoch) else {
+            return;
+        };
+        let generation = self.input_generation.borrow().clone();
         self.render();
         let dialog = gtk::FileDialog::new();
         let cancellable = self.model.borrow().dialog.clone();
@@ -777,19 +799,27 @@ impl Panel {
             if let Some(panel) = weak.upgrade() {
                 panel.model.borrow_mut().dialog = None;
                 let permit = panel.model.borrow_mut().dialog_permit.take();
-                if panel.model.borrow().closing {
+                if panel.model.borrow().closing
+                    || !Rc::ptr_eq(&generation, &panel.input_generation.borrow())
+                {
                     return;
                 }
                 if let Ok(files) = files {
                     let paths: Option<Vec<_>> = files.iter().map(gio::File::path).collect();
                     match (paths, panel.handle.clone(), permit) {
                         (Some(paths), Some(handle), Some(permit)) if !paths.is_empty() => {
-                            panel.ingress.start(
+                            let receive = panel.ingress.start(
                                 &panel.runtime,
                                 paths,
                                 handle,
                                 permit,
                                 base.clone(),
+                            );
+                            panel.wait_selection(
+                                receive,
+                                epoch,
+                                target.clone(),
+                                generation.clone(),
                             );
                         }
                         _ => panel.notice("Only local files and folders can be selected."),
@@ -865,6 +895,7 @@ impl Panel {
             && controls_ready(
                 &model.state,
                 model.waiting
+                    || model.input_active
                     || (model.safety_active && !model.safety.manual_allowed())
                     || model.ingress.busy
                     || model.dialog.is_some()
@@ -984,6 +1015,7 @@ impl Panel {
             ("folder", ready && can_add),
             ("send-text", ready && !selected),
             ("send-image", ready && !selected),
+            ("send-clipboard", ready && !selected),
             ("discard", ready && selected),
             ("nearby", !preview),
             ("incoming", !preview),
@@ -1024,6 +1056,7 @@ impl Panel {
             self.button(id).set_sensitive(
                 !preview
                     && !model.waiting
+                    && !model.input_active
                     && !model.state.busy
                     && (model.state.pending
                         || (id == "recover"

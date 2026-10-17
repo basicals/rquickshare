@@ -88,7 +88,7 @@ valid independent timer regressions.
   discovery events; record explicit requirements and missing decisions.
 - [x] P2: freeze clipboard/completion contracts, branch/risk inventory and rollback.
 - [x] P3: simplify history rows; move source controls and implement prepared curtain.
-- [ ] P4: implement the endpoint-bound inline action strip and one-shot acquisition;
+- [x] P4: implement the endpoint-bound inline action strip and one-shot acquisition;
   preserve the daemon FIFO, immutable source snapshots and explicit receiver consent.
 - [ ] P5: stage-aware incoming rows and guarded once-only completion presentation.
 - [ ] P6: scoped receiver diagnosis/repair based on demonstrated evidence.
@@ -163,3 +163,65 @@ the nonexistent branch and use filename type. Final affected real widget smoke
 passed1/0 in0.66s, including source/countdown order, blur input blocking and
 drawer-aware Receive indication. Isolated Layer Shell warnings are expected,
 not physical KDE proof. No ten-run/full Mode B claim. Terminal commands exited.
+
+P4 source checkpoint: one animated four-action per-device strip, repeat click
+closes it; main type menu preserves the drawer. File/folder chooser and text
+editor bind exact epoch/endpoint and use the returned Selection; successful
+context input uses existing consuming Send, global preparation opens devices
+after completion and uses retained Queue on each row click. Clipboard uses
+bounded file lists (256 roots/256KiB), PNG worker validation or bounded UTF-8,
+with files > image > text and no fallback after the chosen format fails. Cut
+clipboard entries are read as sources, never moved/deleted. Hide/lock/epoch
+changes invalidate input generation; dropped waits never replay a send.
+
+The joined ingress owner now returns explicit selection completion rather than
+guessing from a later watch snapshot. Before submitting the contextual Send,
+refresh both controller state and ingress state from their owners: GUI watch
+delivery may lag the completed acquisition. Prepared source is preserved after
+failed/stale-target admission for an explicit user decision. No daemon API or
+protocol change in P4.
+
+Measured verification: initial full native46 run had45 passes/1 failure; GIO
+accepted a remote-host file URI as a local path. Added explicit empty/localhost
+authority and percent-encoding validation without weakening the assertion.
+Affected panel scope then16 passed/0 failed in0.67s (30 unrelated filtered),
+including all8 MIME format combinations, local URI/count/size/malformed cases,
+exact target/epoch/pending/disconnect guards and strip repeat toggling. Lint
+found an unreachable payload fallback and a test helper after the test module;
+removed the impossible branch and moved the helper. Strict all-target native
+no-dependency lint passed1.42s. After the ingress-ordering guard and contextual
+editor copy correction, affected actual widget smoke passed1/0 in0.50s. No ten
+repetitions or whole Mode B claim; installed native24 remains unchanged.
+
+## P5 result capability review before public/security-boundary changes
+
+Existing Files1.AcquireFile returns only a checked regular-file FD by index. It
+cannot provide a received top-level directory or one whole-batch result. The
+portal OpenDirectory accepts a file/directory FD and opens its containing folder,
+possibly selecting it; OpenFile also accepts directories but must never receive
+an untrusted regular received file as an automatic action. Official reference
+inspected2026-10-17:
+https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.OpenURI.html#org-freedesktop-portal-openuri-opendirectory
+
+Recommended option1: daemon resolves one typed completed-transfer result using
+its original receive root and immutable receipt: one loose file -> checked file
+FD, one common received folder -> checked directory FD, several loose roots ->
+containing directory. SDK validates descriptor type and current epoch/revision;
+GTK uses the matching directory-only/open-containing-folder portal action once.
+No caller paths, no metadata-name authority, no content execution. This gives
+correct folder/batch behavior but requires an additive result API, bounded
+joined filesystem acquisition and replacement/rename/type validation. Any
+unavailable result remains completed with a visible manual action/error.
+
+Alternative option2: keep the current per-file API and automatically reveal only
+the first complete file. It reuses checked authority and fewer contracts but
+cannot consistently select the received folder or represent multiple loose roots;
+the user may see the wrong level of a nested folder. Do not silently choose this
+semantic shortcut for the requested whole-transfer result.
+
+Section3/3.1 requires the user's choice before the additive result capability.
+P3/P4 are reviewable independent commits; P5 lifecycle/Completed persistence and
+automatic text/result presentation, P6 discovery and P7 package/install remain
+open. Do not mark native25 installed or auto-result complete. No new public API,
+file-manager launch, clipboard capture from the live session or service restart
+was performed in these source stages. All command sessions exited.
