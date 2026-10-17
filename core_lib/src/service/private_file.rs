@@ -17,7 +17,7 @@ pub(super) fn directory(directory: &Path, create: bool) -> Result<Option<File>> 
         if let Some(parent) = directory.parent() {
             std::fs::create_dir_all(parent).map_err(|_| StoreError::Write)?;
         }
-        match std::fs::DirBuilder::new().mode(0o700).create(&directory) {
+        match std::fs::DirBuilder::new().mode(0o700).create(directory) {
             Ok(()) => (),
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => (),
             Err(_) => return Err(StoreError::Write),
