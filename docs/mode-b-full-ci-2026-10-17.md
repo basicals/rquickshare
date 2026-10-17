@@ -136,3 +136,39 @@ remains open as noted in `docs/mode-b-test-plan.md`; adding a fifth
 CI suite does not complete missing domain tests, run a mutation
 framework, establish zero flakiness across future environments, or
 substitute for real Pixel/Windows/Ubuntu transfer validation.
+
+## 2026-10-17 first strict run failure and correction
+
+First Mode B workflow run
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39063291246
+**failed on attempt 1**, not on a stochastic core or GTK race:
+Core 704/0 plus 8 integration, legacy desktop 10/0 and Vue
+passed before Python failed 1 of 54 cases. The error came from
+the GitHub Ubuntu system `botocore.config.Config` rejecting
+the already-used `request_checksum_calculation` SDK parameter.
+The pinned Python dependencies from `scripts/requirements-r2.txt`
+had **not been installed** in Mode B, whereas the exact-source
+ordinary Preflight
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39063291248
+was 5/5 green and did install them. As designed, this failed
+the full suite and **skipped both GTK and coverage**; no 10x
+proof or percentage is available from the first run.
+
+The new `dev` source commit `f8e5d2d0` adds a pinned venv
+identical in principle to the passing Preflight Python isolation.
+The strict Mode B job still repeats **all** four complete
+suites ten times, followed by native GTK ten times, then
+conditional coverage. GitHub run
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477128
+was started from that correction and was still active at the
+initial entry; no success should be inferred from its launch.
+
+An independent **ordinary CI** profile now runs the stable
+Core subset 1x and a documented 8-case race-sensitive subset
+10x, with a live selector-integrity check. This is the
+user-requested speed optimization for development checks,
+**not** a substitute for mandatory full Mode B Stage 11;
+see [stable/stress partition and CI evidence](ci-stable-race-sensitive-2026-10-17.md).
+A future product defect must never be hidden by calling a
+failing test 'flaky' or silently skipping it.
+
