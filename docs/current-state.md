@@ -1,6 +1,30 @@
 # Current implementation and continuation state
 
 
+## Offline outbound empty-file EOF reliability — 2026-10-17
+
+Review of the accepted sender's FILE loop found that a selected zero-byte
+file was silently retired without its required Data(lastChunk=1) frame.
+Thus sender Finished could coexist with an incomplete receiver. The native
+sender now uses one existing-protocol terminal-frame constructor for both
+zero-byte and nonzero files and retires working members only after the EOF
+write succeeds. Encrypted loopback tests verify a sole empty file,
+empty/nonempty/empty multi-file manifest, exact IDs/offsets/EOF counts and
+source preservation. A deterministic missing-key failure before terminal
+transmission verifies no false Finished/retirement. This is not a kernel
+TCP disconnection regression.
+
+Source `289442da`: Core 699/0 and integration 8/0, Python offline 54/0,
+GTK isolated 52/0, Rust formatting and core Clippy/frontend passed.
+Legacy Tauri Clippy was still running at that evidence checkpoint.
+See [outbound empty-file ledger](native-outbound-empty-files-2026-10-17.md).
+The preceding incoming EOF/partial-file tests also remain in this suite.
+These are headless single-run results, not physical Android/Windows acceptance
+or MODE B ten-repeat proof. Installed native29, native30 package/upgrade
+gate, release-signing gate and master stay unchanged.
+
+
+
 ## Offline transport-loss and partial-file verification — 2026-10-17
 
 A focused accepted two-file inbound regression now closes the external peer
