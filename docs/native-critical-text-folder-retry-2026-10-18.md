@@ -127,6 +127,45 @@ run SHA and verification. Rollback removes the scoped tests,
 docs and optional workflow trigger; leaves production,
 master and installed binary unaffected.
 
+## Verified critical-source test results and strict-run start
+
+The exact P0 source `940a3a9f54f0b965df54555190b353ea7ef845c4`
+completed
+[Core stable test job 117528745242](https://github.com/morozhenko-apps/rquickshare/actions/runs/39077876927)
+with **702/0** passed once, **8/0** additional integration
+tests (4+4), and exactly ten cycles of eight
+race-sensitive tests (**80/0** single-test results).
+All three **new** managed cases appear individually
+`ok` in the full Rust log. Rust format, frontend,
+Core strict Clippy for that source passed, and the
+independent [Native GTK 39077876891](https://github.com/morozhenko-apps/rquickshare/actions/runs/39077876891)
+was **SUCCESS**; the prior Preflight's legacy Tauri
+job was cancelled by the next `dev` workflow-only
+commit, not marked 5/5.
+
+Workflow-only commit `5776e0ea65b0240cdbf3057b5d5ab7d84d4f9935`
+adds a **fail-closed inventory gate** at the start of
+the full Mode B job to ensure all six critical
+incoming P0 tests (decline, peer disconnect,
+remote Cancel, text/link, folder, explicit retry)
+are present **exactly once** in the compiled
+Rust test registry. It leaves the existing
+ten full suite loops, independent GTK ten loops
+and final dependency-gated coverage measurements
+unchanged. That same `dev` workflow-file push
+automatically started the strict
+[full Mode B run 39078162262](https://github.com/morozhenko-apps/rquickshare/actions/runs/39078162262)
+on **exact HEAD `5776e0ea`**, with
+[Preflight 39078162267](https://github.com/morozhenko-apps/rquickshare/actions/runs/39078162267)
+also invoked. Both were still active when this
+entry was written. Strict Stage 11 and overall
+Stage 12 cannot be claimed from a running job.
+
+All user-operated Google Android/Windows,
+installed native29 upgrade and real KDE/Wayland
+peer cases remain UNTESTED for the new P0
+scenarios, regardless of final CI result.
+
 ## Source-only implementation checkpoint
 
 The three requested high-risk methods and scoped managed-session
