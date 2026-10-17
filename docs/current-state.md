@@ -15,7 +15,8 @@ behavior change (`3c606db`). Exact-source dev Preflight run
 https://github.com/morozhenko-apps/rquickshare/actions/runs/39048444812
 passed Rust formatting, 54 offline Python contract tests, 693 core library
 tests plus 8 integration tests, frontend checks and core Clippy; the separate
-legacy Tauri Clippy was still running at this written checkpoint.
+legacy Tauri Clippy subsequently passed. Preflight completed all five jobs
+successfully on that exact source commit. Frontend Vitest passed 46 tests.
 Native GTK run
 https://github.com/morozhenko-apps/rquickshare/actions/runs/39048444825
 passed its strict source checks and 52 isolated widget/controller tests.
