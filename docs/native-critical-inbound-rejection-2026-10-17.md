@@ -124,7 +124,7 @@ remapped here. Stage 12 **overall NO** remains.
    under the established `receive_reliability.rs` fixture.
    If failure shows production defect, stop Mode B and
    separately plan Mode A fix. Never weaken assertions.
-3. [ ] Observe headless Preflight (Core stable 1x +
+3. [x] Observe headless Preflight (Core stable 1x +
    race-sensitive 10x) and separate Native GTK if needed
    (no GTK production changes). Record exact outcomes;
    do not mark running jobs successful.
@@ -161,3 +161,53 @@ Hardware status remains **UNTESTED** for actual Pixel rejection,
 peer app close during Reject and Google Windows compatibility.
 The existing installed native29 was not changed; the newly
 tested source is not an installed device-acceptance result.
+
+## Verified critical protocol regression results
+
+The actual production-code SHA `da71cdcd4c79c214d78b6080291710867141fb8f`
+passed the exact-source
+[Preflight Core job 117522681485](https://github.com/morozhenko-apps/rquickshare/actions/runs/39075819730)
+and separately
+[Native GTK 117522631690](https://github.com/morozhenko-apps/rquickshare/actions/runs/39075819773).
+Core stdout explicitly shows both **new methods individually `ok`**:
+
+- `given_managed_user_decline_when_two_files_are_offered_then_real_encrypted_reject_has_no_file_authority`.
+- `given_user_decline_and_peer_socket_loss_when_reject_cannot_be_sent_then_terminal_rejected_has_no_publication`.
+
+The test runner verified **698/0 stable** library cases
+(out of 706; exactly 8 intentionally excluded),
+**4/0 + 4/0** separate integration suites, then
+10 numbered risk-sensitive iterations comprising **80/0**
+fully qualified exact-name invocations. No new P0
+test is in the eight-case risk subset; each passes
+during stable once. Python contracts / formatter,
+frontend lint/type/unit and Core Clippy passed in
+the same source's Preflight. Native GTK widget
+suite passed separately. The legacy Tauri Clippy
+job was still executing when the first evidence
+was entered, so the aggregate five-job Preflight
+verdict was not asserted at that checkpoint.
+
+**Critical scope results (new cases):** Positive 0;
+N3 1 (socket dropped), N4 2 (no accepted retry,
+sticky terminal), N7 2 (managed negative consent,
+no unauthorized file receipt), N9 2 (user
+rejection / peer exit), N10 2 (no secret
+publication), N12 2 (empty destination/no staged
+file). Counts are overlapping assertions per
+applicable category, not independent test totals.
+All other N-categories remain governed by adjacent
+existing test inventories rather than new coverage.
+
+**Mutation sensitivity:** would fail on sending
+Accept instead of Reject, changed lastChunk or
+payload length, state bypassing Rejected, any
+public final file/stage owner, fraudulent received
+receipt, or later Disconnected taking over a
+terminal rejection. No mutation engine was run.
+
+**Critical release status:** these two source-only
+negative cases pass. **Physical Pixel reject and
+abort, text/folder and Google Windows protocols
+remain UNTESTED**. No installed program changed.
+No new measured coverage claimed.
