@@ -780,7 +780,8 @@ mod tests {
     }
 
     #[test]
-    fn given_valid_weave_version_ranges_and_packet_bounds_when_parsed_then_negotiation_clamps_exactly() {
+    fn given_valid_weave_version_ranges_and_packet_bounds_when_parsed_then_negotiation_clamps_exactly(
+    ) {
         // Arrange: ranges containing version 1 and all min/max ±1 boundaries.
         let ranges = [(0_u16, 1_u16), (1, 1), (0, 2), (1, u16::MAX)];
         let cases = [
@@ -820,7 +821,8 @@ mod tests {
     }
 
     #[test]
-    fn given_bad_or_partial_weave_frame_lengths_when_checked_then_no_truncated_payload_is_admitted() {
+    fn given_bad_or_partial_weave_frame_lengths_when_checked_then_no_truncated_payload_is_admitted()
+    {
         // Arrange/Assert: no prefix shorter than four bytes has a declared size.
         let prefix = 1_u32.to_be_bytes();
         for len in 0..4 {
@@ -836,7 +838,12 @@ mod tests {
                 "invalid announced length={length}"
             );
         }
-        for length in [1_usize, 2, MAX_INBOUND_FRAME_SIZE - 1, MAX_INBOUND_FRAME_SIZE] {
+        for length in [
+            1_usize,
+            2,
+            MAX_INBOUND_FRAME_SIZE - 1,
+            MAX_INBOUND_FRAME_SIZE,
+        ] {
             let prefix = (length as u32).to_be_bytes();
             assert_eq!(
                 complete_framed_message_len(&prefix).unwrap(),
@@ -856,7 +863,8 @@ mod tests {
     }
 
     #[test]
-    fn given_complete_weave_frame_boundaries_when_checked_then_only_the_first_exact_valid_frame_is_consumed() {
+    fn given_complete_weave_frame_boundaries_when_checked_then_only_the_first_exact_valid_frame_is_consumed(
+    ) {
         // Arrange: a one-byte payload and full 5MiB payload must both be valid.
         for length in [1_usize, MAX_INBOUND_FRAME_SIZE] {
             let total = 4 + length;
