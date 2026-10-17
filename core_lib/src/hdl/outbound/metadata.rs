@@ -55,6 +55,163 @@ async fn introduce(request: &mut OutboundRequest, peer: &mut TcpStream) {
 }
 
 #[tokio::test]
+async fn given_peer_reset_before_empty_file_eof_when_accepted_then_source_and_failed_state_are_preserved(
+) {
+    // Arrange: an established encrypted native sender with a real captured
+    // zero-byte regular file; RST is delivered before the accepted FILE frame.
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("private-empty-source");
+    std::fs::write(&path, []).unwrap();
+    let (mut request, mut peer, _hub, control) =
+        managed_request(crate::prepared_source::PreparedSource::from(selection(
+            &path,
+            "empty.bin",
+        )))
+        .await;
+    let source = match &request.payload {
+        OutboundPayload::NativeSource(source) => Arc::downgrade(source),
+        _ => panic!("expected opened native source"),
+    };
+    introduce(&mut request, &mut peer).await;
+    let original = control.snapshot();
+    assert_eq!(original.details.total_bytes, 0);
+    assert_eq!(original.details.files.len(), 1);
+    assert_eq!(request.state.transferred_files.len(), 1);
+
+    // Force an abortive TCP close, not a simulated missing encryption key.
+    rustix::net::sockopt::set_socket_linger(&peer, Some(std::time::Duration::ZERO)).unwrap();
+    drop(peer);
+    tokio::time::timeout(std::time::Duration::from_secs(5), request.socket.readable())
+        .await
+        .expect("peer reset must wake the actual outgoing socket")
+        .unwrap();
+    let mut byte = [0_u8; 1];
+    assert_eq!(
+        request.socket.try_read(&mut byte).unwrap_err().kind(),
+        std::io::ErrorKind::ConnectionReset
+    );
+
+    // Act: Accept tries to send the zero-size FILE terminal chunk over RST TCP.
+    let error = request
+        .process_consent(&consent_frame(
+            sharing_nearby::connection_response_frame::Status::Accept,
+        ))
+        .await
+        .unwrap_err();
+
+    // Assert: network write error is preserved, no fake Finished/retirement,
+    // final notification is failure, and the original opened source survives.
+    assert!(error.root_cause().downcast_ref::<std::io::Error>().is_some());
+    assert_eq!(request.state.state, State::SendingFiles);
+    assert_eq!(request.state.transferred_files.len(), 1);
+    assert_eq!(request.state.transfer_metadata.as_ref().unwrap().ack_bytes, 0);
+    assert!(source.upgrade().is_some());
+    request.record_termination(State::Disconnected);
+    let failed = control.snapshot();
+    assert_eq!(failed.state, State::Disconnected);
+    assert_eq!(failed.details.files, original.details.files);
+    assert_eq!(failed.details.transferred_bytes, 0);
+    request.record_termination(State::Finished);
+    assert_eq!(control.snapshot().state, State::Disconnected);
+    drop(request);
+    assert!(source.upgrade().is_none());
+    assert_eq!(std::fs::read(&path).unwrap(), b"");
+}
+
+#[tokio::test]
+async fn given_peer_reset_after_first_real_file_chunk_when_sending_then_no_false_finish_or_source_loss(
+) {
+    // Arrange: a sparse 32-MiB regular file cannot fit in the constrained TCP
+    // buffers. Both peers use actual AES/HMAC and FILE framing.
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("private-large-source");
+    let marker = b"first-outgoing-block";
+    std::fs::write(&path, marker).unwrap();
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .unwrap()
+        .set_len(32 * 1024 * 1024)
+        .unwrap();
+    let (mut request, mut peer, _hub, control) =
+        managed_request(crate::prepared_source::PreparedSource::from(selection(
+            &path,
+            "large.bin",
+        )))
+        .await;
+    let source = match &request.payload {
+        OutboundPayload::NativeSource(source) => Arc::downgrade(source),
+        _ => panic!("expected opened native source"),
+    };
+    introduce(&mut request, &mut peer).await;
+    let original = control.snapshot();
+    assert_eq!(original.details.total_bytes, 32 * 1024 * 1024);
+    assert_eq!(original.details.files.len(), 1);
+    rustix::net::sockopt::set_socket_send_buffer_size(&request.socket, 16 * 1024).unwrap();
+    rustix::net::sockopt::set_socket_recv_buffer_size(&peer, 16 * 1024).unwrap();
+
+    // Act: allow exactly one observable encrypted chunk to arrive, then
+    // abort the receiving TCP peer. Synchronization is by real protocol
+    // readiness; timeout only diagnoses a stalled test.
+    let (send_result, first_chunk) = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        async {
+            tokio::join!(
+                request.process_consent(&consent_frame(
+                    sharing_nearby::connection_response_frame::Status::Accept,
+                )),
+                async {
+                    let frame = read_native_frame(&mut peer, 3).await;
+                    let transfer = frame.v1.unwrap().payload_transfer.unwrap();
+                    let header = transfer.payload_header.unwrap();
+                    assert_eq!(header.total_size(), 32 * 1024 * 1024);
+                    assert_eq!(header.file_name.as_deref(), Some("large.bin"));
+                    let body = transfer.payload_chunk.unwrap();
+                    assert_eq!(body.flags(), 0);
+                    assert_eq!(body.offset(), 0);
+                    assert_eq!(body.body().len(), 512 * 1024);
+                    assert!(body.body().starts_with(marker));
+                    rustix::net::sockopt::set_socket_linger(
+                        &peer,
+                        Some(std::time::Duration::ZERO),
+                    )
+                    .unwrap();
+                    drop(peer);
+                    body.body().len()
+                },
+            )
+        },
+    )
+    .await
+    .expect("first FILE chunk and eventual TCP reset must both complete");
+    let error = send_result.expect_err("TCP reset must interrupt the large file");
+    assert!(error.root_cause().downcast_ref::<std::io::Error>().is_some());
+
+    // Assert: some accepted bytes, strictly below the advertised total.
+    // TCP local write counts are not remote delivery receipts.
+    assert_eq!(first_chunk, 512 * 1024);
+    assert_eq!(request.state.state, State::SendingFiles);
+    let acknowledged = request.state.transfer_metadata.as_ref().unwrap().ack_bytes;
+    assert!(acknowledged >= first_chunk as u64);
+    assert!(acknowledged < 32 * 1024 * 1024);
+    assert_eq!(request.state.transferred_files.len(), 1);
+    assert!(source.upgrade().is_some());
+    request.record_termination(State::Disconnected);
+    let failed = control.snapshot();
+    assert_eq!(failed.state, State::Disconnected);
+    assert_eq!(failed.details.files, original.details.files);
+    assert_eq!(failed.details.total_bytes, 32 * 1024 * 1024);
+    assert_eq!(failed.details.transferred_bytes, acknowledged);
+    request.record_termination(State::Finished);
+    assert_eq!(control.snapshot().state, State::Disconnected);
+
+    drop(request);
+    assert!(source.upgrade().is_none());
+    assert_eq!(std::fs::metadata(&path).unwrap().len(), 32 * 1024 * 1024);
+    assert!(std::fs::read(&path).unwrap().starts_with(marker));
+}
+
+#[tokio::test]
 async fn given_managed_outbound_files_when_completed_then_metadata_retains_manifest_and_exact_bytes(
 ) {
     // Arrange: opened sources use protocol display names, never their disk paths.
