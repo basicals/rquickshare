@@ -42,9 +42,9 @@ zero-size FILE payload.
    Send before retiring the corresponding working entry. A failed frame send
    propagates an error before removing the member or reporting Finished.
    Do not change data offsets/packet type/metadata/sequence numbers.
-4. [ ] Run exact-source CI once; examine failures, fix only actual causes,
+4. [x] Run exact-source CI once; examine failures, fix only actual causes,
    preserve regressions and record counts. Core/GTK/legacy UI change-free.
-5. [ ] Update SSOT/current-state and explicitly defer device/physical peer
+5. [x] Update SSOT/current-state and explicitly defer device/physical peer
    compatibility, package and installation tests.
 
 Rollback: revert helper + sender branch and its regressions. Invariants:
@@ -102,3 +102,29 @@ core tests, core/legacy Clippy and GTK remained in progress.
 No final complete pass, Mode B ten-repeat evidence or real Android/Windows
 compatibility is claimed at this checkpoint.
 
+
+## Exact-source verification and completion
+
+Source commit `289442da` passed the following GitHub Actions jobs:
+
+- Rust core library 699 passed, 0 failed; two integration binaries 4+4
+  passed, 0 failed. The new zero-only/mixed encrypted-loopback test and
+  deterministic pre-wire failure test are included.
+- Native GTK isolated UI 52/0 passed, with its strict checks.
+- Offline Python contract 54/0 passed.
+- Rust nightly formatting, core strict Clippy, and frontend lint/typecheck
+  and unit tests passed.
+- Legacy Tauri Clippy was still in progress at this checkpoint; do not
+  claim all five Preflight jobs complete until the workflow finishes.
+
+Run URLs:
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39057293853
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39057293868
+
+The test covers one zero-only file, zero/nonzero/zero members in a single
+accepted operation, exact encrypted IDs/lengths/offsets/final-flag counts,
+source preservation, and failure before the first zero-size terminal write.
+No physical Google Quick Share transfer, kernel TCP write failure, signed
+package or installed candidate was exercised. No measured coverage
+percentage, multi-run stress claim or MODE B full inventory is asserted.
+The previous accepted native29 install and master branch remain untouched.
