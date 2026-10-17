@@ -143,6 +143,11 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .unwrap();
     assert_eq!(scroll.min_content_height(), 0);
     assert_eq!(scroll.max_content_height(), 300);
+    panel.resize_to_content();
+    if let Some(monitor) = panel.window.monitor() {
+        let expected = monitor.geometry().height().saturating_sub(220).clamp(120, 760);
+        assert_eq!(scroll.max_content_height(), expected);
+    }
     assert!(panel.box_widget("compact").get_visible());
     assert!(*panel.ingress.gate.subscribe().borrow());
     panel.button("quick-devices").emit_clicked();
