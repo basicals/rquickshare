@@ -1,5 +1,18 @@
 # Current implementation and continuation state
 
+2026-10-17 follow-up (dev only, no master promotion): user selected B for
+completed operation grouping, with only provable device association. The current
+D-Bus recipient projection supplies names but not endpoint IDs, so no safe
+same-device merger is possible yet. New scoped UI changes keep active transfers,
+discovered endpoints and collapsed unlinked completed activity separate, retain
+transfer capabilities, repair transfer expansion/bottom anchoring and terminal
+unsupported-content labels, and open recipients before source choice on Send.
+See [card operations plan](native-card-operations-2026-10-17.md) for explicit
+API STOP FACTOR, MODE B inventory and change/rollback ledger. New native GTK
+test workflow is running; pre-change tests do not validate this candidate.
+No native22 installation, release signing or public APT publication is implied.
+
+
 Mainline integration (2026-10-17): native21 source is merged into the actual
 default branch master by PR #4, merge SHA 25cf7dd17ea28e98b2765efd09e0474d0028334a;
 remote dev was fast-forwarded to that merge checkpoint without force. The exact
