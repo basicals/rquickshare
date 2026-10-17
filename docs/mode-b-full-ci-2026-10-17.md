@@ -92,7 +92,7 @@ the orchestration. No product files or test assertions to change.
 1. [x] Verify current baseline, full coverage MODE B SSOT and CI gap;
    document the exact branch map, matrix, test count, decisions and
    unverified hardware/coverage scopes before workflow edits.
-2. [ ] Keep the existing four-suites loop and coverage measurements
+2. [x] Keep the existing four-suites loop and coverage measurements
    unchanged; include a fifth independent GTK job with ten isolated
    X11/D-Bus test runs. Coverage must explicitly depend on BOTH
    ten-run jobs. Add narrowly scoped dev workflow-file push trigger.
@@ -110,6 +110,29 @@ Rollback: one atomic workflow revert restores tag/manual-only
 trigger and original four-suite gate; related docs are independent.
 Preserve `master` and installed artifacts.
 
-## Completion evidence
+## Completion evidence — execution started
 
-Pending workflow source update and exact GitHub Actions execution.
+Workflow-only change `7107339e49b577be9f292004513d80d09d706188`
+adds the opt-in path-limited dev push trigger, a sequential
+`native_gtk` job with the exact existing Ubuntu 26.04/Xvfb/D-Bus
+runtime and **ten** full test runs, and changes
+`coverage.needs` to `[full_suite,native_gtk]`. The four-suite
+loop and existing three coverage instruments remain byte-for-byte
+unchanged. The workflow consumes no product data, performs no
+deployment and has only `contents: read` permission.
+
+GitHub Actions accepted the push trigger and started:
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39063291246
+with `full_suite` in progress at this checkpoint; the native GTK
+job is dependency-gated and has not yet begun. Ordinary
+Preflight for the same source also started:
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39063291248.
+No pass count or coverage value is asserted until the resulting
+CI logs are explicitly inspected. This is the exact tested workflow
+source; later documentation-only commits should not alter its code.
+
+The full current artifact/method/N1-N12 and OS-hardware inventory
+remains open as noted in `docs/mode-b-test-plan.md`; adding a fifth
+CI suite does not complete missing domain tests, run a mutation
+framework, establish zero flakiness across future environments, or
+substitute for real Pixel/Windows/Ubuntu transfer validation.
