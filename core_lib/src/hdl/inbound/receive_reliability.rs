@@ -219,6 +219,139 @@ async fn given_user_decline_and_peer_socket_loss_when_reject_cannot_be_sent_then
 }
 
 #[tokio::test]
+async fn given_remote_cancel_after_accept_before_or_after_first_file_when_handled_then_only_durable_members_survive(
+) {
+    use crate::byte_payload::tests::frame;
+    use tokio::io::AsyncReadExt;
+
+    for first_completed in [false, true] {
+        // Arrange: the *real* two-file consent and encrypted Accept precede
+        // remote cancellation. The second member has no terminal data chunk.
+        let (mut request, control, peer_socket) = admitted().await;
+        let directory = request._directory.path().to_owned();
+        request.state.encryption_done = true;
+        request.accept_transfer().await.unwrap();
+        assert_eq!(request.state.state, State::ReceivingFiles);
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 0);
+
+        if first_completed {
+            request
+                .process_offline_frame(received_file_frame(101, 1, 0, b"a", 1))
+                .await
+                .unwrap();
+            request
+                .process_offline_frame(received_file_frame(102, 3, 0, b"b", 0))
+                .await
+                .unwrap();
+            assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+            assert!(!directory.join("b.bin").exists());
+        }
+
+        let mut peer = InboundRequest::new(
+            peer_socket,
+            "cancel-peer".into(),
+            tokio::sync::broadcast::channel(4).0,
+        );
+        peer.state.decrypt_key = Some(vec![0; 32]);
+        peer.state.recv_hmac_key = Some(vec![0; 32]);
+
+        // Read and validate both previously emitted encrypted Accept chunks.
+        let raw = read_plain_frame_from(&mut peer.socket).await.unwrap();
+        let secure = SecureMessage::decode(raw.as_slice()).unwrap();
+        let transfer = peer
+            .decrypt_secure_message(&secure)
+            .await
+            .unwrap()
+            .v1
+            .unwrap()
+            .payload_transfer
+            .unwrap();
+        let accepted = sharing_nearby::Frame::decode(
+            transfer.payload_chunk.unwrap().body.unwrap().as_slice(),
+        )
+        .unwrap();
+        assert_eq!(
+            accepted.v1.unwrap().connection_response.unwrap().status(),
+            sharing_nearby::connection_response_frame::Status::Accept
+        );
+        let raw = read_plain_frame_from(&mut peer.socket).await.unwrap();
+        let secure = SecureMessage::decode(raw.as_slice()).unwrap();
+        let end = peer
+            .decrypt_secure_message(&secure)
+            .await
+            .unwrap()
+            .v1
+            .unwrap()
+            .payload_transfer
+            .unwrap()
+            .payload_chunk
+            .unwrap();
+        assert_eq!(end.flags(), 1);
+
+        let cancel = sharing_nearby::Frame {
+            version: Some(sharing_nearby::frame::Version::V1.into()),
+            v1: Some(sharing_nearby::V1Frame {
+                r#type: Some(sharing_nearby::v1_frame::FrameType::Cancel.into()),
+                ..Default::default()
+            }),
+        }
+        .encode_to_vec();
+
+        // Act: the actual byte-payload/reassembly/Cancel path handles a
+        // complete untrusted sharing control frame after file admission.
+        let terminated = request
+            .process_offline_frame(frame(901, cancel.len(), 0, &cancel, true))
+            .await
+            .unwrap_err();
+
+        // Assert: the daemon sends Disconnection and never reports Finished.
+        assert!(terminated.is::<crate::errors::AppError>());
+        assert_eq!(request.state.state, State::Cancelled);
+        let raw = read_plain_frame_from(&mut peer.socket).await.unwrap();
+        let secure = SecureMessage::decode(raw.as_slice()).unwrap();
+        let offline = peer.decrypt_secure_message(&secure).await.unwrap();
+        assert_eq!(
+            offline.v1.unwrap().r#type(),
+            location_nearby_connections::v1_frame::FrameType::Disconnection
+        );
+        let mut extra = [0_u8; 1];
+        let no_more = peer.socket.read(&mut extra);
+        tokio::pin!(no_more);
+        assert!(futures::poll!(no_more.as_mut()).is_pending());
+
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.state, State::Cancelled);
+        assert_eq!(snapshot.details.transferred_bytes, u64::from(first_completed));
+        assert!(request.publications.is_empty());
+        assert!(request.pending_files.is_none());
+        assert!(request
+            .state
+            .transferred_files
+            .values()
+            .all(|file| file.file.is_none()));
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), usize::from(first_completed));
+        assert!(!directory.join("b.bin").exists());
+        if first_completed {
+            assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+            let received = snapshot.received_files.as_ref().unwrap();
+            assert_eq!(received.len(), 1);
+            assert!(received.valid_for(&snapshot.details));
+            assert_eq!(received.details()[0].name, "a.bin");
+            let mut body = [0_u8; 1];
+            std::os::unix::fs::FileExt::read_exact_at(&received.open(0).unwrap(), &mut body, 0)
+                .unwrap();
+            assert_eq!(&body, b"a");
+        } else {
+            assert!(!directory.join("a.bin").exists());
+            assert!(snapshot.received_files.is_none());
+        }
+        request.record_termination(State::Disconnected);
+        assert_eq!(request.state.state, State::Cancelled);
+        assert_eq!(control.snapshot().state, State::Cancelled);
+    }
+}
+
+#[tokio::test]
 async fn given_missing_receive_root_before_introduction_when_pinning_then_no_file_consent_or_authority_is_created(
 ) {
     // Arrange: remove only this test's empty download directory before the
