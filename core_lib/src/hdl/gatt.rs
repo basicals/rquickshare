@@ -736,6 +736,165 @@ mod tests {
     use super::*;
 
     #[test]
+    fn given_bad_weave_connection_requests_when_parsed_then_no_handshake_is_negotiated() {
+        // Arrange: every truncated prefix, unsupported command and version range.
+        let valid = [WEAVE_CONTROL, 0, 1, 0, 1, 0, 20];
+        for len in 0..7 {
+            assert!(
+                parse_connection_request(&valid[..len]).is_err(),
+                "truncated handshake length={len}"
+            );
+        }
+        for command in 1..=WEAVE_CMD_MASK {
+            let mut packet = valid;
+            packet[0] |= command;
+            assert!(
+                parse_connection_request(&packet).is_err(),
+                "unknown control command={command}"
+            );
+        }
+        for packet_type in [0_u8, 1, WEAVE_FIRST_BIT, WEAVE_LAST_BIT, 0x7f] {
+            let mut packet = valid;
+            packet[0] = packet_type;
+            assert!(
+                parse_connection_request(&packet).is_err(),
+                "missing control bit header=0x{packet_type:02x}"
+            );
+        }
+        for (min_version, max_version) in [
+            (0_u16, 0_u16),
+            (1, 0),
+            (2, 1),
+            (2, 2),
+            (2, u16::MAX),
+            (u16::MAX, u16::MAX),
+        ] {
+            let mut packet = valid;
+            packet[1..3].copy_from_slice(&min_version.to_be_bytes());
+            packet[3..5].copy_from_slice(&max_version.to_be_bytes());
+            assert!(
+                parse_connection_request(&packet).is_err(),
+                "unsupported version range {min_version}..={max_version}"
+            );
+        }
+    }
+
+    #[test]
+    fn given_valid_weave_version_ranges_and_packet_bounds_when_parsed_then_negotiation_clamps_exactly() {
+        // Arrange: ranges containing version 1 and all min/max ±1 boundaries.
+        let ranges = [(0_u16, 1_u16), (1, 1), (0, 2), (1, u16::MAX)];
+        let cases = [
+            (0_u16, MIN_WEAVE_PACKET_SIZE),
+            (1, MIN_WEAVE_PACKET_SIZE),
+            (MIN_WEAVE_PACKET_SIZE - 1, MIN_WEAVE_PACKET_SIZE),
+            (MIN_WEAVE_PACKET_SIZE, MIN_WEAVE_PACKET_SIZE),
+            (MIN_WEAVE_PACKET_SIZE + 1, MIN_WEAVE_PACKET_SIZE + 1),
+            (MAX_WEAVE_PACKET_SIZE - 1, MAX_WEAVE_PACKET_SIZE - 1),
+            (MAX_WEAVE_PACKET_SIZE, MAX_WEAVE_PACKET_SIZE),
+            (MAX_WEAVE_PACKET_SIZE + 1, MAX_WEAVE_PACKET_SIZE),
+            (u16::MAX, MAX_WEAVE_PACKET_SIZE),
+        ];
+        for (minimum, maximum) in ranges {
+            for (requested, expected) in cases {
+                let mut packet = [WEAVE_CONTROL, 0, 0, 0, 0, 0, 0];
+                packet[1..3].copy_from_slice(&minimum.to_be_bytes());
+                packet[3..5].copy_from_slice(&maximum.to_be_bytes());
+                packet[5..7].copy_from_slice(&requested.to_be_bytes());
+                assert_eq!(
+                    parse_connection_request(&packet).unwrap(),
+                    expected,
+                    "version={minimum}..={maximum}, requested={requested}"
+                );
+                assert_eq!(
+                    connection_confirm(expected),
+                    [
+                        WEAVE_CONTROL | WEAVE_CMD_CONN_CONFIRM,
+                        0,
+                        1,
+                        (expected >> 8) as u8,
+                        expected as u8,
+                    ]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn given_bad_or_partial_weave_frame_lengths_when_checked_then_no_truncated_payload_is_admitted() {
+        // Arrange/Assert: no prefix shorter than four bytes has a declared size.
+        let prefix = 1_u32.to_be_bytes();
+        for len in 0..4 {
+            assert_eq!(
+                complete_framed_message_len(&prefix[..len]).unwrap(),
+                None,
+                "partial prefix length={len}"
+            );
+        }
+        for length in [0_u32, (MAX_INBOUND_FRAME_SIZE + 1) as u32, u32::MAX] {
+            assert!(
+                complete_framed_message_len(&length.to_be_bytes()).is_err(),
+                "invalid announced length={length}"
+            );
+        }
+        for length in [1_usize, 2, MAX_INBOUND_FRAME_SIZE - 1, MAX_INBOUND_FRAME_SIZE] {
+            let prefix = (length as u32).to_be_bytes();
+            assert_eq!(
+                complete_framed_message_len(&prefix).unwrap(),
+                None,
+                "not complete from prefix alone, declared length={length}"
+            );
+        }
+        for body_len in [0_usize, 1, 2] {
+            let mut partial = 3_u32.to_be_bytes().to_vec();
+            partial.resize(4 + body_len, 0xaa);
+            assert_eq!(
+                complete_framed_message_len(&partial).unwrap(),
+                None,
+                "declared 3, received {body_len} payload bytes"
+            );
+        }
+    }
+
+    #[test]
+    fn given_complete_weave_frame_boundaries_when_checked_then_only_the_first_exact_valid_frame_is_consumed() {
+        // Arrange: a one-byte payload and full 5MiB payload must both be valid.
+        for length in [1_usize, MAX_INBOUND_FRAME_SIZE] {
+            let total = 4 + length;
+            let mut packet = (length as u32).to_be_bytes().to_vec();
+            packet.resize(total, 0x5a);
+            assert_eq!(
+                complete_framed_message_len(&packet[..total - 1]).unwrap(),
+                None,
+                "truncated final byte, declared={length}"
+            );
+            assert_eq!(
+                complete_framed_message_len(&packet).unwrap(),
+                Some(total),
+                "complete payload, declared={length}"
+            );
+
+            // Act: append an independent second framed message, not a longer first one.
+            let second = [0_u8, 0, 0, 1, 0x33];
+            packet.extend_from_slice(&second);
+            assert_eq!(
+                complete_framed_message_len(&packet).unwrap(),
+                Some(total),
+                "first frame boundary must be preserved"
+            );
+            assert_eq!(
+                complete_framed_message_len(&packet[total..]).unwrap(),
+                Some(second.len()),
+                "second frame must remain independently decodable"
+            );
+        }
+        assert!(
+            complete_framed_message_len(&((MAX_INBOUND_FRAME_SIZE + 1) as u32).to_be_bytes())
+                .is_err(),
+            "a 5 MiB + 1 declared payload is never admissible"
+        );
+    }
+
+    #[test]
     fn slot0_zero_offset_preserves_mdns_and_deferred_advertising_by_default() {
         let refresh = receiver_discovery_refresh(0, true).expect("slot0 offset zero must refresh");
         assert!(refresh.resend_mdns);
