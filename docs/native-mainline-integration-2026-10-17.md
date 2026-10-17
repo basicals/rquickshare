@@ -34,7 +34,7 @@ those results do not validate the new native21 revision. Failure roots:
   native21 rebuild or repeated Rust/GTK tests for metadata-only incoming changes.
 - [x] M3: update the remaining essential acceptance list to distinguish completed
   native21 UI from physical peer/lifecycle/release gates. Commit scoped changes.
-- [ ] M4: push dev normally; inspect exact-head Preflight. Prepare a dev-to-master
+- [x] M4: push dev normally; inspect exact-head Preflight. Prepare a dev-to-master
   PR and attach it to this task. Merge only once the substantive exact dev-head
   checks are green; same-repository dev PR checks intentionally skip duplicates.
 - [ ] M5: synchronize local master, return to dev and confirm both remote branches
@@ -83,3 +83,11 @@ expiry/monitor/lifecycle and signed-publication gates. No previously accepted UI
 work is relisted as a missing feature. Dated original observations are retained.
 M4 will use normal dev push, exact-head Preflight and a dev-to-master PR; no tags,
 application publication, force push or dev branch deletion.
+
+## Verified source-merge record — 2026-10-17
+
+- Exact `dev` head `b96d93d90693867d135b8542b800e8ccb66f8f8a` passed all five substantive Preflight jobs in [push run #453](https://github.com/morozhenko-apps/rquickshare/actions/runs/38984114755): core Rust tests, Rust format/offline Python contracts, both Clippy targets, frontend lint/typecheck/unit tests. Same-repository PR-check duplicate jobs were intentionally skipped; these were not the only validation evidence.
+- [PR #4](https://github.com/morozhenko-apps/rquickshare/pull/4) merged `dev` into `master` with a normal merge commit `25cf7dd17ea28e98b2765efd09e0474d0028334a`. Commit history was preserved without force pushes. The dev remote ref was then fast-forwarded to that exact merge commit without force. Both remote branches were synchronized at that checkpoint.
+- The post-merge `master` Preflight run is [38984886879](https://github.com/morozhenko-apps/rquickshare/actions/runs/38984886879). Its completion is tracked independently from the already-passing exact `dev` head.
+- No signed release, tag, production APT publication, native package deployment, device test or full Mode B ten-run claim is implied. All three essential-release gates above remain open.
+- M5 remote synchronization is complete. **Local** `master`/`dev` checkout synchronization requires the workstation (not accessible from this GitHub-only operation): `git fetch origin`, `git switch master && git pull --ff-only`, `git switch dev && git pull --ff-only`. Preserve local work and avoid resets. The doc-only follow-up needs a regular PR to place this record in `master` as well.
