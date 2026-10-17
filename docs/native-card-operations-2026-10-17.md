@@ -276,11 +276,11 @@ separate user-approved ADR. No implicit pairing claims in UI.
 - [x] C0: inspect Coordinator dispatch clearing, Batch1 snapshot/SDK,
   GTK keyed rows, existing CI and explicit compatibility requirements.
   Freeze the B/C split and regression inventory before production edits.
-- [ ] C1: retain immutable ephemeral association in core; project additive
+- [x] C1: retain immutable ephemeral association in core; project additive
   bounded, authenticated and snapshot-frozen Batch1 rows; update XML.
-- [ ] C2: SDK optional read/strict validation, compatible absence on old
+- [x] C2: SDK optional read/strict validation, compatible absence on old
   daemon only; never use untrusted display names as fallback.
-- [ ] C3: GTK nested, collapsible completed rows under matching live endpoint,
+- [x] C3: GTK nested, collapsible completed rows under matching live endpoint,
   unlinked fallback for stale/inbound/absent; preserve independent actions.
 - [ ] C4: regression suite on coordinator, capture, bus/SDK and GTK;
   strict format/Clippy/CI, ten runs and coverage evidence.
@@ -308,3 +308,35 @@ same-epoch confirmed match displays once; all receipts/consent and cancel remain
 unmodified; optional older daemon is handled without fake association.
 Measure production-file coverage and verify the mutation variants before
 claiming MODE B complete. Physical KDE/Android/Windows acceptance is separate.
+
+### Implemented B-to-C checkpoint before final execution
+
+Core `Transfer.associated_endpoint` is a distinct clone of the admitted
+outbound endpoint; `Transfer.endpoint` remains mutable dispatch authority.
+Inbound associations remain empty. Retained terminal records preserve the
+association until the original current-run history eviction; no durable
+identity, pairing or new acceptance behavior. `StateCache` freezes one
+association row per transfer with the existing snapshot, and charges owned
+copies against its bounded byte reservation. Authenticated Batch1 adds the
+read-only `GetTransferEndpointPage`, leaving existing methods/signatures
+unchanged. SDK validates matching transfer IDs, direction and safe byte
+limits. UnknownMethod/UnknownInterface from older daemons maps only to empty
+grouping, never to a guessed name. Error responses other than
+`Incompatible` still fail the state read.
+
+GTK groups terminal outbound rows under a currently discovered endpoint
+with the exact same ID in the same state snapshot. Other operations remain
+in Recent activity; the discovered device itself is not labeled paired.
+The renderer retains row content/capabilities while reparenting between
+GTK containers. A missing/changed association and incoming requests do
+not silently match display names.
+
+Focused regressions added to Batch core ownership, bus state page bounds,
+SDK real-bus batch reads, SDK inbound/outbound and GTK strict-grouping/
+reparenting. Current-stage verification is **not yet signed off**:
+the previous new GTK CI first failed rustfmt (fixed), then ran a genuine
+preview decoder fixture without its helper binary (CI fixed to build it).
+Fresh exact-head compilation, ten-repeat suite, per-file coverage, physical
+KDE/Android/Windows acceptance and MODE B Completion Gate remain OPEN until
+observed evidence is recorded. The UI workflow is intentionally independent
+of release signing and installed package changes.
