@@ -135,12 +135,12 @@ socket buffers rather than weakening the invariant.
 
 1. [x] Scan code/docs, CI framework, existing fixtures and failures,
    record every scoped testable branch, risk and interaction before edits.
-2. [ ] Implement two actual encrypted loopback RST/owned-source tests,
+2. [x] Implement two actual encrypted loopback RST/owned-source tests,
    with strict assertions and no mock of the request/manager domain.
-3. [ ] Run real CI on exact source; investigate failures. If a
+3. [x] Run real CI on exact source; investigate failures. If a
    production defect is confirmed, stop MODE B and document an MODE A
    repair before altering behavior; do not weaken assertions.
-4. [ ] Capture verified result counts, per-production-file coverage and
+4. [x] Capture verified result counts, per-production-file coverage and
    mutation review, update the ledger and `docs/current-state.md`.
    Leave MODE B 10-repeat/global repository gate OPEN unless fully
    executed. Preserve native29, native30, master, all physical gates.
@@ -149,6 +149,91 @@ Rollback: revert the isolated test commit and ledger. No user data or
 installed binary changes; no automatic resend, timeout policy, protocol
 or public API decision is authorized by this test stage.
 
-## Results
+## Results and exact-source receipts
 
-Execution pending.
+- Documentation-first baseline: `aa4078d3`; source-only tests added
+  `9486a073`. First Preflight run 39058571428 failed **before any
+  new RST assertion executed** with Rust E0716 at the `tokio::join!`
+  future: the reference to a temporary consent frame was dropped while
+  the future remained borrowed. This was a new test ownership issue,
+  not a production fault. Rust format, core strict Clippy, frontend and
+  independent GTK were green on that first attempt.
+- `ad2adf04` binds the consent frame to a local variable with adequate
+  lifetime. Neither RST scenario nor its assertions were weakened.
+- Source `ad2adf04`: **701/701** library methods passed (the 2 newly
+  added RST tests are explicitly listed as `ok` in the GitHub job log);
+  both integration binaries **4/4 + 4/4** passed; Rust format, offline
+  Python **54/54**, core Clippy and frontend lint/typecheck/unit passed.
+  Native GTK strict checks and **52/52** isolated tests passed. Legacy
+  desktop Tauri Clippy remained in progress at this recording checkpoint,
+  so the entire 5-job Preflight workflow is not yet described as complete.
+  GitHub run references:
+  https://github.com/morozhenko-apps/rquickshare/actions/runs/39058711970
+  https://github.com/morozhenko-apps/rquickshare/actions/runs/39058711967
+
+Actual failure paths: after protocol introduction, the peer closes its
+TCP socket with SO_LINGER(0), producing a real RST. The zero-byte test
+waits for the local socket error before Accept and requires EOF-frame
+write rejection. The 32-MiB test constrains socket buffers, reads and
+decodes an **actual 512-KiB encrypted FILE frame**, then aborts the
+peer. The sender returns a real I/O error rather than Finished. In both:
+retained working member, original exact manifest, terminal
+Disconnected without later Finished override, source Arc alive while
+the request exists and released on drop, original file preserved.
+Progress is zero before the first frame and nonzero but below the
+announced total after the mid-body RST. No second request was enqueued.
+These tests do not prove the remote peer durably received locally
+acknowledged bytes.
+
+## Coverage execution and per-production-file map
+
+New methods: **2** (N3 network failure: 1; N9 peer interruption:
+1 as primary category). Both exercise N5 race, N12 original-source
+retention, N4 absence of implicit retry, and the source/terminal
+invariants; these overlaps are not counted as extra methods. Existing
+positive completion, malformed-source, cancel, replay/idempotency and
+storage-reader tests remain green as part of the 701 core suite.
+No new N8/N11 scenarios (clock/locale/billing are inapplicable); no
+new input parser, auth boundary, schema, diagnostics, or permission API.
+
+| Production file | Affected functions/branches covered | Remaining |
+|---|---|---|
+| `core_lib/src/hdl/outbound.rs` | Accept, initial/mid FILE send error, progress, nonterminal state, no retirement, repeated terminal suppression; full send remains existing | Other peer protocols and kernel disconnect timings; full E2E |
+| `core_lib/src/hdl/outbound/metadata.rs` | Real managed loopback source/receipt fixture, both new RST methods, AES/HMAC frames and no false completion | Separate explicit interactive retry |
+| `core_lib/src/file_reader.rs` | Existing offset/size/read error tests re-executed | Mid-read host disk I/O faults not part of RST test |
+| `core_lib/src/file_source.rs`, `prepared_source.rs` | Captured owner still live during I/O; released after request drop; original file unchanged | Host unlink/permissions/suspend paths |
+| `core_lib/src/manager/session.rs` | Existing error-to-Disconnected rules inspected; test uses same direct request terminal transition | New end-to-end manager-with-Google-peer RST route not separately exercised |
+| `core_lib/src/managed.rs`, `service/operations.rs` | Existing admission/release/receipt tests re-executed, no implicit retry introduced | User-initiated retry UI/physical acceptance |
+| Native desktop UI/IPC | Existing headless GTK and contracts pass, no edited functions | KDE/Wayland installed acceptance |
+
+Mutation expectations: swallowing network failure should fail
+`expect_err`; manufacturing Finished/overriding Disconnected should
+fail state assertions; premature retirement should fail map length;
+incorrect first FILE body/offset should fail encrypted frame assertions;
+leaking/unexpectedly dropping the source Arc should fail weak ownership
+checks; falsely claiming the entire 32-MiB file should fail the strict
+progress inequality. This is an assertion review, not an executed
+mutation-analysis tool or measured statement/branch coverage.
+
+Testability refactor required: **none**. The current actual loopback
+socket and managed request constructor already expose deterministic
+external peer actions; only socket buffer sizes were adjusted in the
+test. No new production seam, dependency, API, storage scheme or
+protocol behavior was needed.
+
+### Completion gate and exact limitations
+
+The two planned source tests passed once on the exact repaired commit
+and all altered branches in this scoped RST plan were exercised.
+The existing `mode-b.yml` workflow supports ten consecutive *full*
+suite executions plus coverage measurement, but this tag/dispatch
+workflow was **not** triggered. Therefore 10-pass stability,
+instrumented coverage percentages, repository-wide Mode B completion
+and all public branch/API completion gates remain explicitly OPEN.
+A successful single CI run must not be described as 100% coverage,
+zero proven flakiness, or interoperability acceptance.
+
+Still OPEN: Pixel/Google Windows normal sharing, real desktop/systemd
+startup/shutdown, denied access/disk full and device sleep, native30
+package/idle/upgrade, signing/release. Installed native29 and master
+were untouched; no automatic retry or source deletion was added.
