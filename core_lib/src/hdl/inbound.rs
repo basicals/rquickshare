@@ -3810,7 +3810,10 @@ mod security_tests {
 
                 // Assert: strict declared bounds and exactly one terminal state.
                 assert_eq!(
-                    result.as_ref().err().is_some_and(|error| error.is::<crate::errors::AppError>()),
+                    result
+                        .as_ref()
+                        .err()
+                        .is_some_and(|error| error.is::<crate::errors::AppError>()),
                     completes,
                     "managed={managed}, size={size}, body={body:?}"
                 );
@@ -3832,7 +3835,11 @@ mod security_tests {
                 );
                 assert_eq!(
                     std::fs::read(destination.path()).unwrap(),
-                    if body.len() as i64 <= size { body } else { b"".as_slice() }
+                    if body.len() as i64 <= size {
+                        body
+                    } else {
+                        b"".as_slice()
+                    }
                 );
             }
         }
