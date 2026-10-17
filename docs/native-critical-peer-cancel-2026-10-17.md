@@ -118,3 +118,39 @@ and
 Do not count this new cancel case as verified until the
 exact-source CI results are inspected; no physical
 Pixel cancellation or installed release is implied.
+
+## First CI outcome and test-contract correction
+
+First source `65f63e72`, Preflight
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39076370296
+had Core **698 passed / 1 failed** in the newly added
+`given_remote_cancel_after_accept_before_or_after_first_file_when_handled_then_only_durable_members_survive`.
+Actual failure: test at line 324 expected transferred_bytes 1,
+actual 2, after first complete 1-byte file and an additional
+1 byte written into the second anonymous staged file.
+This was a **faulty test expectation**. The existing
+`TransferDetails::transferred_bytes` documented contract
+is bytes actually written, not bytes durably published.
+The actual terminal `Cancelled`, encrypted protocol
+Disconnection, cleanup and unique first-file preservation
+had already passed earlier assertions in that test.
+The original assertion failed before later receipt checks,
+so those were not yet validated by that run.
+
+Independent `ReceivedFiles` API definitions confirm a
+partial receipt must satisfy `subset_of(details)` but **not**
+`valid_for(details)`, which requires all announced members.
+The repair changes test expectations to exactly
+**2 written bytes for one complete + one incomplete member**
+(and zero when no chunks have arrived), and now asserts
+both `subset_of` and `!valid_for` for partial results.
+It never weakens no-publication, stale-terminal, wire-code,
+received-file integrity or empty stage-owner checks.
+No production change or ambiguous business rule choice
+is made. Test-only correction `b69a6581`.
+The final headless run for this corrected source is
+required before claiming a pass.
+
+This is distinct from a tested protocol defect. The
+red first run remains in the evidence record; no test
+was skipped, made permissive or quarantined.
