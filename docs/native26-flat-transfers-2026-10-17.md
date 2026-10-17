@@ -38,7 +38,7 @@ additional sender dialog; keep the independently authorized history work moving.
 - [x] S3: flatten history rows; retain direct result/review/cancel controls.
 - [x] S4: run affected real GTK scope and strict native lint once; record observations.
 - [x] S5: commit source, build a distinct package and perform an idle-gated upgrade.
-- [ ] S6: record exact installed/export receipts and request physical acceptance.
+- [x] S6: record exact installed/export receipts and request physical acceptance.
 
 Main risks: losing partial-file/cancel/consent actions while removing the detail
 container, duplicate result launch, attaching one GTK child to multiple parents,
@@ -164,3 +164,11 @@ separate immutable25/26/27 package/source names and neighboring SHA256 sidecars.
 The external export JSON records binary-source versus archive-documentation
 commits, archive hashes and entry counts. Generic handoff source/current-state
 copies refresh to27, preserving older exact rollback files. No signing/publication.
+
+Local export completed: immutable native27 source archive at documentation commit
+2bd733d5f5e2009e6d271e5748ba514e9ef534b6,646 entries, SHA-256
+d8335182a943be71a2bbe11f81e190471b8ea2819271cb007e88a947fb4d2fbf.
+Native25/26 source archives and exact rollback packages were also retained.
+External per-version export manifests distinguish binary and documentation commits.
+Source/evidence pushed to origin/dev without force. This docs-only follow-up does
+not rebuild/reinstall or claim another test run. Physical acceptance remains open.
