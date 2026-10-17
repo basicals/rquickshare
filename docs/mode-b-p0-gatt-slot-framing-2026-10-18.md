@@ -181,7 +181,7 @@ a measured mutation score.
 1. [x] Scan SSOT and P0 GATT/BlueZ framing and
    read-slot production files; register all target branches
    and every N-category before code.
-2. [ ] Implement eight new table-driven, deterministic
+2. [x] Implement eight new table-driven, deterministic
    tests only; never edit runtime/authorization
    and never relax existing assertions.
 3. [ ] Verify exact-source Preflight Core, separate
@@ -196,3 +196,91 @@ a measured mutation score.
 Rollback is the scoped test-only diff and this
 ledger; existing tests, prod, installed KDE,
 `master`, secrets and packages unchanged.
+
+## Stage 9 implementation checkpoint — before CI verdict
+
+Committed two atomic, production-source-free test changes:
+
+- `core_lib/src/hdl/gatt/slot.rs` at `0b17a2f8`:
+  four original unit methods cover legacy no-cache
+  reads, coherent unprimed/empty reads, per-peer
+  advertising epochs, bounded 32-peer eviction
+  with same-peer refresh. The original two
+  positive tests remain.
+- `core_lib/src/hdl/gatt.rs` at `6222c70d`:
+  four original unit methods with exhaustive
+  small-input tables: 0..6 handshake prefixes,
+  all 15 nonzero control commands, missing
+  CONTROL bit, unsupported/inverted version
+  ranges, accepted version-range cross products,
+  negotiation min/max -1/+1, 0/u16::MAX,
+  framed prefixes 0..3, zero/overmax/u32::MAX,
+  truncated header/body and exact 1-byte/5MiB
+  framed payloads including adjacent second
+  frames.
+
+No production functions, API contracts,
+BlueZ setup/Wayland host or application
+behavior changed. The tests assert exact
+old/new revision bytes, cache ownership,
+read termination, message sizes and invalid
+input errors. The 5MiB case allocates only
+local process memory and has no real
+network side effect.
+
+GitHub automatically started exact-source
+[Preflight 39080885453](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080885453)
+and
+[GTK verification 39080885432](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080885432).
+**At this checkpoint both jobs are running.**
+Do not count the new eight methods as
+verified until the same-source core test
+logs are read and the full 5-job Preflight
+is green. The independent strict full
+10× run 39078162262 was from an earlier
+source and is not evidence for these
+eight newly added tests.
+
+### Actual newly introduced test-category assignments
+
+8 new methods, overlapping category assignments:
+Positive **4** (both slot policies, handshake
+accepted range, valid frames);
+N1 **4** (unknown offsets, header/command,
+malformed lengths, unprimed slot),
+N2 **6**, N3 **0/NA** (pure computation),
+N4 **2** (restart and consumed-owner replay),
+N5 **2** (peer isolation and bounded concurrent
+slots), N6 **3** (advertising revision,
+unsupported version, corrupt/truncated
+length), N7 **6** (all slot peer boundary
+and frame inputs), N8 **0/NA** (no clock/locale),
+N9 **2** (completed read/fragment interruption),
+N10 **2** (no cross-peer data; no byte content
+in production logs), N11 **0/NA** (no entitlements),
+N12 **0/NA** (pure functions, no persistence).
+These are audit *assignments*, not executed
+mutation kills or global D2 counts.
+
+### Testability gap exposed by Stage 8
+
+The GATT runtime's `weave_session` takes a
+concrete `bluer::gatt::local::CharacteristicNotifier`,
+and `ReceiverGattServer::run` establishes a
+live `bluer::Session`. Negative lifecycle,
+read/notify fragmentation, channel closure,
+reconnection and subscription conflicts
+cannot be exhaustively reproduced through
+the pure helper unit tests. This is a P0
+**testability defect**. A future MODE A
+refactor proposal should expose a minimal
+transport/notification adapter for contracted
+fake peer testing while preserving all
+production behavior and public wire format.
+Risk: high (BlueZ lifecycle, cancellation,
+bounded write queue); compatibility: must
+remain unchanged. Defer actual refactor
+until approved architecture/security choice
+and maintain real hardware smoke gate.
+
+**Global Stage 12 remains NO.**
