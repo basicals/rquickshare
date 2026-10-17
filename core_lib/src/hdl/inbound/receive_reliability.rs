@@ -1,11 +1,17 @@
 use super::*;
 
-async fn admitted() -> (
+async fn admitted_with_directory(
+    directory: Option<&Path>,
+) -> (
     TestRequest,
     crate::sessions::SessionControl,
     tokio::io::DuplexStream,
 ) {
     let mut request = test_request();
+    if let Some(directory) = directory {
+        request.receive_directory =
+            crate::receive::ReceivePolicy::new(Some(directory.to_owned())).snapshot();
+    }
     let (socket, peer) = tokio::io::duplex(8192);
     request.socket = socket;
     request.state.encrypt_key = Some(vec![0; 32]);
@@ -48,6 +54,166 @@ async fn admitted() -> (
     );
     receipt.wait().await.unwrap();
     (request, control, peer)
+}
+
+async fn admitted() -> (
+    TestRequest,
+    crate::sessions::SessionControl,
+    tokio::io::DuplexStream,
+) {
+    admitted_with_directory(None).await
+}
+
+#[tokio::test]
+async fn given_missing_receive_root_before_introduction_when_pinning_then_no_file_consent_or_authority_is_created(
+) {
+    // Arrange: remove only this test's empty download directory before the
+    // request attempts to pin it. No accepted manifest can be constructed.
+    let mut request = test_request();
+    let root = request._directory.path().to_owned();
+    std::fs::remove_dir(&root).unwrap();
+    let introduction = introduction_frame(
+        vec![file_metadata("a.bin", 101, 1)],
+        vec![],
+        vec![],
+    );
+
+    // Act: pinning an absent directory fails before any Accept can be sent.
+    let error = request.process_introduction(&introduction).await.unwrap_err();
+
+    // Assert: the request neither acquires file resources nor invents success.
+    assert_eq!(error.to_string(), "Receive directory is unavailable");
+    assert!(request.receive_root.is_none());
+    assert!(request.state.transfer_metadata.is_none());
+    assert!(request.state.transferred_files.is_empty());
+    assert!(request.pending_files.is_none());
+    assert!(request.publications.is_empty());
+    request.record_termination(State::Disconnected);
+    assert_eq!(request.state.state, State::Disconnected);
+    assert!(!root.exists());
+}
+
+#[tokio::test]
+async fn given_inaccessible_or_unsafe_receive_storage_after_introduction_when_preparing_then_no_accept_or_partial_owner_is_left(
+) {
+    use std::os::unix::fs::symlink;
+    use tokio::io::AsyncReadExt;
+
+    for case in ["removed-root", "parent-file", "parent-symlink", "unsupported-fs"] {
+        // Arrange: real accepted managed consent and pinned receive root.
+        // procfs is read-only/unsupported for O_TMPFILE; only an unnamed
+        // creation syscall is attempted, never a named write there.
+        let unsupported = case == "unsupported-fs";
+        let (mut request, control, mut peer) = admitted_with_directory(
+            if unsupported { Some(Path::new("/proc")) } else { None },
+        )
+        .await;
+        let directory = request._directory.path().to_owned();
+        let outside = tempfile::tempdir().unwrap();
+        let before = control.snapshot();
+        assert_eq!(before.state, State::WaitingForUserConsent);
+        assert_eq!(before.details.total_bytes, 4);
+        assert_eq!(before.details.transferred_bytes, 0);
+        assert_eq!(before.details.files.len(), 2);
+        assert!(before.received_files.is_none());
+        assert!(request.pending_files.is_some());
+        let mut sentinel = None;
+
+        match case {
+            "removed-root" => {
+                // The original directory FD survives, but the unlinked
+                // directory cannot allocate an anonymous inode.
+                std::fs::remove_dir(&directory).unwrap();
+            }
+            "parent-file" | "parent-symlink" => {
+                // Preserve the actual HashMap iteration order used by
+                // accept_transfer: stage the first member successfully,
+                // then force the second destination-parent lookup to fail.
+                let ids = request
+                    .state
+                    .transferred_files
+                    .keys()
+                    .copied()
+                    .collect::<Vec<_>>();
+                assert_eq!(ids.len(), 2);
+                let blocked = directory.join("blocked");
+                if case == "parent-file" {
+                    std::fs::write(&blocked, b"user-owned").unwrap();
+                } else {
+                    symlink(outside.path(), &blocked).unwrap();
+                }
+                request
+                    .state
+                    .transferred_files
+                    .get_mut(&ids[1])
+                    .unwrap()
+                    .file_url = blocked.join("second.bin");
+                sentinel = Some(blocked);
+            }
+            "unsupported-fs" => {
+                assert!(Path::new("/proc").is_dir());
+            }
+            _ => unreachable!(),
+        }
+
+        // Act: storage preparation fails before the encrypted Accept frame.
+        let error = request.accept_transfer().await.unwrap_err();
+
+        // Assert before termination: no frame, local progress, state advance
+        // or unexpectedly committed file/receipt. This is not a timed read.
+        assert_eq!(
+            error.to_string(),
+            "Receive filesystem cannot prepare a safe file",
+            "{case}"
+        );
+        let mut probe = [0_u8; 1];
+        assert!(futures::poll!(peer.read(&mut probe)).is_pending(), "{case}");
+        assert_eq!(request.state.state, State::WaitingForUserConsent);
+        assert_eq!(request.state.transfer_metadata.as_ref().unwrap().ack_bytes, 0);
+        assert_eq!(request.state.transferred_files.len(), 2);
+        assert!(request
+            .state
+            .transferred_files
+            .values()
+            .all(|file| file.file.is_none()));
+        assert!(request.publications.is_empty());
+        assert!(control.snapshot().received_files.is_none());
+        assert_eq!(control.snapshot().details, before.details);
+
+        request.record_termination(State::Disconnected);
+        let after = control.snapshot();
+        assert_eq!(after.state, State::Disconnected, "{case}");
+        assert_eq!(after.details.files, before.details.files);
+        assert_eq!(after.details.total_bytes, 4);
+        assert_eq!(after.details.transferred_bytes, 0);
+        assert!(after.received_files.is_none());
+        assert!(request.pending_files.is_none());
+        assert!(request.publications.is_empty());
+        assert!(request
+            .state
+            .transferred_files
+            .values()
+            .all(|file| file.file.is_none()));
+        request.record_termination(State::Finished);
+        assert_eq!(control.snapshot().state, State::Disconnected, "{case}");
+
+        if case == "removed-root" {
+            assert!(!directory.exists());
+        } else {
+            assert!(!directory.join("a.bin").exists(), "{case}");
+            assert!(!directory.join("b.bin").exists(), "{case}");
+            if let Some(blocked) = sentinel {
+                if case == "parent-file" {
+                    assert_eq!(std::fs::read(blocked).unwrap(), b"user-owned");
+                } else {
+                    assert!(blocked.symlink_metadata().unwrap().file_type().is_symlink());
+                }
+            } else {
+                assert!(std::fs::read_dir(&directory).unwrap().next().is_none());
+            }
+        }
+        assert!(std::fs::read_dir(outside.path()).unwrap().next().is_none());
+    }
 }
 
 #[tokio::test]
