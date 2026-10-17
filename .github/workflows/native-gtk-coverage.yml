@@ -60,7 +60,7 @@ jobs:
               --summary-only \
               --ignore-filename-regex 'target/|bindings/|core_lib/' \
             2>&1 | tee "$RUNNER_TEMP/native-gtk-coverage.log"
-          if ! grep -Eq 'test result: ok\\. [1-9][0-9]* passed; 0 failed; 0 ignored;' "$RUNNER_TEMP/native-gtk-coverage.log"; then
+          if ! grep -Eq 'test result: ok\. [1-9][0-9]* passed; 0 failed; 0 ignored;' "$RUNNER_TEMP/native-gtk-coverage.log"; then
             echo "Native GTK instrumented run must execute actual non-ignored passing tests" >&2
             exit 1
           fi
