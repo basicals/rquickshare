@@ -71,3 +71,9 @@ Package revision26 distinguishes these bytes from installed25. Preserve25 exactl
 build/verify the release package, then fresh known-owner/global-idle upgrade only.
 Do not restart with prepared content or nonterminal work. Sender-window identity
 remains a separate required clarification; history does not depend on it.
+
+Verified release package: 6653320 bytes, SHA-256 5f8baac1fa56479ec7014dfb2bd71eaa5b2b16537fd05d76d23d94fa6d8bf448.
+Binary source4436332; package inventory/dependencies/ELF/checksums/offline checks
+passed. Upgrade script pins native25 known owners2699373/2699377, exact old/new
+package hashes and fresh global idle gate. It preserves login settings and starts
+normal units after APT; it adds no trace override (receiver correction unchanged).
