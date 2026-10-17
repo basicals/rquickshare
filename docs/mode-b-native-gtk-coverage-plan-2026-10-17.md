@@ -88,10 +88,10 @@ fail or become visibly unsupported. No mutation tool run.
 2. [x] Create a separate opt-in GitHub workflow for GTK
    llvm-cov with 26.04 runner, no product changes and
    no duplicate complete 10x workload.
-3. [ ] Observe the exact-source job and record per-file
+3. [x] Observe the exact-source job and record per-file
    summary plus limitations; fix only CI compatibility
    errors without changing product assertions.
-4. [ ] Update overall MODE B coverage map and current-state
+4. [x] Update overall MODE B coverage map and current-state
    SSOT, leaving real hardware/branch and mutation gates OPEN.
 
 ## Execution
@@ -107,3 +107,40 @@ reported percentages and the 52-case instrumented test summary
 must be read from the complete result, not guessed from its
 start. All product code, prior 10x validation, installed
 host and Google peer acceptance remain unchanged.
+
+## Completed instrumented execution
+
+Exact source `3bb41cb6647820ff82ce2ec70f6943e7d7b11c9c`.
+GitHub [Native GTK instrumented coverage run
+39071770811](https://github.com/morozhenko-apps/rquickshare/actions/runs/39071770811)
+and job `117510700242`: **SUCCESS**.
+Install GTK4 and rust llvm tools, compile actual preview
+helper, execute original unmodified isolated `rquickshare`
+test target through Xvfb/D-Bus and parse real totals:
+`test result: ok. 52 passed; 0 failed; 0 ignored`.
+`TOTAL`: 16,927 instrumented regions/5,865 missed
+(**65.35%**), 875 functions/323 missed (**63.09%**),
+10,549 lines/3,481 missed (**67.00%**). Rust branches
+are **not instrumented** here.
+
+The complete 33-file source map, risks, and remaining
+hardware/Stage 12 constraints are now in
+[native-gtk-coverage-baseline-2026-10-17.md](native-gtk-coverage-baseline-2026-10-17.md).
+One-shot instrumented execution complements the previously
+verified **GTK 52×10** stability job; it is not itself 10x.
+The initial workflow creation `668917d8` was
+superseded/cancelled due to a corrected regex; `3bb41cb6`
+is the exact successful committed workflow.
+
+Primary measured GTK gaps: `panel/reveal.rs` **10.87%**
+of lines, `panel/outbound.rs` **47.42%**,
+`panel/settings.rs` **64.30%**, `main.rs` **13.07%**
+(mostly full GUI/Wayland entrypoint). The panel reveal
+path depends on opaque received-file capability handles and
+GLib/desktop portal callbacks; a test-only fabricated
+capability or mocked product response is not an acceptable
+shortcut. Genuine hardware/device acceptance and the
+full public-method/branch map remain explicitly OPEN.
+
+All changes are workflow/documentation only on `dev`;
+original 10x source and user installed native29 unchanged.
