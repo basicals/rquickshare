@@ -321,7 +321,12 @@ async fn given_remote_cancel_after_accept_before_or_after_first_file_when_handle
 
         let snapshot = control.snapshot();
         assert_eq!(snapshot.state, State::Cancelled);
-        assert_eq!(snapshot.details.transferred_bytes, u64::from(first_completed));
+        // Progress counts bytes actually written, including an unfinished
+        // staged second member; durable receipt still contains only complete files.
+        assert_eq!(
+            snapshot.details.transferred_bytes,
+            if first_completed { 2 } else { 0 }
+        );
         assert!(request.publications.is_empty());
         assert!(request.pending_files.is_none());
         assert!(request
@@ -335,7 +340,8 @@ async fn given_remote_cancel_after_accept_before_or_after_first_file_when_handle
             assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
             let received = snapshot.received_files.as_ref().unwrap();
             assert_eq!(received.len(), 1);
-            assert!(received.valid_for(&snapshot.details));
+            assert!(received.subset_of(&snapshot.details));
+            assert!(!received.valid_for(&snapshot.details));
             assert_eq!(received.details()[0].name, "a.bin");
             let mut body = [0_u8; 1];
             std::os::unix::fs::FileExt::read_exact_at(&received.open(0).unwrap(), &mut body, 0)
