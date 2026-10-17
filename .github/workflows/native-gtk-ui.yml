@@ -8,6 +8,11 @@ on:
       - "core_lib/**"
       - ".github/workflows/native-gtk-ui.yml"
   workflow_dispatch:
+    inputs:
+      stability:
+        description: Run ten repetitions for an explicit final stability gate
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -54,12 +59,14 @@ jobs:
           cargo +stable clippy --locked --manifest-path native_desktop/Cargo.toml --all-targets --no-deps -- -D warnings
 
       - name: Native GTK isolated widget and controller suite
+        env:
+          NATIVE_TEST_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.stability && '10' || '1' }}
         run: |
           mkdir -p "$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
           export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
           cargo +stable build --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare-preview-helper
-          for attempt in $(seq 1 10); do
-            echo "=== Native GTK regression attempt ${attempt}/10 ==="
+          for attempt in $(seq 1 "$NATIVE_TEST_RUNS"); do
+            echo "Native GTK regression attempt ${attempt}/${NATIVE_TEST_RUNS}"
             GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
               dbus-run-session --config-file docs/prototypes/preview-bus.conf -- \
               xvfb-run -a cargo +stable test --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare

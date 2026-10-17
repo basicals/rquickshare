@@ -62,3 +62,9 @@ checks, explicitly recording its source-equivalent tree and run URLs.
 
 Previews, account/Contacts/trusted auto-accept, QR, resume/dedup, Apple transport,
 advanced payloads and localization remain outside the current essential sequence.
+
+CI repetition correction implemented: push/development default is one complete
+GTK suite; only workflow_dispatch stability=true selects ten repetitions. Format,
+strict lint, helper build, sandbox restrictions and all test assertions remain
+unchanged. Bash syntax/whitespace validation is performed locally; exact remote
+source checks will validate the candidate. This does not rebuild installed28.
