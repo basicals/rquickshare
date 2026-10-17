@@ -45,10 +45,21 @@ fn section_title(text: &str) -> gtk::Box {
     row.append(&title);
     row
 }
+fn bound_current_endpoint<'a>(
+    direction: Direction,
+    associated: Option<&'a str>,
+    discovered: &BTreeSet<&str>,
+) -> Option<&'a str> {
+    if direction != Direction::Outbound {
+        return None;
+    }
+    associated.filter(|id| discovered.contains(id))
+}
 fn same_description(a: &TransferView, b: &TransferView) -> bool {
     a.transfer == b.transfer
         && a.completed_files == b.completed_files
         && a.recipient == b.recipient
+        && a.associated_endpoint == b.associated_endpoint
         && a.direction == b.direction
         && a.phase == b.phase
         && a.consent_revision == b.consent_revision
@@ -75,7 +86,10 @@ fn arrange(container: &gtk::Box, desired: &[gtk::Box]) {
     }
     let mut previous: Option<gtk::Widget> = None;
     for row in desired {
-        if row.parent().is_none() {
+        if row.parent().as_ref() != Some(container.upcast_ref()) {
+            if let Some(parent) = row.parent().and_downcast::<gtk::Box>() {
+                parent.remove(row);
+            }
             container.append(row);
         }
         if row.prev_sibling() != previous {
@@ -334,14 +348,15 @@ impl Panel {
                 .get(&key)
                 .is_none_or(|entry| entry.endpoint.as_ref() != Some(&projection))
             {
-                let root = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-                root.add_css_class("device-row");
+                let root = gtk::Box::new(gtk::Orientation::Vertical, 6);
+                let controls = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+                controls.add_css_class("device-row");
                 let state = if projection.1 {
                     Badge::Available
                 } else {
                     Badge::Unavailable
                 };
-                root.append(&device_icon(
+                controls.append(&device_icon(
                     rqs_lib::service::client::state::DeviceKind::Unknown,
                     if projection.1 {
                         "Nearby advertised device"
@@ -365,7 +380,7 @@ impl Panel {
                         panel.choose_recipient(&endpoint, choice.is_active());
                     }
                 });
-                root.append(&choice);
+                controls.append(&choice);
                 let send = gtk::Button::with_label("Send");
                 send.set_widget_name("send-device");
                 let weak = Rc::downgrade(self);
@@ -374,7 +389,8 @@ impl Panel {
                         panel.send_to(&id);
                     }
                 });
-                root.append(&send);
+                controls.append(&send);
+                root.append(&controls);
                 rows.entries.insert(
                     key.clone(),
                     Entry {
@@ -403,6 +419,8 @@ impl Panel {
         }
         let mut active_rows = Vec::new();
         let mut terminal_rows = Vec::new();
+        let mut grouped: BTreeMap<String, Vec<gtk::Box>> = BTreeMap::new();
+        let discovered: BTreeSet<&str> = view.endpoints.iter().map(|peer| peer.id.as_str()).collect();
         let recent: BTreeSet<_> = view
             .transfers
             .iter()
@@ -430,7 +448,15 @@ impl Panel {
                 let root = self.cached_transfer(&mut rows, page, transfer, ready, incoming);
                 if page == "nearby" {
                     if transfer.phase.is_terminal() {
-                        terminal_rows.push(root);
+                        if let Some(endpoint) = bound_current_endpoint(
+                            transfer.direction,
+                            transfer.associated_endpoint.as_deref(),
+                            &discovered,
+                        ) {
+                            grouped.entry(endpoint.to_owned()).or_default().push(root);
+                        } else {
+                            terminal_rows.push(root);
+                        }
                     } else {
                         active_rows.push(root);
                     }
@@ -440,8 +466,49 @@ impl Panel {
                 used.insert((page.to_owned(), transfer.transfer.id().to_owned()));
             }
         }
-        // A transfer's advertised name is not an endpoint identity. Keep
-        // unlinked finished operations accessible, but out of the discovery list.
+        // Only same-epoch endpoint IDs from the daemon can link an outbound
+        // result to discovery. Inbound advertised names are never identity.
+        for endpoint in &view.endpoints {
+            let key = ("nearby".to_owned(), endpoint.id.clone());
+            let Some(entry) = rows.entries.get(&key) else { continue };
+            let root = entry.root.clone();
+            let existing = named(root.upcast_ref(), "device-activity")
+                .and_downcast::<gtk::Expander>();
+            if let Some(operations) = grouped.remove(&endpoint.id) {
+                let expander = existing.unwrap_or_else(|| {
+                    let expander = gtk::Expander::new(Some("Completed operations"));
+                    expander.set_widget_name("device-activity");
+                    expander.set_resize_toplevel(true);
+                    expander.set_expanded(false);
+                    let body = gtk::Box::new(gtk::Orientation::Vertical, 8);
+                    expander.set_child(Some(&body));
+                    let weak = Rc::downgrade(self);
+                    expander.connect_expanded_notify(move |_| {
+                        if let Some(panel) = weak.upgrade() {
+                            panel.pin_surface_bottom();
+                            let weak = Rc::downgrade(&panel);
+                            glib::idle_add_local_once(move || {
+                                if let Some(panel) = weak.upgrade() {
+                                    panel.resize_to_content();
+                                }
+                            });
+                        }
+                    });
+                    root.append(&expander);
+                    expander
+                });
+                let body = expander.child().and_downcast::<gtk::Box>()
+                    .expect("device activity container");
+                arrange(&body, &operations);
+            } else if let Some(expander) = existing {
+                root.remove(&expander);
+            }
+        }
+        // When a peer disappears, its in-memory operations remain accessible,
+        // but they cannot be grouped with a later device of the same name.
+        for (_, operations) in grouped {
+            terminal_rows.extend(operations);
+        }
         let devices = std::mem::take(pages.get_mut("nearby").unwrap());
         let nearby = pages.get_mut("nearby").unwrap();
         if !active_rows.is_empty() {
