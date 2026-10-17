@@ -133,3 +133,12 @@ expansion mechanism is gone, and actual-widget no-Expander/direct-consent/plain
 manifest-tooltip assertions replace the old presentation contract. Original
 readiness, exact consent callbacks, progress and bounded-content checks remain.
 No ten-run/full Mode B claim. Command sessions exited; Terminal closed.
+
+Native27 release package verified:6653458 bytes, SHA-256
+f023a2ca0575d4166203e972d0e70040e0e507c6c67578e75dbd7ffc5f36dd6c.
+Binary/source e523523. Exact extracted-package incoming preview was visually
+inspected: peer/type/code and direct Decline/Accept fit one420px card row; no
+arrow/lower detail block. Preview remains inert and does not prove real peer/KDE
+acceptance. Upgrade pins native26 owners2738171/2738175 and both package hashes,
+requires a fresh global idle gate, and preserves received files/journal/login state.
+No new runtime diagnostic override. Stop before mutation if any request is active.
