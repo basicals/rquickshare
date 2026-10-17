@@ -1,13 +1,16 @@
 # Current implementation and continuation state
 
-Mainline integration (2026-10-17): the user authorized moving the current native21
-checkpoint into the repository's actual default branch, master. Incoming remote
-repository configuration is merged into dev; two Python CI environment/fixture
-defects are fixed. The full54-test offline Python suite passed. Exact-head remote
-Preflight and dev-to-master merge are in progress; see
+Mainline integration (2026-10-17): native21 source is merged into the actual
+default branch master by PR #4, merge SHA 25cf7dd17ea28e98b2765efd09e0474d0028334a;
+remote dev was fast-forwarded to that merge checkpoint without force. The exact
+pre-merge dev HEAD passed all five Preflight jobs (run 38984114755), including
+the fixed Python fixture/runtime contract checks. The separate post-merge master
+run is 38984886879. A documentation-only follow-up records these results; local
+workstation branches still require normal fetch/fast-forward. See
 [integration checkpoint](native-mainline-integration-2026-10-17.md). Installed
-native21 and its accepted UI stay unchanged. Peer/lifecycle/signed-release gates
-listed there remain open.
+native21 and its accepted UI stay unchanged. Current physical Android/Windows
+peer, KDE lifecycle, full Mode B ten-run and approved signed-release gates
+remain open.
 
 Latest work (2026-10-17): native21 is installed and running. Primary tray Activate
 now toggles the card, and valid same-session monitor/bottom margins are restored
