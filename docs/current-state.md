@@ -1,15 +1,24 @@
 # Current implementation and continuation state
 
 2026-10-17 native28 is installed and user-accepted as the current UI iteration.
-Binary source2c14d26; package SHA-256 and14-file/tray/API receipts are in
-[native28 evidence](evidence/native28-installation-2026-10-17.json). Live/history
-columns, footer controls, background movement and guarded15s free-card dismissal
-are implemented; the user's general acceptance is not an exhaustive case matrix.
-Current source promotion to the actual master default branch is explicitly
-approved and follows [integration plan](native28-mainline-integration-2026-10-17.md).
-No new signed/public release or Google parity claim. The installed package stays
-unchanged during integration. See [essential acceptance](native-essential-acceptance.md)
-for remaining peer/failure/lifecycle work; avoid relisting completed UI as missing.
+Its source is merged into the actual master default branch by
+[PR #7](https://github.com/morozhenko-apps/rquickshare/pull/7), merge4eaf99ada7c4232d34f3b74272d3e93c32c5e392.
+Exact candidate3d048082 passed all five Preflight jobs and one native GTK suite
+(52 passed/0 failed). The merge tree is identical; subsequent README/evidence
+changes are docs-only. See [integration evidence](evidence/native28-mainline-integration-2026-10-17.json).
+Existing master/dev refs are synchronized without force or branch deletion and
+checkout stays dev. Installed binary source2c14d26/package28 stays unchanged;
+[installed evidence](evidence/native28-installation-2026-10-17.json) includes14-file/
+tray/API checks and general user acceptance, not an exhaustive physical matrix.
+
+Root/native READMEs now lead with the actual native build/distribution state and
+retain legacy/macOS attribution/reference. Signing keys and encrypted cloud backup
+are already verified. Next priorities: current Android/Google Windows ordinary
+content and cancellation, interruption/partial/collision and desktop lifecycle,
+then exact approved signed distribution/provenance/scoped publishing and APT
+consumption. See [acceptance](native-essential-acceptance.md) and
+[priority order](native-essential-priorities.md). Previews/new account/trust/QR/
+resume expansion remain deferred. No new public release or full parity claim.
 
 Historical native27 installed checkpoint:
 

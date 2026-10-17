@@ -3,50 +3,43 @@
 Current implementation, selected distribution/signing bindings and remaining gates:
 [current state](../docs/current-state.md). Dated checkpoints below retain historical observations.
 
-The card uses a transparent outer surface and a themed rounded body. Its close
-button hides the card while tray/daemon/transfers continue. Full/Compact remain;
-idle readiness/discovery/branding text and the duplicated options button are gone.
-The original blue application icon is restored, and Settings/tray offer an owned
-About dialog. See [card cleanup](../docs/native-card-cleanup.md) for source, visual
-checks and exact installed status.
+The installed native28 uses one Receive, Send, Devices, Hide toolbar. Devices
+opens the upper device list; incoming consent is immediately inline as type/code
+and Decline/Accept, followed by byte progress and a transient Completed status.
+Received files are automatically revealed safely; text opens a plain Copy/Close
+review. Manual result actions live in the separate Transfers window. There is no
+row disclosure or additional Full header. Main Send opens content types first;
+choosing a global source then opens devices. Per-device Send instead offers an
+inline File/Folder/Text/Clipboard strip and sends to that exact endpoint after input.
 
-The installed native21 uses a single Receive, Send, Devices, Hide toolbar.
-Devices toggles an upper drawer containing the keyed device/request/transfer list
-with icon statuses, explicit code/manifest review, prepared source Add/Clear and
-recipient Send. Explicit sending/review actions also open that drawer. Closing
-it preserves selected recipients and active transfers. Native bottom anchoring
-keeps the toolbar in place while the drawer fits onscreen. There is no separate
-Full header or saved Card view control. Existing compact/full development preview
-aliases map to drawer Closed/Open only. See [card usability](../docs/native-card-usability.md).
+Prepared sources are retained in the daemon. Each device-row Send joins its FIFO
+in click order; clearing preparation preserves admitted payloads. Clipboard chooses
+local file/folder lists before image before text, without fallback after a chosen
+format fails. File and text limits and explicit receiving consent still apply.
+The card's lower controls are covered while a global source awaits target choices.
 
-Confirmed one-minute visibility gives Receive a subdued theme-relative green
-pulse. Pressing it again requests Hidden, ending discoverability early without
-interrupting transfers or accepting requests. The daemon owns expiry and exact
-command reconciliation; the indicator never claims optimistic success.
+Primary tray clicks toggle the card and preserve valid same-session position.
+Background movement and cursor feedback share one hit rule, excluding controls.
+A free card hides after15 seconds without input while the pointer is outside;
+requests/transfers, sources, dialogs/menus and recovery states pause dismissal.
+Daemon work continues after hiding. See [native28 contract](../docs/native28-history-idle-movement-2026-10-17.md)
+for exact measured checks and the user's general UI acceptance.
 
-The branded Settings window retains General, Receiving, Advanced and About
-sidebar sections, shared Cancel/OK and staged edits. Legacy card_mode is preserved
-from the acknowledged settings base for API/storage compatibility and ignored
-by presentation. Drawer expansion is local, initially Closed.
+Receive reviews a waiting request or requests one-minute visibility. Pressing it
+again during temporary visibility requests Hidden. The collapsed button pulses;
+the open drawer uses a spinner/countdown. Visibility2 supplies the checked core
+snapshot and SDK monotonic sample; the daemon alone owns expiry. No periodic IPC
+or automatic acceptance is added by the display timer.
 
-Primary tray clicks toggle the card, preserving valid monitor/anchor margins
-within the running process. Expanded temporary visibility shows a native spinner
-and countdown from the checked Visibility2 snapshot, paired with an SDK monotonic
-sample. Display ticks stop while collapsed/hidden/disconnected/closed; they never
-expire visibility or send periodic IPC. Daemon and client must be upgraded together
-for Visibility2; the previous Visibility1 wire signature is not reinterpreted.
+The tray offers card toggle, Receive, Send, Transfers, live visibility controls,
+Settings and Quit. Transfers uses aligned live/metadata rows and footer controls;
+completed metadata is retained up to30 days/1000 records without payload contents.
+Old persisted metadata does not grant received-file access or device trust.
 
-The shortened tray offers a visibility-aware Open/Hide, Receive, one Send entry,
-actual incoming/active counts, three live visibility choices, Settings/About and
-Quit. Devices stays on the card. Receive stops confirmed temporary visibility,
-otherwise reviews a waiting request, otherwise
-requests one-minute visibility through the existing daemon owner while preserving
-the chosen card view; it never accepts.
-The Send surface offers files/folder/text/explicit clipboard image capture. Add
-files atomically extends an unsent file source in the daemon, preserving the base
-on failure and never auto-sending after chooser completion. See
-[source extension](../docs/native-source-extension.md). No remembered trust or
-persistent history is implied by discovered names or status icons.
+Settings retains branded General, Receiving, Advanced and About sections and
+staged Cancel/OK edits. Legacy card_mode remains preserved in storage for contract
+compatibility, while drawer expansion is local and initially closed. Exact
+source/package/installed state is in [current state](../docs/current-state.md).
 
 Settings OK saves validated native values, then requested login start. It closes
 only after acknowledged application; failures/uncertainty/restart-required state
@@ -60,21 +53,16 @@ Corrupt configuration or failed transport startup keeps a Stopped settings servi
 available for in-app repair. Save is distinct from guarded start/restart; prepared
 files/live transfers block restart. Reconnect reads the new generation without
 replaying source/send/save actions. Missing daemon or read-only `--settings PATH`
-override disables persistence. No install/autostart
-is implied; normal native startup uses the separate native store when present.
+override disables persistence. A build does not install or enable login startup; normal native startup uses
+the separate native store when present.
 
-Nearby now supports1..10 explicit recipient choices and one Send. The daemon
-admits all selected targets atomically, then keeps independent per-peer outcomes
-and source ownership if the card closes. A selected vanished peer stays visible
-and blocks Send until explicitly unchecked or available again. See
-[multi-recipient contract](../docs/native-multi-recipient-review.md).
-
-A GTK4 tray client for the native daemon. Native12 replaced the legacy Tauri
-package on the approved Ubuntu26.04/KDE Wayland host on2026-10-16; native13 then
-repaired named tmpfs-file admission with anonymous-source guards preserved. This does not
-establish Google Quick Share parity. See [installed acceptance](../docs/native-installed-acceptance.md). The current plan,
-invariants, exact measured checks and pending acceptance are in
-[native-gtk-shell.md](../docs/native-gtk-shell.md).
+The daemon owns per-device admission, queue and independent results even after
+the card closes. The older checkbox/multi-selection UI has been replaced by the
+per-click contract in [managed dispatch](../docs/native-managed-dispatch.md) and
+the [native25 interaction ledger](../docs/native25-interaction-polish-2026-10-17.md).
+Current ordinary interoperability and failure/lifecycle acceptance are tracked in
+[essential acceptance](../docs/native-essential-acceptance.md). The installed
+source checkpoint is not a claim of full Google Quick Share feature parity.
 
 Build from the repository root with Rust >=1.93, GTK4 >=4.12 development files,
 GTK4 Layer Shell development/runtime, fontconfig/libseccomp development files,

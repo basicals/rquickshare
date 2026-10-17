@@ -1,3 +1,41 @@
+# rQuickShare
+
+Nearby file, folder and text sharing for Linux. The current development version
+uses a native GTK4 tray card and a separate user-session daemon. Incoming requests
+show explicit Decline/Accept controls and a verification code; admitted transfers
+continue when the card is hidden. The Transfers window keeps bounded operation
+metadata and provides checked access to received results.
+
+The current local candidate is native28, tested on Ubuntu 26.04 amd64 with KDE
+Wayland. The user has confirmed Android discovery and successful transfers, and
+accepted the current UI iteration. The broader Android/Google Quick Share for
+Windows, interruption and desktop lifecycle checklist remains open. See the
+[current state](docs/current-state.md) and
+[acceptance checklist](docs/native-essential-acceptance.md) for exact evidence.
+
+## Native build and distribution
+
+Start with the [native development guide](native_desktop/README.md) for dependencies
+and build commands. [Native packaging](native_desktop/packaging/README.md) explains
+how to build and verify a local Debian package, install the selected artifact and
+use the package-owned systemd user services. This candidate targets the declared
+build ABI; it does not establish Ubuntu 24.04, ARM64 or other desktop acceptance.
+
+The signed APT channel is being prepared and has not been published. Local
+verified packages and source checkpoints are distinct from a public signed release.
+The [essential priorities](docs/native-essential-priorities.md) list the remaining
+work before that release.
+
+## Project and legacy versions
+
+This is a maintained fork of [Martichou/rquickshare](https://github.com/Martichou/rquickshare).
+Upstream attribution, legacy Tauri/macOS sources and the [GPL-3.0 license](LICENSE)
+are retained. The material below describes the earlier application and its
+distribution paths; use the native guides above for the current Linux candidate.
+
+<details>
+<summary>Legacy Tauri application, downloads and macOS reference</summary>
+
 <div align="center">
   <h1>rquickshare</h1>
 
@@ -218,3 +256,6 @@ Contributing
 --------------------------
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+
+</details>

@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "date": "2026-10-17",
+  "pull_request": "https://github.com/morozhenko-apps/rquickshare/pull/7",
+  "candidate_commit": "3d048082ddbdf6ec9dabb7e9602c722fa103b371",
+  "merge_commit": "4eaf99ada7c4232d34f3b74272d3e93c32c5e392",
+  "merged_at": "2026-10-17T14:10:20Z",
+  "merge_tree_equals_candidate": true,
+  "check_runs": {
+    "preflight": {
+      "id": 39039111171,
+      "url": "https://github.com/morozhenko-apps/rquickshare/actions/runs/39039111171",
+      "head_sha": "3d048082ddbdf6ec9dabb7e9602c722fa103b371",
+      "conclusion": "success",
+      "jobs": [
+        [
+          "Rust format",
+          "success"
+        ],
+        [
+          "Frontend lint, typecheck and unit tests",
+          "success"
+        ],
+        [
+          "Clippy (core_lib)",
+          "success"
+        ],
+        [
+          "Clippy (app/main/src-tauri)",
+          "success"
+        ],
+        [
+          "Core Rust tests",
+          "success"
+        ]
+      ]
+    },
+    "gtk": {
+      "id": 39039111205,
+      "url": "https://github.com/morozhenko-apps/rquickshare/actions/runs/39039111205",
+      "head_sha": "3d048082ddbdf6ec9dabb7e9602c722fa103b371",
+      "conclusion": "success",
+      "jobs": [
+        [
+          "Native GTK widget tests and strict lint",
+          "success"
+        ]
+      ]
+    }
+  },
+  "gtk": {
+    "passed": 52,
+    "failed": 0,
+    "seconds": 0.47,
+    "repetitions": 1
+  },
+  "source_equivalent_docs_followup": [
+    "README.md",
+    "native_desktop/README.md",
+    "docs/current-state.md",
+    "docs/native28-mainline-integration-2026-10-17.md",
+    "docs/evidence/native28-mainline-integration-2026-10-17.json"
+  ],
+  "post_merge_runs": "Independent automatic runs; not claimed complete by this receipt.",
+  "no_new_branch_or_worktree": true,
+  "no_force_push_or_deletion": true,
+  "installed_version_unchanged": "0.11.5+native28",
+  "no_signed_or_public_release": true
+}

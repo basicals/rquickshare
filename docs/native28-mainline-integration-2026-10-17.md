@@ -29,11 +29,11 @@ fits the user's current policy and does not alter installed binaries.
   priorities; preserve source and user feedback in SSOT before mutation.
 - [x] I2: record native28 installed/user acceptance and immutable local export receipt;
   update the essential acceptance index to current facts without inventing coverage.
-- [ ] I3: correct development CI repetition default, push dev normally, obtain substantive
+- [x] I3: correct development CI repetition default, push dev normally, obtain substantive
   exact-head Preflight and one-run GTK results. Fix concrete failures at their roots.
-- [ ] I4: create/attach a dev-to-master PR; verify exact candidate and base, then merge
+- [x] I4: create/attach a dev-to-master PR; verify exact candidate and base, then merge
   normally after successful substantive checks. No squash/history rewrite.
-- [ ] I5: synchronize existing local master/remote dev to the merge while staying on dev;
+- [x] I5: synchronize existing local master/remote dev to the merge while staying on dev;
   record source/check/merge evidence and the ordered continuation list.
 
 Source rollback is a normal merge revert; package rollback is the retained exact27
@@ -115,3 +115,20 @@ refresh mutable handoff separately from immutable native28 package/source output
 Rollback I6 independently from the accepted implementation. Keys and encrypted
 cloud backup are already verified; remaining distribution gates concern exact
 release/provenance/scoped publishing and public APT consumption.
+
+I6 complete: README now leads with the actual native Linux checkpoint, build/
+package guides and unpublished signed-channel status. Original legacy/macOS body
+is preserved verbatim inside a labeled reference section, with attribution/license.
+Leading native_desktop guide now reflects the single toolbar, direct consent,
+retained per-click FIFO, Clipboard, separate history and approved idle policy.
+All relative links in the new introduction/native guide exist and whitespace
+validation passed. This receipt changes documentation only; implementation/test/
+workflow trees remain the already checked candidate. No unchanged binary rebuild,
+installation or production-suite repetition. Exact source/CI/merge evidence is in
+evidence/native28-mainline-integration-2026-10-17.json.
+
+The final docs-only commit is mirrored normally to existing master/dev refs with
+[skip ci]; its production source is the successful candidate/merge tree. Automatic
+post-merge CI results are independent and not asserted by this receipt. Immutable
+native28 package/source archives stay unchanged; latest mutable source/status
+exports include this integration receipt. Owned command sessions exit cleanly.
