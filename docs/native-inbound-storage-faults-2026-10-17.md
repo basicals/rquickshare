@@ -129,11 +129,11 @@ at least one exact-state or filesystem assertion. This is mutation
    branch map, matrix and six test cases documented before code.
 2. [x] Implement all six tests in existing handler reliability fixture;
    no production changes or new dependencies. Preserve all assertions.
-3. [ ] Run exact-source CI including full Rust suite + 8 integration,
+3. [x] Run exact-source CI including full Rust suite + 8 integration,
    format/core Clippy/Python/frontend and GTK; triage any red jobs.
    If production behavior is wrong, record a MODE A repair plan before
    changing runtime code.
-4. [ ] Record verified results by category and per-production-file
+4. [x] Record verified results by category and per-production-file
    coverage remaining; update current-state. Mark MODE B full gate
    open without full 10-pass/coverage workflow; never claim physical
    disks/peer acceptance.
@@ -163,3 +163,64 @@ Full core execution, legacy Tauri Clippy and GTK remain in progress
 at this written checkpoint. No claim that the six new cases pass
 or that Mode B whole-repo gates are closed until actual job evidence.
 
+
+## Exact-source execution, coverage and completion status
+
+Source commit `0bdf73bd`: `Preflight` run 39061071880;
+`Native GTK UI verification` run 39061071881.
+
+- The newly added single table-driven method completed with status
+  **ok**, running all 6 preregistered storage subcases (2 first-file
+  outcomes × 3 kernel/publish faults).
+- Rust core library **702 passed / 0 failed**, modern protocol integration
+  **4/0**, native daemon integration **4/0**.
+- Offline Python contracts **54/0**, nightly Rust format, core
+  all-feature/all-target strict Clippy, and frontend
+  lint/typecheck/unit passed.
+- Native GTK strict checks and isolated **52/0** widget tests passed.
+- Legacy Tauri Clippy was in progress when this status was recorded.
+  Do not claim full Preflight 5/5 until it reports completed/success.
+- The 6 new cases require exact ENOSPC or EBADF kernel error codes,
+  generic non-PII size rejection, ReceivedFiles subset/absence,
+  exact progress before and after the failure, exact user fixture bytes,
+  no invented Finished and no abandoned staged owners.
+
+Scoped test counts by **primary** category:
+Positive=0 new (existing positive cases reexecuted), N1=0,
+N2=0, N3=0, N4=0, N5=0, N6=2 (altered inode size),
+N7=2 (read-only descriptor), N8=N/A, N9=0,
+N10=0, N11=N/A, N12=2 (ENOSPC).
+Total **6 scenarios in 1 new method**; interactions with already
+published first member, cleanup, idempotent terminal state and
+receipt read-only FD are asserted in **all 6**. Other negative
+categories in the scoped matrix were previously implemented or
+remain outside this storage-specific flow. No instrumentation provides
+an overall statement/branch coverage percentage; no executed mutation
+campaign or 10-repeat full-suite validation was performed.
+
+### Per-production-file coverage map / mutation review
+
+| Production file | Covered by actual new cases | Remaining boundary |
+|---|---|---|
+| `hdl/inbound.rs` | Write error propagation, no failed-write progress, correct EOF/size check before final name, exact terminal state and working FD cleanup | Multi-chunk partial `write_all_at` kernel fault and actual remote Android sender |
+| `receive.rs` | Actual O_TMPFILE staged inode, metadata-size guard, absence of leaf on error; existing root/collision/fsync tests reexecuted | Real user-selected read-only mount, power-loss durability |
+| `received_files.rs` | No failed member in receipt; first completed remains readable by owned FD; zero-member has no authority | Files1 live desktop/peer acceptance |
+| `sessions.rs` | Original immutable manifest and exact progress; no false Finished after recorded terminal failure | Physical notification/reconnect lifecycle |
+| Other existing files | Existing 702 core and 8 integration tests reexecuted | No claim of complete per-file Mode B branch coverage |
+
+Mutation review: a change that increments progress before a failed
+write, removes the pre-link size guard, treats full ack count as whole
+transfer success, records the failed member, overwrites the final
+filename, drops the completed first member, fails to release staged
+FDs, overrides Disconnected with Finished or alters the user-owned
+read-only fixture should make at least one direct assertion fail.
+Mutation tool *not* executed. No testability refactor was necessary:
+the real kernel-descriptor boundary is controllable from existing
+fixtures; no production seam or mock needed.
+
+Result: **scoped storage-failure regressions complete; whole-repo
+MODE B completion gate OPEN** (the 10-run `mode-b.yml` and measured
+coverage were not run). This is not evidence for arbitrary disk-full
+mounts, user permission policies, suspension, real Android/Windows
+interoperability, native30 installation, package signing or release.
+User's installed native29 and master remain unchanged.
