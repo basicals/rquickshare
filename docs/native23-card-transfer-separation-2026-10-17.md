@@ -72,7 +72,7 @@ visibility, network configuration or authorization during passive analysis.
   review/cancel and content capabilities. Do not invent durable trust.
 - [ ] A5: trace receiver discovery stages with bounded privacy-safe evidence;
   fix only the demonstrated cause and record what needs a live phone check.
-- [ ] A6: run appropriate affected checks once (no ten-run development loop),
+- [x] A6: run appropriate affected checks once (no ten-run development loop),
   record measured failures/corrections and commit logical stages independently.
 - [ ] A7: separately verified package and known-owner/global-idle installation
   before the user's physical acceptance. Preserve native22 rollback package.
@@ -292,3 +292,28 @@ the documented temporary per-unit privacy-safe receiver trace after the idle
 stop, then launch normally. Keep login start disabled and verify all14 installed
 files plus one14-entry tray and the new Journal1/Queue interfaces. Real phone
 timing/queue and KDE visual acceptance remain separate user checks.
+
+## Native24 installed checkpoint
+
+APT exited0; native22 upgraded to native24 at2026-10-17T11:52Z. Normal launch
+restored daemon2570570 and desktop2570571; login start remains disabled. All14
+installed regular files match package bytes/modes/root ownership. Passive reads
+confirmed one Active14-entry tray, valid Visibility2, Journal1 error0/zero initial
+records, and Queue/Retry interface support. Current source d3cd9d3; later changes
+are documentation only. Two native22 in-memory terminal records were not imported;
+no active work, prepared source, received file or setting was removed.
+
+Extracted final-package card and secondary Transfers-window images were inspected;
+there are no recipient checkboxes, per-device islands or auto-selected labels.
+The real compositor and phone flows still need user observations. Privacy-safe
+startup trace recorded mDNS registration10ms and BLE advertisement69ms. These
+are daemon startup stages, not phone discovery measurements. Temporary per-unit
+trace is enabled for the pending physical reproduction; remove its task-owned
+runtime override after capture, without interrupting active work. Running daemon
+keeps its process-local trace flag until its next normal restart.
+
+A7 package/installed verification is complete; physical acceptance remains open.
+See evidence/native24-installation-2026-10-17.json for measured receipts. All
+installer/observer commands exited; ordinary installed application units remain
+running intentionally for user testing. No signed/public release or new master
+merge. No unchanged CI/ten-run/full-repository pass is claimed.

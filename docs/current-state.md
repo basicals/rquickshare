@@ -1,18 +1,23 @@
 # Current implementation and continuation state
 
-2026-10-17 dev source checkpoint: native24 is being packaged; installed version
-remains native22 until the fresh known-owner/global-idle gate passes. The card
-now has flat current device rows with progress; completed operations live in a
-separate daemon-backed Transfers window. Prepared sources are retained and each
-per-device Send joins one sequential daemon queue in click order; no recipient
-checkboxes or second sender confirmation. Persistent metadata is bounded to
-30 days/1000 completed entries; no payload storage or name-based device trust.
-Receiver recovery deadlines no longer restart on unrelated events. A real
-Android timing check remains open. See [active plan and measured checks](native23-card-transfer-separation-2026-10-17.md). Native23 is an uninstalled
-internal package retained before the explicit journal-write retry correction.
-No new master integration, signed release or cloud publication.
+2026-10-17 installed checkpoint: native24 is installed and running. Release
+source d3cd9d3; exact package and installed receipts are in
+[evidence](evidence/native24-installation-2026-10-17.json). All14 installed files,
+one14-entry tray, Visibility2/Journal1/Queue passed passive verification; login
+start remains disabled. The card has flat current device rows with progress;
+completed operations live in a separate daemon-backed Transfers window. Prepared
+sources stay available and each per-device Send joins one sequential daemon
+queue in click order; no recipient checkboxes or second sender confirmation.
+Metadata retention is30 days/1000 completed entries, without payloads/name-based
+trust. Receiver recovery timers no longer restart on unrelated events; phone
+discovery speed and physical UI/queue acceptance remain pending. A temporary
+per-unit privacy-safe receiver trace is enabled for that reproduction and must
+be removed after capture. See [active plan and measured checks](native23-card-transfer-separation-2026-10-17.md).
+Native22 rollback and uninstalled native23 internal package are retained. No
+new master integration, signed release or cloud publication.
 
-Historical installed checkpoint before the pending upgrade:
+Historical installed checkpoint before native24:
+
 
 2026-10-17 current installed checkpoint: native22 is installed and running for
 user testing. Binary/package source0f34808537a2b40a22dc8f56a227b5801dc74b61,

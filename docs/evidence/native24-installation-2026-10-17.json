@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "source_commit": "d3cd9d337c5c66ce9baf58d8232bec43a0f53084",
+  "package": {
+    "name": "rquickshare_0.11.5+native24_amd64.deb",
+    "bytes": 6582328,
+    "sha256": "26d6b4cf2e6d2791c1dda512c6036d5739b46fedcb933c03a5d8c7d369b70805",
+    "offline_verified": true
+  },
+  "installation": {
+    "observed_at": "2026-10-17T11:52:06.372776+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native22",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2495491"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2495492"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 19,
+      "owned_selections": 0,
+      "transfers": 2
+    },
+    "terminal_history_count": 2,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "temporary_trace_override": "/run/user/1000/systemd/user/rquickshare-daemon.service.d/90-rquickshare-receiver-trace.conf",
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native24",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2570570"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2570571"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "passive_installed_checks": {
+    "observed_at": "2026-10-17T11:52:28.833866+00:00",
+    "installed_version": "0.11.5+native24",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true,
+    "endpoint_association_read": {
+      "total": 0,
+      "rows": 0,
+      "passed": true
+    },
+    "visibility2_read": {
+      "running": true,
+      "mode": 2,
+      "valid": true
+    },
+    "journal_read": {
+      "error": 0,
+      "records": 0,
+      "valid": true
+    },
+    "queue_and_journal_retry_supported": true
+  },
+  "development_checks": {
+    "service": {
+      "passed": 308,
+      "failed": 0,
+      "seconds": 8.05
+    },
+    "gtk": {
+      "passed": 44,
+      "failed": 0,
+      "seconds": 0.67
+    },
+    "final_widget": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.52
+    },
+    "daemon_lifecycle": {
+      "passed": 4,
+      "failed": 0,
+      "seconds": 0.02
+    },
+    "receiver_schedule": {
+      "passed": 9,
+      "failed": 0
+    },
+    "receiver_trace": {
+      "passed": 1,
+      "failed": 0
+    },
+    "journal_after_retry_fix": {
+      "passed": 9,
+      "failed": 0,
+      "seconds": 0.2
+    },
+    "journal_bus_after_retry_fix": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.07
+    },
+    "strict_core_clippy_seconds": 18.77,
+    "strict_native_clippy_seconds": 3.91,
+    "full_repository_or_mode_b_claim": false
+  },
+  "receiver_startup": {
+    "mdns_register_ms": 10,
+    "advertisement_started_ms": 69,
+    "physical_phone_latency_verified": false
+  },
+  "physical_acceptance": {
+    "kde_card": false,
+    "direct_send": false,
+    "multi_device_click_order": false,
+    "android_discovery": false
+  },
+  "no_public_release": true
+}
