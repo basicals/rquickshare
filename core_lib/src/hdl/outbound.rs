@@ -559,6 +559,7 @@ impl OutboundPayload {
 pub struct OutboundRequest {
     endpoint_id: [u8; 4],
     socket: TcpStream,
+    frame_header: super::frame_header::FrameHeader,
     pub state: InnerState,
     sender: Sender<ChannelMessage>,
     receiver: Option<Receiver<ChannelMessage>>,
@@ -644,6 +645,7 @@ impl OutboundRequest {
         Ok(Self {
             endpoint_id,
             socket,
+            frame_header: super::frame_header::FrameHeader::default(),
             state: InnerState {
                 id,
                 server_seq: 0,
@@ -701,9 +703,6 @@ impl OutboundRequest {
     }
 
     pub async fn handle(&mut self) -> Result<(), anyhow::Error> {
-        // Buffer for the 4-byte length
-        let mut length_buf = [0u8; 4];
-
         tokio::select! {
             i = crate::sessions::legacy_message(&mut self.receiver) => {
                 match i {
@@ -739,10 +738,8 @@ impl OutboundRequest {
                     }
                 }
             },
-            h = stream_read_exact(&mut self.socket, &mut length_buf) => {
-                h?;
-
-                self._handle(length_buf).await?
+            header = self.frame_header.read(&mut self.socket) => {
+                self._handle(header?).await?
             }
         }
 
@@ -1941,6 +1938,59 @@ impl OutboundRequest {
 #[cfg(test)]
 mod security_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn given_interrupted_frame_header_when_control_is_handled_then_outbound_resumes_exactly()
+    {
+        for split in 1..4 {
+            // Arrange: a real peer rejection split inside the length prefix.
+            let (mut request, mut peer) = test_request(vec![]).await;
+            request.state.state = State::SentUkeyClientFinish;
+            let body = OfflineFrame {
+                v1: Some(crate::location_nearby_connections::V1Frame {
+                    r#type: Some(
+                        crate::location_nearby_connections::v1_frame::FrameType::ConnectionResponse
+                            .into(),
+                    ),
+                    connection_response: Some(
+                        crate::location_nearby_connections::ConnectionResponseFrame {
+                            response: Some(ResponseStatus::Reject.into()),
+                            ..Default::default()
+                        },
+                    ),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+            .encode_to_vec();
+            let header = (body.len() as u32).to_be_bytes();
+            peer.write_all(&header[..split]).await.unwrap();
+            request.socket.readable().await.unwrap();
+
+            // Act: consume the partial header, handle an unrelated event, resume.
+            {
+                let sender = request.sender.clone();
+                let handle = request.handle();
+                tokio::pin!(handle);
+                assert!(futures::poll!(handle.as_mut()).is_pending());
+                sender
+                    .send(ChannelMessage {
+                        direction: ChannelDirection::LibToFront,
+                        ..Default::default()
+                    })
+                    .unwrap();
+                handle.await.unwrap();
+            }
+            peer.write_all(&header[split..]).await.unwrap();
+            peer.write_all(&body).await.unwrap();
+            peer.shutdown().await.unwrap();
+
+            // Assert: the rejection was decoded, rather than EOF/framing failure.
+            let error = request.handle().await.unwrap_err();
+            assert_eq!(error.to_string(), "Connection rejected by third party");
+            assert_eq!(request.state.state, State::SentUkeyClientFinish);
+        }
+    }
 
     #[tokio::test]
     async fn given_encrypted_outbound_byte_chunks_when_routed_then_completion_releases_buffers_and_limits_apply(

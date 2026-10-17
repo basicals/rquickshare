@@ -495,6 +495,7 @@ pub fn peek_client_introduction(
 #[derive(Debug)]
 pub struct InboundRequest<S = TcpStream> {
     socket: S,
+    frame_header: super::frame_header::FrameHeader,
     pub state: InnerState,
     sender: Sender<ChannelMessage>,
     receiver: Option<Receiver<ChannelMessage>>,
@@ -518,6 +519,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
 
         Self {
             socket,
+            frame_header: super::frame_header::FrameHeader::default(),
             state: InnerState {
                 id,
                 server_seq: 0,
@@ -690,9 +692,6 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
     }
 
     pub async fn handle(&mut self) -> Result<(), anyhow::Error> {
-        // Buffer for the 4-byte length
-        let mut length_buf = [0u8; 4];
-
         tokio::select! {
             command = crate::sessions::consent_command(&mut self.session) => {
                 if let Some(command) = command {
@@ -739,10 +738,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                     }
                 }
             },
-            h = stream_read_exact(&mut self.socket, &mut length_buf) => {
-                h?;
-
-                self._handle(length_buf).await?
+            header = self.frame_header.read(&mut self.socket) => {
+                self._handle(header?).await?
             }
         }
 
@@ -2393,6 +2390,94 @@ impl InboundRequest<crate::hdl::MigratableStream> {
 #[cfg(test)]
 mod security_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn given_interrupted_frame_header_when_control_is_handled_then_inbound_resumes_exactly() {
+        use tokio::io::AsyncWriteExt;
+
+        for native in [false, true] {
+            for split in 1..4 {
+                // Arrange: a real connection request split inside its length prefix.
+                let body = OfflineFrame {
+                    v1: Some(crate::location_nearby_connections::V1Frame {
+                        r#type: Some(crate::location_nearby_connections::v1_frame::FrameType::ConnectionRequest.into()),
+                        connection_request: Some(crate::location_nearby_connections::ConnectionRequestFrame {
+                            endpoint_id: Some("TEST".into()),
+                            endpoint_info: Some(RemoteDeviceInfo {
+                                name: "Fixture phone".into(),
+                                device_type: DeviceType::Phone,
+                            }.serialize()),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }.encode_to_vec();
+                let header = (body.len() as u32).to_be_bytes();
+                let (socket, mut peer) = tokio::io::duplex(4096);
+                let (sender, _events) = tokio::sync::broadcast::channel(16);
+                let mut request =
+                    InboundRequest::new(socket, "header-fixture".into(), sender.clone());
+                let hub = crate::sessions::SessionHub::new(17).unwrap();
+                let mut response = None;
+                let control = if native {
+                    let mut session = hub
+                        .open(
+                            crate::channel::TransferType::Inbound,
+                            None,
+                            tokio_util::sync::CancellationToken::new(),
+                        )
+                        .unwrap();
+                    session.observe(&State::WaitingForUserConsent);
+                    let control = session.control();
+                    request = request.attach_session(session);
+                    Some(control)
+                } else {
+                    None
+                };
+                peer.write_all(&header[..split]).await.unwrap();
+
+                // Act: poll until the prefix bytes are consumed, then interrupt it.
+                {
+                    let handle = request.handle();
+                    tokio::pin!(handle);
+                    assert!(futures::poll!(handle.as_mut()).is_pending());
+                    if let Some(control) = control.as_ref() {
+                        // A queued command whose observed consent phase is now stale.
+                        response = Some(
+                            control
+                                .respond(control.snapshot().consent.unwrap(), 1, true)
+                                .unwrap(),
+                        );
+                    } else {
+                        sender
+                            .send(ChannelMessage {
+                                direction: ChannelDirection::LibToFront,
+                                ..Default::default()
+                            })
+                            .unwrap();
+                    }
+                    handle.await.unwrap();
+                }
+                if let Some(response) = response {
+                    assert_eq!(
+                        response.wait().await,
+                        Err(crate::sessions::SessionError::Stale)
+                    );
+                }
+                peer.write_all(&header[split..]).await.unwrap();
+                peer.write_all(&body).await.unwrap();
+                peer.shutdown().await.unwrap();
+
+                // Assert: parse the original frame, with no discarded prefix bytes.
+                request.handle().await.unwrap();
+                assert_eq!(request.state.state, State::ReceivedConnectionRequest);
+                let device = request.state.remote_device_info.as_ref().unwrap();
+                assert_eq!(device.name, "Fixture phone");
+                assert_eq!(device.device_type, DeviceType::Phone);
+            }
+        }
+    }
 
     #[tokio::test]
     async fn given_inbound_byte_chunks_when_routed_then_completion_is_exact_and_reservations_are_bounded(

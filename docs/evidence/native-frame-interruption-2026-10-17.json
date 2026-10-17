@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "date": "2026-10-17",
+  "mode": "A",
+  "branch": "dev",
+  "starting_checkpoint": "56e320d41b8d7c7fcb8cbb33d036562dfcff9970",
+  "plan_commit": "3414868",
+  "change": "Retain partially consumed four-byte frame prefixes across resumable control interruptions in inbound and outbound handlers",
+  "public_contract_changes": false,
+  "wire_changes": false,
+  "installed_native_version": "0.11.5+native28",
+  "installed_binary_changed": false,
+  "verification": {
+    "pre_fix_handler_regressions": {
+      "passed": 0,
+      "failed": 2,
+      "failure": "early eof instead of the actual decoded protocol outcome",
+      "execution_seconds": 0.0
+    },
+    "affected_handler_group": {
+      "command": "TMPDIR=$PWD/target/native23-test-tmp cargo test --all-features --lib hdl:: -- --nocapture",
+      "working_directory": "core_lib",
+      "passed": 132,
+      "failed": 0,
+      "ignored": 0,
+      "execution_seconds": 0.48,
+      "repetitions": 1,
+      "new_test_functions": 7,
+      "new_table_cases": 23
+    },
+    "initial_strict_clippy": {"passed": true, "seconds": 9.23},
+    "after_exact_stale_assertion": {
+      "affected_inbound_test_passed": 1,
+      "failed": 0,
+      "execution_seconds": 0.0,
+      "strict_clippy_passed": true,
+      "strict_clippy_seconds": 4.53
+    },
+    "dependency_advisory": "Existing bluer 0.17.3 future incompatibility advisory",
+    "full_mode_b_completion_claimed": false,
+    "real_radio_or_peer_used": false
+  },
+  "fixtures": {
+    "workspace_relative_directory": "outputs/rquickshare-peer-check-2026-10-17",
+    "payload_files": 5,
+    "payload_bytes": 65935,
+    "local_reread_size_and_sha256_verified": true,
+    "remote_transfer_result": "UNTESTED"
+  },
+  "available_peer": {
+    "source": "User report",
+    "model": "Pixel 6a",
+    "android_version": "17",
+    "quick_share_version": null,
+    "windows_available": false
+  },
+  "physical_acceptance": "UNTESTED for this slice",
+  "signed_or_published": false
+}

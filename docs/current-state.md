@@ -1,5 +1,15 @@
 # Current implementation and continuation state
 
+2026-10-17 follow-up on dev: the ordinary-transfer reliability review reproduced
+partial frame-prefix loss in both request handlers when control events interrupt
+`read_exact`. A private request-owned prefix reader repairs resumable reads;
+wire/consent/size-limit contracts are unchanged. See the
+[repair and measured verification](native-frame-interruption-2026-10-17.md).
+Native28 remains installed and master remains at the accepted integration;
+this source repair is not yet installed or merged. Available physical peer is
+user-reported Pixel6a/Android17, unknown Quick Share version; Windows unavailable.
+Disposable content fixtures are ready, but no new peer result is claimed.
+
 2026-10-17 native28 is installed and user-accepted as the current UI iteration.
 Its source is merged into the actual master default branch by
 [PR #7](https://github.com/morozhenko-apps/rquickshare/pull/7), merge4eaf99ada7c4232d34f3b74272d3e93c32c5e392.

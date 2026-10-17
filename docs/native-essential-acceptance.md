@@ -12,6 +12,12 @@ See [native28 evidence](evidence/native28-installation-2026-10-17.json) and
 
 ## Preconditions
 
+Available peer reported2026-10-17: Pixel6a, Android17; Quick Share version could
+not be found. Google Quick Share for Windows is unavailable. Keep its rows
+UNTESTED. Local deterministic sources and SHA-256 manifest are prepared under
+`outputs/rquickshare-peer-check-2026-10-17` in the conversation workspace; these
+are preparation only. See [current reliability slice](native-frame-interruption-2026-10-17.md).
+
 Use the exact installed native28 package/hash from
 [evidence](evidence/native28-installation-2026-10-17.json), with the actual Android
 and Google Quick Share for Windows versions recorded before checking each peer.
