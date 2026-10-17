@@ -91,7 +91,7 @@ valid independent timer regressions.
 - [x] P4: implement the endpoint-bound inline action strip and one-shot acquisition;
   preserve the daemon FIFO, immutable source snapshots and explicit receiver consent.
 - [x] P5: stage-aware incoming rows and guarded once-only completion presentation.
-- [ ] P6: scoped receiver diagnosis/repair based on demonstrated evidence.
+- [x] P6: scoped receiver diagnosis/repair based on demonstrated evidence.
 - [ ] P7: run affected checks once, record actual results, atomic commits and a new
   verified native package/known-owner idle upgrade for physical acceptance.
 
@@ -319,3 +319,35 @@ Before tests: independent Murmur reference vectors, exact V2/header/bloom/hash
 layout,31-byte legacy packet budget, same-slot/stable header across refresh,
 changed slot hash, GATT-ready/header channel closure and existing long-read/
 identity/shutdown invariants. Physical Android latency remains a separate gate.
+
+Final result UI polish: history's pending Review disclosure is hidden as well as
+Details (the expander is the sole history disclosure). Inline pairing label says
+Code explicitly. Successful automatic reveal does not add another global status;
+Completed stays in its device row. The final affected widget smoke passed1/0
+in0.58s; strict native lint passed3.25s. No new physical acceptance is claimed.
+
+P6 implementation observed: compact V2 header now reaches the actual FEF3 service
+advertising dictionary. GATT publishes only after registration, updates exact slot
+bytes before header changes and clears publication at shutdown. Subscriber closure
+stops advertising; no new retry interval or consent behavior. CSPRNG salt is fixed
+for each published slot generation; periodic refresh reuses it. The17-byte header
+fits the28-byte computed legacy payload, including Flags and UUID AD overhead.
+
+Independent oracle: compiled the public-domain aappleby/smhasher x64_128 source
+with docs/prototypes/receiver-bloom-reference.cpp once; golden JSON includes14
+inputs (empty/tail/block boundaries, hello and NearbySharing) and exact80-bit
+Nearby bloom outputs. Source URL:
+https://raw.githubusercontent.com/aappleby/smhasher/master/src/MurmurHash3.cpp
+Observed MurmurHash3.cpp SHA-256: 30f121ed155ebf336af398aabb7d8d157afdfafc8d981e7b48d2a1ceb4b63e4e.
+Observed MurmurHash3.h SHA-256: 9af2003e3885c841fa0ac08cb5d5f31541ee9d793f8a9c4a4f771f43fb0d6f41.
+The harness and frozen vectors are retained in the repo; tests require no network
+or C++ runtime. Compile the harness beside those verified upstream files with
+g++ -std=c++17 -O2 reference.cpp MurmurHash3.cpp -o reference, then run reference.
+
+Measured P6 checks: header2/0; initial GATT and advertiser scopes passed. Strict
+lint found an unnecessary unwrap and recommended fixed-size block iteration;
+replaced them without weakening assertions. Final affected hdl125/0 in0.70s,
+trace allowlist1/0, core strict all-feature/all-target lint7.18s passed. This proves
+format/owner logic, not Android scan latency. The installed native24 is still
+unchanged; P7 will verify the release package, idle upgrade and real startup
+GattHeaderReady stage before requesting a phone reproduction.

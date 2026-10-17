@@ -310,13 +310,19 @@ impl RQS {
             let (receiver_adv_refresh_sender, _) =
                 broadcast::channel::<crate::hdl::ReceiverAdvertisingRefresh>(8);
 
+            let (receiver_header_sender, receiver_header_receiver) =
+                tokio::sync::watch::channel(None);
             let visibility_rx = self.subscribe_visibility();
             let receiver_ctk = ctoken.clone();
             let advertiser_refresh_sender = receiver_adv_refresh_sender.clone();
             tracker.spawn(async move {
                 let Some(initialized) = manager::session::until_stopped(
                     &receiver_ctk,
-                    ReceiverAdvertiser::new(visibility_rx, advertiser_refresh_sender),
+                    ReceiverAdvertiser::new(
+                        visibility_rx,
+                        advertiser_refresh_sender,
+                        receiver_header_receiver,
+                    ),
                 )
                 .await
                 else {
@@ -356,6 +362,7 @@ impl RQS {
                     Ok(server) => {
                         let server = server
                             .with_receive_policy(gatt_receive_policy)
+                            .with_header(receiver_header_sender)
                             .with_identity(endpoint_id, gatt_identity);
                         if let Err(error) = server.run(gatt_ctk).await {
                             error!("ReceiverGattServer stopped with error: {error}");

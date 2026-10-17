@@ -326,12 +326,14 @@ pub struct ReceiverAdvertiser {
     adapter: Arc<bluer::Adapter>,
     visibility_receiver: crate::VisibilityReader,
     refresh_sender: broadcast::Sender<ReceiverAdvertisingRefresh>,
+    header: tokio::sync::watch::Receiver<Option<super::receiver_header::Header>>,
 }
 
 impl ReceiverAdvertiser {
     pub async fn new(
         visibility_receiver: crate::VisibilityReader,
         refresh_sender: broadcast::Sender<ReceiverAdvertisingRefresh>,
+        header: tokio::sync::watch::Receiver<Option<super::receiver_header::Header>>,
     ) -> Result<Self, anyhow::Error> {
         let session = bluer::Session::new().await?;
         let adapter = session.default_adapter().await?;
@@ -341,15 +343,27 @@ impl ReceiverAdvertiser {
             adapter: Arc::new(adapter),
             visibility_receiver,
             refresh_sender,
+            header,
         })
     }
 
+    fn packet(header: super::receiver_header::Header) -> Advertisement {
+        let service_uuid = Uuid::from_u16(QS_SERVICE_UUID);
+        Advertisement {
+            advertisement_type: bluer::adv::Type::Peripheral,
+            service_uuids: [service_uuid].into(),
+            service_data: [(service_uuid, header.to_vec())].into(),
+            discoverable: Some(true),
+            min_interval: Some(std::time::Duration::from_millis(100)),
+            max_interval: Some(std::time::Duration::from_millis(150)),
+            ..Default::default()
+        }
+    }
     fn should_refresh(visibility: Visibility, has_handle: bool) -> bool {
         has_handle && BleAdvertiser::should_advertise(visibility)
     }
 
     pub async fn run(mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
-        let service_uuid = Uuid::from_u16(QS_SERVICE_UUID);
         let mut handle: Option<AdvertisementHandle> = None;
         let mut refresh_receiver = self.refresh_sender.subscribe();
         let mut schedule = ReceiverSchedule::default();
@@ -367,20 +381,13 @@ impl ReceiverAdvertiser {
 
         loop {
             let visibility = self.visibility_receiver.current_and_update();
-            if BleAdvertiser::should_advertise(visibility) && handle.is_none() {
-                // Keep the on-air packet legacy-sized: advertise only the 0xFEF3
-                // service UUID and serve the full Nearby receiver advertisement
-                // through GATT slot 0. Putting the full service data on air can
-                // force BlueZ into Extended Advertising, which some Android
-                // scanners and kernel/adapter combinations do not discover reliably.
-                let advertisement = Advertisement {
-                    advertisement_type: bluer::adv::Type::Peripheral,
-                    service_uuids: [service_uuid].into(),
-                    discoverable: Some(true),
-                    min_interval: Some(std::time::Duration::from_millis(100)),
-                    max_interval: Some(std::time::Duration::from_millis(150)),
-                    ..Default::default()
-                };
+            let header = *self.header.borrow_and_update();
+            if let Some(header) =
+                header.filter(|_| BleAdvertiser::should_advertise(visibility) && handle.is_none())
+            {
+                // The compact V2 header fits legacy advertising and points to slot0.
+                // The full name/endpoint bytes stay with their GATT owner.
+                let advertisement = Self::packet(header);
                 match self.adapter.advertise(advertisement).await {
                     Ok(advertisement_handle) => {
                         handle = Some(advertisement_handle);
@@ -402,13 +409,20 @@ impl ReceiverAdvertiser {
                         continue;
                     }
                 }
-            } else if !BleAdvertiser::should_advertise(visibility) && handle.take().is_some() {
+            } else if (!BleAdvertiser::should_advertise(visibility) || header.is_none())
+                && handle.take().is_some()
+            {
                 schedule.stopped();
                 crate::receiver_trace::event(crate::receiver_trace::Event::AdvertisementStopped);
                 info!("{RX_INNER_NAME}: stopped advertising");
             }
 
             tokio::select! {
+                changed = self.header.changed() => {
+                    if changed.is_err() { break; }
+                    handle.take();
+                    schedule.stopped();
+                }
                 _ = ctk.cancelled() => {
                     info!("{RX_INNER_NAME}: tracker cancelled, returning");
                     break;
@@ -500,5 +514,24 @@ mod schedule_tests {
             Some(restarted + std::time::Duration::from_secs(30))
         );
         assert!(schedule.deferred.is_none());
+    }
+}
+
+#[cfg(test)]
+mod receiver_packet_tests {
+    use super::*;
+    #[test]
+    fn given_current_gatt_header_when_packet_is_built_then_exact_service_data_uses_the_connectable_legacy_budget(
+    ) {
+        let mut header = [0; 17];
+        header[0] = 0x41;
+        let packet = ReceiverAdvertiser::packet(header);
+        let service = Uuid::from_u16(QS_SERVICE_UUID);
+        assert_eq!(packet.advertisement_type, bluer::adv::Type::Peripheral);
+        assert_eq!(packet.service_uuids, [service].into());
+        assert_eq!(packet.service_data, [(service, header.to_vec())].into());
+        assert_eq!(packet.discoverable, Some(true));
+        assert!(packet.secondary_channel.is_none());
+        assert!(3 + 4 + 4 + packet.service_data[&service].len() <= 31);
     }
 }

@@ -12,6 +12,7 @@ pub enum Event {
     AdvertisementDeferred,
     AdvertisementPeriodic,
     GattRead,
+    GattHeaderReady,
     MdnsRegister,
     MdnsResend,
 }
@@ -28,6 +29,7 @@ impl Event {
             Self::AdvertisementDeferred => "advertisement_deferred",
             Self::AdvertisementPeriodic => "advertisement_periodic",
             Self::GattRead => "gatt_slot0_read",
+            Self::GattHeaderReady => "gatt_header_ready",
             Self::MdnsRegister => "mdns_register",
             Self::MdnsResend => "mdns_resend",
         }
@@ -79,6 +81,7 @@ mod tests {
             Event::AdvertisementDeferred,
             Event::AdvertisementPeriodic,
             Event::GattRead,
+            Event::GattHeaderReady,
             Event::MdnsRegister,
             Event::MdnsResend,
         ] {
