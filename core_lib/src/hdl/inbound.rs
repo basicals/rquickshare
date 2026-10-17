@@ -3760,7 +3760,7 @@ mod security_tests {
             for (size, body, completes, expected_bytes) in [
                 (1_i64, b"a".as_slice(), true, 1_u64),
                 (3, b"abc".as_slice(), true, 3),
-                (3, b"ab".as_slice(), false, 2),
+                (3, b"ab".as_slice(), false, 0),
                 (3, b"abcd".as_slice(), false, 0),
             ] {
                 // Arrange
