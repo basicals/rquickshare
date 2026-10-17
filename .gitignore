@@ -2,3 +2,5 @@ target/
 Cargo.lock
 *.snap
 gen
+__pycache__/
+.wrangler/

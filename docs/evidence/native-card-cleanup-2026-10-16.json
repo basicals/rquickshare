@@ -1,0 +1,324 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "scope": "user-requested-eight-point-card-tray-cleanup",
+  "plan_commit": "a8a082ec6f78a512781aa0d82e78357c44cda7e6",
+  "native_tests": {
+    "passed": 39,
+    "failed": 0,
+    "seconds": 0.99
+  },
+  "packaging_tests": {
+    "passed": 5,
+    "failed": 0,
+    "seconds": 2.137
+  },
+  "strict_native_clippy": {
+    "passed": true,
+    "seconds": 7.32,
+    "all_targets": true,
+    "no_deps": true,
+    "existing_dependency_warnings": 9
+  },
+  "package_inventory_files": 14,
+  "about_menu_action_id": 22,
+  "core_wire_settings_changed": false,
+  "development_ten_repetitions": false,
+  "physical_kde_visual_acceptance": false,
+  "package_revision": 15,
+  "candidate_built": true,
+  "candidate_installed": true,
+  "affected_gtk_after_height_correction": {
+    "passed": 1,
+    "failed": 0,
+    "filtered": 38
+  },
+  "package_tests_after_icon_asset_relocation": {
+    "passed": 5,
+    "failed": 0,
+    "seconds": 1.96
+  },
+  "initial_render": [
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14/nearby-compact.png",
+      "page": "nearby",
+      "mode": "compact",
+      "width": 420,
+      "height": 137,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "center_alpha": 255
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14/nearby-full.png",
+      "page": "nearby",
+      "mode": "full",
+      "width": 420,
+      "height": 475,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "center_alpha": 255
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14/incoming-compact.png",
+      "page": "incoming",
+      "mode": "compact",
+      "width": 420,
+      "height": 330,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "center_alpha": 255
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14/transfers-full.png",
+      "page": "transfers",
+      "mode": "full",
+      "width": 420,
+      "height": 367,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "center_alpha": 255
+    }
+  ],
+  "final_render_pending": false,
+  "native14_intermediate": {
+    "binary_source_commit": "d61b2b864ca48c04fc2f083299af8d7095f728b1",
+    "sha256": "7e47b89b5e3ee98002e816a7cf4765bf12d500023a85d696599fd23ca68b3515",
+    "bytes": 6469486,
+    "package_verification_passed": true,
+    "installed": false,
+    "final_ui_acceptance": false,
+    "visual_failure": "minimum window allocation caused premature scrolling despite natural-height measurement",
+    "release_render": [
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/nearby-compact.png",
+        "page": "nearby",
+        "mode": "compact",
+        "width": 420,
+        "height": 137,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "66201ada1d3bee8cfdf94e1ac6a6e039addbfea622ba3b05ae4b6920b1a08e11"
+      },
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/nearby-full.png",
+        "page": "nearby",
+        "mode": "full",
+        "width": 420,
+        "height": 375,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "5ece9d551c1cad3f65cbe98bdde732a59efa025ce21ea7e2ffb28a9d0a195e22"
+      },
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/incoming-compact.png",
+        "page": "incoming",
+        "mode": "compact",
+        "width": 420,
+        "height": 330,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "5c8372b0ccd8ebde8a64fcdccc42da3ea809e5498baba24a286e1ee6d817020a"
+      },
+      {
+        "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native14-release/transfers-full.png",
+        "page": "transfers",
+        "mode": "full",
+        "width": 420,
+        "height": 267,
+        "corner_alpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "sha256": "9061443dd3501adda16ceccbcf82c63d9796d5a729089cb5dcb7e09c291bbf24"
+      }
+    ]
+  },
+  "final_sizing_gtk_passed": true,
+  "final_sizing_clippy_passed": true,
+  "binary_source_commit": "344909f36bc06a3cd4582e3cb1c697a549f5a203",
+  "candidate": {
+    "version": "0.11.5+native15",
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native15_amd64.deb",
+    "sha256": "f32e3f35021c358e3357bab066ce695c9d8a2272616f030d9a29e9b9c0340099",
+    "bytes": 6469576,
+    "fourteen_file_inventory_dependencies_elf_checksum_offline_smoke_passed": true,
+    "build_seconds": {
+      "daemon": 0.26,
+      "gui": 24.71,
+      "helper": 0.22
+    }
+  },
+  "final_render": [
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/nearby-compact.png",
+      "page": "nearby",
+      "mode": "compact",
+      "width": 420,
+      "height": 137,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "66201ada1d3bee8cfdf94e1ac6a6e039addbfea622ba3b05ae4b6920b1a08e11"
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/nearby-full.png",
+      "page": "nearby",
+      "mode": "full",
+      "width": 420,
+      "height": 421,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "3cc3458af05c52f8deb5b54872aada5dc9e975f064f8dc8a612cd73d3da2572d"
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/incoming-compact.png",
+      "page": "incoming",
+      "mode": "compact",
+      "width": 420,
+      "height": 330,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "5c8372b0ccd8ebde8a64fcdccc42da3ea809e5498baba24a286e1ee6d817020a"
+    },
+    {
+      "path": "/home/morozhenko/Documents/GitHub/rquickshare/native_desktop/target/card-cleanup-visual-native15-release/transfers-full.png",
+      "page": "transfers",
+      "mode": "full",
+      "width": 420,
+      "height": 377,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "e9459e8ed1ca398176c1ce52e214d3f2c717848d2b11aa060ca463b52bc1e177"
+    }
+  ],
+  "final_sizing_gtk": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 0.87,
+    "filtered": 38
+  },
+  "final_sizing_native_clippy_seconds": 2.25,
+  "installation": {
+    "observed_at": "2026-10-16T20:30:46.356627+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native13",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1909694"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1909695"
+      }
+    },
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 1,
+      "owned_selections": 0,
+      "transfers": 1
+    },
+    "terminal_history_count": 1,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native15",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1925337"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1925338"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true,
+    "tray": {
+      "own_items": 1,
+      "icon_name": "rquickshare",
+      "status": "Active",
+      "menu_rows": 22,
+      "about_present": true,
+      "about_enabled": true
+    }
+  },
+  "installed_verification_completed_at": "2026-10-16T20:40:39.558214+00:00",
+  "documentation_verification": {
+    "local_links_verified": 61,
+    "json_valid": true,
+    "runtime_source_matches_binary_commit": true,
+    "whitespace_passed": true
+  },
+  "export": {
+    "archive_source_commit": "f3441d0f93b62f041af8ea86a7da847d81266fd3",
+    "source_archive": "rquickshare-native15-source.zip",
+    "source_sha256": "d21e61379baf30ac512b849f18ed9bf854c6800d64b9f56c26f0381d7eaa5160",
+    "tracked_files": 492,
+    "receipt": "rquickshare-native15-export.json",
+    "native13_preserved": true,
+    "native14_diagnostic_preserved": true,
+    "apt_staged": false
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "scope": "named-tmpfs-source-acceptance",
+  "selected_option": 1,
+  "user_authorized": true,
+  "source_contract": {
+    "named_mutable_seal_capable_link_count_min": 1,
+    "named_file_memory_charge": 0,
+    "fully_sealed_sources_still_charged": true,
+    "anonymous_complete_seals_required": true,
+    "anonymous_file_max_bytes": 33554432,
+    "aggregate_anonymous_reservation_bytes": 134217728,
+    "wire_settings_schema_changed": false
+  },
+  "verification": {
+    "source_tests_passed": 49,
+    "source_tests_failed": 0,
+    "filtered": 606,
+    "seconds": 0.15,
+    "new_methods": 2,
+    "existing_memory_table_extended": true,
+    "strict_core_all_features_all_targets_clippy_passed": true,
+    "clippy_seconds": 8.07,
+    "existing_bluer_future_incompatibility_notice": true,
+    "anonymous_memfd_link_count": 0,
+    "anonymous_filesystem_link_probe_errno": 18,
+    "ten_repetitions": false,
+    "physical_peer_transfer": false
+  },
+  "candidate_revision": 13,
+  "candidate_built": true,
+  "fixed_candidate_installed": true,
+  "logs": [
+    "/tmp/rqs-tmpfs-source-tests.log",
+    "/tmp/rqs-tmpfs-source-clippy.log",
+    "/tmp/rqs-native13-build.log",
+    "/tmp/rqs-native13-build-final.log",
+    "/tmp/rqs-native13-install.log"
+  ],
+  "binary_source_commit": "1607c8f95e308a533269b31e6ceb8ce7cf21a505",
+  "candidate": {
+    "version": "0.11.5+native13",
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native13_amd64.deb",
+    "bytes": 6416616,
+    "sha256": "3d52d836d5b2a4a4832b1ea00b8964e7b3c6a16d1bb2e19926d94b8c22414d06",
+    "eleven_file_inventory_dependencies_checksum_elf_offline_smoke_verified": true,
+    "build_seconds": {
+      "daemon": 196,
+      "gui": 60,
+      "helper": 1.33
+    },
+    "private_layer_shell_shlibs_from": "libgtk4-layer-shell0_1.3.0-1_amd64.deb",
+    "initial_packaging_missing_private_shlibs": true,
+    "corrected_packaging_passed": true
+  },
+  "installation": {
+    "observed_at": "2026-10-16T19:53:13.360373+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native12",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1901044"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1901045"
+      }
+    },
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 47,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native13",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "1909694"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "1909695"
+      }
+    },
+    "installed_regular_files_verified": 11,
+    "passed": true
+  },
+  "installed_tmpfs_readback": {
+    "observed_at": "2026-10-16T19:54:39.562317+00:00",
+    "candidate_version": "0.11.5+native13",
+    "commit_called": false,
+    "send_called": false,
+    "before": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 0,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "pids_before": {
+      "rquickshare-daemon.service": "1909694",
+      "rquickshare-desktop.service": "1909695"
+    },
+    "pids_after": {
+      "rquickshare-daemon.service": "1909694",
+      "rquickshare-desktop.service": "1909695"
+    },
+    "repeat_launcher_same_pids": true,
+    "own_tray_items": 1,
+    "tmpfs_append_ack": 1,
+    "abort_status": "aborted",
+    "fixture_removed": true,
+    "after": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 0,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "resource_baseline_restored": true,
+    "passed": true
+  },
+  "android_preparation": {
+    "cli_exit_code": 0,
+    "explicit_recipient_choice_required": true,
+    "send_called_by_agent": false,
+    "fixture_bytes": 123,
+    "fixture_sha256": "36f53d9c2376e0c6c8f911327ab0a3cd067afa1e24989b6c34fbf1a8f2f3230d",
+    "daemon_observation": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 1,
+      "reserved_handles": 2,
+      "selected_bytes": 123,
+      "nearby_devices": 0,
+      "owned_selections": 0,
+      "transfers": 0,
+      "observed_at": "2026-10-16T19:55:57.399122+00:00"
+    },
+    "user_result_pending": false
+  },
+  "documentation_verification": {
+    "local_links_verified": 58,
+    "json_valid": true,
+    "runtime_sources_match_binary_commit": true
+  },
+  "android_outbound": {
+    "observed_at": "2026-10-16T20:03:57.290865+00:00",
+    "user_reported_file_received": true,
+    "user_reported_code_matched": true,
+    "android_version": null,
+    "quick_share_version": null,
+    "remote_file_sha256_independently_verified": false,
+    "daemon_observation": {
+      "outbound_transfer_count": 1,
+      "phase": "finished",
+      "detail_status": "unsupported",
+      "total_bytes": 0,
+      "transferred_bytes": 0,
+      "manifest_available": false,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0
+    },
+    "first_observer_assertion_failed": "Observer assumed outgoing terminal metadata includes fixture manifest/bytes; actual metadata unsupported. No source test assertion changed."
+  },
+  "export": {
+    "archive_source_commit": "a8a082ec6f78a512781aa0d82e78357c44cda7e6",
+    "source_archive": "rquickshare-native13-source.zip",
+    "source_sha256": "0d29ac4121e6c0a6da8511093be63e7e0fb669dacdcc2c797f7dbaf9602c5b3e",
+    "tracked_files": 487,
+    "receipt": "rquickshare-native13-export.json",
+    "native12_preserved": true,
+    "apt_staged": false
+  }
+}

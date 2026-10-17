@@ -9,6 +9,36 @@ permissions:
   contents: read
 
 jobs:
+  desktop:
+    name: Desktop Rust coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install Linux desktop test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            protobuf-compiler libdbus-1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev \
+            libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: Measure desktop coverage
+        working-directory: ./app/main/src-tauri
+        run: |
+          cargo +stable llvm-cov \
+            --no-default-features \
+            --bin rquickshare \
+            --summary-only \
+            --ignore-filename-regex 'target/|bindings/|core_lib/'
+
   rust:
     name: Rust core coverage
     runs-on: ubuntu-latest
@@ -22,7 +52,7 @@ jobs:
       - name: Install Linux test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libdbus-1-dev
+          sudo apt-get install -y protobuf-compiler dbus-daemon libdbus-1-dev
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov --locked

@@ -1,0 +1,38 @@
+/* Only the card owns its rounded surface; secondary windows keep their theme. */
+window.rqs-card-window { background: transparent; border: none; box-shadow: none; }
+.rqs-card-body {
+  background-color: @theme_bg_color;
+  color: @theme_fg_color;
+  border: 1px solid alpha(currentColor, 0.12);
+  border-radius: 18px;
+  padding: 14px;
+}
+.card-close { min-width: 28px; min-height: 28px; padding: 0; border-radius: 50%; }
+.selection-card { padding: 10px; border-radius: 12px; background: alpha(currentColor, 0.05); }
+.device-row { padding: 12px; border-radius: 12px; border: 1px solid alpha(currentColor, 0.10); }
+.consent-card { padding: 12px; border-radius: 12px; border: 1px solid alpha(currentColor, 0.10); }
+.row-title { font-weight: 600; }
+.dim-label { opacity: 0.65; }
+.verification-code { font-size: 26px; font-weight: 600; padding: 5px 0; }
+.footer-note { font-size: 11px; }
+.rqs-card-body stackswitcher button { min-width: 70px; }
+.device-status { font-size: 10px; font-weight: bold; border-radius: 8px; min-width: 12px; background-color: @theme_bg_color; }
+.device-status.success { color: @success_color; }
+.device-status.warning { color: @warning_color; }
+.device-status.error { color: @error_color; }
+
+.device-status.accent { color: @theme_selected_bg_color; }
+.quick-action { min-height: 64px; padding: 8px; }
+
+/* The daemon owns visibility/expiry; CSS animates only its confirmed projection. */
+@keyframes receive-pulse {
+  0%, 100% { background-color: mix(@theme_bg_color, @success_color, 0.12); }
+  50% { background-color: mix(@theme_bg_color, @success_color, 0.22); }
+}
+button.quick-action.receive-active {
+  background-image: none;
+  background-color: mix(@theme_bg_color, @success_color, 0.12);
+  color: @theme_fg_color;
+  border-color: mix(@theme_bg_color, @success_color, 0.28);
+  animation: receive-pulse 1.8s ease-in-out infinite;
+}

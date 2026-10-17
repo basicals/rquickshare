@@ -1,0 +1,271 @@
+<node>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Batch1">
+    <method name="Send">
+      <arg name="selection" type="s" direction="in"/>
+      <arg name="recipients" type="as" direction="in"/>
+      <arg name="sequence" type="t" direction="in"/>
+      <arg name="transfers" type="as" direction="out"/>
+    </method>
+    <method name="GetReceipt">
+      <arg name="sequence" type="t" direction="in"/>
+      <arg name="kind" type="s" direction="out"/>
+      <arg name="transfers" type="as" direction="out"/>
+    </method>
+    <method name="GetRecipientPage">
+      <arg name="snapshot" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next" type="u" direction="out"/>
+      <arg name="recipients" type="a(ss)" direction="out"/>
+    </method>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Visibility2">
+    <method name="Read">
+      <arg name="visibility" type="(sbtbyt)" direction="out"/>
+    </method>
+    <method name="Set">
+      <arg name="intent" type="(stssy)" direction="in"/>
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
+    </method>
+    <signal name="Changed">
+      <arg name="epoch" type="s"/>
+      <arg name="revision" type="t"/>
+    </signal>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Settings2">
+    <method name="Restart">
+      <arg name="epoch" type="s" direction="in"/>
+    </method>
+    <method name="Read">
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
+    </method>
+    <method name="Reload">
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
+    </method>
+    <method name="Save">
+      <arg name="intent" type="(stssyiyybs)" direction="in"/>
+      <arg name="directory" type="ah" direction="in"/>
+      <arg name="settings" type="(sbybtsyiysbtbbysssy)" direction="out"/>
+    </method>
+    <signal name="SettingsChanged">
+      <arg name="epoch" type="s"/>
+      <arg name="revision" type="t"/>
+    </signal>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Manager2">
+    <method name="BeginSelection">
+      <arg name="request_id" type="s" direction="in"/>
+      <arg name="upload_id" type="s" direction="out"/>
+    </method>
+    <method name="AppendFiles">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="batch_seq" type="u" direction="in"/>
+      <arg name="entries" type="a(hs)" direction="in"/>
+      <arg name="next_batch_seq" type="u" direction="out"/>
+    </method>
+    <method name="GetUpload">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="next_batch_seq" type="u" direction="out"/>
+      <arg name="state" type="s" direction="out"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
+    <method name="CommitSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
+    <method name="AbortSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+    </method>
+    <method name="DiscardSelection">
+      <arg name="selection_id" type="s" direction="in"/>
+    </method>
+    <method name="SendSelection">
+      <arg name="selection_id" type="s" direction="in"/>
+      <arg name="endpoint_id" type="s" direction="in"/>
+      <arg name="request_id" type="s" direction="in"/>
+      <arg name="transfer_id" type="s" direction="out"/>
+    </method>
+    <method name="Respond">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="consent_revision" type="t" direction="in"/>
+      <arg name="accept" type="b" direction="in"/>
+    </method>
+    <method name="Cancel">
+      <arg name="transfer_id" type="s" direction="in"/>
+    </method>
+    <method name="BeginSnapshot">
+      <arg name="snapshot_id" type="s" direction="out"/>
+      <arg name="epoch" type="s" direction="out"/>
+      <arg name="revision" type="t" direction="out"/>
+      <arg name="lifecycle" type="s" direction="out"/>
+      <arg name="synchronized" type="b" direction="out"/>
+      <arg name="resource_selections" type="u" direction="out"/>
+      <arg name="reserved_handles" type="u" direction="out"/>
+      <arg name="selected_bytes" type="t" direction="out"/>
+      <arg name="endpoint_count" type="u" direction="out"/>
+      <arg name="selection_count" type="u" direction="out"/>
+      <arg name="transfer_count" type="u" direction="out"/>
+    </method>
+    <method name="GetEndpointPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="endpoints" type="a(ss)" direction="out"/>
+    </method>
+    <method name="GetSelectionPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="selections" type="as" direction="out"/>
+    </method>
+    <method name="GetTransferPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="transfers" type="a(sssbtbst)" direction="out"/>
+    </method>
+    <method name="GetTransferDetailsPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="details" type="a(sssssttu)" direction="out"/>
+    </method>
+    <method name="GetFilePage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="files" type="a(st)" direction="out"/>
+    </method>
+    <method name="EndSnapshot">
+      <arg name="snapshot_id" type="s" direction="in"/>
+    </method>
+    <method name="GetStartupWarnings">
+      <arg name="warnings" type="as" direction="out"/>
+    </method>
+    <signal name="StateChanged">
+      <arg name="epoch" type="s"/>
+      <arg name="revision" type="t"/>
+    </signal>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Operations1">
+    <method name="BeginText">
+      <arg name="byte_count" type="u" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="upload_id" type="s" direction="out"/>
+    </method>
+    <method name="BeginSelection">
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="upload_id" type="s" direction="out"/>
+    </method>
+    <method name="CommitExtension">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="base_selection_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
+    <method name="CommitSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="selection_id" type="s" direction="out"/>
+    </method>
+    <method name="AbortSelection">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+    </method>
+    <method name="SendSelection">
+      <arg name="selection_id" type="s" direction="in"/>
+      <arg name="endpoint_id" type="s" direction="in"/>
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="transfer_id" type="s" direction="out"/>
+    </method>
+    <method name="GetOperationState">
+      <arg name="last_accepted" type="t" direction="out"/>
+      <arg name="acknowledged_through" type="t" direction="out"/>
+    </method>
+    <method name="GetReceipt">
+      <arg name="operation_seq" type="t" direction="in"/>
+      <arg name="kind" type="s" direction="out"/>
+      <arg name="result_id" type="s" direction="out"/>
+    </method>
+    <method name="AcknowledgeThrough">
+      <arg name="operation_seq" type="t" direction="in"/>
+    </method>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Notifications1">
+    <method name="GetNoticeCount">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="count" type="u" direction="out"/>
+    </method>
+    <method name="GetNoticePage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="notices" type="a(sstt)" direction="out"/>
+    </method>
+    <method name="Dismiss">
+      <arg name="notices" type="a(sstt)" direction="in"/>
+    </method>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Text1">
+    <method name="AppendText">
+      <arg name="upload_id" type="s" direction="in"/>
+      <arg name="sequence" type="u" direction="in"/>
+      <arg name="bytes" type="ay" direction="in"/>
+      <arg name="next_sequence" type="u" direction="out"/>
+    </method>
+    <method name="GetSelectionPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="sources" type="a(ssut)" direction="out"/>
+    </method>
+    <method name="GetMetadataPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="metadata" type="a(ssbt)" direction="out"/>
+    </method>
+    <method name="BeginRead">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="content_revision" type="t" direction="in"/>
+      <arg name="reader_id" type="s" direction="out"/>
+      <arg name="kind" type="s" direction="out"/>
+      <arg name="byte_count" type="u" direction="out"/>
+    </method>
+    <method name="GetChunk">
+      <arg name="reader_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="bytes" type="ay" direction="out"/>
+    </method>
+    <method name="EndRead">
+      <arg name="reader_id" type="s" direction="in"/>
+    </method>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Files1">
+    <method name="GetCompletedPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="files" type="a(st)" direction="out"/>
+    </method>
+    <method name="GetMetadataPage">
+      <arg name="snapshot_id" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next_offset" type="u" direction="out"/>
+      <arg name="metadata" type="a(stu)" direction="out"/>
+    </method>
+    <method name="AcquireFile">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="terminal_revision" type="t" direction="in"/>
+      <arg name="index" type="u" direction="in"/>
+      <arg name="file" type="h" direction="out"/>
+    </method>
+  </interface>
+  <interface name="org.freedesktop.DBus.Introspectable">
+    <method name="Introspect">
+      <arg name="xml_data" type="s" direction="out"/>
+    </method>
+  </interface>
+</node>

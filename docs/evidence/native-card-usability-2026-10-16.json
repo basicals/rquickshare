@@ -1,0 +1,250 @@
+{
+  "source_commit": "1a9d675d45196ba11e57b2261830bd882c39f011",
+  "package": "rquickshare_0.11.5+native16_amd64.deb",
+  "bytes": 6502012,
+  "sha256": "902748767e11c8e5c0307653c13e795737d13dc43364ed8e24dd25b1e4ea4ede",
+  "frames": [
+    {
+      "file": "nearby-compact.png",
+      "width": 420,
+      "height": 141,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "8216ead0028b16b86aab5b349ced0808eb6c245ca064966f6b3e98c67d18a812"
+    },
+    {
+      "file": "nearby-full.png",
+      "width": 420,
+      "height": 341,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "d1c012c67360053121b6bc07ae1cd6afcac010c1f2828a065a7e1ae85d950e54"
+    },
+    {
+      "file": "incoming-full.png",
+      "width": 420,
+      "height": 349,
+      "corner_alpha": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "sha256": "c62b154812bcbc152e33a325cb2cdd6ab1fb939ae1b5d7b126c5117f7fa1010f"
+    },
+    {
+      "file": "settings-general.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "d87682d75859a7486136dad9735703cc7587b1a975f87ece0107ef9a85da8b46",
+      "source": "actual GTK test window, no connected settings writer"
+    },
+    {
+      "file": "settings-receiving.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "d9717adb89f3cbd6d08b1f611e077a5c31cd207ccbc09ad931be3231cc7fff48",
+      "source": "actual GTK test window, no connected settings writer"
+    },
+    {
+      "file": "settings-advanced.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "5c183c89ca6f1d427ab6e7e4dec9e2f64fafb4e394eb149548c4c2218ceafa27",
+      "source": "actual GTK test window, no connected settings writer"
+    },
+    {
+      "file": "settings-about.png",
+      "width": 760,
+      "height": 389,
+      "sha256": "b39e67c21068f309092af81285c83db5b8e98e13291cd5bbb31ee3c488cbb021",
+      "source": "actual GTK test window, no connected settings writer"
+    }
+  ],
+  "scope": "approved card/tray/sidebar settings mockup and atomic daemon-owned file extension",
+  "source_extension_commit": "228785e",
+  "verification": {
+    "core_service_initial": {
+      "passed": 293,
+      "failed": 0,
+      "seconds": 15.52
+    },
+    "subsequent_extension_filter": {
+      "passed": 4,
+      "failed": 0,
+      "seconds": 0.98
+    },
+    "subsequent_budget_method": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.16
+    },
+    "core_strict_clippy": true,
+    "native_full_before_final_changes": {
+      "passed": 41,
+      "failed": 0,
+      "seconds": 0.72
+    },
+    "native_final_affected_panel": {
+      "passed": 11,
+      "failed": 0,
+      "seconds": 0.9
+    },
+    "native_final_strict_clippy": true,
+    "native_final_strict_clippy_seconds": 1.8,
+    "full_core_suite_freshly_run": false,
+    "ten_repetitions": false,
+    "package_regular_files_verified": 14
+  },
+  "installation": {
+    "candidate_installed": true,
+    "current_version": "0.11.5+native16",
+    "system_changed": true,
+    "local_upgrade": {
+      "observed_at": "2026-10-16T23:01:11.771891+00:00",
+      "system_changed": true,
+      "installed_before": "0.11.5+native15",
+      "units_before": {
+        "rquickshare-daemon.service": {
+          "ActiveState": "active",
+          "SubState": "running",
+          "UnitFileState": "static",
+          "MainPID": "1925337"
+        },
+        "rquickshare-desktop.service": {
+          "ActiveState": "inactive",
+          "SubState": "dead",
+          "UnitFileState": "disabled",
+          "MainPID": "0"
+        }
+      },
+      "desktop_already_closed_by_user": true,
+      "daemon_preflight": {
+        "lifecycle": "running",
+        "synchronized": true,
+        "source_reservations": 0,
+        "reserved_handles": 0,
+        "selected_bytes": 0,
+        "nearby_devices": 57,
+        "owned_selections": 0,
+        "transfers": 0
+      },
+      "terminal_history_count": 0,
+      "active_transfer_count": 0,
+      "idle_gate_passed": true,
+      "owned_idle_services_joined": true,
+      "apt_exit_code": 0,
+      "installed_after": "0.11.5+native16",
+      "normal_launch_restored": true,
+      "units_after": {
+        "rquickshare-daemon.service": {
+          "ActiveState": "active",
+          "SubState": "running",
+          "UnitFileState": "static",
+          "MainPID": "2139034"
+        },
+        "rquickshare-desktop.service": {
+          "ActiveState": "active",
+          "SubState": "running",
+          "UnitFileState": "disabled",
+          "MainPID": "2139035"
+        }
+      },
+      "installed_regular_files_verified": 14,
+      "passed": true
+    },
+    "tray": {
+      "own_items": 1,
+      "status": "Active",
+      "icon_name": "rquickshare",
+      "menu_rows": 15,
+      "removed_duplicate_ids_absent": true,
+      "open_hide_roundtrip": true,
+      "original_card_visibility_restored": true,
+      "daemon_running_synchronized": true,
+      "source_and_transfer_resources_zero": true
+    },
+    "source_extension": {
+      "actual_installed_operations1_extension": true,
+      "source_files": 2,
+      "source_bytes": 10,
+      "source_handles": 4,
+      "exact_commit_replay": true,
+      "no_transfers_created": true,
+      "only_observer_owned_selection_discarded": true,
+      "source_resources_after": 0,
+      "private_fixture_bytes_preserved_until_owned_cleanup": true
+    },
+    "user_original_files_deleted": false,
+    "login_start_enabled": false,
+    "physical_visual_acceptance_pending": true
+  },
+  "acceptance": {
+    "physical_kde_drag_verified": true,
+    "physical_settings_ok_cancel_verified": true,
+    "current_candidate_android_windows_accepted": false,
+    "persistent_pairing_implemented": false,
+    "persistent_history_implemented": false,
+    "signed": false,
+    "published": false,
+    "physical_kde_drag_observation": {
+      "local_date": "2026-10-17",
+      "source": "explicit user reply in current chat",
+      "installed_version": "0.11.5+native16",
+      "surface": "full card header",
+      "environment": "existing KDE/Wayland session",
+      "result": "card can be dragged",
+      "automated_compositor_test": false
+    },
+    "physical_settings_ok_cancel_observation": {
+      "local_date": "2026-10-17",
+      "source": "explicit user reply in current chat",
+      "installed_version": "0.11.5+native16",
+      "result": "settings are not saved until OK",
+      "scope": "requested staged Card view Cancel/OK check; no claim about every settings failure path"
+    }
+  },
+  "deferred_installation_observation": {
+    "candidate_installed": false,
+    "current_version": "0.11.5+native15",
+    "system_changed": false,
+    "preflight": {
+      "observed_at": "2026-10-16T22:58:26.810846+00:00",
+      "system_changed": false,
+      "installed_before": "0.11.5+native15",
+      "units_before": {
+        "rquickshare-daemon.service": {
+          "ActiveState": "active",
+          "SubState": "running",
+          "UnitFileState": "static",
+          "MainPID": "1925337"
+        },
+        "rquickshare-desktop.service": {
+          "ActiveState": "active",
+          "SubState": "running",
+          "UnitFileState": "disabled",
+          "MainPID": "1925338"
+        }
+      },
+      "daemon_preflight": {
+        "lifecycle": "running",
+        "synchronized": true,
+        "source_reservations": 1,
+        "reserved_handles": 2,
+        "selected_bytes": 414,
+        "nearby_devices": 46,
+        "owned_selections": 0,
+        "transfers": 0
+      }
+    },
+    "deferred_reason": "Existing GUI-owned preparation; user asked to send/clear or defer. Do not discard automatically."
+  }
+}

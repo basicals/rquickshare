@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "custody": "same-linux-workstation",
+  "primary_fingerprint": "6D8854762CF0C86881138A56695A0888D09FA616",
+  "signing_subkey_fingerprint": "1F5150D98D94C43109FBA2503E7DE744C1014357",
+  "public_keyring_sha256": "2c9f0593c762c4a792ca1d27f0c7911a3f0f935c3e36332c9944700aa763a25b",
+  "challenge_sha256": "d24ee85cef53b271fde23854681d86010de7f91789780e3afdc1e5ef90461671",
+  "signature_sha256": "212b9c42dc949fea69065f32f91ad320d6f6d8d9020c254215aa99c5d45971eb",
+  "actual_gpgv_subkey_and_primary_verified": true,
+  "release_signed": false,
+  "production_published": false,
+  "public_identity": {
+    "primary": {
+      "expires": 1949682156,
+      "fingerprint": "6D8854762CF0C86881138A56695A0888D09FA616",
+      "keygrip": "00E5FE52B36F1F2557CE5F55888F74DB11621C3D",
+      "kind": "pub"
+    },
+    "signing_subkey": {
+      "expires": 1823538223,
+      "fingerprint": "1F5150D98D94C43109FBA2503E7DE744C1014357",
+      "keygrip": "350DFFB2C459EDC63864E37652A91E1F9E9362D2",
+      "kind": "sub"
+    }
+  },
+  "owned_authority_and_signer_agents_closed": true,
+  "recovery_copy_configured": false
+}

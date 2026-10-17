@@ -1,38 +1,11 @@
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
-
 use mdns_sd::{AddrType, ServiceDaemon, ServiceInfo};
-use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::Receiver;
-use tokio::sync::watch;
-use tokio::time::{interval_at, Instant};
 use tokio_util::sync::CancellationToken;
-use ts_rs::TS;
 
 use crate::utils::{gen_mdns_endpoint_info, gen_mdns_name, DeviceType};
+use crate::Visibility;
 
 const INNER_NAME: &str = "MDnsServer";
-const TICK_INTERVAL: Duration = Duration::from_secs(60);
-
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
-#[ts(export)]
-pub enum Visibility {
-    Visible = 0,
-    Invisible = 1,
-    Temporarily = 2,
-}
-
-#[allow(dead_code)]
-impl Visibility {
-    pub fn from_raw_value(value: u64) -> Self {
-        match value {
-            0 => Visibility::Visible,
-            1 => Visibility::Invisible,
-            2 => Visibility::Temporarily,
-            _ => unreachable!(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ReceiverRefreshAction {
@@ -56,18 +29,28 @@ pub struct MDnsServer {
     service_info: ServiceInfo,
     ble_receiver: Receiver<()>,
     receiver_refresh_receiver: Receiver<()>,
-    visibility_sender: Arc<Mutex<watch::Sender<Visibility>>>,
-    visibility_receiver: watch::Receiver<Visibility>,
+    visibility_receiver: crate::VisibilityReader,
+    endpoint_id: [u8; 4],
+    identity: Option<crate::identity::IdentityConsumer>,
+    shutdown_requested: bool,
 }
 
 impl MDnsServer {
+    fn identity_visible(visibility: &crate::VisibilityReader) -> bool {
+        visibility.current() != Visibility::Invisible
+    }
+
+    pub(crate) fn with_identity(mut self, identity: crate::identity::IdentityConsumer) -> Self {
+        self.identity = Some(identity);
+        self
+    }
+
     pub fn new(
         endpoint_id: [u8; 4],
         service_port: u16,
         ble_receiver: Receiver<()>,
         receiver_refresh_receiver: Receiver<()>,
-        visibility_sender: Arc<Mutex<watch::Sender<Visibility>>>,
-        visibility_receiver: watch::Receiver<Visibility>,
+        visibility_receiver: crate::VisibilityReader,
     ) -> Result<Self, anyhow::Error> {
         let service_info = Self::build_service(endpoint_id, service_port, DeviceType::Laptop)?;
 
@@ -76,19 +59,46 @@ impl MDnsServer {
             service_info,
             ble_receiver,
             receiver_refresh_receiver,
-            visibility_sender,
             visibility_receiver,
+            endpoint_id,
+            identity: None,
+            shutdown_requested: false,
         })
     }
 
     pub async fn run(&mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
+        let outcome = self.run_inner(ctk).await;
+        self.shutdown_requested = true;
+        complete_lifetime(outcome, async {
+            let completion = self.daemon.shutdown()?;
+            completion.recv_async().await?;
+            Ok(())
+        })
+        .await
+    }
+
+    async fn run_inner(&mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
         info!("{INNER_NAME}: service starting");
         let monitor = self.daemon.monitor()?;
         let ble_receiver = &mut self.ble_receiver;
         let receiver_refresh_receiver = &mut self.receiver_refresh_receiver;
-        let mut visibility = *self.visibility_receiver.borrow();
-        let mut interval = interval_at(Instant::now() + TICK_INTERVAL, TICK_INTERVAL);
+        self.visibility_receiver.current_and_update();
         let mut receiver_refresh_open = true;
+        let mut identity = self.identity.take();
+        if let Some(consumer) = identity.as_mut() {
+            let snapshot = consumer.snapshot();
+            self.service_info = Self::renamed_service(
+                &self.service_info,
+                self.endpoint_id,
+                snapshot.name.as_str(),
+            )?;
+            if Self::identity_visible(&self.visibility_receiver) {
+                self.daemon.register(self.service_info.clone())?;
+            }
+            consumer.acknowledge(snapshot.revision)?;
+        } else if Self::identity_visible(&self.visibility_receiver) {
+            self.daemon.register(self.service_info.clone())?;
+        }
 
         loop {
             tokio::select! {
@@ -96,27 +106,42 @@ impl MDnsServer {
                     info!("{INNER_NAME}: tracker cancelled, breaking");
                     break;
                 }
+                changed = async {
+                    match identity.as_mut() {
+                        Some(consumer) => consumer.changed().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    changed?;
+                    let consumer = identity.as_mut().ok_or_else(|| anyhow::anyhow!("Identity consumer unavailable"))?;
+                    let snapshot = consumer.snapshot();
+                    self.service_info = Self::renamed_service(&self.service_info, self.endpoint_id, snapshot.name.as_str())?;
+                    if Self::identity_visible(&self.visibility_receiver) {
+                        self.daemon.register(self.service_info.clone())?;
+                    }
+                    consumer.acknowledge(snapshot.revision)?;
+                }
                 r = monitor.recv_async() => {
                     match r {
                         Ok(_) => continue,
                         Err(err) => return Err(err.into()),
                     }
                 },
-                _ = self.visibility_receiver.changed() => {
-                    visibility = *self.visibility_receiver.borrow_and_update();
-
+                changed = self.visibility_receiver.changed() => {
+                    if changed.is_err() {
+                        break;
+                    }
+                    let visibility = self.visibility_receiver.current_and_update();
                     debug!("{INNER_NAME}: visibility changed: {visibility:?}");
-                    if visibility == Visibility::Visible {
-                        self.daemon.register(self.service_info.clone())?;
-                    } else if visibility == Visibility::Invisible {
+                    if visibility == Visibility::Invisible {
                         let receiver = self.daemon.unregister(self.service_info.get_fullname())?;
-                        let _ = receiver.recv();
-                    } else if visibility == Visibility::Temporarily {
+                        let _ = receiver.recv_async().await;
+                    } else {
                         self.daemon.register(self.service_info.clone())?;
-                        interval.reset();
                     }
                 }
                 _ = ble_receiver.recv() => {
+                    let visibility = self.visibility_receiver.current();
                     if visibility == Visibility::Invisible {
                         continue;
                     }
@@ -134,6 +159,7 @@ impl MDnsServer {
                 refresh = receiver_refresh_receiver.recv(), if receiver_refresh_open => {
                     match receiver_refresh_action(refresh) {
                         ReceiverRefreshAction::Resend => {
+                            let visibility = self.visibility_receiver.current();
                             if visibility == Visibility::Invisible {
                                 continue;
                             }
@@ -147,26 +173,12 @@ impl MDnsServer {
                         }
                     }
                 },
-                _ = interval.tick() => {
-                    if visibility != Visibility::Temporarily {
-                        continue;
-                    }
-
-                    let receiver = self.daemon.unregister(self.service_info.get_fullname())?;
-                    let _ = receiver.recv();
-                    match self.visibility_sender.lock() {
-                        Ok(sender) => {
-                            let _ = sender.send(Visibility::Invisible);
-                        }
-                        Err(_) => error!("{INNER_NAME}: visibility sender lock is poisoned"),
-                    }
-                }
             }
         }
 
         // Unregister the mDNS service - we're shutting down
         let receiver = self.daemon.unregister(self.service_info.get_fullname())?;
-        if let Ok(event) = receiver.recv() {
+        if let Ok(event) = receiver.recv_async().await {
             info!("MDnsServer: service unregistered: {:?}", &event);
         }
 
@@ -178,16 +190,39 @@ impl MDnsServer {
         service_port: u16,
         device_type: DeviceType,
     ) -> Result<ServiceInfo, anyhow::Error> {
-        let name = gen_mdns_name(endpoint_id);
         let hostname = sys_metrics::host::get_hostname()?;
-        info!("Broadcasting with: {hostname}");
-        let endpoint_info = gen_mdns_endpoint_info(device_type as u8, &hostname);
+        Self::named_service(endpoint_id, service_port, device_type, &hostname, &hostname)
+    }
+
+    fn renamed_service(
+        original: &ServiceInfo,
+        endpoint_id: [u8; 4],
+        display_name: &str,
+    ) -> Result<ServiceInfo, anyhow::Error> {
+        Self::named_service(
+            endpoint_id,
+            original.get_port(),
+            DeviceType::Laptop,
+            original.get_hostname(),
+            display_name,
+        )
+    }
+
+    fn named_service(
+        endpoint_id: [u8; 4],
+        service_port: u16,
+        device_type: DeviceType,
+        hostname: &str,
+        display_name: &str,
+    ) -> Result<ServiceInfo, anyhow::Error> {
+        let name = gen_mdns_name(endpoint_id);
+        let endpoint_info = gen_mdns_endpoint_info(device_type as u8, display_name);
 
         let properties = [("n", endpoint_info)];
         let si = ServiceInfo::new(
             "_FC9F5ED42C8A._tcp.local.",
             &name,
-            &hostname,
+            hostname,
             "",
             service_port,
             &properties[..],
@@ -198,9 +233,106 @@ impl MDnsServer {
     }
 }
 
+impl Drop for MDnsServer {
+    fn drop(&mut self) {
+        if !self.shutdown_requested && self.daemon.shutdown().is_err() {
+            error!("mDNS SDK shutdown admission failed during owner drop");
+        }
+    }
+}
+
+async fn complete_lifetime(
+    outcome: Result<(), anyhow::Error>,
+    shutdown: impl std::future::Future<Output = Result<(), anyhow::Error>>,
+) -> Result<(), anyhow::Error> {
+    let shutdown = shutdown.await;
+    if shutdown.is_err() {
+        error!("mDNS SDK shutdown failed");
+    }
+    outcome.and(shutdown)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn given_worker_and_sdk_outcomes_when_completing_then_shutdown_ack_is_required_and_primary_error_survives(
+    ) {
+        for worker_failed in [false, true] {
+            for shutdown_failed in [false, true] {
+                // Arrange
+                let (release, acknowledgement) = tokio::sync::oneshot::channel();
+                let outcome = if worker_failed {
+                    Err(anyhow::anyhow!("worker failure"))
+                } else {
+                    Ok(())
+                };
+                let mut completion = Box::pin(complete_lifetime(outcome, async {
+                    acknowledgement.await.unwrap();
+                    if shutdown_failed {
+                        Err(anyhow::anyhow!("SDK failure"))
+                    } else {
+                        Ok(())
+                    }
+                }));
+                // Act / Assert
+                assert!(futures::poll!(completion.as_mut()).is_pending());
+                release.send(()).unwrap();
+                let result = completion.await;
+                assert_eq!(
+                    result.err().map(|error| error.to_string()),
+                    if worker_failed {
+                        Some("worker failure".into())
+                    } else if shutdown_failed {
+                        Some("SDK failure".into())
+                    } else {
+                        None
+                    }
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn given_display_name_change_when_service_is_rebuilt_then_dns_identity_and_endpoint_stay_fixed()
+    {
+        let policy = crate::visibility::VisibilityPolicy::new(Visibility::Temporarily);
+        let receiver = policy.subscribe();
+        assert!(MDnsServer::identity_visible(&receiver));
+        policy.set(Visibility::Invisible, true).unwrap();
+        assert!(receiver.has_changed().unwrap());
+        assert!(!MDnsServer::identity_visible(&receiver));
+        policy.set(Visibility::Visible, true).unwrap();
+        assert!(MDnsServer::identity_visible(&receiver));
+        let endpoint = *b"TEST";
+        let original = MDnsServer::named_service(
+            endpoint,
+            2345,
+            DeviceType::Laptop,
+            "machine.local.",
+            "Original",
+        )
+        .unwrap();
+        let renamed = MDnsServer::renamed_service(&original, endpoint, "Рабочий ПК").unwrap();
+        assert_eq!(renamed.get_fullname(), original.get_fullname());
+        assert_eq!(renamed.get_hostname(), original.get_hostname());
+        assert_eq!(renamed.get_port(), original.get_port());
+        let value = renamed.get_properties().get("n").unwrap().val_str();
+        let (kind, name) = crate::utils::parse_mdns_endpoint_info(value).unwrap();
+        assert_eq!(kind, DeviceType::Laptop);
+        assert_eq!(name, "Рабочий ПК");
+        let max = "a".repeat(crate::identity::MAX_NAME_BYTES);
+        let maximum = MDnsServer::renamed_service(&original, endpoint, &max).unwrap();
+        assert_eq!(
+            crate::utils::parse_mdns_endpoint_info(
+                maximum.get_properties().get("n").unwrap().val_str()
+            )
+            .unwrap()
+            .1,
+            max
+        );
+    }
 
     #[test]
     fn receiver_refresh_ok_and_lagged_request_resend() {

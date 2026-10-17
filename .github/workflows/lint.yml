@@ -26,6 +26,21 @@ jobs:
         working-directory: ./app/main/src-tauri
         run: cargo fmt --all --check
 
+      - name: Validate receiver A/B smoke launcher
+        run: |
+          bash -n scripts/receiver-ab-smoke.sh
+          bash scripts/receiver-ab-smoke.sh --help >/dev/null
+          if bash scripts/receiver-ab-smoke.sh unknown >/dev/null 2>&1; then
+            echo "Unknown A/B mode must fail" >&2
+            exit 1
+          fi
+
+      - name: Offline Python contract tests with pinned publication dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/native-publication-python"
+          "$RUNNER_TEMP/native-publication-python/bin/python" -m pip install -r scripts/requirements-r2.txt
+          "$RUNNER_TEMP/native-publication-python/bin/python" -m unittest discover -s scripts/tests -v
+
   frontend:
     name: Frontend lint, typecheck and unit tests
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.head.ref != 'dev'
@@ -70,7 +85,7 @@ jobs:
       - name: Install core dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libdbus-1-dev
+          sudo apt-get install -y protobuf-compiler dbus-daemon libdbus-1-dev
 
       - name: Run core tests
         working-directory: ./core_lib
@@ -117,3 +132,8 @@ jobs:
       - name: Clippy
         working-directory: ${{ matrix.directory }}
         run: cargo +stable clippy ${{ matrix.clippy_args }} -- -D warnings
+
+      - name: Desktop Rust unit tests
+        if: matrix.directory == 'app/main/src-tauri'
+        working-directory: ./app/main/src-tauri
+        run: cargo +stable test --no-default-features --bin rquickshare

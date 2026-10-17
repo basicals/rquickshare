@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::File;
-use std::io::Read;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
@@ -11,6 +10,7 @@ use hmac::{Hmac, Mac};
 use libaes::{Cipher, AES_256_KEY_LEN};
 use p256::ecdh::diffie_hellman;
 use p256::elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint};
+use p256::elliptic_curve::zeroize::{Zeroize, Zeroizing};
 use p256::{EncodedPoint, PublicKey};
 use prost::Message;
 use rand::Rng;
@@ -25,13 +25,14 @@ use ts_rs::TS;
 use super::info::{InternalFileInfo, TransferMetadata};
 use super::{InnerState, State, TextPayloadType};
 use crate::channel::{ChannelAction, ChannelDirection, ChannelMessage};
+use crate::file_reader::read_file_chunk;
 use crate::location_nearby_connections::bandwidth_upgrade_negotiation_frame::upgrade_path_info::Medium;
 use crate::location_nearby_connections::connection_response_frame::ResponseStatus;
 use crate::location_nearby_connections::payload_transfer_frame::{
     payload_header, PacketType, PayloadChunk, PayloadHeader,
 };
 use crate::location_nearby_connections::{KeepAliveFrame, OfflineFrame, PayloadTransferFrame};
-use crate::protocol::{checked_payload_buffer_size, SANE_FRAME_LENGTH, SANITY_DURATION};
+use crate::protocol::{checked_payload_buffer_size, SANE_FRAME_LENGTH};
 use crate::securegcm::ukey2_alert::AlertType;
 use crate::securegcm::ukey2_client_init::CipherCommitment;
 use crate::securegcm::{
@@ -43,8 +44,7 @@ use crate::securemessage::{
     SecureMessage, SigScheme,
 };
 use crate::sharing_nearby::{
-    file_metadata, paired_key_result_frame, text_metadata, FileMetadata, IntroductionFrame,
-    TextMetadata,
+    file_metadata, text_metadata, FileMetadata, IntroductionFrame, TextMetadata,
 };
 use crate::utils::{
     encode_point, gen_ecdsa_keypair, gen_random, hkdf_extract_expand, normalize_p256_coordinate,
@@ -411,16 +411,44 @@ fn prepare_outbound_files(files: &[String]) -> Result<PreparedOutboundFiles, any
         ));
     }
 
-    let mut file_metadata = Vec::with_capacity(candidates.len());
+    let opened = candidates.into_iter().map(|candidate| {
+        let file = File::open(&candidate.path)
+            .map_err(|error| anyhow!("Failed to open outbound file: {error}"))?;
+        Ok((file, candidate.path, candidate.parent_folder))
+    });
+    prepare_open_file_metadata(opened)
+}
+
+#[cfg(target_os = "linux")]
+fn prepare_opened_outbound_files(
+    selection: &crate::file_source::OpenedSelection,
+) -> Result<PreparedOutboundFiles, anyhow::Error> {
+    let opened = selection.files().iter().map(|source| {
+        let (parent, name) = match source.relative_name().rsplit_once('/') {
+            Some((parent, name)) => (Some(parent.to_owned()), name),
+            None => (None, source.relative_name()),
+        };
+        let file = source.clone_handle()?;
+        if file.metadata()?.len() != source.size() {
+            return Err(anyhow!("Source size changed after acquisition"));
+        }
+        Ok((file, PathBuf::from(name), parent))
+    });
+    prepare_open_file_metadata(opened)
+}
+
+fn prepare_open_file_metadata(
+    opened: impl Iterator<Item = Result<(File, PathBuf, Option<String>), anyhow::Error>>,
+) -> Result<PreparedOutboundFiles, anyhow::Error> {
+    let mut file_metadata = Vec::new();
     let mut transferred_files = HashMap::new();
     let mut total_to_send = 0_u64;
 
-    for candidate in candidates {
-        let path = candidate.path.as_path();
+    for source in opened {
+        let (file, path, parent_folder) = source?;
+        let path = path.as_path();
         let file_path = path.display().to_string();
 
-        let file = File::open(path)
-            .map_err(|error| anyhow!("Failed to open outbound file {file_path}: {error}"))?;
         let metadata = file
             .metadata()
             .map_err(|error| anyhow!("Failed to get metadata for {file_path}: {error}"))?;
@@ -469,7 +497,7 @@ fn prepare_outbound_files(files: &[String]) -> Result<PreparedOutboundFiles, any
             size: Some(file_size),
             mime_type: Some(mime_type),
             r#type: Some(attachment_type.into()),
-            parent_folder: candidate.parent_folder.clone(),
+            parent_folder: parent_folder.clone(),
             ..Default::default()
         };
 
@@ -478,7 +506,7 @@ fn prepare_outbound_files(files: &[String]) -> Result<PreparedOutboundFiles, any
             InternalFileInfo {
                 payload_id,
                 file_url: path.to_path_buf(),
-                parent_folder: candidate.parent_folder,
+                parent_folder,
                 bytes_transferred: 0,
                 total_size: file_size,
                 file: Some(file),
@@ -504,6 +532,27 @@ pub enum OutboundPayload {
     Files(Vec<String>),
     EphemeralFiles(Vec<String>),
     Text(String),
+    /// Native-only resources cannot be constructed through the legacy JSON boundary.
+    #[cfg(target_os = "linux")]
+    #[serde(skip)]
+    #[ts(skip)]
+    OpenedFiles(std::sync::Arc<crate::file_source::OpenedSelection>),
+    /// The outer native source capability survives actual request teardown.
+    #[cfg(target_os = "linux")]
+    #[serde(skip)]
+    #[ts(skip)]
+    NativeSource(std::sync::Arc<crate::prepared_source::PreparedSource>),
+}
+
+impl OutboundPayload {
+    fn text(&self) -> Option<&str> {
+        match self {
+            Self::Text(text) => Some(text),
+            #[cfg(target_os = "linux")]
+            Self::NativeSource(source) => source.text().map(|text| text.text()),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -512,10 +561,13 @@ pub struct OutboundRequest {
     socket: TcpStream,
     pub state: InnerState,
     sender: Sender<ChannelMessage>,
-    receiver: Receiver<ChannelMessage>,
+    receiver: Option<Receiver<ChannelMessage>>,
+    session: Option<crate::sessions::SessionLease>,
+    authentication: crate::peer_authentication::PeerAuthentication,
     payload: OutboundPayload,
     text_payload_id: Option<i64>,
     cleanup_files: Vec<ManagedEphemeralFile>,
+    local_name: Option<crate::identity::DeviceName>,
 }
 
 impl Drop for OutboundRequest {
@@ -533,6 +585,11 @@ impl Drop for OutboundRequest {
 }
 
 impl OutboundRequest {
+    pub(crate) fn with_local_name(mut self, name: crate::identity::DeviceName) -> Self {
+        self.local_name = Some(name);
+        self
+    }
+
     pub fn new(
         endpoint_id: [u8; 4],
         socket: TcpStream,
@@ -553,6 +610,35 @@ impl OutboundRequest {
                 (Some(files.clone()), None, cleanup_files)
             }
             OutboundPayload::Text(text) => (None, Some(text.clone()), Vec::new()),
+            #[cfg(target_os = "linux")]
+            OutboundPayload::NativeSource(source) => match source.as_ref() {
+                crate::prepared_source::PreparedSource::Files(files) => (
+                    Some(
+                        files
+                            .files()
+                            .iter()
+                            .map(|file| file.relative_name().to_owned())
+                            .collect(),
+                    ),
+                    None,
+                    Vec::new(),
+                ),
+                crate::prepared_source::PreparedSource::Text(text) => {
+                    (None, Some(text.text().to_owned()), Vec::new())
+                }
+            },
+            #[cfg(target_os = "linux")]
+            OutboundPayload::OpenedFiles(selection) => (
+                Some(
+                    selection
+                        .files()
+                        .iter()
+                        .map(|file| file.relative_name().to_owned())
+                        .collect(),
+                ),
+                None,
+                Vec::new(),
+            ),
         };
 
         Ok(Self {
@@ -574,16 +660,29 @@ impl OutboundRequest {
                 ..Default::default()
             },
             sender,
-            receiver,
+            receiver: Some(receiver),
+            session: None,
+            authentication: crate::peer_authentication::PeerAuthentication::anonymous(
+                crate::peer_authentication::Role::Sender,
+            ),
             payload,
             text_payload_id: None,
             cleanup_files,
+            local_name: None,
         })
     }
 
     fn take_pending_cancel_request(&mut self) -> Result<bool, anyhow::Error> {
+        if let Some(session) = self.session.as_ref() {
+            return Ok(session.cancellation().is_cancelled());
+        }
         loop {
-            match self.receiver.try_recv() {
+            match self
+                .receiver
+                .as_mut()
+                .ok_or_else(|| anyhow!("Missing legacy control receiver"))?
+                .try_recv()
+            {
                 Ok(message) => {
                     if is_cancel_request(&message, &self.state.id) {
                         debug!("outbound: received cancellation while sending");
@@ -606,7 +705,7 @@ impl OutboundRequest {
         let mut length_buf = [0u8; 4];
 
         tokio::select! {
-            i = self.receiver.recv() => {
+            i = crate::sessions::legacy_message(&mut self.receiver) => {
                 match i {
                     Ok(channel_msg) => {
                         if channel_msg.direction == ChannelDirection::LibToFront {
@@ -648,6 +747,22 @@ impl OutboundRequest {
         }
 
         Ok(())
+    }
+
+    pub(crate) fn attach_session(mut self, session: crate::sessions::SessionLease) -> Self {
+        self.state.id = session.event_id();
+        self.receiver = None;
+        self.session = Some(session);
+        self
+    }
+
+    pub(crate) fn record_termination(&mut self, state: State) {
+        if !crate::sessions::terminal(&self.state.state) {
+            self.state.state = state;
+            if let Some(session) = self.session.as_mut() {
+                session.observe(&self.state.state);
+            }
+        }
     }
 
     pub async fn _handle(&mut self, length_buf: [u8; 4]) -> Result<(), anyhow::Error> {
@@ -714,6 +829,15 @@ impl OutboundRequest {
     }
 
     pub async fn send_connection_request(&mut self) -> Result<(), anyhow::Error> {
+        if self.local_name.is_none() {
+            self.local_name = Some(crate::identity::DeviceName::new(
+                &sys_metrics::host::get_hostname()?,
+            )?);
+        }
+        let local_name = self
+            .local_name
+            .as_ref()
+            .ok_or_else(|| anyhow!("Local identity unavailable"))?;
         let request = location_nearby_connections::OfflineFrame {
             version: Some(location_nearby_connections::offline_frame::Version::V1.into()),
             v1: Some(location_nearby_connections::V1Frame {
@@ -722,10 +846,10 @@ impl OutboundRequest {
                 ),
                 connection_request: Some(location_nearby_connections::ConnectionRequestFrame {
                     endpoint_id: Some(String::from_utf8_lossy(&self.endpoint_id).to_string()),
-                    endpoint_name: Some(sys_metrics::host::get_hostname()?.into()),
+                    endpoint_name: Some(local_name.as_str().into()),
                     endpoint_info: Some(
                         RemoteDeviceInfo {
-                            name: sys_metrics::host::get_hostname()?,
+                            name: local_name.as_str().into(),
                             device_type: DeviceType::Laptop,
                         }
                         .serialize(),
@@ -904,11 +1028,7 @@ impl OutboundRequest {
             version: Some(sharing_nearby::frame::Version::V1.into()),
             v1: Some(sharing_nearby::V1Frame {
                 r#type: Some(sharing_nearby::v1_frame::FrameType::PairedKeyEncryption.into()),
-                paired_key_encryption: Some(sharing_nearby::PairedKeyEncryptionFrame {
-                    secret_id_hash: Some(gen_random(6)),
-                    signed_data: Some(gen_random(72)),
-                    ..Default::default()
-                }),
+                paired_key_encryption: Some(self.authentication.outgoing_frame()?),
                 ..Default::default()
             }),
         };
@@ -929,12 +1049,7 @@ impl OutboundRequest {
             .ok_or_else(|| anyhow!("Missing receive HMAC key"))?;
         let mut hmac = HmacSha256::new_from_slice(recv_hmac_key)?;
         hmac.update(&smsg.header_and_body);
-        if !hmac
-            .finalize()
-            .into_bytes()
-            .as_slice()
-            .eq(smsg.signature.as_slice())
-        {
+        if !hmac.finalize().into_bytes()[..].eq(smsg.signature.as_slice()) {
             return Err(anyhow!("hmac!=signature"));
         }
 
@@ -991,54 +1106,8 @@ impl OutboundRequest {
                 match header.r#type() {
                     payload_header::PayloadType::Bytes => {
                         info!("Processing PayloadType::Bytes");
-                        let payload_id = header.id();
 
-                        let declared_size = checked_payload_buffer_size(header.total_size())?;
-
-                        self.state
-                            .payload_buffers
-                            .entry(payload_id)
-                            .or_insert_with(|| Vec::with_capacity(declared_size));
-
-                        // Get the current length of the buffer, if it exists, without holding a mutable borrow.
-                        let buffer_len = self
-                            .state
-                            .payload_buffers
-                            .get(&payload_id)
-                            .ok_or_else(|| anyhow!("Missing payload buffer for {payload_id}"))?
-                            .len();
-                        if chunk.offset() != buffer_len as i64 {
-                            self.state.payload_buffers.remove(&payload_id);
-                            return Err(anyhow!(
-                                "Unexpected chunk offset: {}, expected: {}",
-                                chunk.offset(),
-                                buffer_len
-                            ));
-                        }
-
-                        let body_len = chunk.body().len();
-                        let new_len = buffer_len
-                            .checked_add(body_len)
-                            .ok_or_else(|| anyhow!("Byte payload size overflow"))?;
-                        if new_len > declared_size {
-                            self.state.payload_buffers.remove(&payload_id);
-                            return Err(anyhow!(
-                                "Byte payload exceeds declared size: {new_len} > {declared_size}"
-                            ));
-                        }
-
-                        let buffer = self
-                            .state
-                            .payload_buffers
-                            .get_mut(&payload_id)
-                            .ok_or_else(|| anyhow!("Missing payload buffer for {payload_id}"))?;
-                        if let Some(body) = &chunk.body {
-                            buffer.extend(body);
-                        }
-
-                        if (chunk.flags() & 1) == 1 {
-                            debug!("Chunk flags & 1 == 1 ?? End of data ??");
-
+                        if let Some(buffer) = self.state.byte_payloads.push(header, chunk)? {
                             let innner_frame = sharing_nearby::Frame::decode(buffer.as_slice())?;
                             self.process_transfer_setup(&innner_frame).await?;
                         }
@@ -1134,22 +1203,27 @@ impl OutboundRequest {
         &mut self,
         v1_frame: &sharing_nearby::V1Frame,
     ) -> Result<(), anyhow::Error> {
-        if v1_frame.paired_key_encryption.is_none() {
-            return Err(anyhow!("Missing required fields"));
-        }
+        let proof = v1_frame
+            .paired_key_encryption
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing paired-key proof"))?;
+        let outcome = self.authentication.verify(proof);
 
         let paired_result = sharing_nearby::Frame {
             version: Some(sharing_nearby::frame::Version::V1.into()),
             v1: Some(sharing_nearby::V1Frame {
                 r#type: Some(sharing_nearby::v1_frame::FrameType::PairedKeyResult.into()),
                 paired_key_result: Some(sharing_nearby::PairedKeyResultFrame {
-                    status: Some(paired_key_result_frame::Status::Unable.into()),
+                    status: Some(outcome.wire()),
                 }),
                 ..Default::default()
             }),
         };
 
         self.send_encrypted_frame(&paired_result).await?;
+        if outcome == crate::peer_authentication::Outcome::Fail {
+            return Err(crate::peer_authentication::AuthenticationError.into());
+        }
 
         Ok(())
     }
@@ -1158,17 +1232,37 @@ impl OutboundRequest {
         &mut self,
         v1_frame: &sharing_nearby::V1Frame,
     ) -> Result<(), anyhow::Error> {
-        if v1_frame.paired_key_result.is_none() {
-            return Err(anyhow!("Missing required fields"));
-        }
+        let result = v1_frame
+            .paired_key_result
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing paired-key result"))?;
+        self.authentication.finish(result.status)?;
 
-        let introduction = match &self.payload {
+        let prepared_files = match &self.payload {
             OutboundPayload::Files(files) | OutboundPayload::EphemeralFiles(files) => {
+                Some(prepare_outbound_files(files)?)
+            }
+            #[cfg(target_os = "linux")]
+            OutboundPayload::NativeSource(source) => match source.as_ref() {
+                crate::prepared_source::PreparedSource::Files(files) => {
+                    Some(prepare_opened_outbound_files(files)?)
+                }
+                crate::prepared_source::PreparedSource::Text(_) => None,
+            },
+            #[cfg(target_os = "linux")]
+            OutboundPayload::OpenedFiles(selection) => {
+                Some(prepare_opened_outbound_files(selection)?)
+            }
+            OutboundPayload::Text(_) => None,
+        };
+
+        let introduction = match prepared_files {
+            Some(prepared) => {
                 let PreparedOutboundFiles {
                     metadata: file_metadata,
                     files: transferred_files,
                     total_bytes: total_to_send,
-                } = prepare_outbound_files(files)?;
+                } = prepared;
 
                 self.update_state(
                     |state| {
@@ -1189,13 +1283,23 @@ impl OutboundRequest {
                     ..Default::default()
                 }
             }
-            OutboundPayload::Text(text) => {
+            None => {
+                let text = self
+                    .payload
+                    .text()
+                    .ok_or_else(|| anyhow!("Missing prepared outbound text"))?;
                 let prepared = prepare_outbound_text(text)?;
                 self.text_payload_id = Some(prepared.payload_id);
                 let payload_type = prepared.payload_type.clone();
+                let payload_info = if payload_type == TextPayloadType::Url {
+                    super::TextPayloadInfo::Url(prepared.payload_id)
+                } else {
+                    super::TextPayloadInfo::Text(prepared.payload_id)
+                };
                 let total_bytes = prepared.bytes.len() as u64;
                 self.update_state(
                     |state| {
+                        state.text_payload = Some(payload_info);
                         if let Some(metadata) = state.transfer_metadata.as_mut() {
                             metadata.total_bytes = total_bytes;
                             metadata.text_type = Some(payload_type);
@@ -1255,7 +1359,7 @@ impl OutboundRequest {
                 )
                 .await;
 
-                if let OutboundPayload::Text(text) = self.payload.clone() {
+                if let Some(text) = self.payload.text().map(str::to_owned) {
                     if self.take_pending_cancel_request()? {
                         self.update_state(|state| state.state = State::Cancelled, true)
                             .await;
@@ -1342,17 +1446,17 @@ impl OutboundRequest {
                                 break;
                             }
 
-                            if curr_state.file.is_none() {
-                                warn!("File {current} is none");
-                                break;
-                            }
-
                             let mut buffer = vec![0u8; 512 * 1024];
-                            let mut file = curr_state
+                            let file = curr_state
                                 .file
                                 .as_ref()
                                 .ok_or_else(|| anyhow!("Outbound file handle is missing"))?;
-                            let bytes_read = file.read(&mut buffer)?;
+                            let total_size = u64::try_from(curr_state.total_size)
+                                .map_err(|_| anyhow!("Negative outbound file size"))?;
+                            let offset = u64::try_from(curr_state.bytes_transferred)
+                                .map_err(|_| anyhow!("Negative outbound file offset"))?;
+                            let bytes_read =
+                                read_file_chunk(file, total_size, offset, &mut buffer)?;
 
                             (
                                 InternalFileInfo {
@@ -1557,7 +1661,13 @@ impl OutboundRequest {
         let auth_label = "UKEY2 v1 auth".as_bytes();
         let next_label = "UKEY2 v1 next".as_bytes();
 
-        let auth_string = hkdf_extract_expand(auth_label, &derived_secret, &ukey_info, 32)?;
+        let mut auth_string = Zeroizing::new(hkdf_extract_expand(
+            auth_label,
+            &derived_secret,
+            &ukey_info,
+            32,
+        )?);
+        self.authentication.bind_token(&auth_string)?;
         let next_secret = hkdf_extract_expand(next_label, &derived_secret, &ukey_info, 32)?;
 
         let salt_hex = "82AA55A0D397F88346CA1CEE8D3909B95F13FA7DEB1D4AB38376B8256DA85510";
@@ -1593,7 +1703,8 @@ impl OutboundRequest {
         )
         .await;
 
-        info!("Pin code: {:?}", self.state.pin_code);
+        auth_string.zeroize();
+        debug!("Pairing verification code prepared");
 
         Ok(())
     }
@@ -1807,6 +1918,10 @@ impl OutboundRequest {
     {
         f(&mut self.state);
 
+        if let Some(session) = self.session.as_mut() {
+            session.observe_state(&self.state);
+        }
+
         if !inform {
             return;
         }
@@ -1819,16 +1934,676 @@ impl OutboundRequest {
             meta: self.state.transfer_metadata.clone(),
             ..Default::default()
         });
-        // Add a small sleep timer to allow the Tokio runtime to have
-        // some spare time to process channel's message. Otherwise it
-        // get spammed by new requests. Currently set to 10 micro secs.
-        tokio::time::sleep(SANITY_DURATION).await;
+        tokio::task::yield_now().await;
     }
 }
 
 #[cfg(test)]
 mod security_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn given_encrypted_outbound_byte_chunks_when_routed_then_completion_releases_buffers_and_limits_apply(
+    ) {
+        use tokio::io::AsyncReadExt;
+
+        use crate::byte_payload::tests::frame;
+
+        async fn deliver(
+            request: &mut OutboundRequest,
+            peer: &mut OutboundRequest,
+            frame: OfflineFrame,
+        ) -> Result<(), anyhow::Error> {
+            peer.encrypt_and_send(&frame).await?;
+            let length = request.socket.read_u32().await?;
+            request._handle(length.to_be_bytes()).await
+        }
+
+        for scenario in ["complete", "short", "budget"] {
+            // Arrange: actual TCP/framing/AES/HMAC/sequence processing with fixture keys.
+            let (mut request, peer_socket) = test_request(vec![]).await;
+            let original_metadata = serde_json::to_value(&request.state.transfer_metadata).unwrap();
+            let (sender, _events) = tokio::sync::broadcast::channel(16);
+            let mut peer = OutboundRequest::new(
+                [1, 2, 3, 4],
+                peer_socket,
+                "bytes-peer".into(),
+                sender,
+                OutboundPayload::Files(vec![]),
+                RemoteDeviceInfo {
+                    name: "Fixture".into(),
+                    device_type: DeviceType::Phone,
+                },
+            )
+            .unwrap();
+            for state in [&mut request.state, &mut peer.state] {
+                state.encryption_done = true;
+                state.encrypt_key = Some(vec![0x11; 32]);
+                state.decrypt_key = Some(vec![0x11; 32]);
+                state.send_hmac_key = Some(vec![0x22; 32]);
+                state.recv_hmac_key = Some(vec![0x22; 32]);
+            }
+            let cancel = sharing_nearby::Frame {
+                v1: Some(sharing_nearby::V1Frame {
+                    r#type: Some(sharing_nearby::v1_frame::FrameType::Cancel.into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }
+            .encode_to_vec();
+            // Act / Assert
+            if scenario == "budget" {
+                deliver(
+                    &mut request,
+                    &mut peer,
+                    frame(1, SANE_FRAME_LENGTH as usize, 0, b"", false),
+                )
+                .await
+                .unwrap();
+                let error = deliver(&mut request, &mut peer, frame(2, 1, 0, b"", false))
+                    .await
+                    .unwrap_err();
+                assert_eq!(error.to_string(), "Byte payload reservation limit exceeded");
+                assert_eq!(request.state.state, State::Initial);
+            } else {
+                deliver(
+                    &mut request,
+                    &mut peer,
+                    frame(1, cancel.len(), 0, &cancel[..1], false),
+                )
+                .await
+                .unwrap();
+                assert_eq!(request.state.state, State::Initial);
+                assert!(!request.state.byte_payloads.is_empty());
+                let body = if scenario == "complete" {
+                    &cancel[1..]
+                } else {
+                    &cancel[1..cancel.len() - 1]
+                };
+                let error = deliver(
+                    &mut request,
+                    &mut peer,
+                    frame(1, cancel.len(), 1, body, true),
+                )
+                .await
+                .unwrap_err();
+                if scenario == "complete" {
+                    assert!(error.is::<crate::errors::AppError>());
+                    assert_eq!(request.state.state, State::Cancelled);
+                } else {
+                    assert_eq!(error.to_string(), "Byte payload is incomplete");
+                    assert_eq!(request.state.state, State::Initial);
+                }
+            }
+            assert!(request.state.byte_payloads.is_empty());
+            assert_eq!(
+                serde_json::to_value(&request.state.transfer_metadata).unwrap(),
+                original_metadata
+            );
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    mod opened_sources {
+        use std::io::{Seek, SeekFrom};
+        use std::sync::Arc;
+
+        use super::*;
+        use crate::file_source::{OpenedFile, OpenedSelection, SelectionLimits};
+
+        fn selection(path: &Path, name: &str) -> OpenedSelection {
+            OpenedSelection::from_files(
+                vec![OpenedFile::adopt(File::open(path).unwrap(), name.to_owned()).unwrap()],
+                SelectionLimits::default(),
+            )
+            .unwrap()
+        }
+
+        async fn native_request(selected: OpenedSelection) -> (OutboundRequest, TcpStream) {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let peer = TcpStream::connect(listener.local_addr().unwrap())
+                .await
+                .unwrap();
+            let (socket, _) = listener.accept().await.unwrap();
+            let (sender, _) = tokio::sync::broadcast::channel(16);
+            let mut request = OutboundRequest::new(
+                [1, 2, 3, 4],
+                socket,
+                "native-test".into(),
+                sender,
+                OutboundPayload::NativeSource(Arc::new(
+                    crate::prepared_source::PreparedSource::from(selected),
+                )),
+                RemoteDeviceInfo {
+                    name: "Test phone".into(),
+                    device_type: DeviceType::Phone,
+                },
+            )
+            .unwrap();
+            // Established-session fixture: real framing/crypto with explicit test keys.
+            request.state.encryption_done = true;
+            request.state.encrypt_key = Some(vec![0x11; 32]);
+            request.state.send_hmac_key = Some(vec![0x22; 32]);
+            (request, peer)
+        }
+
+        #[tokio::test]
+        async fn given_native_source_when_actual_request_owns_payload_then_outer_capability_lives_until_request_drop(
+        ) {
+            // Arrange / Act / Assert
+            for text in [false, true] {
+                let file = tempfile::NamedTempFile::new().unwrap();
+                let source = Arc::new(if text {
+                    crate::prepared_source::PreparedSource::Text(
+                        crate::prepared_source::NativeText::new("private-text".into()).unwrap(),
+                    )
+                } else {
+                    crate::prepared_source::PreparedSource::from(selection(file.path(), "file"))
+                });
+                let weak = Arc::downgrade(&source);
+                let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                let _peer = TcpStream::connect(listener.local_addr().unwrap())
+                    .await
+                    .unwrap();
+                let (socket, _) = listener.accept().await.unwrap();
+                let (sender, _) = tokio::sync::broadcast::channel(16);
+                let request = OutboundRequest::new(
+                    [1, 2, 3, 4],
+                    socket,
+                    "source-test".into(),
+                    sender,
+                    OutboundPayload::NativeSource(source),
+                    RemoteDeviceInfo {
+                        name: "phone".into(),
+                        device_type: DeviceType::Phone,
+                    },
+                )
+                .unwrap();
+                assert!(weak.upgrade().is_some());
+                assert!(!format!("{:?}", request.payload).contains("private-text"));
+                assert_eq!(
+                    request
+                        .state
+                        .transfer_metadata
+                        .as_ref()
+                        .unwrap()
+                        .text_payload
+                        .is_some(),
+                    text
+                );
+                drop(request);
+                assert!(weak.upgrade().is_none());
+                assert!(file.path().is_file());
+            }
+        }
+
+        async fn read_native_frame(socket: &mut TcpStream, sequence: i32) -> OfflineFrame {
+            use tokio::io::AsyncReadExt;
+            let mut length = [0; 4];
+            socket.read_exact(&mut length).await.unwrap();
+            let length = u32::from_be_bytes(length) as usize;
+            assert!((1..=SANE_FRAME_LENGTH as usize).contains(&length));
+            let mut bytes = vec![0; length];
+            socket.read_exact(&mut bytes).await.unwrap();
+            let secure = SecureMessage::decode(bytes.as_slice()).unwrap();
+            let mut hmac = HmacSha256::new_from_slice(&[0x22; 32]).unwrap();
+            hmac.update(&secure.header_and_body);
+            hmac.verify_slice(&secure.signature).unwrap();
+            let body = HeaderAndBody::decode(secure.header_and_body.as_slice()).unwrap();
+            assert_eq!(body.header.encryption_scheme, EncScheme::Aes256Cbc as i32);
+            assert_eq!(body.header.signature_scheme, SigScheme::HmacSha256 as i32);
+            let mut cipher = Cipher::new_256(&[0x11; 32]);
+            cipher.set_auto_padding(true);
+            let plaintext = cipher.cbc_decrypt(body.header.iv(), &body.body);
+            let message = DeviceToDeviceMessage::decode(plaintext.as_slice()).unwrap();
+            assert_eq!(message.sequence_number(), sequence);
+            OfflineFrame::decode(message.message()).unwrap()
+        }
+
+        fn paired_result() -> sharing_nearby::V1Frame {
+            sharing_nearby::V1Frame {
+                paired_key_result: Some(sharing_nearby::PairedKeyResultFrame::default()),
+                ..Default::default()
+            }
+        }
+
+        #[tokio::test]
+        async fn given_paired_key_proofs_and_remote_results_when_sending_then_failure_cannot_emit_introduction_or_file_bytes(
+        ) {
+            use crate::peer_authentication::{tests::known_fixture, Role};
+            for kind in ["anonymous", "known", "bad-signature", "oversize"] {
+                for status in [None, Some(0), Some(1), Some(2), Some(3), Some(4)] {
+                    // Arrange
+                    let file = tempfile::NamedTempFile::new().unwrap();
+                    std::fs::write(file.path(), b"private-file-body").unwrap();
+                    let (mut request, mut peer) =
+                        native_request(selection(file.path(), "file.txt")).await;
+                    request.state.state = State::SentPairedKeyEncryption;
+                    let (authentication, mut proof) = known_fixture(Role::Sender);
+                    if kind != "anonymous" {
+                        request.authentication = authentication;
+                    }
+                    if kind == "bad-signature" {
+                        proof.signed_data = Some(vec![0; 72]);
+                    }
+                    if kind == "oversize" {
+                        proof.signed_data = Some(vec![0; 73]);
+                    }
+                    let frame = sharing_nearby::Frame {
+                        v1: Some(sharing_nearby::V1Frame {
+                            paired_key_encryption: Some(proof),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    };
+                    // Act / Assert
+                    let rejected_proof = matches!(kind, "bad-signature" | "oversize");
+                    assert_eq!(
+                        request.process_transfer_setup(&frame).await.is_err(),
+                        rejected_proof
+                    );
+                    let reply = read_native_frame(&mut peer, 1).await;
+                    let body = reply
+                        .v1
+                        .unwrap()
+                        .payload_transfer
+                        .unwrap()
+                        .payload_chunk
+                        .unwrap()
+                        .body
+                        .unwrap();
+                    let reply = sharing_nearby::Frame::decode(body.as_slice()).unwrap();
+                    assert_eq!(
+                        reply.v1.unwrap().paired_key_result.unwrap().status,
+                        Some(if rejected_proof {
+                            2
+                        } else if kind == "known" {
+                            1
+                        } else {
+                            3
+                        })
+                    );
+                    read_native_frame(&mut peer, 2).await;
+                    if rejected_proof {
+                        assert_eq!(request.state.state, State::SentPairedKeyEncryption);
+                    } else {
+                        let result = sharing_nearby::Frame {
+                            v1: Some(sharing_nearby::V1Frame {
+                                paired_key_result: Some(sharing_nearby::PairedKeyResultFrame {
+                                    status,
+                                }),
+                                ..Default::default()
+                            }),
+                            ..Default::default()
+                        };
+                        assert_eq!(
+                            request.process_transfer_setup(&result).await.is_err(),
+                            status == Some(2)
+                        );
+                        if status == Some(2) {
+                            assert_eq!(request.state.state, State::SentPairedKeyResult);
+                        } else {
+                            assert_eq!(request.state.state, State::SentIntroduction);
+                            let intro = read_native_frame(&mut peer, 3).await;
+                            let body = intro
+                                .v1
+                                .unwrap()
+                                .payload_transfer
+                                .unwrap()
+                                .payload_chunk
+                                .unwrap()
+                                .body
+                                .unwrap();
+                            let intro = sharing_nearby::Frame::decode(body.as_slice())
+                                .unwrap()
+                                .v1
+                                .unwrap()
+                                .introduction
+                                .unwrap();
+                            assert_eq!(intro.file_metadata.len(), 1);
+                            assert_eq!(intro.file_metadata[0].name(), "file.txt");
+                            read_native_frame(&mut peer, 4).await;
+                        }
+                    }
+                    assert_eq!(
+                        request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                        0
+                    );
+                    let mut next = [0];
+                    assert_eq!(
+                        peer.try_read(&mut next).unwrap_err().kind(),
+                        std::io::ErrorKind::WouldBlock
+                    );
+                }
+            }
+        }
+
+        #[tokio::test]
+        async fn given_native_selection_when_introduced_and_accepted_then_exact_file_frames_complete(
+        ) {
+            // Arrange.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("source");
+            std::fs::write(&path, b"abc").unwrap();
+            let (mut request, mut peer) =
+                native_request(selection(&path, "folder/display.txt")).await;
+            std::fs::remove_file(&path).unwrap();
+            assert!(request.cleanup_files.is_empty());
+            assert_eq!(
+                request
+                    .state
+                    .transfer_metadata
+                    .as_ref()
+                    .unwrap()
+                    .files
+                    .as_ref()
+                    .unwrap(),
+                &["folder/display.txt"]
+            );
+            // Act.
+            request
+                .process_paired_key_result(&paired_result())
+                .await
+                .unwrap();
+            let intro = read_native_frame(&mut peer, 1).await;
+            let body = intro
+                .v1
+                .unwrap()
+                .payload_transfer
+                .unwrap()
+                .payload_chunk
+                .unwrap()
+                .body
+                .unwrap();
+            let introduction = sharing_nearby::Frame::decode(body.as_slice())
+                .unwrap()
+                .v1
+                .unwrap()
+                .introduction
+                .unwrap();
+            let intro_end = read_native_frame(&mut peer, 2).await;
+            assert_eq!(
+                intro_end
+                    .v1
+                    .unwrap()
+                    .payload_transfer
+                    .unwrap()
+                    .payload_chunk
+                    .unwrap()
+                    .flags(),
+                1
+            );
+            request
+                .process_consent(&consent_frame(
+                    sharing_nearby::connection_response_frame::Status::Accept,
+                ))
+                .await
+                .unwrap();
+            let data = read_native_frame(&mut peer, 3)
+                .await
+                .v1
+                .unwrap()
+                .payload_transfer
+                .unwrap();
+            let end = read_native_frame(&mut peer, 4)
+                .await
+                .v1
+                .unwrap()
+                .payload_transfer
+                .unwrap();
+            let disconnect = read_native_frame(&mut peer, 5).await.v1.unwrap();
+            // Assert.
+            assert_eq!(introduction.file_metadata.len(), 1);
+            let metadata = &introduction.file_metadata[0];
+            assert_eq!(metadata.name(), "display.txt");
+            assert_eq!(metadata.parent_folder.as_deref(), Some("folder"));
+            assert_eq!(metadata.size(), 3);
+            let header = data.payload_header.unwrap();
+            assert_eq!(header.id(), metadata.payload_id());
+            assert_eq!(header.total_size(), 3);
+            assert_eq!(header.file_name.as_deref(), Some("display.txt"));
+            assert_eq!(header.parent_folder.as_deref(), Some("folder"));
+            let chunk = data.payload_chunk.unwrap();
+            assert_eq!(chunk.offset(), 0);
+            assert_eq!(chunk.body(), b"abc");
+            assert_eq!(end.payload_chunk.as_ref().unwrap().flags(), 1);
+            assert_eq!(end.payload_chunk.as_ref().unwrap().offset(), 3);
+            assert_eq!(
+                disconnect.r#type(),
+                location_nearby_connections::v1_frame::FrameType::Disconnection
+            );
+            assert_eq!(request.state.state, State::Finished);
+            assert_eq!(
+                request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                3
+            );
+        }
+
+        #[tokio::test]
+        async fn given_prepared_source_changes_when_consent_arrives_then_no_false_completion_occurs(
+        ) {
+            // Arrange / Act / Assert.
+            for bytes in [b"a".as_slice(), b"abcdef".as_slice()] {
+                let directory = tempfile::tempdir().unwrap();
+                let path = directory.path().join("source");
+                std::fs::write(&path, b"abc").unwrap();
+                let (mut request, mut peer) = native_request(selection(&path, "display")).await;
+                request
+                    .process_paired_key_result(&paired_result())
+                    .await
+                    .unwrap();
+                read_native_frame(&mut peer, 1).await;
+                read_native_frame(&mut peer, 2).await;
+                std::fs::write(&path, bytes).unwrap();
+                let result = request
+                    .process_consent(&consent_frame(
+                        sharing_nearby::connection_response_frame::Status::Accept,
+                    ))
+                    .await;
+                assert!(result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Source size changed"));
+                assert_ne!(request.state.state, State::Finished);
+                assert_eq!(
+                    request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                    0
+                );
+                assert_eq!(std::fs::read(path).unwrap(), bytes);
+            }
+        }
+
+        #[tokio::test]
+        async fn given_native_transfer_cancelled_before_read_when_accepted_then_original_is_preserved(
+        ) {
+            // Arrange.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("source");
+            std::fs::write(&path, b"abc").unwrap();
+            let (mut request, mut peer) = native_request(selection(&path, "display")).await;
+            request
+                .process_paired_key_result(&paired_result())
+                .await
+                .unwrap();
+            read_native_frame(&mut peer, 1).await;
+            read_native_frame(&mut peer, 2).await;
+            request
+                .sender
+                .send(ChannelMessage {
+                    id: "native-test".into(),
+                    direction: ChannelDirection::FrontToLib,
+                    action: Some(ChannelAction::CancelTransfer),
+                    ..Default::default()
+                })
+                .unwrap();
+            // Act.
+            let result = request
+                .process_consent(&consent_frame(
+                    sharing_nearby::connection_response_frame::Status::Accept,
+                ))
+                .await;
+            // Assert.
+            assert!(result.is_err());
+            assert_eq!(request.state.state, State::Cancelled);
+            assert_eq!(
+                request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                0
+            );
+            assert_eq!(
+                read_native_frame(&mut peer, 3).await.v1.unwrap().r#type(),
+                location_nearby_connections::v1_frame::FrameType::Disconnection
+            );
+            drop(request);
+            assert_eq!(std::fs::read(path).unwrap(), b"abc");
+        }
+
+        #[test]
+        fn given_native_files_when_prepared_then_protocol_names_types_sizes_and_parents_match() {
+            // Arrange.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("source");
+            std::fs::write(&path, b"abc").unwrap();
+            let inputs = [
+                ("folder/photo.png", file_metadata::Type::Image),
+                ("video.mp4", file_metadata::Type::Video),
+                ("audio.mp3", file_metadata::Type::Audio),
+                ("client.apk", file_metadata::Type::App),
+                ("notes.txt", file_metadata::Type::Unknown),
+            ];
+            let selected = OpenedSelection::from_files(
+                inputs
+                    .iter()
+                    .map(|(name, _)| {
+                        OpenedFile::adopt(File::open(&path).unwrap(), (*name).to_owned()).unwrap()
+                    })
+                    .collect(),
+                SelectionLimits::default(),
+            )
+            .unwrap();
+            // Act.
+            let prepared = prepare_opened_outbound_files(&selected).unwrap();
+            // Assert.
+            assert_eq!(prepared.total_bytes, 15);
+            assert_eq!(prepared.metadata.len(), 5);
+            assert_eq!(prepared.files.len(), 5);
+            for (metadata, (relative, kind)) in prepared.metadata.iter().zip(inputs) {
+                assert_eq!(metadata.name(), relative.rsplit('/').next().unwrap());
+                assert_eq!(metadata.size(), 3);
+                assert_eq!(metadata.r#type(), kind);
+                assert_eq!(
+                    metadata.parent_folder.as_deref(),
+                    relative.rsplit_once('/').map(|(parent, _)| parent)
+                );
+                let file = &prepared.files[&metadata.payload_id()];
+                assert_eq!(file.total_size, 3);
+                assert_eq!(file.bytes_transferred, 0);
+                assert_eq!(file.parent_folder, metadata.parent_folder);
+            }
+        }
+
+        #[test]
+        fn given_unlinked_native_source_when_prepared_then_no_path_reopen_occurs() {
+            // Arrange.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("source");
+            std::fs::write(&path, b"original").unwrap();
+            let selected = selection(&path, "folder/display.txt");
+            std::fs::remove_file(&path).unwrap();
+            // Act.
+            let prepared = prepare_opened_outbound_files(&selected).unwrap();
+            let info = prepared.files.values().next().unwrap();
+            let mut bytes = [0; 8];
+            read_file_chunk(info.file.as_ref().unwrap(), 8, 0, &mut bytes).unwrap();
+            // Assert.
+            assert_eq!(&bytes, b"original");
+            assert_eq!(info.file_url, Path::new("display.txt"));
+            assert_eq!(info.parent_folder.as_deref(), Some("folder"));
+        }
+
+        #[test]
+        fn given_native_source_size_changed_when_prepared_then_transfer_is_rejected() {
+            // Arrange / Act / Assert.
+            for bytes in [b"a".as_slice(), b"abcdef".as_slice()] {
+                let directory = tempfile::tempdir().unwrap();
+                let path = directory.path().join("source");
+                std::fs::write(&path, b"abc").unwrap();
+                let selected = selection(&path, "display");
+                std::fs::write(path, bytes).unwrap();
+                assert!(prepare_opened_outbound_files(&selected).is_err());
+            }
+        }
+
+        #[test]
+        fn given_native_payload_when_serialized_or_deserialized_then_json_cannot_carry_handles() {
+            // Arrange.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("source");
+            std::fs::write(&path, b"abc").unwrap();
+            let payload = OutboundPayload::OpenedFiles(Arc::new(selection(&path, "display")));
+            // Act / Assert.
+            assert!(serde_json::to_string(&payload).is_err());
+            for json in [
+                r#"{"OpenedFiles":[]}"#,
+                r#"{"OpenedFiles":{}}"#,
+                r#"{"OpenedFiles":null}"#,
+            ] {
+                assert!(serde_json::from_str::<OutboundPayload>(json).is_err());
+            }
+            let declaration = OutboundPayload::decl();
+            assert!(!declaration.contains("OpenedFiles"));
+            for legacy in ["Files", "EphemeralFiles", "Text"] {
+                assert!(declaration.contains(legacy));
+            }
+        }
+
+        #[test]
+        fn given_legacy_payloads_when_round_tripped_then_existing_json_contract_is_preserved() {
+            // Arrange / Act / Assert.
+            for json in [
+                r#"{"Files":["source"]}"#,
+                r#"{"EphemeralFiles":["source"]}"#,
+                r#"{"Text":"hello"}"#,
+            ] {
+                let payload: OutboundPayload = serde_json::from_str(json).unwrap();
+                assert_eq!(serde_json::to_string(&payload).unwrap(), json);
+            }
+        }
+
+        #[test]
+        fn given_native_payload_when_dropped_then_original_source_has_no_cleanup_capability() {
+            // Arrange.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("source");
+            std::fs::write(&path, b"abc").unwrap();
+            let payload = OutboundPayload::OpenedFiles(Arc::new(selection(&path, "display")));
+            // Act.
+            drop(payload);
+            // Assert.
+            assert_eq!(std::fs::read(path).unwrap(), b"abc");
+        }
+
+        #[test]
+        fn given_prepared_native_handles_when_shared_position_changes_then_readers_stay_independent(
+        ) {
+            // Arrange.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("source");
+            std::fs::write(&path, b"abcdef").unwrap();
+            let selected = selection(&path, "display");
+            let first = prepare_opened_outbound_files(&selected).unwrap();
+            let second = prepare_opened_outbound_files(&selected).unwrap();
+            let a = first.files.values().next().unwrap().file.as_ref().unwrap();
+            let b = second.files.values().next().unwrap().file.as_ref().unwrap();
+            // Act.
+            let mut other = a.try_clone().unwrap();
+            other.seek(SeekFrom::Start(5)).unwrap();
+            let mut bytes = [0; 2];
+            read_file_chunk(b, 6, 0, &mut bytes).unwrap();
+            // Assert.
+            assert_eq!(&bytes, b"ab");
+            assert_eq!(other.stream_position().unwrap(), 5);
+        }
+    }
 
     #[test]
     fn outbound_file_preparation_classifies_files_and_skips_missing_paths() {

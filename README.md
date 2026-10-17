@@ -158,7 +158,9 @@ If you want to **really** close the app when clicking on the close button, you c
 
 ### My firewall is blocking the connection
 
-In this case, configure a static port in **Settings → Listening port**, restart the app, and allow that TCP port in your firewall. Leaving the field empty keeps the default random-port behavior.\n\nFor older builds without this setting, you can still edit the config file manually:
+In this case, configure a static port in **Settings → Listening port**, restart the app, and allow that TCP port in your firewall. Leaving the field empty keeps the default random-port behavior.
+
+For older builds without this setting, you can still edit the config file manually:
 
 ```bash
 # linux

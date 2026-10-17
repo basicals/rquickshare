@@ -1,6 +1,6 @@
 import { Visibility } from '@martichou/core_lib/bindings/Visibility';
 import { TauriVM } from './helper/ParamsHelper';
-import { autostartKey, DisplayedItem, downloadPathKey, numberToVisibility, realcloseKey, startminimizedKey, stateToDisplay, visibilityKey, visibilityToNumber } from './types';
+import { autostartKey, DisplayedItem, downloadPathKey, realcloseKey, startminimizedKey, stateToDisplay } from './types';
 import { SendInfo } from '@martichou/core_lib/bindings/SendInfo';
 import { ChannelMessage } from '@martichou/core_lib/bindings/ChannelMessage';
 import { ChannelAction } from '@martichou/core_lib';
@@ -128,13 +128,14 @@ async function getStartMinimized(vm: TauriVM) {
 
 async function setVisibility(vm: TauriVM, visibility: Visibility) {
 	await vm.invoke('change_visibility', { message: visibility });
-	await vm.store.set(visibilityKey, visibilityToNumber[visibility]);
-	await vm.store.save();
 	vm.visibility = visibility;
+	vm.visibilityRecovered = false;
 }
 
 async function getVisibility(vm: TauriVM) {
-	vm.visibility = numberToVisibility[(await vm.store.get(visibilityKey) ?? 0) as number];
+	const [visibility, recovered] = await vm.invoke('get_receiving_status') as [Visibility, boolean];
+	vm.visibility = visibility;
+	vm.visibilityRecovered = recovered;
 }
 
 async function invertVisibility(vm: TauriVM) {

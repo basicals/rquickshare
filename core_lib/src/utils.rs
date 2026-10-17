@@ -16,8 +16,6 @@ use sha2::Sha256;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use ts_rs::TS;
 
-use crate::CUSTOM_DOWNLOAD;
-
 #[derive(Debug, Clone, Deserialize, PartialEq, Serialize, TS)]
 #[ts(export)]
 #[allow(dead_code)]
@@ -225,20 +223,6 @@ pub fn gen_random(size: usize) -> Vec<u8> {
 }
 
 pub fn get_download_dir() -> PathBuf {
-    match CUSTOM_DOWNLOAD.read() {
-        Ok(guard) => {
-            if let Some(path) = guard.as_ref() {
-                return path.to_path_buf();
-            }
-        }
-        Err(poisoned) => {
-            warn!("CUSTOM_DOWNLOAD lock is poisoned; recovering the stored path");
-            if let Some(path) = poisoned.into_inner().as_ref() {
-                return path.to_path_buf();
-            }
-        }
-    }
-
     if let Some(user_dirs) = directories::UserDirs::new() {
         if let Some(dd) = user_dirs.download_dir() {
             return dd.to_path_buf();

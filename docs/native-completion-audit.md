@@ -1,0 +1,128 @@
+# Native completion audit and next everyday UI slice
+
+Current checkpoint2026-10-17: native21 is installed. The single toolbar/device
+drawer and the requested tray position/visibility countdown checks are user-
+accepted. The dated analysis below records earlier source milestones; native12
+is superseded as the installed candidate. Remaining essential peer, failure,
+desktop lifecycle and signed-release gates are listed in
+[mainline integration](native-mainline-integration-2026-10-17.md) and
+[essential priorities](native-essential-priorities.md). Full Google parity is not
+accepted, and previews remain excluded.
+
+2026-10-16. Mode A, direct dev. Guide: /home/morozhenko/.codex/AGENTS.md,
+sections3/3.1/11/12/13. User requested continuing implementation and an honest
+assessment of whether basic features and UI are complete. No installation,
+physical peer, account/cloud call, package rebuild or runtime change in this audit.
+
+## Plan and actual audit
+
+1. [x] A1: inspect the continuation index/roadmap, current GTK menus/settings,
+   typed state/settings projections, runtime visibility application and actual
+   native ingress gates. Separate source support from installed/peer acceptance.
+2. [x] A2: document readiness and remaining work. Correct the old native7 release
+   paragraph and obsolete roadmap continuation markers; retain dated evidence.
+3. [x] A3: record the significant UI/API alternatives before code; user selected
+   option1, daemon-owned live visibility and quick controls.
+4. [x] A4: [contract and measured source checks](native-live-visibility.md)
+   cover current policy, intent/retry/reconnect and GTK/tray controls. Source
+   implementation, native9 offline verification and exact artifact export are complete.
+
+Rollback of this audit is documentation only. Native8 artifacts remain immutable;
+no unaffected Rust/GTK/package checks are repeated for a documentation change.
+
+## Active scope update — 2026-10-16
+
+The user excluded previews and requested only necessary work. Follow
+[essential priorities](native-essential-priorities.md) before the broader inventory
+below: ordinary peer interoperability, safe failures/retry, installed tray/card,
+desktop entry points, then install/update lifecycle. Resume, accounts/trust/QR and
+advanced payloads are deferred. This does not revoke existing input/file safety.
+
+## Readiness matrix
+
+| Area | Implemented source | Still missing implementation | Separate acceptance |
+|---|---|---|---|
+| Manual sharing | Native file/folder selection, multiple files, explicit1..10 recipients via daemon-owned queue/results, PIN/Accept/Reject, progress/cancel, per-file atomic receive publication and explicit retained-file partial results; core BLE/mDNS and LAN upgrade paths | Full advanced-payload/peer parity is not achieved | Current native12 with real Android/Google Windows; radio failure/large files/interruptions |
+| Text and clipboard | Outbound text/URL and explicit clipboard capture; reviewed immutable PNG image source; incoming text/URL review and explicit Copy | Complete Remote Copy negotiation/peer semantics; native Wi-Fi/app completeness | Current peer/clipboard/portal behavior on installed desktop |
+| Native shell | Rust daemon + authenticated typed D-Bus + GTK4 Layer Shell card/tray, Full/Compact, menu/navigation, consent details and terminal states; live visibility/quick actions | Localization; durable user-facing history/polish | KDE/Wayland near-clock positioning, focus/lock/DND/scaling/accessibility and tray/menu rendering |
+| Settings and desktop | Daemon-owned Settings2/schema2, migration/recovery, live name, receive-directory capability, opt-in daemon+tray login start and Dolphin Send assets | Broader desktop/share-target integration is not complete | Installed context menu, autostart, restart, upgrade/removal, recovery and live-transfer behavior |
+| Preview images — excluded | Bounded byte ingress, real isolated Glycin/Bwrap helper, bounded pixels/cancel/deadline/reaping, synthetic Full/Compact fixture | No further implementation in the active scope; historical foundations retained | Not an essential-release acceptance gate; fixture is not peer evidence |
+| Resume/dedup | Modern wire fields only | Content identity, safe partial storage/integrity/recovery and actual negotiation | Interrupted transfers against supported peers |
+| Other payloads | Modern proto fields and some core/legacy parsing | Streams, complete Wi-Fi/app/sensitive-content behavior | Versioned capability matrix and physical peers |
+| Trust/account/platform parity | Bounded token/role/certificate verifier; production certificate source explicitly empty | Supported Google certificate acquisition/rotation, remembered trust/auto-accept, Contacts/Your devices, compatible QR and Apple transport work | Supported account authorization and applicable real platform paths |
+| Distribution | Native12 uninstalled Ubuntu26.04 amd64 package/unsigned APT/public unapproved request; source export verified; HTTPS/R2 and local signer/recovery tooling | First approved signed publication and scoped publisher access; ARM64/other package formats remain open | Installed updates/uninstall and actual signed public APT consumption |
+
+Basic manual workflows and a substantial native shell exist in source. Neither
+"all basic functionality is release accepted" nor "UI is finished" is supported.
+Old core/legacy physical observations do not validate the current native package.
+Native12 is locally verified and uninstalled, not a replacement already installed
+on the user's desktop. No percentage estimate or full Google compatibility claim.
+
+The shell already uses GTK/theme-relative CSS; do not list all dark/system styling
+as nonexistent merely because the old roadmap has a polish bullet. Locale strings
+are currently fixed English. The daemon retains in-memory transfer rows; do not
+call the Transfers page a completed persistent history product. Background consent
+notifications exist and should not be listed as wholly missing either.
+
+## Selected visibility scope: pre-implementation analysis and decision
+
+At A1 (before the selected implementation), the core owned expiry and exposed
+read-only VisibilityReader. Then-current
+native StateView/Manager2 has no live mode/deadline projection. SettingsView has
+the saved visibility intent, not the current expired policy. The GTK editor has
+a visibility dropdown; the native DBusMenu/GTK menu has no visibility action.
+Therefore a user can configure temporary visibility but the shell cannot display
+its authoritative expiry state. Do not use saved Temporary as proof of currently
+visible transport or add a GTK-owned expiry policy to hide that gap.
+
+Relevant source: core_lib/src/visibility.rs, service/runtime.rs,
+service/settings_service.rs, service/client/state.rs, native_desktop/src/panel/
+settings.rs, menu.rs, tray.rs and native_desktop/src/tray/menu.rs. This is an
+everyday UI gap that can progress without guessing undocumented preview bytes.
+
+| Option | Description | Advantages | Costs / risks |
+|---|---|---|---|
+| 1 — daemon visibility facade, recommended | Publish actual core policy through an authenticated typed facade; card/tray consume it and send explicit visibility intent commands. The existing daemon settings writer remains sole persistence owner and the core remains sole deadline owner. Add the three existing modes to quick controls. | Same source for all surfaces; expiry/reconnect is observable; UI does not orchestrate saved-versus-current policy or own timers. Explicit command identity can prevent retry from renewing a window. | New IPC/API and coordinated daemon/client/GTK/menu implementation; persistence/live-apply failure and stale command behavior need a frozen contract. Policy acceptance still does not prove on-air withdrawal. |
+| 2 — GTK orchestrates existing settings saves | Add quick controls that read/edit/save Settings2 in the GTK client, plus a read-only live status projection. Reuse current settings error/recovery handling. | Reuses the existing save path and fewer daemon command surfaces. Persistent mode intent has the same writer. | Presentation must coordinate current state, saved revisions, retry and explicit Temporary renewal; conflicts/expiry/reconnect logic can drift between settings, card and tray. A plain repeated save currently intentionally does not renew Temporary, so it is insufficient by itself. |
+
+Recommend1 for ownership, correctness and maintainability. Scope uses Visible,
+Hidden and the already selected one-minute mode; it does not introduce Google
+account visibility, a new duration or automatic transfer acceptance. Quick-mode
+intent should use the same saved-mode/startup semantics as explicit Settings
+selection, while current expiry stays separate. Exact durable-write/live-apply,
+failure, replay and renewal semantics must be frozen at A4 before implementation.
+Do not silently replace settings authority or reopen an expired mode on unrelated
+saves. No second expiry clock or radio-success claim from the GUI.
+
+The user selected option1. Implementation follows native-live-visibility.md. This is a new slice;
+the already selected Glycin decoder boundary must not be asked again.
+
+## Current continuation order
+
+Use [essential priorities](native-essential-priorities.md), which supersedes the
+previous preview/resume/account expansion sequence. Existing live visibility and
+multi-recipient source/package work is complete; verify current peer/desktop use
+and fix concrete reliability/lifecycle defects first. No new preview work is
+planned. Release signing/publication remains separately approved.
+
+Actual checks: repository/source inspection and documentation link/whitespace
+verification only. No new tests/builds or external services were needed. Owned
+inspection commands exited; Terminal closed.
+
+
+2026-10-16 continuation: the private defensive preview routing fix is complete in
+source, outside native9 binaries; full codec/mapping/IPC/display remains open.
+The next independent parity decision is [multi-recipient ownership](native-multi-recipient-review.md),
+option1 selected and source implementation complete. Atomic admission, exact
+retry and GTK recipient selection/status are verified in scoped offline checks;
+corrected native11 package/visual review passed. See the feature SSOT for actual
+evidence; native10 is a preserved superseded intermediate.
+
+
+2026-10-16 essential receive follow-up: selected per-file publication is implemented
+with anonymous Linux staging, size/sync/no-overwrite completion, retained published
+members and terminal partial file capability/GTK projection. Core653 initial
+652/1 old-contract assertion, corrected pinned-root1/0, SDK1/0, final directory-sync
+1/0 and native39/0 plus strict lints are recorded in
+[native-receive-reliability.md](native-receive-reliability.md). Physical peer/desktop
+acceptance and detailed platform/storage coverage remain separate.

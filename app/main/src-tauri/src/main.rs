@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate log;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{atomic::AtomicBool, Mutex};
 
 use anyhow::anyhow;
 
@@ -28,9 +28,7 @@ use crate::logger::set_up_logging;
 use crate::notification::{
     send_finished_notification, send_request_notification, send_temporarily_notification,
 };
-use crate::store::{
-    get_download_path, get_port, get_realclose, get_visibility, init_default, set_visibility,
-};
+use crate::store::{get_realclose, get_visibility, init_default, set_visibility};
 
 mod cmds;
 mod logger;
@@ -40,11 +38,12 @@ mod store;
 pub struct AppState {
     pub message_sender: broadcast::Sender<ChannelMessage>,
     pub dch_sender: broadcast::Sender<EndpointInfo>,
-    pub visibility_sender: Arc<Mutex<watch::Sender<Visibility>>>,
+    pub visibility: rqs_lib::VisibilityReader,
     pub foreground_sender: watch::Sender<bool>,
     pub sender_file: mpsc::Sender<SendInfo>,
     pub ble_receiver: broadcast::Receiver<()>,
     pub rqs: Mutex<RQS>,
+    pub visibility_recovered: AtomicBool,
 }
 
 #[tokio::main]
@@ -70,6 +69,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .invoke_handler(tauri::generate_handler![
             cmds::change_download_path,
             cmds::change_visibility,
+            cmds::get_receiving_status,
             cmds::save_clipboard_image,
             cmds::remove_ephemeral_file,
             cmds::start_discovery,
@@ -81,13 +81,21 @@ async fn main() -> Result<(), anyhow::Error> {
             cmds::send_to_rs,
         ])
         .setup(|app| {
+            #[cfg(target_os = "linux")]
+            app.manage(rqs_lib::service::process::LaunchGuard::acquire(
+                &rqs_lib::service::process::runtime_directory()?,
+            )?);
+            // Validate the source before the store plugin can ignore a load error.
+            let settings = store::startup_settings(app.app_handle())?;
             // Setting up logging inside file for the app
             set_up_logging(app.app_handle())?;
 
             debug!("Starting setup of RQuickShare app");
 
             // Initialize default values for the store
-            init_default(app.app_handle());
+            if !settings.visibility_recovered {
+                init_default(app.app_handle());
+            }
 
             // Initialize system Tray
             let name = MenuItemBuilder::new("RQuickShare")
@@ -129,9 +137,10 @@ async fn main() -> Result<(), anyhow::Error> {
             let _ = tray.set_icon_as_template(true);
 
             // Fetch initial configuration values
-            let visibility = get_visibility(app.app_handle());
-            let port_number = get_port(app.app_handle());
-            let download_path = get_download_path(app.app_handle());
+            let visibility = settings.visibility;
+            let port_number = settings.port;
+            let download_path = settings.download_path;
+            let visibility_recovered = settings.visibility_recovered;
 
             let app_handle = app.app_handle().clone();
             // This is not optimal, but until I find a better way to init log
@@ -151,11 +160,12 @@ async fn main() -> Result<(), anyhow::Error> {
                     app_handle.manage(AppState {
                         message_sender: rqs.message_sender.clone(),
                         dch_sender: broadcast::channel(10).0,
-                        visibility_sender: rqs.visibility_sender.clone(),
+                        visibility: rqs.subscribe_visibility(),
                         foreground_sender: rqs.foreground_sender.clone(),
                         sender_file,
                         ble_receiver,
                         rqs: Mutex::new(rqs),
+                        visibility_recovered: AtomicBool::new(visibility_recovered),
                     });
 
                     Ok::<(), anyhow::Error>(())
@@ -267,21 +277,15 @@ fn spawn_receiver_tasks(app_handle: &AppHandle) {
     let capp_handle = app_handle.clone();
     tauri::async_runtime::spawn(async move {
         let state: tauri::State<'_, AppState> = capp_handle.state();
-        let mut visibility_receiver = match state.visibility_sender.lock() {
-            Ok(sender) => sender.subscribe(),
-            Err(_) => {
-                error!("visibility sender lock is poisoned");
-                return;
-            }
-        };
+        let mut visibility_receiver = state.visibility.clone();
 
         loop {
             let rinfo = visibility_receiver.changed().await;
 
             match rinfo {
                 Ok(_) => {
-                    let v = visibility_receiver.borrow_and_update();
-                    let _ = set_visibility(&capp_handle, *v);
+                    let visibility = visibility_receiver.current_and_update();
+                    let _ = set_visibility(&capp_handle, visibility);
                 }
                 Err(_) => {
                     debug!("visibility_receiver closed");

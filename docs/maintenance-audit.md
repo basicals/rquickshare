@@ -1,8 +1,443 @@
 # rQuickShare maintained fork — audit and Mode B hardening
 
-_Last updated: 2026-10-06_
+## 2026-10-13: standard native tray menu completed
+
+[native-tray-menu.md](native-tray-menu.md) completes the previously accepted
+secondary tray actions. Fixed /Menu DBusMenu export uses no transfer/source/private
+metadata; actual caller UID, FD/cardinality/input bounds and current enabled state
+are checked. Ordered bounded actions go to existing checked GTK handlers, including
+temporary Full/Compact, settings and local Quit. No tray consent/save/daemon-stop
+authority. Group rejection reports every undispatched event ID; no false success.
+Desktop lock disables sensitive actions; unlock immediately recomputes readiness.
+
+All 20 native methods passed (0.55s), with affected-only reruns for later fixes;
+final strict native Clippy/build passed. Two new methods primarily cover N1/N7,
+plus enhanced real watcher and single GTK smoke. The preview adapter no longer
+calls Layer Shell functions on an ordinary Xvfb window. Actual Plasma menu/focus/
+placement remains a physical gate. Existing dependency/feature/DRI3 warnings are
+separate. Private tasks/brokers/displays exited. Terminal closed.
+
+No live installation/registration/configuration changes, push or branch creation.
+Next native gaps: clipboard/text/reveal, autostart/updates and package equivalence;
+real Google exchanges/full parity remain pending. Earlier tray gap entries are historical.
+
+## 2026-10-13: native settings and receive authority completed
+
+Accepted 1/A is implemented; see [native-settings.md](native-settings.md) for the
+staged contracts, rationale, rollback, fault inventory and actual checks. The daemon
+is sole writer of separate private native configuration; original legacy data and
+unknown source fields remain preserved. TCP/BLE requests snapshot owner-local
+receive policy, then retain directory authority through consent and creation.
+No process-global receive setting or late mutable root lookup remains.
+
+Settings1 and GTK expose explicit save/import/recovery/retry, saved/applied/restart
+state, and persistent card preference. A damaged configuration or failed transport
+startup retains an editable Stopped service without starting radio discovery.
+Restart rejects preparations, live leases and pending settings writes, then closes
+session admission atomically and joins the previous generation. No source replay.
+
+Full core command passed: 532 unit/export and 8 integration methods. Native 18
+methods passed, with affected-only reruns after fixes; strict core/native Clippy,
+native build and format/diff passed. Twenty-three new scoped methods across this
+settings slice: Positive 2, N1 1, N2 1, N4 2, N5 6, N6 4, N7 5, N9 1, N12 1
+by primary purpose; secondary privacy/network/interruption coverage is in SSOT.
+No Mode B exhaustive/ten-run or physical-device claim. Existing dependency/feature
+warnings are recorded separately. All private processes were joined.
+
+No user migration, install, autostart registration, push or branch creation.
+Native clipboard/reveal, tray dropdown, autostart/updates/package equivalence and
+real KDE/Google acceptance remain pending. Prior review/pending entries are historical.
+
+## 2026-10-13: native settings ownership review prepared
+
+The next native gap is persistent settings and in-app visibility recovery. GTK
+currently retains only Appearance mode in process; the daemon reads legacy settings
+but offers no native write/reload contract. The accepted recovery UX still forbids
+manual JSON repair. [native-settings-review.md](native-settings-review.md) maps
+actual owners and proposes 1/A (recommended): the existing daemon is the sole writer
+of a versioned native store with typed edits/acknowledgement. Alternative 2/B is an
+independent per-user settings service. This is a new persistence/API decision;
+notification option A did not approve it. Await selection before settings code.
+
+The review also identifies process-global CUSTOM_DOWNLOAD as incompatible with
+owner-local settings and pinned receive authority; its substantial refactor is
+included in the proposal, not silently implemented. The narrow independent privacy
+fix is complete: both download setters now log fixed categories instead of paths.
+Strict core library Clippy (4.61s), core/Tauri format and diff checks passed once.
+No fresh suite/runtime/device claim, user settings access, migration or install.
+Continue on dev. Earlier checkpoints below are historical.
+
+## 2026-10-13: daemon-owned custom-card delivery implemented
+
+The user accepted A/option 1, the daemon notice read model. All source milestones
+N1-N5 in [native-notification-backend.md](native-notification-backend.md) are complete:
+epoch-local bounded notices, immutable Notifications1 reads, exact dismissal,
+canonical GTK presentation, keyed rows, fixed package GUI activation, finite CLI
+error codes, unavailable backend and explicit joined reconnect. No implicit Send,
+consent, source replay or system-notification takeover. Dismissal cannot affect a
+newer round. Same-generation failure/Quit does not create a respawn loop.
+
+Actual verification: 219 core service methods passed, then two affected wake methods
+passed after the native-future lint fix/additional blocked-bus integration; 15 native
+methods passed, followed by three affected policy/widget methods. Final strict
+core/native Clippy, both builds, format/diff and XML/activation-asset checks passed.
+Ten new methods by primary purpose: N2=1, N3=3, N4=1, N5=3, N7=2. Combined inventory
+535 is not a fresh whole-suite/coverage claim. Six compiled inert previews were
+regenerated; physical KDE/Google acceptance is not implied.
+
+No install/push/live registration, legacy settings write or Tauri retirement.
+Remaining: installed package startup/upgrade/removal and KDE lock/DND/focus/scale;
+durable native settings, separate tray dropdown, clipboard/reveal/autostart/updates
+and actual Google parity. Registry survives GTK restart only within its daemon epoch.
+Earlier dated checkpoints and pending choices below are historical. Continue on dev.
+
+## 2026-10-13: custom Full/Compact card and desktop safety implemented
+
+The user selected fully custom rQuickShare cards with Full/Compact modes and
+secondary settings/right-click actions. C1/C2 in
+[native-custom-card.md](native-custom-card.md) are implemented in commits
+72ca702 and f09671e. Compact is the initial mode; Full retains recipient choice,
+incoming review and transfers. Header/card right-click menus share checked actions;
+Appearance settings retain the mode for the current GTK process only. Tray
+ContextMenu currently opens the panel; a separate tray dropdown is not implemented.
+
+While GTK runs, bounded presentation policy observes current daemon requests and
+new completion/error transitions. Read-only KDE lock/DND monitors pin same-UID
+owners and reject stale replies. Unknown lock hides sensitive surfaces; automatic
+cards also require known DND-off. Dismissal never answers consent or cancels work.
+
+Observed: all 13 native methods passed once, followed only by checks affected by
+later fixes; final strict native Clippy/build/format/diff passed. Four new methods
+primarily cover N5 (2), N3 (1), N7 (1), with secondary edge/privacy tables. Current
+core/native inventory is 525, not a fresh whole-suite run or coverage measurement.
+Six compiled inert previews show both modes; they do not prove KDE compositor,
+lock/focus/scale behavior or interoperability. No live installation, push, daemon/
+transport/core API change, legacy settings write or Tauri retirement in this slice.
+
+C3 remains pending: closed-GUI delivery, cross-GTK notice recovery/dismissal and
+visible backend-unavailable Dolphin errors. The next significant decision is
+[native-notification-backend-review.md](native-notification-backend-review.md):
+recommend A, a bounded daemon notice read model coherent with captured transfer
+state; B uses a supervised renderer and private acknowledged IPC. No C3 production
+code precedes this new API/data-model/process decision. Keyed GTK row updates are
+also required before final focus/expansion acceptance. Durable settings,
+clipboard/reveal/autostart/updates/packaging and actual Google parity remain open.
+Earlier dated checkpoints below are historical, including their pending choices.
+
+## 2026-10-13: GUI-owned CLI import and Dolphin source assets
+
+The user delegated ingress ownership selection to architectural quality. Option 1
+is implemented: CLI acquires read-only descriptors; authenticated bounded Desktop1
+imports into the panel's existing SDK connection. Interrupted replies replay the
+same import; committed preparation survives CLI disconnect. Invocation never sends.
+The chooser and CLI share one preparation gate, preserving an existing selection.
+CLI cold start is driven by broker ownership/child exit. No implicit daemon startup.
+
+[native-desktop-ingress.md](native-desktop-ingress.md) records invariants, rollback
+and actual verification: 43 affected core client methods passed; nine native methods
+passed, followed by one affected startup-fixture rerun; strict lint/build/format
+passed. Combined test inventory is 521, not a whole-suite execution. Source-only
+Dolphin metadata has static/KConfig validation and an explicit package lifecycle.
+No live install/registration, push, settings changes or Tauri retirement.
+
+Native notifications and visible nonterminal CLI errors are the next release gate;
+[native-notification-review.md](native-notification-review.md) records the pending
+incoming-action UX choice. Settings, clipboard/reveal/autostart/updates/packaging,
+physical KDE placement and actual Google peer parity remain unfinished. Historical
+checkpoints below describe their dated state, not current authorization.
+
+
+## 2026-10-12: uninstalled native GTK tray shell implemented
+
+[native-gtk-shell.md](native-gtk-shell.md) records the separate pinned GTK4 crate,
+actual complete-view/controller bindings, tracked local chooser acquisition,
+explicit send/consent/cancel/discard/recovery and hide/quit ownership. Tray uses
+shared hardened SDK framing, real broker UID checks, pinned watcher ownership and
+coalesced hints. No automatic ordinary-window fallback. Three compiled previews
+are 420x498; physical KDE placement/scale/focus remains unproven.
+
+Seven new methods passed across scoped initial/corrected/affected runs; fourteen
+existing SDK methods passed after shared framing extraction. Final core and native
+strict Clippy passed. Full core inventory 504 plus native 7 = 511, not a fresh
+whole-511 run. See SSOT for the observed failed link/fixture and corrections.
+No install, live tray/daemon/settings changes, push or Tauri retirement. Work stays
+on dev; upstream tracking refs remain as requested. All owned processes exited.
+Terminal closed.
+
+Next: choose the new context-menu import/selection ownership contract in
+[native-desktop-ingress-review.md](native-desktop-ingress-review.md). Existing
+accepted daemon selection ownership does not authorize a bare CLI token handoff.
+No new GUI ingress or ownership transfer is implemented before selection.
+Notifications, settings/Dolphin/package and actual Google parity also remain.
+
+## 2026-10-12: bounded native panel controller implemented
+
+[native-panel-controller.md](native-panel-controller.md) records one dedicated SDK
+worker, eight queued actions, coalesced complete views and exact preparation/
+mutation recovery. Choose never sends; explicit Send does. Hide is independent of
+controller close; accepted transfers survive it. Native controls refresh current
+matched details before admission. Seven private-broker checks passed across the
+initial six-case run and one added abort case. Core Clippy/format/diff passed.
+Continue GTK adapter/placement and notifications; no live UI/registration yet.
+
+## 2026-10-12: complete native Manager2 view implemented
+
+The user selected option 2 and confirmed there are no old native clients. Manager2
+replaces unpublished Manager1 in daemon, client and XML; no compatibility adapter.
+[native-complete-view.md](native-complete-view.md) is authoritative for ordered
+sender/files/PIN/progress, immutable manifests, complete bounded captures and
+safe native acceptance. Prior pending-choice/Manager1 summaries below are historical.
+
+Measured full run: 488 unit/export + 8 integration passed; final round-reset
+change passed 32 affected session tests. Current inventory 497, not a fresh whole-
+497 run. Strict core/desktop Clippy, format and diff checks passed. No installation,
+push or user-session changes. Continue native panel/controller integration; GTK
+clock placement, notifications, settings/Dolphin/package and physical Google parity
+remain unfinished. Terminal closed.
+
+## 2026-10-12: native GTK widget preview and detail-contract review prepared
+
+Client projections/controls are committed as `cb1b0d3`. Work continued into an
+actual GTK4 widget prototype: three 420x497 native captures were parsed/rendered
+under owned private broker/Xvfb, with temporary extracted GI typelibs. No package
+installation/user-session changes. [native-desktop-details-review.md](native-desktop-details-review.md)
+records the prototype, reproduction and the next required public-contract choice.
+
+Current Manager1/SessionSnapshot have no sender/files/PIN/progress. The legacy
+TransferMetadata contains these and private destination/text fields, but separately
+bridging its broadcast would break ordered/recoverable native state. Recommend
+additive focused typed detail reads (option 1); option 2 is a complete Manager2
+immutable view with a larger migration/cache contract. Await selection under
+AGENTS 3/3.1 before new schema/live consent presentation. No blind accept or invented
+verification data. Graphical examples are marked Preview, not live functionality.
+
+Source inspection also exposed seven normal logs with device/file/PIN/consent
+metadata. Fixed diagnostic messages now replace those identified disclosures;
+transfer logic is unchanged. Strict library Clippy and format/diff passed; no
+redundant protocol test loop. This is not a whole-repository privacy audit. Review
+utility compiles; three native images visually inspected. A preview-only broker
+configuration prevents portal/helper activation; all three captures were rerendered
+after that isolation change. Logged initial helper PIDs were verified exited. All owned processes
+exited. Native executable UI/placement, notifications, settings, Dolphin/package
+activation and physical Google parity remain unfinished. Terminal closed.
+
+## 2026-10-12: native client projections, invalidations and controls implemented
+
+Plan frozen before code in `ea0840b`; [native-client-state.md](native-client-state.md)
+records checked immutable pages, one owned continuously drained/coalescing signal
+pump, sticky daemon replacement and exact existing consent/cancel/discard methods.
+It avoids zbus subscription backpressure blocking replies, partial view publication
+and source-owning request loss. Same-UID transfer controls are not bound to the
+originating client. Cancellation admission remains distinct from terminal closure.
+
+12 new checks; all 190 affected service tests passed. One changed cleanup assertion
+passed its targeted rerun; strict core/desktop Clippy, Rust format and diff checks
+passed. Current inventory 482; no fresh whole-482 run/ten-run claim. No dependencies,
+wire changes, activation, user-session/settings changes or physical peer proof.
+
+Continue with a reviewable native compact-panel prototype and bounded transfer
+metadata contract. The current coarse state has no sender/files/PIN/progress for
+safe consent presentation; do not fabricate those fields or ship blind accept.
+Terminal closed.
+
+## 2026-10-12: native operation client with automatic receipt acknowledgement
+
+Plan committed before production code in `6551265`;
+[native-client.md](native-client.md) records the isolated dedicated-connection SDK,
+actual broker/UID/unique-daemon/epoch validation and existing bounded transport.
+No wire additions or Manager1 fallback. Exact command/FD-batch state is retained
+before await; cancelled replies reconcile accepted progress on the same owner.
+Validated outcomes are recorded before automatic acknowledgement. Lost ack retries
+ack only, and a distinct AcknowledgementPending error preserves accepted-send
+semantics. Changed daemon never receives a replay of old pending work.
+
+14 new private-broker/validation regressions. Initial full affected service run:
+177 passed. An additional ack-disposition check found a missing error mapping;
+production mapping was corrected, final 14 client checks passed. Inventory is now
+470 core checks; no fresh whole-470 run is claimed. Core/desktop strict Clippy,
+Rust formatting and diff checks passed. Exact counts and actual observations are
+in the SSOT. No lock/version change, ten-run repetition or live user services.
+
+Next: native state projection/invalidation and consent/cancel adapters, then GTK
+tray/settings/notifications, Dolphin, packaging and physical Google parity. The
+new SDK is not an installed GUI and the old Tauri presentation remains current.
+Terminal closed.
+
+## 2026-10-12: bounded current-run history and ordered operations implemented
+
+The user selected retention option 1. Plan/contract frozen before code in
+`52b5347`, implemented in `8b0a4f7`; [native-retention.md](native-retention.md) records the additive seven
+Operations1 methods, 128 connection-owned receipts and cumulative acknowledgement
+watermark. Expired requests never execute again. Typed upload origins preserve
+legacy Manager1 behavior and prevent bypassing sequenced commit/abort receipts.
+Closed ordered upload metadata is reclaimed after acknowledgement; active selections
+and queued/active payloads survive it. Legacy replay references remain pinned.
+
+The serial runtime now records owner closure, identified outbound release and late
+control receipts before retiring oldest eligible history beyond 64. Terminal state
+alone cannot trigger retirement; missing/lost observations remain pinned. Shared
+revision changes invalidate new reads without changing immutable captured pages.
+No persisted journal, file deletion, higher FD/session limits or user cleanup step.
+The future native client still must perform reconciliation/acknowledgement itself.
+
+19 new tests; core inventory is now 448 unit/export plus 8 integration = 456.
+The full run passed, followed only by the 164 affected service tests after final
+compatibility refinements. Core and desktop strict Clippy, both Rust format checks,
+XML contract parsing and diff checks passed. Exact observations/category counts
+are in the implementation SSOT. No unchanged frontend checks or ten-run gate;
+no physical peers, installed services or user settings were changed. Terminal closed.
+
+Next: native client with automatic receipt acknowledgement and GTK tray/settings/
+notifications, Dolphin, packaging and physical Google compatibility. The older
+awaiting-retention-choice review below is historical and superseded.
+
+## 2026-10-12: continuous-service retention review prepared
+
+[native-retention-review.md](native-retention-review.md) analyzes the retained
+256-transfer/128-receipt limits and prepares the next new API/data-model choice.
+Recommended option 1 keeps 64 safely closed current-run terminal records in memory;
+option 2 persists bounded history in a local transactional journal. Both use a
+proposed additive ordered/acknowledged operation protocol so retired sequences
+cannot be executed again, while Manager1 replay contracts stay compatible. History
+cleanup requires owner closure and real reader release, not terminal phase alone.
+
+Await user confirmation of history lifetime under AGENTS sections 3/3.1 before
+changing behavior/wire contracts. No implementation, user-session change or test
+rerun in this review. The executable/recovery slice below remains the current code.
+
+## 2026-10-12: native executable and hidden visibility recovery implemented
+
+The user selected option 2 and rejected manual JSON repair. Plan committed before
+code in `823cf68`; [native-daemon-startup.md](native-daemon-startup.md) records
+shared bounded read-only settings, effective Hidden recovery with a durable warning,
+explicit legacy UI choices/save and persistence-before-core ordering. Failed save
+retains the warning/live mode and restores the cached field; automatic retries are
+disabled. Whole-file corruption still fails without resetting settings. Complete
+atomic settings migration/repair remains a separate gate.
+
+The native Linux executable reads prior settings, supports validation-only check,
+local Unix session addresses, fresh epochs, a shared exclusive owner guard and
+SIGINT/SIGTERM-driven joined cleanup. Updated Tauri/developer/native launchers share
+the guard. Manager1 now has 15 methods including fixed GetStartupWarnings. No native
+GTK client, installed activation/autostart, retention policy or peer claim was added.
+
+25 new checks. Actual complete/affected results, one corrected private-directory
+fixture assumption, compilation repairs and primary category counts are in the
+startup SSOT: current inventory 437 core, 10 desktop, 46 frontend. All affected
+checks and final strict Clippy/format/diff passed. No final one-call complete-suite
+or ten-run stability claim. Real owned process tests prove signals during waiting
+authentication and cleanup after an occupied-port startup failure; no live BlueZ/
+mDNS success or graphical/device behavior was tested. No user config/service was
+changed and no push/promotion occurred. Terminal closed.
+
+Next: continuous-service retention review, native client/GTK notifications/settings,
+Dolphin, package and physical Google compatibility. The previous privacy choice
+below is answered and superseded by this checkpoint.
+
+## 2026-10-12: native executable startup analysis
+
+[native-daemon-startup-review.md](native-daemon-startup-review.md) records the next
+executable plan and the existing outstanding visibility error decision. The old
+runner uses Visible defaults without desktop settings; an invalid stored unsigned
+visibility reaches a panic, while getter failures default to Visible. The daemon
+must preserve the old AppData store without writes/resets. Recommended option 1
+rejects invalid saved visibility before network startup; option 2 starts hidden
+with an explicit degraded-state warning. User confirmation is required for this
+privacy/product policy under AGENTS sections 3/3.1 and the existing diary.
+
+Analysis also confirms the legacy UI does not claim the native bus name; an
+independent shared launch guard is needed for the already accepted single-owner
+invariant. No production code, user settings, process/service or package was
+changed. No unchanged suite was rerun; this is not executable validation.
+
+## 2026-10-12: bounded native state reads and invalidations implemented
+
+The user selected stable snapshot pages (option 1). Plan/contract committed before
+code in `9546431`; [native-dbus-state.md](native-dbus-state.md) records exact typed
+signatures, view ownership, 16-record pages, checked 48-KiB bodies/64-KiB frames,
+fixed 512-KiB capture reservations and 8-MiB aggregate cache. Successful replacement,
+release, disconnect and close reclaim metadata without discarding transfers or
+receipts. StateChanged is directed only to authenticated clients and coalesced by
+the shared revision; effective discovery label/address updates now advance that
+revision before mutation. Fourteen Manager1 methods and one signal are implemented.
+
+18 new methods. The complete unit/export invocation passed 410/415 and exposed
+five test Signature-display assumptions; exact wire-form comparison corrected
+them. All 46 affected bus methods and four integration methods then passed. The
+369 unaffected methods were already green. One later notification-test ordering
+fence change passed its affected method. Final Clippy/format/diff checks passed.
+Inventory is 419 checks, with no claim of a final single 419-method full run or ten
+repetitions. The state SSOT preserves actual failures, outcomes, category counts,
+limits and rollback. No installed service/UI, hardware certification or remote run.
+
+Next: executable/process lifecycle, terminal/replay retention before continuous
+deployment, native client/GTK, Dolphin and actual Google peers. The older state
+contract choice below is answered; historical pending wire-state entries are
+superseded by this checkpoint. No new significant decision is made in this slice.
+
+## 2026-10-12: native D-Bus send and transfer controls implemented
+
+[native-dbus-controls.md](native-dbus-controls.md) records the plan committed before
+code (`7527abd`), additive Manager1 fixture and verification. DiscardSelection,
+SendSelection, Respond and Cancel now delegate through the same serial authenticated
+adapter into the existing coordinator/runtime. Selected files are never reopened
+by path; explicit send moves ownership to the service; control replies acknowledge
+admission rather than core processing or peer completion. No new trust, consent,
+retention, settings or UI policy was introduced.
+
+One full core run passed **397 unit/export + 4 integration = 401**, including eight
+new regression methods. Final Clippy, formatting and diff checks passed. Tests
+include actual private-broker send/replay/disconnect, foreign selection rejection,
+accept/reject intent preservation and another same-UID panel cancelling queued
+work; wire-level unit checks cover signatures/FDs/tokens, capacity and uncertainty.
+Measured results and category counts are in the control SSOT. No package install,
+live registration, hardware run, push or master promotion occurred. Terminal closed.
+
+Next: concrete bounded snapshot/discovery/invalidation contract; executable,
+continuous-service retention, native GTK panel and Dolphin. The old five-method-only
+checkpoints below are historical; the current Manager1 exposes nine methods.
+
+The concrete next public API choice is recorded in
+[native-dbus-state-review.md](native-dbus-state-review.md): stable bounded typed
+snapshot pages (recommended option 1) versus a larger bounded complete JSON reply
+(option 2). It addresses aggregate state exceeding a symmetric 64-KiB message,
+read consistency, cache ownership and invalidation. Implementation awaits the
+user's choice under AGENTS sections 3/3.1; no old architecture approval is pending.
+
+
+## 2026-10-12: transactional native D-Bus selection ingress implemented
+
+The user chose the architecturally preferred option 1 from [native-dbus-selection-review.md](native-dbus-selection-review.md). [native-selection-transactions.md](native-selection-transactions.md) records the frozen Manager1 methods, owner-bound preparations, atomic commit/replay, shared aggregate quotas, safe CLOEXEC receipt and predecode frame/FD limits. A serial same-UID zbus adapter now hosts the retained native runtime and joins it on requested stop/bus loss. Exact per-caller disconnect subscriptions avoid unrelated session traffic; all broker authority replies are sender-checked. The library does not register itself on the user's bus or replace the UI.
+
+35 new regression methods. One full local run passed **389 unit/export + 4 integration = 393**; the later fixture-only relocation passed all 22 affected bus methods. Final Clippy/format/diff passed; no-default-features compiled with the 9 existing inactive-feature warnings. Actual outcomes, the corrected serializer test assumption, source FD cleanup proof, category counts, rollback and remaining work are recorded in the selection SSOT. CI test jobs now declare their private-broker prerequisite; no remote CI/package/hardware run is claimed. No user package install, system policy, live service registration, push or master promotion.
+
+Next: remaining snapshot/discovery/send/control wire methods and native executable; bounded retention review before continuous deployment; approved GTK clock-area chooser and Dolphin ingress; physical Google compatibility. Earlier pending-D-Bus statements below are historical and superseded by this entry.
+
+## 2026-10-12: native coordinator/core runtime implemented
+
+[native-core-runtime.md](native-core-runtime.md) records the completed serial coordinator/core mapping, bounded pending dispatch, discovery-only routes, truthful consent processing receipts and awaited shutdown. [native-core-events.md](native-core-events.md) records ordered bounded TCP/BLE lifecycle events and readiness without polling. Startup retains its owner across cancellation; shutdown closes admission before adopting buffered inbound sessions. The legacy Tauri app remains unchanged. Runtime implementation: `c7674e8`; ordered events/admission: `fb316c2`. The next new public D-Bus selection choice is recorded in [native-dbus-selection-review.md](native-dbus-selection-review.md); no bus contract is implemented before that choice.
+
+28 regression methods added. One completed full core run passed 350 unit/export plus 4 integration tests; final runtime changes passed 23 affected methods. Final Clippy/format/diff checks passed; no-default-features compiled with 9 existing inactive-feature warnings. Current inventory is 354 unit/export plus 4 integration, with no claim of one final-source 358-method run. Full measured details and remaining physical/API/UI gates are in the runtime handoff. No daemon registration, system install, push or master promotion occurred. Older pending-runtime statements below are historical checkpoints superseded by this entry.
+
+_Last updated: 2026-10-12_
+
+## Native coordinator continuation — 2026-10-12
+
+The user superseded development repetition requirements: one appropriate verification run, no ten-run loop or redundant polling. Global AGENTS section 12 records this preference. Previous measured repetitions remain in their original verification sections.
+
+The accepted native service design now has a reusable Linux coordinator: caller-owned unsent selections, service-owned queued/active sends, bounded aggregate outbound-source reservations including sender duplicates, per-client idempotency, revisioned snapshots/consent, cancellation acknowledgement and draining. A terminal event cannot release admission quota while a worker still holds the original payload. Core event loss pauses sends/consent and remains explicit after reconnect; no invented resynchronization. This is internal state logic, not an activated daemon or authenticated IPC endpoint.
+
+Plan, complete scoped inventory, 53-method index, category counts, results and next adapter gates are in [native-service-coordinator.md](native-service-coordinator.md). One full core run passed (233 unit/export + 4 integration tests), with format/Clippy and diff checks passing. Existing desktop/frontend/analyzer code was unchanged and its suites were not repeated. No physical compatibility or clock-area UI acceptance is claimed. No live service, package registration or system settings were changed.
+
+Follow-up core inspection found outbound errors correlated to the network address instead of the request ID. The bounded correction uses one outbound failure builder, preserves metadata and terminal outcomes, and passed one targeted manager invocation (9 tests, 3 new). The user then approved the substantial TCP supervision refactor. The manager now bounds and joins its TCP workers, keeps accept responsive during outbound transfers, reserves BWU classifiers and cancels pending/active work on shutdown. [native-transfer-supervision.md](native-transfer-supervision.md) records 26 new scenarios, actual execution results including one corrected FIN/RST test assumption, and two real-manager text transfers. The [managed dispatch slice](native-managed-dispatch.md) now implements native outgoing cancellation, queue-closure health input and partial-start rollback. One full core run passed 288 tests, followed by 44 affected manager tests after the final fairness correction; format/Clippy passed. Common inbound consent processing acknowledgement is now implemented in [native-session-controls.md](native-session-controls.md); the live coordinator/core adapter remains pending. No live daemon or Google parity claim.
 
 This document is the working log for the `morozhenko-apps/rquickshare` maintenance pass. It is intentionally kept separate from release notes: it tracks audit scope, upstream triage, CI gates, fixes, and the final Mode B verification before fast-forwarding `dev` into `master`.
+
+Native continuation checkpoint: TCP supervision `ee2139a`, managed outgoing dispatch/startup rollback `2354c1d`. The user approved option 1 in [native-session-control-review.md](native-session-control-review.md). The [common session controls](native-session-controls.md) now provide fresh capabilities and owned consent/receipts for TCP and BLE, bounded joined GATT tasks and cancel-safe stale BWU-route pruning. Its 42 new methods and exact full/affected execution observations are recorded in the verification section. No new permission is pending for this completed slice; live service/API/UI and hardware parity gates remain open.
+
+The 2026-10-12 offline continuation, recovered diary references, implementation plan and validation results are recorded in [offline-maintenance.md](offline-maintenance.md). Dated hardware evidence remains in [mode-b-inventory.md](mode-b-inventory.md).
+
+The subsequent user correction establishes the native tray/notification-area redesign, Tauri migration following NativePair and full Google parity as the target. See [product-direction.md](product-direction.md); maintenance completion does not complete that goal.
 
 ## Current CI policy
 
@@ -16,10 +451,12 @@ This document is the working log for the `morozhenko-apps/rquickshare` maintenan
 
 ## Current gate status
 
-The Pixel/BLE foundation and the current Full Quick Share work are consolidated on `dev`. PR #2 and PR #3 were merged into `dev` during the two-branch cleanup; the old `dev -> master` PR #1 was closed without changing `master`. Hardware smoke and the final Mode B gate still block promotion to `master`.
+Offline continuation (2026-10-12): all four suites passed ten consecutive local runs on final implementation `2051314` (122 core + 8 desktop + 41 frontend + 25 analyzer checks per iteration), after an earlier loop on `29c3dc8`. Fresh line measurements are core 48.05%, desktop 21.31% and frontend 54.69%, with measurement limits and ten caught analyzer mutations recorded in `offline-maintenance.md`. Physical-device completion, broader Mode B review and final promotion remain open.
 
-- Current feature preflight is green after the mutation-driven BWU test hardening and CI cleanup.
-- Linux debug `.deb` package smoke is green on application code head `a1b96b7` (run `37474172562`); all later changes before this documentation update are tests/CI only, so the packaged application code is unchanged.
+The Pixel/BLE foundation and current Full Quick Share work are consolidated into the maintained two-branch workflow. On 2026-10-07 the user explicitly requested an **interim snapshot** fast-forward of `dev` at `0bc9b50` into `master` (400 commits ahead, zero behind). Both refs were verified identical after the non-forced update. This promotion is **not** a final Mode B completion or hardware release signoff: the remaining cold GATT startup latency and current-build Pixel -> Linux text smoke are still open. The complete 10x Mode B gate has not been claimed as passed.
+
+- The final implementation head `e229ac8` passed all five preflight jobs (run `37687010250`) and manual Linux debug `.deb` package smoke (run `37688585293`). The promoted `0bc9b50` differs only by subsequent documentation describing Pixel smoke results.
+- The debug-only slot0 and periodic advertising A/B controls and launcher are implemented on `dev`. Controlled slot0-reaching trials and matched foreground/background comparisons remain open; ordinary/release behavior must not change based on inconclusive evidence.
 - Historical pre-smoke Mode B is green after the BWU test hardening: stable suite 1x plus selected async transport/BWU tests 10x (run `37475497104`). The current SSOT is stricter, so a complete-suite 10x run is still required before completion.
 - Targeted mutation audit now reports 22 caught, 18 unviable, 1 missed and 0 timeouts across 41 mutants. The only survivor is the `MigratableStream::poll_flush -> Ok(())` mutation, which is equivalent/unobservable for the current concrete `DuplexStream` and `TcpStream` transports; the real delegation remains in production code.
 - Residual `unwrap`/`expect`/panic review of the 11 changed Rust modules found no such calls in production regions; remaining occurrences are under `#[cfg(test)]`.
@@ -159,13 +596,13 @@ The implementation now lives on `dev`. It must pass the final complete Mode B ga
 
 Coverage is measured explicitly instead of inferring quality from test count. The detailed Mode B scope, inventory, branch map, Positive/N1-N12 matrix, interaction matrix and coverage map are maintained in `docs/mode-b-test-plan.md` and `docs/mode-b-inventory.md`.
 
-Current automated suite on the Pixel receiver branch:
+Historical baseline on the Pixel receiver branch (not current counts):
 
 - **Rust:** 50 tests pass with `cargo test --all-features`.
 - **Frontend:** 25 Vitest tests pass across 6 test files.
 - **Total:** 75 automated tests before the separate package/live smoke checks.
 
-Final measured coverage after the Mode B regression expansion:
+Historical measured coverage before later protocol/text/folder/desktop changes (not final current coverage):
 
 - **Rust core:** 30.37% line coverage, 29.75% function coverage, 31.19% region coverage.
 - `hdl/inbound.rs`: 31.67% lines, up from 14.58% before the introduction/state tests.
@@ -179,7 +616,7 @@ Final measured coverage after the Mode B regression expansion:
 - `Heading.vue`: 100% lines/functions/branches.
 - `SideMenu.vue`: 98.21% lines.
 
-The remaining low global percentages are concentrated in OS/service orchestration rather than pure protocol logic: BlueZ/GATT service lifecycle, mDNS daemons/discovery, Tauri startup/window/tray wiring and the monolithic `HomePage.vue` event bootstrap. These paths require package/live smoke or explicit dependency seams before unit coverage becomes representative.
+The historical low percentages include OS/service orchestration: BlueZ/GATT lifecycle, mDNS, Tauri startup/window/tray and `HomePage.vue`. The original coverage jobs omitted the desktop Rust crate entirely. The offline continuation adds desktop measurement; its result must be recorded separately rather than inferred from core/Vue coverage.
 
 No arbitrary repository-wide percentage gate is being introduced in this pass. The useful gate is regression coverage for validated defects plus live Linux/Android smoke for OS-bound behavior. Coverage should rise further as the post-smoke refactors create testable seams.
 
@@ -230,7 +667,7 @@ Refactoring is required, but the work is split by risk.
 
 3. **Split outbound transfer construction from secure transport.**
    - `process_consent` is roughly 230 lines and mixes consent state, file metadata, file I/O and payload transmission.
-   - Text sending remains TODO in two outbound locations.
+   - Text sending is implemented; the earlier two TODO locations are obsolete. Accepted/rejected/cancelled text state-machine coverage remains distinct from helper coverage.
    - Recommended split: transfer plan/payload source abstraction separate from crypto/channel transport.
 
 ### Medium-priority cleanup
@@ -267,3 +704,13 @@ Refactoring is required, but the work is split by risk.
 No broad architectural refactor should be merged solely to improve style before real Pixel smoke. Before the smoke test, only pure helpers, duplicated validation, tests and isolated infrastructure may be extracted. Protocol state-machine refactoring starts only after the current behavior is proven end-to-end.
 
 **Audit conclusion:** no additional architectural refactor is required before the real-device smoke. The next mandatory refactor for maintainability is the shared secure-session extraction, but it should begin only after the current Pixel send/receive behavior is proven so protocol regressions can be distinguished from structural changes.
+
+## 2026-10-12: accepted compact tray panel and context-menu direction
+
+The user selected the tray-panel-plus-native-notifications option in [product-direction.md](product-direction.md), explicitly rejected the current oversized drop-zone window, and requested a file-manager context-menu sender. This is accepted product scope; do not ask the A/B desktop-interaction question again.
+
+[native-desktop-design.md](native-desktop-design.md) records the current Tauri/core coupling, proposed service API/security boundary, Dolphin adapter, phased implementation/validation and rollback points. The remaining review is the path-based versus descriptor-based file-selection contract. No native implementation, package registration or settings migration has started. The historical protocol-refactor guardrail above still applies; the newly authorized desktop migration must keep protocol behavior separable from shell changes.
+
+Security follow-up: the user questioned the path-based recommendation. Source inspection identified a check/open race between candidate metadata inspection and later `File::open` in outbound preparation; no exploit was executed. The design now recommends handle/capability input for the durable service boundary and records its remaining content-mutation, folder-enumeration, resource-budget and authorization limitations. This is a revised recommendation pending approval, not an accepted architecture change or completed fix.
+
+Subsequent user decision: descriptor/capability input approved, with a cross-project preference to fix brittle internal workarounds immediately and ask before substantial refactors. The global agent guide records that preference. [native-file-input.md](native-file-input.md) is the implemented file-boundary handoff: safe Linux resource acquisition, an in-process-only core payload, and bounded positioned reads. Implementation `c8d537e` passed all 258 checks ten consecutive times; 62 methods are new, and 18 copied-source mutants were caught by assertions. No native daemon/UI/context-menu installation or physical peer test occurred. The legacy Tauri path route remains a rollback path with its known acquisition race; it must not be used by the new service.

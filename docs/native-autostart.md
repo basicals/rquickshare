@@ -1,0 +1,217 @@
+# Native opt-in login-start and single GUI process ownership
+
+2026-10-14. Mode A. User selected1: enabled login-start launches daemon and tray
+client, card hidden. Guide /home/morozhenko/.codex/AGENTS.md. Direct dev, no install/
+enable/live user manager/config/clipboard/peer, branch/push or sibling edits.
+
+## Analysis and staged plan before code
+
+Legacy default-off is established. Current CLI spawns a GUI child and drops its
+handle after name acquisition; GUI activation directly execs that same binary.
+Adding another login launcher would compete with those paths. Current daemon
+Type=exec and LaunchGuard already survive joined settings-generation name changes.
+Native settings JSON must not duplicate actual OS enablement state.
+
+1. [x] A1: fixed GUI systemd/D-Bus process ownership, typed shared activation and
+   separate retained GUI guard. Preserve daemon process/typed ingress contracts.
+2. [x] A2: headless normal/CLI launch delegates to GUI service; explicit --service
+   runs one foreground worker for installed manager/development. Event-driven tray
+   readiness and process-lifetime signals/guard across reconnect; no spawned child.
+3. [x] A3: one bounded native login-settings owner for systemd reads/explicit edits,
+   actual OS state/watch/readback and secondary Settings controls, no JSON/schema
+   or daemon API changes. Keep active transfers and GUI lifetime unaffected.
+4. [x] A4: affected domain/private-broker/GTK/package checks once, strict lint/
+   format/build, actual release .deb/extract smoke, SSOT/atomic commits/exact export.
+
+Rollback UI/login adapter, then launch/GUI assets/core activation extensions. Keep
+existing daemon activation/wire/session and file/text/image behavior. Significant
+GUI launch ownership refactor is inside selected option1, not unrelated cleanup.
+
+## Frozen process and launch contracts
+
+rquickshare-desktop.service: Type=exec, ExecStart=/usr/bin/rquickshare --service,
+Restart=no, PartOf=graphical-session.target, Wants=rquickshare-daemon.service,
+After=graphical-session-pre.target dbus.socket rquickshare-daemon.service,
+TimeoutStopSec=infinity, SendSIGKILL=no. Install WantedBy=graphical-session.target
+is available only for explicit user enablement; no preset/enable/start on package
+installation. Do NOT order After=graphical-session.target: the target's wanted-unit
+ordering would create a cycle. Daemon remains independently owned after GUI Quit.
+
+GUI Desktop D-Bus asset delegates to that unit via SystemdService and fail-closed
+Exec=/usr/bin/false, matching the daemon's supported-manager boundary. Application
+entry/plain command and Send/error ingress use fixed owned D-Bus activation, never
+spawn/fork/shell. Plain explicit launch sends existing Desktop1.Show after readiness;
+login worker/daemon wake send no Show and leave card hidden until existing safe
+presentation policy permits it. This gives repeated manual launch a useful existing
+card instead of starting a competing GUI. No receive/send/clipboard action replay.
+A failed panel activation is not automatically retried merely to show its error.
+
+--service is the explicit foreground GTK worker for manager/development; --preview
+remains offline and --help returns before GTK/bus. A separate fixed GUI LaunchGuard
+pins rquickshare-desktop-owner.lock in the validated private runtime directory
+before initialization and across reconnect. Preserve daemon lock name/behavior;
+share validation without accepting caller-controlled lock names. SIGINT/SIGTERM
+cancel startup/tray wait and request GTK quit, then join actual owners before guard
+release. GTK init requires an actual graphical environment; no guessed display or
+silent ordinary-window fallback. Desktop session environment remains acceptance.
+
+Subscribe to watcher name changes before lookup; if absent wait for actual matching
+broker events, no sleeps/polling/retry timer. Resolve same-UID unique owner before
+registration and pin it afterward as before. Startup cancellation closes the owned
+connection. Broker activation success/name acquisition is followed by the existing
+DesktopClient handshake; it is not an invented complete GTK/transport guarantee.
+
+## Frozen login settings owner
+
+One toolkit-independent native owner, queue8 and watch snapshot, owns a dedicated
+bounded connection to the existing same-UID org.freedesktop.systemd1 unique owner.
+This OS lifecycle concern stays separate from daemon transfer/settings ownership.
+No second JSON flag, privileged shell/systemctl invocation, manager activation,
+user-file copying or new daemon API. State reads are allowed without transport
+availability; changes require current explicit unlocked Settings action.
+
+Read only fixed rquickshare-desktop.service. GetUnitFileState enabled/disabled gives
+persistent actual state; masked/runtime/linked/static/unknown/missing/custom units
+remain unavailable/unknown, never coerced to false. LoadUnit inspects without start;
+validate exact known unit object identity, vendor FragmentPath (/usr/lib or merged
+/lib/systemd/user path), no DropInPaths and LoadState=loaded before edits. Do not
+force/overwrite/mask/unmask custom units. Manager owner changes invalidate authority.
+Subscribe to UnitFilesChanged before initial read and call manager Subscribe; close
+connection releases subscription. Re-read on actual signals/explicit reload.
+
+Explicit Apply carries expected observed boolean and desired boolean. Re-read before
+mutation; stale value conflicts instead of blindly overwriting. EnableUnitFiles
+([fixed unit],runtime=false,force=false) or DisableUnitFiles([fixed unit],false),
+then Reload the same user manager configuration and read back actual state before
+acknowledgement. Never Start/Stop/Restart unit or touch current transfers. A concurrent external change can still
+race (manager has no CAS revision); report actual observation, not durable exclusion.
+Failure/lost reply becomes unknown until explicit/owned readback; never auto-repeat
+a write. Dropping a GUI completion does not abandon admitted work. Shutdown retains
+owner, cancels broker wait/closes connection and joins; accepted OS changes cannot
+be retracted, next launch reads actual state. No guessed UI success or boolean retry
+ledger pretending the external manager has application receipts.
+
+Secondary Settings shows Start at sign-in plus separate Apply/Reload and fixed
+status. Unknown uses an inconsistent checkbox and disabled Apply. Initial-off
+means unenabled vendor unit, not an application write at first run. Changes affect
+future sign-ins, not live transfers/current GUI. Existing Save settings keeps its
+own transactional semantics. One retained login completion waiter, lock/close guards,
+no per-widget daemon controller or automatic enabling from rendering/opening settings.
+
+## Verification inventory before tests
+
+A1: typed daemon/desktop activation, real shipped asset with external fake manager,
+current owner/no start, absent/unsupported/failure/cancel/UID; independent daemon/
+GUI guards, duplicate guard, safe files and retained release. Existing core checks.
+A2: launcher cold/warm/no child, exactly fixed unit, explicit worker/preview/help
+argument separation; actual late tray watcher/cancel/owner pin, signal shutdown
+ownership and unchanged GTK card-hide/readiness, no transfer replay on reconnect.
+A3: real private fake-manager contract with actual login controller: enabled/off/
+unknown/masked/custom/dropins, wrong UID/owner/FD/path, stale expected value, denied/
+lost reply/readback, busy/close/dropped completion, UnitFilesChanged, no Start/Stop/
+force/runtime mutations. Pure tables for finite state/errors; fake external OS only.
+A4: extend existing single GTK smoke; real staged release package exact new unit/
+activation/Install semantics, offline help/settings smoke, XML/desktop/YAML/format/
+lint. No real user manager/login/install or ten-run Mode B gate. Physical KDE
+sign-in/logout/readiness/lock/DND/scale/focus and upgrade/removal remain acceptance.
+
+Applicable Positive,N1,N2,N3,N4,N5,N6,N7,N9,N10,N12; N8/N11 not applicable. Record
+actual results/failures per stage and final source/version artifact provenance.
+
+Official upstream references inspected2026-10-14:
+https://raw.githubusercontent.com/systemd/systemd/main/man/org.freedesktop.systemd1.xml
+https://raw.githubusercontent.com/systemd/systemd/main/man/systemd.special.xml
+Manager documents fixed unit-file read/enable/disable, no-force/runtime parameters,
+changes lists and subscription lifecycle. These operations differ from Start/Stop.
+Graphical session target stops PartOf services; independently enabled wants links
+select login services, pre-target concerns environment setup. Installed behavior
+is not proven by reading specifications or a fake external manager.
+
+A1 implemented: shared fixed daemon/desktop activation, GUI unit/delegation,
+independent retained desktop guard and hardened daemon wake reuse. Initial compile
+missed a test-only desktop import after removing the old activation code; corrected
+that fixture import. Service run observed264 pass/1 fail (7.17s): the new lock test
+used a TempDir whose permissions did not meet the existing private-runtime contract.
+Reused the existing explicit0700 fixture, preserving production checks. Corrected
+lock1/0 passed0.00s/build5.52s; strict core lint5.72s. New actual cold desktop broker
+and old activation/wake scenarios were among264 passes. Inventory578 core, no fresh
+whole265 service run claimed after the fixture-only repair. No real manager/guard
+or user files touched. Terminal closed.
+
+A2 startup/launcher implementation compiles all native targets (4.83s): no child
+spawn fallback, explicit foreground worker, process signal ownership, independent
+GUI lock across reconnect, normal launcher Show and cancellable event-driven tray
+readiness. One now-test-only immediate Tray::connect still warned unused in the
+production target; mark it test-only before strict checks. No warning suppression.
+A2 behavior/private-tray checks and A3 settings owner/UI remain pending.
+
+A2/A3 implemented: one foreground process across reconnect, finite explicit launcher
+and event-driven tray readiness; cancellation also wraps read-only bootstrap
+connections/handshakes before owners are returned. The toolkit-independent login
+owner and explicit Settings Apply/Reload are separate from daemon settings JSON.
+The direct serde dependency adds only an existing locked dependency edge.
+
+First full native run compiled but found a malformed Enable/Disable body: a Rust
+fixed-size array encoded a struct instead of the required D-Bus string array,
+so the fake external manager rejected the request and two admission waits hung.
+Stopped only this task-owned check; corrected production arguments to Vec and
+added test-only30s scenario watchdogs, preserving event/condition waits and asserts.
+Corrected full native36/0 passed0.49s/build2.46s under an isolated broker/Xvfb.
+Strict native all-target no-deps lint3.31s passed before the subsequent startup
+cancellation/owner-loss additions; affected final checks are recorded below.
+No real systemd, sign-in or installed desktop claim. Terminal closed.
+
+Final affected login6/0 passed0.14s/build2.55s, including missing/lost manager,
+admitted write cancellation and no reactivation/retry. Strict native all-target
+no-deps lint1.27s passed with startup cancellation changes. Python package5/0
+passed1.245s with exact10-file inventory and desktop-unit/activation tamper cases.
+Both Rust format checks and git diff whitespace passed. Native inventory37, core578;
+full36 passed before the additional owner-loss test, followed by affected6; no
+fresh full37/578 or ten-run/coverage claim. The known nine core no-default-feature
+warnings remain visible, no new native lint warning is suppressed. Terminal closed.
+
+A4 source review correction before package completion: upstream systemctl-enable.c
+explicitly reloads the manager after unit-file changes. Enable/Disable alone edits
+symlinks but can leave an already loaded target dependency graph stale, especially
+with a lingering user manager. Correct the adapter within selected login behavior:
+a confirmed mutation is followed by Manager.Reload (configuration only, no service
+restart), then readback. Retain a pending configuration-reload requirement after
+uncertain admission; subsequent owned readback/explicit Reload may synchronize
+configuration but never repeats Enable/Disable. Denied-before-change clears that
+requirement. A new process cannot reconstruct lost in-memory admission; external
+manager/graph state after process death stays an installed recovery acceptance gate.
+This replaces the earlier overly broad no-manager-Reload statement, preserving the
+actual no-Start/Stop/no-transfer-interruption contract.
+Primary source inspected2026-10-14:
+https://raw.githubusercontent.com/systemd/systemd/main/src/systemctl/systemctl-enable.c
+
+A4 complete: corrected manager configuration synchronization7/0 passed0.14s/
+build2.85s; strict native all-target no-deps lint1.44s. Denied reload remains
+Uncertain (links may already be changed); subsequent read synchronizes the pending
+configuration without repeating Enable/Disable. Tests assert exact reload counts,
+no reload for no-op/stale/denied-before-mutation and no guessed success. AtomicBool
+is only a Send/Sync-compatible per-owner flag, not global state or durable receipt.
+Native inventory38; full36 plus affected7 is the actual execution sequence.
+
+Actual final locked release Debian build and exact10-file root-owned/mode/asset/
+checksum/ELF/dependency verifier passed, including extracted GUI/daemon --help and
+private fixture --settings --check. First build core1m49s/native32.38s; after the
+review correction only affected native rebuilt11.55s, core remained cached.
+Final package rquickshare_0.11.5+native1_amd64.deb SHA256 d2a8211bd2e5ff05771b6381fb3e3a0a04fa770008db66d8e163930bc0f4fc99.
+Built on Ubuntu26.04 with actual private Layer Shell shlibs metadata; this does
+not claim Ubuntu24.04 compatibility. Host merged-/usr loader diversion warning and
+nine existing core feature-specific warnings remain visible, not suppressed.
+No installed user manager, services, sign-in/logout, clipboard, peer or portal was
+used. All task-owned terminal processes exited; Terminal closed.
+
+Handoff: A1–A4 complete in source; isolated checks and real uninstalled release
+package complete. Rollback feature commit plus subsequent configuration-sync fix,
+then package inventory/docs and A1 unit/activation extension if needed. Same normal
+launch/CLI/daemon-wake service owner, independent daemon work after GUI Quit, and
+default-off future-login enablement are recorded above. Export final committed
+source ZIP and exact package/checksum with separate checkpoint provenance.
+Remaining installed acceptance: KDE session env/late watcher/login/logout/lingering
+manager, already admitted change across GUI death, unit customization/global
+enablement, package upgrade/removal with live transfers, physical scale/focus/DND/
+lock/portal/Dolphin and actual Google peer matrix. Updates/account/QR and protocol
+parity gaps remain separate roadmap work; no full Google compatibility claim.

@@ -245,9 +245,11 @@ pub fn send_temporarily_notification(app_handle: &AppHandle) {
             tokio::task::spawn_blocking(move || {
                 notification.wait_for_action(|action| match action {
                     "visible" => {
-                        if let Err(error) =
-                            cmds::change_visibility(Visibility::Temporarily, capp_handle.state())
-                        {
+                        if let Err(error) = cmds::change_visibility(
+                            Visibility::Temporarily,
+                            capp_handle.state(),
+                            capp_handle.clone(),
+                        ) {
                             error!("Couldn't change visibility from notification: {error}");
                         }
                     }

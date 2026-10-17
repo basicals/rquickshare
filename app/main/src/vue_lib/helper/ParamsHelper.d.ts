@@ -23,6 +23,7 @@ export interface TauriVM {
     realclose: boolean;
     startminimized: boolean;
     visibility: Visibility;
+    visibilityRecovered: boolean;
     downloadPath: string | undefined;
     hostname: string | undefined;
     settingsOpen: boolean;

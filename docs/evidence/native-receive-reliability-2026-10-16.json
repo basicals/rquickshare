@@ -1,0 +1,180 @@
+{
+  "schema": 1,
+  "date": "2026-10-16",
+  "scope": "essential-receive-reliability",
+  "choice": 1,
+  "checks": {
+    "core_initial_compilation": {
+      "passed": false,
+      "tests_executed": false,
+      "reason": "cfg expression and nested test-module path corrected"
+    },
+    "core_full": {
+      "total": 653,
+      "passed": 652,
+      "failed": 1,
+      "seconds": 27.12,
+      "reason": "Existing test expected premature final-name creation; strengthened to check absence until EOF then exact bytes under pinned root"
+    },
+    "core_affected_root": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 652,
+      "seconds": 0.06
+    },
+    "core_affected_sdk": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 652,
+      "seconds": 0.12
+    },
+    "core_strict_clippy": {
+      "passed": true,
+      "seconds": 32.68,
+      "all_features": true,
+      "all_targets": true
+    },
+    "native": {
+      "passed": 39,
+      "failed": 0,
+      "seconds": 1.7
+    },
+    "native_strict_clippy": {
+      "passed": true,
+      "seconds": 20.58,
+      "all_targets": true,
+      "no_deps": true
+    },
+    "affected_directory_sync": {
+      "passed": 1,
+      "failed": 0,
+      "filtered": 652,
+      "seconds": 0.03
+    },
+    "final_core_strict_clippy_after_test_extension": {
+      "passed": true,
+      "seconds": 31.21
+    },
+    "format_and_whitespace": {
+      "passed": true
+    },
+    "package": {
+      "passed": true,
+      "files": 11,
+      "core_release_seconds": 258,
+      "gtk_release_seconds": 120,
+      "helper_release_seconds": 3.61,
+      "builder_checks": [
+        "inventory",
+        "ownership-permissions",
+        "dependencies",
+        "ELF",
+        "checksum",
+        "extracted-help",
+        "private-settings-smoke"
+      ]
+    },
+    "initial_artifact_review": {
+      "passed": false,
+      "before_mutation": true,
+      "reason": "started before builder completed checksum sidecar; precondition failed",
+      "corrected_after_builder_exit": true
+    }
+  },
+  "new_core_methods": 8,
+  "invariants": {
+    "native_linux_receive_scope": true,
+    "anonymous_unpublished_content": true,
+    "no_display_path_deletion": true,
+    "publish_after_exact_size_and_data_sync": true,
+    "atomic_no_overwrite_link": true,
+    "partial_complete_files_preserved": true,
+    "one_reserved_receipt_slot": true,
+    "immutable_requested_manifest": true,
+    "completed_list_indices_only": true,
+    "explicit_remaining_file_retry": true,
+    "automatic_retry": false,
+    "preview_work_added": false
+  },
+  "filesystem_support": {
+    "local_probe_paths": [
+      "/tmp",
+      "core_lib/target/disk-test-tmp"
+    ],
+    "anonymous_create_and_fd_link_passed": true,
+    "all_filesystems_supported": false,
+    "unsupported_safe_staging_fails_before_accept": true,
+    "empty_created_directories_may_remain": true
+  },
+  "installed": false,
+  "physical_peer_acceptance": false,
+  "release_signed": false,
+  "published": false,
+  "documentation": {
+    "local_links_verified": 55,
+    "whitespace_passed": true
+  },
+  "implementation_commit": "88c1f94003fc35c665568024273d446b5ced35ed",
+  "observed_at_utc": "2026-10-16T18:08:37.040355+00:00",
+  "package": {
+    "path": "native_desktop/target/packages/rquickshare_0.11.5+native12_amd64.deb",
+    "version": "0.11.5+native12",
+    "architecture": "amd64",
+    "bytes": 6416730,
+    "sha256": "b4ef947385b46a2b16f2dc625f1cfc216205672b1df75478f821bb4a857962f0",
+    "expected_files": 11,
+    "builder_inventory_metadata_permissions_elf_help_settings_verified": true,
+    "installed": false
+  },
+  "images": [],
+  "package_ui_verified_by_existing_extended_gtk_smoke": true,
+  "unsigned_apt": {
+    "path": "native_desktop/target/apt-unsigned-native12",
+    "files": [
+      "dists/rquickshare-native-ubuntu26.04/Release",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages.gz",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/1a9a8dd34a9b0a5af5a6537cc5830683377b031b7f860a9291ac44a3149ebb59",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/7aee3a9c5d8f06964f2e627fbf3742d59d94b956b3c8daf3cafa526558a066e4",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native12_amd64.deb",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native12_amd64.deb.sha256"
+    ],
+    "date": "Fri, 16 Oct 2026 18:08:35 GMT",
+    "valid_until": "Fri, 23 Oct 2026 18:08:35 GMT",
+    "valid_until_utc": "2026-10-23T18:08:35Z",
+    "signed": false
+  },
+  "signing_request": {
+    "path": "native_desktop/target/signing-request-native12/request.json",
+    "sha256": "34d1ca73c10956a269196ee42005996abcfbb09012a9dafbe3406bc3fd7c7e05",
+    "approved": false,
+    "first_release": true,
+    "source_attestation_supplied": false,
+    "live_empty_baseline_verified": false
+  },
+  "native9_preserved": true,
+  "native11_preserved": true,
+  "owned_processes_exited": true,
+  "public_export": {
+    "completed": true,
+    "source_commit": "1802f2f96e87f3464cead8a1232faaf8e9f30af7",
+    "binary_source_commit": "88c1f94003fc35c665568024273d446b5ced35ed",
+    "source_zip": {
+      "name": "rquickshare-native12-source.zip",
+      "sha256": "bd12f4ac5210fa3ada9b2574fac0a567ef43ccdfae1808b2178290a8593d775d",
+      "tracked_files": 482,
+      "crc_inventory_selected_bytes_verified": true
+    },
+    "unsigned_apt_zip": {
+      "name": "rquickshare-native12-apt-UNSIGNED.zip",
+      "sha256": "f8fe5e8982f77a3512b9f07de740fe8cbfe51a73641e2579ae024caab818d29a",
+      "files": 7,
+      "signed": false
+    },
+    "receipt": "rquickshare-native12-export.json",
+    "archive_precedes_final_handoff_docs": true,
+    "generic_source_refreshed": true,
+    "previous_artifacts_preserved": true
+  },
+  "selected_scope_complete": true
+}

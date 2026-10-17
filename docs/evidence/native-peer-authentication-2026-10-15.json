@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "feature": "session-bound Google PairedKey authentication foundation",
+  "mode": "A",
+  "selected_option": 1,
+  "source_commit": "c286e206a3992bd0eee057c017a4cca3cbbe6576",
+  "google_reference_revision": "d128b5fca30b3fa8d4642f8c75dd9e314e090e74",
+  "google_reference_release_attestation": false,
+  "new_test_methods": {
+    "domain": 10,
+    "real_encrypted_handlers": 2
+  },
+  "primary_test_categories": {
+    "Positive": 1,
+    "N1": 2,
+    "N2": 1,
+    "N4": 1,
+    "N7": 5,
+    "N8": 1,
+    "N10": 1
+  },
+  "observations": {
+    "initial_domain": {
+      "passed": 10,
+      "seconds": 1.6
+    },
+    "integrated_core_library_before_final_clock_and_zeroizing_refinements": {
+      "passed": 617,
+      "seconds": 21.37
+    },
+    "domain_after_clock_sampling_change": {
+      "passed": 10,
+      "seconds": 1.8,
+      "filtered": 607
+    },
+    "modern_protocol_after_final_token_guard": {
+      "passed": 4,
+      "seconds": 0.0
+    },
+    "native_daemon_after_final_token_guard": {
+      "passed": 4,
+      "seconds": 0.06
+    },
+    "final_strict_core_all_features_all_targets_clippy": {
+      "passed": true,
+      "seconds": 10.48
+    },
+    "nightly_format": "passed for affected core source",
+    "new_gui_tests": 0,
+    "unchanged_gui_suites_repeated": false,
+    "independent_crypto_fixture": "Public deterministic test-key SPKI/signature from system OpenSSL; expected HKDF from Python stdlib RFC5869 extract/expand; temporary fixture key removed",
+    "upstream_bluer_future_incompatibility_warning": "existing observation; no waiver/suppression"
+  },
+  "contracts": {
+    "raw_token_bytes": 32,
+    "signature": "role-prefixed raw UKEY2 token, P-256 ECDSA-SHA256 DER",
+    "token_hash": "6-byte HKDF-SHA256, token input, certificate-secret salt, empty info",
+    "maximum_signature_bytes": 72,
+    "maximum_peer_spki_bytes": 128,
+    "maximum_local_hash_certificates": 9,
+    "public_validity_tolerance_seconds": 1800,
+    "production_certificate_source": "explicitly empty; no provider enrollment/account access",
+    "wire_certificate_info_is_trusted": false,
+    "remote_success_can_promote_unable": false,
+    "remote_fail_aborts_before_introduction": true,
+    "manual_consent_required": true,
+    "auto_accept_implemented": false,
+    "google_account_support_implemented": false,
+    "persistent_trust_store_implemented": false,
+    "ipc_or_proto_schema_changed": false,
+    "dependencies_or_lockfile_changed": false
+  },
+  "package": {
+    "filename": "rquickshare_0.11.5+native7_amd64.deb",
+    "size": 4661954,
+    "sha256": "c426c29d8141d752b04943d2629eb8e1c1123ec3f99aebbd27e8b38c0cb465bf",
+    "binary_source_commit": "c286e206a3992bd0eee057c017a4cca3cbbe6576",
+    "offline_verified": true,
+    "target": "Ubuntu26.04 amd64",
+    "core_release_build_seconds": 209,
+    "gtk_release_build_seconds": 76
+  },
+  "physical_google_or_kde_acceptance": false,
+  "google_backend_called": false,
+  "account_authorization_changed": false,
+  "ten_run_stability": false,
+  "installed": false,
+  "release_signed": false,
+  "published": false,
+  "unsigned_apt": {
+    "suite": "rquickshare-native-ubuntu26.04",
+    "date": "2026-10-15T21:21:09Z",
+    "valid_until": "2026-10-22T21:21:09Z",
+    "files": [
+      "dists/rquickshare-native-ubuntu26.04/Release",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages.gz",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/bc015a09f2f394be363d448862c8925175cc255353dcf2c2b3ce65eb9b9e5597",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/e568ee3103fbda5ef46a88091eb3f9bbefb76ee35546800f5dc44d4a87af8999",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native7_amd64.deb",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native7_amd64.deb.sha256"
+    ],
+    "signed": false,
+    "verified_offline": true
+  },
+  "signing_request": {
+    "sha256": "ab6fff2d380954f8a549484f78930292caa0b94afb43a054d963a3224643a323",
+    "source_commit_assertion": "c286e206a3992bd0eee057c017a4cca3cbbe6576",
+    "first_release_baseline_assertion": true,
+    "independently_approved": false,
+    "source_provenance_attestation": false
+  },
+  "owned_processes_closed": true,
+  "public_export": {
+    "source_commit": "70ea4c7b091a27b86efd560711f06b0906d597db",
+    "source_zip_sha256": "af067aa44b133d85166cec4ef6229874bf0dea537cec3db4b0db55260e328ca6",
+    "source_tracked_files": 446,
+    "unsigned_repository_zip_sha256": "70161d0904163d0f68e50a77921e836393ae9763f60299a789bbad0f7b56ce17",
+    "signing_request_sha256": "ab6fff2d380954f8a549484f78930292caa0b94afb43a054d963a3224643a323",
+    "verified": true,
+    "completion_docs_commit_is_later": true
+  }
+}

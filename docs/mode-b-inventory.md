@@ -1,8 +1,10 @@
 # Mode B inventory, branch map, and test matrix
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-12_
 
 This document is subordinate to `docs/mode-b-test-plan.md` and records Stages 3-8 for the current maintenance/Pixel receiver scope.
+
+The original tables below retain their historical planning estimates. For cases implemented after those tables were written, the **2026-10-12 source reconciliation** below is authoritative; historical `P` cells are not evidence that an implemented regression is missing. Hardware-only `S` cells remain open unless dated physical evidence explicitly satisfies them. Offline continuation and exact validation results are tracked in [offline-maintenance.md](offline-maintenance.md).
 
 Legend:
 - `C` = covered by an existing automated test.
@@ -84,7 +86,7 @@ Legend:
 4. Endpoint-info length must fit one byte.
 5. Service-data framing length must match the encoded connection advertisement.
 
-**Observed defect candidate:** byte truncation is not UTF-8-boundary-aware. A multibyte name can be cut mid-codepoint while the PR contract currently claims safe UTF-8 truncation.
+**Historical defect, fixed:** byte truncation was not UTF-8-boundary-aware. Current receiver advertisement and mDNS encoding preserve UTF-8 boundaries with regression tests.
 
 ### BWU router
 1. Empty endpoint -> reject registration.
@@ -199,13 +201,13 @@ Legend:
 8. Folder depth or unsafe/non-UTF8 parent component beyond contract -> reject.
 9. File metadata and every FILE payload header carry the same parent-folder value.
 10. Total byte-size/payload-id invariants remain identical to ordinary multi-file transfer.
-4. image/video/audio/apk/other -> correct attachment type.
-5. Missing filename -> error.
-6. Non-UTF8 filename -> error.
-7. Payload ID collision -> regenerate.
-8. File size not representable in i64 -> error.
-9. Total transfer size overflow -> error.
-10. Empty input -> empty deterministic plan.
+11. image/video/audio/apk/other -> correct attachment type.
+12. Missing filename -> error.
+13. Non-UTF8 filename -> error.
+14. Payload ID collision -> regenerate.
+15. File size not representable in i64 -> error.
+16. Total transfer size overflow -> error.
+17. Empty input -> reject with no transfer plan.
 
 ### BWU listener classifier
 1. No pending route -> return socket immediately.
@@ -481,6 +483,38 @@ Estimated delta: **24-37 scenarios**, preferably table-driven where the branch/r
 
 The final Mode B gate must use this extension together with the original Stage 3-8 inventory. Hardware smoke does not replace these deterministic cases.
 
+## 2026-10-12 source reconciliation
+
+These mappings come from current test source, not historical coverage percentages. Execution results belong to the offline work log. A listed test proves only its assertions; remaining cases are not silently marked covered.
+
+| Historical gap | Existing regression evidence | Remaining scope |
+|---|---|---|
+| Port non-finite inputs | `tests/unit/example.test.ts`: NaN and both infinities | Settings/backend failures and event races |
+| Receiver/mDNS UTF-8 | `blea.rs` receiver-data boundary; `utils.rs` multibyte-name truncation | BlueZ advertiser lifecycle |
+| BWU router lifecycle | `bwu.rs`: empty/unknown IDs, dropped receiver, duplicate race, cancel, exact-ID precedence and old-ID alias | Route lifetime during full migration |
+| Weave pure framing | `gatt.rs`: packet-size boundaries, wrong command/inverted range, confirm encoding, frame-size/trailing-byte boundaries | Reassembly/fragmentation/session lifecycle |
+| Migratable TCP | `migratable.rs`: TCP round trip and shutdown forwarding | BLE-to-TCP crypto-state continuity |
+| Filename/Wi-Fi abuse | `inbound.rs`: filename byte boundaries and malformed Wi-Fi table including invalid UTF-8 | Complete file-write/storage-failure matrix |
+| Plain framing/BWU flags | `inbound.rs`: oversized read, empty send, one-shot flags | Truncated prefix/body and maximum send/read review |
+| mDNS malformed records | `utils.rs`: Base64/UTF-8/truncated/compact tests | OS discovery/cache behavior |
+| LAN selection | `utils.rs`: pure private preference, public fallback, IPv6/loopback/link-local/tunnel rejection and order | Real interface-enumeration failure |
+| Listener/UI errors | `manager.rs`: no-pending, malformed, unrelated route, alias, non-consuming route and error truncation | Incomplete-prefix deadline, EOF, orchestration |
+| Modern proto defaults | `tests/modern_protocol.rs`: legacy defaults plus modern/QR/resume round trips | Malformed/unknown enum review |
+| Text helpers | `outbound.rs`: classification shapes, title/payload bounds, empty/UTF-8 handling | Accepted/rejected/cancelled text state-machine integration |
+| BYTE chunk boundaries | `outbound.rs`: empty/exact-chunk/chunk+1/max and reconstruction/terminal marker | Sensitive/header and integration review |
+| Managed ephemeral ownership | `outbound.rs`: name boundaries, idempotent remove, forbidden request, normal-file no-delete, drop cleanup | Removal-error/race matrix |
+| Desktop cleanup command | `cmds/clipboard_image.rs`: shared core managed-path guard | Native clipboard backend smoke; execute existing test in CI |
+| Clipboard/reset | `content-status.test.ts`: blank-text image fallback/running discovery; `utils.test.ts`: cleanup success/failure/no-delete/state reset | Rapid retry and plugin/storage combinations |
+| SAE metadata | `inbound.rs`: `introduction_preserves_sae_wifi_security_type` | Full SAE transfer/rejection/privacy |
+
+There is no separate Tauri `managed_temp_path` implementation now: the command delegates to core `ManagedEphemeralFile`. Do not plan duplicate validation in a nonexistent helper.
+
+Desktop inventory: two `notification.rs` preview tests, two `logger.rs` capped-writer tests, three `cmds/open_download_destination.rs` path tests and one `cmds/clipboard_image.rs` cleanup test. These eight assertions were omitted from preflight/Mode B before the offline continuation. Notification body/action/lifecycle and settings persistence are not comprehensively covered by them.
+
+Remaining deterministic priorities: text consent/send/cancel integration, explicit Weave/framing branches without broad transport extraction, and scoped notification/settings/event logic after preregistering its contracts. Fresh core/desktop/Vue coverage and meaningful mutation review remain required. The offline analyzer has a separate inventory in `offline-maintenance.md`.
+
+The corrupted numeric `visibility` panic remains a settings defect. Recovery visibility changes privacy/discoverability and requires the user's policy decision. Hardware findings below remain authoritative for physical gates.
+
 ## Hardware smoke findings - 2026-10-06
 
 Real Pixel-to-Linux and Linux-to-Pixel smoke on Ubuntu 26.04 KDE/Wayland produced the following evidence:
@@ -628,4 +662,108 @@ Remaining discovery-latency investigation:
 2. The 2-second FEF3 advertisement re-registration while Android is still in GATT bootstrap is a **hypothesis**, not a proven cause. Compare cold-start slot-0 -> notify latency with and without in-flight advertising re-registration in a controlled, reversible A/B experiment; do not disable it permanently from one sample.
 3. Preserve fast direct TCP receive, visibility suppression, bounded mDNS resend, Weave-session completion refresh, and the 30-second recovery fallback. Do not loosen protocol/BWU invariants or change the host's bluetoothd configuration automatically.
 4. Repeat at least three cold-start trials per variant with equivalent visibility and foreground state, plus warm/direct TCP receives and text receive. Record which discovery backend was active on every run.
+
+### Cold-start FEF3 advertising recovery A/B experiment
+
+The measured 22-second slot-0 -> Weave gap is not yet causally attributed to receiver-advertisement re-registration. Evaluate the 2-second slot-0 deferred FEF3 refresh without changing default/release behavior:
+
+- Debug-only startup control: `RQS_DIAG_SLOT0_ADV_REFRESH=0` disables **only** the deferred FEF3 recovery request from a slot-0 offset-zero read. Unset/default or `=1` retains the existing deferred refresh.
+- The experiment must always preserve slot-0 mDNS resend, normal visibility policy, immediate refresh after a completed Weave session, and the 30-second safety refresh. Release builds ignore the control.
+- Emit an explicit startup log identifying which variant is active and a distinct slot-0 event log so every hardware trial can be associated with the correct treatment.
+- For each variant, run at least three **cold** Pixel -> Ubuntu receives (restart receiver before each; same phone, network, visibility, foreground/background state) and at least one repeated/warm direct-TCP receive. Keep the successful transfer path and compare slot-0 -> notify/TCP acceptance, total Android UI time, fallback use, and failures.
+- System BlueZ configuration must remain unchanged throughout. No release-policy change from a single faster observation. Restore the diagnostic flag to its default after experiment.
+- Verify Android -> Ubuntu **text** at least once, since this smoke log contains only images. A/B comparison must not suppress text/clipboard regressions.
+
+### A/B execution helper
+
+The repository includes `scripts/receiver-ab-smoke.sh` to make cold-trial startup reproducible after installing the **debug** Debian package built from the corresponding `dev` HEAD.
+
+```bash
+bash scripts/receiver-ab-smoke.sh baseline
+bash scripts/receiver-ab-smoke.sh skip-deferred
+```
+
+Run the commands in separate trials, not simultaneously. **Always use the tray Quit action after each transfer, never Ctrl+C**. This lets the server cancel its tasks and unregister the mDNS service before exit. Exit the previous rQuickShare tray process before starting the next variant. The helper refuses to start if a user-owned `rquickshare` process remains, sets `RQS_LOG=trace`, sets the A/B switch explicitly to `1` or `0`, and writes per-run timestamped logs to `~/Downloads/rquickshare-smoke/ab-logs/`. It prints the relevant BLE/GATT/BWU/TCP events after exit but retains the complete log. If the debug diagnostic startup marker is absent, discard that trial: a release binary or missing GATT initialization may have ignored the test treatment. Never compare baseline and variant sessions with different visibility, foreground/background state, networking, or receiver startup conditions.
+
+
+### 2026-10-08 A/B smoke findings: seven Pixel attempts
+
+Received archive: three baseline logs and four skip-deferred logs (the fourth is plain text). All seven inbound sessions reached backend `Finished`. Six image payloads and one text payload were recorded; the text was processed and completed, though Android-side timing is not instrumented.
+
+| Variant | Run UTC | Start -> TCP accept | TCP accept -> Finished | GATT slot0 read | Outcome |
+|---|---|---:|---:|---|---|
+| Baseline | 18:36:27 | 23 s | 4 s | none logged | image Finished |
+| Baseline | 18:37:04 | 8 s | 4 s | none logged | image Finished |
+| Baseline | 18:37:43 | 64 s | 6 s | 18:38:01, **46 s** before TCP | image Finished following user-reported Android error/retry |
+| Skip deferred | 18:39:15 | 30 s | 7 s | none logged | image Finished |
+| Skip deferred | 18:40:02 | 10 s | 5 s | none logged | image Finished |
+| Skip deferred | 18:40:23 | 12 s | 6 s | none logged | image Finished |
+| Skip deferred | 18:40:56 | 42 s | 4 s | none logged | text Finished; user reported slow discovery |
+
+The start-to-TCP interval is **not** a tap-to-device-discovery metric; trials did not record Android tap timestamps. The baseline outlier included a GATT slot0 read at 18:38:01, deferred FEF3 re-registration at 18:38:03, periodic re-registration at 18:38:33, then inbound TCP only at 18:38:47. This single observation cannot prove that re-registration caused the delay. No skip-deferred trial read slot0, so the A/B treatment was **not exercised on the same protocol path** and causal conclusions are invalid. The BlueZ AdvertisementMonitor `RegisterMonitor` API remains unsupported (`UnknownMethod`) in all trials, so fallback active scans were used.
+
+Android displayed an increasing number of identically named `Alcotester` entries over restarts (up to four). At application startup, the endpoint ID is randomly generated (`core_lib/src/lib.rs`) and embedded into a fresh mDNS service instance name (`gen_mdns_name`). All seven logs end without the expected `tray_quit`, `MDnsServer: service unregistered`, or `Application stopped` messages. The old A/B script incorrectly instructed Ctrl+C, which can terminate the process before its `MDnsServer::run` unregister/goodbye completes. This is a **plausible primary explanation**, not a confirmed Android cache bug. Do not stabilize the endpoint ID as a quick fix: that would introduce a linkability/privacy tradeoff. The smoke helper now requires tray Quit and warns when graceful unregister is not logged.
+
+Follow-up criteria:
+1. Reinstall the new helper only by pulling `dev` (no new package needed for a shell-script-only change). On Pixel, dismiss stale device lists or restart Quick Share discovery between separate cold-start trials.
+2. Run at least two trials in which the last log includes `tray_quit` and `MDnsServer: service unregistered`. Verify whether ghost `Alcotester` entries stop accumulating without any Android-side reset; record the display before and after Quit.
+3. Record exact phone-side tap/discovery/connect timestamps or a screen recording for long-running attempts, separately from the host process-start timestamp.
+4. To evaluate the FEF3 hypothesis, compare at least three **slot0-reaching** cold GATT attempts per variant. If only direct TCP attempts occur, mark the A/B experiment inconclusive instead of picking a winner.
+5. Maintain a text-transfer test as a separate scenario. Backend `Finished` validates text delivery on Linux but does not validate phone-side UI latency.
+6. If graceful mDNS goodbyes are logged but ghosts remain, investigate Android mDNS cache/advertisement TTL and server identity before changing protocol identity.
+
+### 2026-10-08 graceful-exit follow-up and discovery confounder
+
+The next target-device run used the refreshed launcher from `dev`; the attached terminal capture and cumulative application log both include two **baseline** foreground-process runs (the application was actually minimized in the tray, so the *active fallback BLE scan ran in background duty-cycle mode*). The startup marker showed `RQS_DIAG_SLOT0_ADV_REFRESH=1` in both. Both cleanly exited through the Tauri tray Quit handler and logged `MDnsServer: service unregistered: OK`.
+
+| Baseline run (UTC) | TCP accepted | Outcome | Exit | Periodic FEF3 refresh | Active fallback scan restart |
+|---|---|---|---|---|---|
+| 19:13:22 | 19:13:59 (37 s) | image Finished 19:14:03 | 19:14:13 clean unregister | 19:13:52 | 19:13:52 |
+| 19:14:19 | 19:14:51 (32 s) | first transfer Cancelled at 19:15:27; retry TCP at 19:15:28, Finished at 19:15:32 | 19:15:36 clean unregister | 19:14:49 | 19:14:49 |
+
+The second first-request state reached `WaitingForUserConsent` at 19:14:51 and remained until Android canceled it at 19:15:27; no `AcceptTransfer` was logged for that first request. The second request was explicitly accepted at 19:15:31 and completed one second later. Do not report this as a protocol crash.
+
+**Confounder:** Every initial TCP connection arrived shortly after **both** the 30-second FEF3 advertisement refresh and the 5s/25s active-FE2C fallback scan restarted. Both timers are aligned at boot in this log. The evidence cannot distinguish receiver advertising exhaustion from BLE scan duty cycling, Android-side discovery delay, or mDNS behavior. Neither run read slot0, so the 2-second slot0 A/B experiment remains inconclusive. These start-to-TCP measurements also include arbitrary user interaction time.
+
+**Confirmed:** the Linux mDNS unregister path completes on a proper tray Quit. Earlier duplicate Android entries cannot be attributed to failure to unregister on these two clean exits; their persistence/absence on the Android screen is still unknown. Previous 19:09:15 process log had no clean exit marker before the next startup at 19:13:22, so stale Android cache remains plausible for earlier duplicates. The intentional Tauri tray Quit uses exit code -1 (reported by Bash as 255); the smoke launcher now labels that code as a *normal* shutdown only when `tray_quit` and mDNS unregister are both logged.
+
+### Debug-only periodic receiver advertising A/B
+
+A second diagnostic knob `RQS_DIAG_RX_PERIODIC_ADV_SECS` now selects the **FEF3 receiver advertiser safety-refresh** interval in debug builds only: 5–120 whole seconds, default 30. Unsupported inputs fall back to 30; release builds ignore this override. The debug log states the selected interval. It does not change the FE2C discovery scan duty cycle, GATT slot0 behavior, mDNS register/resend, visibility handling or post-Weave refresh.
+
+The smoke launcher now supports `baseline` (FEF3 periodic 30s), `periodic-10` (FEF3 periodic 10s), and the original `skip-deferred` (slot0 deferred disabled, FEF3 periodic 30s). **A freshly built and installed debug .deb is required for the new periodic-10 variant.**
+
+Do not infer causation from comparing minimized baseline 30s to visible-window periodic-10 10s. To separate timer effects, keep visibility and window state fixed across variants; explicitly record whether `BleListener: active fallback scan stopped` occurs during each trial. Prefer first conducting a *foreground/continuous-scan* baseline with Show from the tray versus the background/duty-cycle baseline, then conduct a 30s vs 10s periodic comparison at the same window state. Record phone-side discovery/tap timing separately. Preserve Mode B hardware gates and the default release interval pending replicated results.
+
+### Desktop notification and Android completion synchronization gate
+
+For reducing the user's manual hardware smoke burden without dropping Mode B checks, see [hardware-test-automation.md](hardware-test-automation.md). It contains the provisional 33-scenario automation matrix, Ubuntu runner/ADB architecture, planning estimates and access/security constraints.
+
+
+New user report (2026-10-08): the Linux-side desktop notification vanishes very quickly while the Android sender still displays a waiting state. Do **not** assume this is the same event as backend `Finished` without a synchronized phone video or timestamps.
+
+Code audit:
+- `app/main/src-tauri/src/notification.rs` constructs request and completion notifications via `notify_rust::Notification` on Linux but specifies no explicit expiration policy. The desktop notification server controls their lifespan. The request's `Accept`/`Reject` action waiter may outlive the visible popup; the in-app `WaitingForUserConsent` card remains an alternate acceptance route.
+- The separate Vue `useToastStore` has a hard-coded 3000 ms auto-dismiss for in-window toasts, but those toasts are not the native inbound transfer notification. Avoid conflating them.
+- `core_lib/src/hdl/inbound.rs` sets `State::Finished` when file payload chunks are fully assembled (also for finished text byte payloads), emits the state to the UI, **then** sends a final encrypted Nearby `Disconnection` frame. This ordering can allow Linux UI completion to precede Android sender completion. It does not prove Android waits because of this ordering.
+- The 2026-10-08 hardware log contains a `WaitingForUserConsent` first session which Android cancelled after 36 s and immediately retried. Another earlier session completed at the Linux backend. Phone-side action/ack state was not captured, so root cause must not be asserted.
+
+Release-blocking acceptance checks:
+1. With Linux window hidden, Android sends a file. Keep the phone waiting 20+ seconds: actionable Accept/Reject must remain reachable and operable; provide an in-app fallback and record KDE notification lifetime.
+2. Verify Accept, Reject and phone-side cancellation as distinct outcomes; no actionable stale prompt may remain after the session ends. Notification lifecycle cleanup is required if persistence is introduced; simply setting `Timeout::Never` without dismissal on peer cancellation is insufficient.
+3. For one image and one text payload, capture both phone sender status (screen recording/timestamps) and Linux event timestamps: `WaitingForUserConsent`, user action, `Finished`, final disconnection send, socket close, Android UI completion. A Linux `Finished` event alone cannot certify remote UI completion.
+4. Do not reorder encrypted connection teardown or declare sender success until a protocol-specific regression test establishes the correct wire lifecycle.
+
+Remaining hardware matrix for progression (counts are individual scenario executions, not disjoint tests; scenarios may share successful trials):
+- Request notification and cancellation: 3 outcomes.
+- Sender/receiver completion comparison: 2 payloads.
+- Cold discovery background/foreground: 3 each (6).
+- FEF3 periodic 30s/10s matched window-state A/B: 3 each (6; baseline can be reused from preceding matched trials).
+- FEF3 slot0 deferred on/off: 3 slot0-reaching attempts each (6, conditionally needed if GATT path is implicated).
+- mDNS duplicate-device behavior after two clean restarts: 2 cycles.
+- Current build feature smoke: incoming text + URL and outgoing image + text + nested folder: 5 paths.
+- Warm consecutive inbound receives without restart: 3 sessions.
+- A fresh debug Debian package gate: 1 build. Final strict Mode B: complete-suite 10 consecutive green executions plus mutation/coverage and Stage-12 YES/NO matrix review.
+
+These counts describe a controlled smoke plan, not a claim that each is a uniquely missing unit test. The 10x final Mode B gate is distinct from the standard one-pass dev preflight, which was green at `1e2f690`. Moving to the next product feature may proceed on `dev` after the targeted discovery/notification blockers are characterized; promoting the resulting feature-complete build to `master` requires final signoff.
 

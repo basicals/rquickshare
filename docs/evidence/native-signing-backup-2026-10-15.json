@@ -1,0 +1,229 @@
+{
+  "schema": 1,
+  "primary_fingerprint": "6D8854762CF0C86881138A56695A0888D09FA616",
+  "ciphertext_sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf",
+  "destination": "/home/morozhenko/morozhenko/secrets/ArcVault",
+  "mounted_copy_verified": true,
+  "direct_cloud_readback_verified": true,
+  "artifacts": [
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+      "size": 20559,
+      "sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "size": 181,
+      "sha256": "461cde6503d936ae07b23b4d25300e259a3fe04c5b8bff3e7fe99ff9f1765e51"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.receipt.json",
+      "size": 585,
+      "sha256": "a504f9165efec62cde5259892c00fd482f4a2ee12cab6f5a0d3c3f215d7ad6ac"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.RESTORE.md",
+      "size": 983,
+      "sha256": "12b088b72eff7a7357618ec911bb5772778fb29352e503d11cd083d849c0f733"
+    }
+  ],
+  "remote_error": null,
+  "direct_remote_artifacts_verified": [
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+      "size": 20559,
+      "sha256": "a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf",
+      "verified_at_utc": "2026-10-15T11:22:40.756212+00:00",
+      "method": "direct rclone cat; existing remote; no FUSE cache"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "size": 181,
+      "sha256": "461cde6503d936ae07b23b4d25300e259a3fe04c5b8bff3e7fe99ff9f1765e51",
+      "verified_at_utc": "2026-10-15T13:25:25.518986+00:00",
+      "method": "direct rclone cat; existing remote; no FUSE cache"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.receipt.json",
+      "size": 585,
+      "sha256": "a504f9165efec62cde5259892c00fd482f4a2ee12cab6f5a0d3c3f215d7ad6ac",
+      "verified_at_utc": "2026-10-15T13:25:25.518986+00:00",
+      "method": "direct rclone cat; existing remote; no FUSE cache"
+    },
+    {
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.RESTORE.md",
+      "size": 983,
+      "sha256": "12b088b72eff7a7357618ec911bb5772778fb29352e503d11cd083d849c0f733",
+      "verified_at_utc": "2026-10-15T13:25:25.518986+00:00",
+      "method": "direct rclone cat; existing remote; no FUSE cache"
+    }
+  ],
+  "local_restoration_verified": true,
+  "local_revocation_verified": true,
+  "release_signed": false,
+  "browser_readback_status": "not performed; user declined browser access; do not request sign-in",
+  "latest_direct_readback": {
+    "checked_at_utc": "2026-10-15T13:25:25.518986+00:00",
+    "method": "direct rclone cat; existing remote; no FUSE cache",
+    "verified": [
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+        "size": 181,
+        "sha256": "461cde6503d936ae07b23b4d25300e259a3fe04c5b8bff3e7fe99ff9f1765e51"
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.receipt.json",
+        "size": 585,
+        "sha256": "a504f9165efec62cde5259892c00fd482f4a2ee12cab6f5a0d3c3f215d7ad6ac"
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.RESTORE.md",
+        "size": 983,
+        "sha256": "12b088b72eff7a7357618ec911bb5772778fb29352e503d11cd083d849c0f733"
+      }
+    ],
+    "status": "verified",
+    "completed_at_utc": "2026-10-15T13:25:52.560106+00:00"
+  },
+  "quota_followup": {
+    "automation_id": "rquickshare-arcvault",
+    "kind": "thread heartbeat",
+    "interval": "hourly",
+    "status": "DELETED",
+    "scope": "read-only existing remote; four exact artifacts; stop on first failure; no browser access",
+    "completion": "All four artifacts independently downloaded and size/SHA256 verified; app confirmed automation deletion.",
+    "deleted_at_utc": "2026-10-15T13:26:51.780574+00:00"
+  },
+  "local_mount_diagnostics": {
+    "checked_at_utc": "2026-10-15T09:21:35.353338+00:00",
+    "method": "local-only original/cache comparison and exact VFS metadata; no Drive requests",
+    "mount_settings": {
+      "vfs_cache_mode": "full",
+      "vfs_write_back": "5s"
+    },
+    "artifacts": [
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.51390626+01:00",
+          "ATime": "2026-10-15T07:14:39.514702315+01:00",
+          "Size": 20559,
+          "Fingerprint": "20559,2026-10-15 06:14:39.513 +0000 UTC,ed966776dc9d1fba0066165a7f371e3b",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.515316657+01:00",
+          "ATime": "2026-10-15T07:14:39.515927078+01:00",
+          "Size": 181,
+          "Fingerprint": "181,2026-10-15 06:14:39.515 +0000 UTC,a6dc8f4b24635e1dbe852612281197e4",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.receipt.json",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.516460953+01:00",
+          "ATime": "2026-10-15T07:14:39.517065629+01:00",
+          "Size": 585,
+          "Fingerprint": "585,2026-10-15 06:14:39.516 +0000 UTC,12aa1163d978da37dd2f361739566e4d",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      },
+      {
+        "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.RESTORE.md",
+        "local_original_matches": true,
+        "cache_metadata_present": true,
+        "cache_metadata": {
+          "ModTime": "2026-10-15T07:14:39.517573996+01:00",
+          "ATime": "2026-10-15T07:14:39.518297182+01:00",
+          "Size": 983,
+          "Fingerprint": "983,2026-10-15 06:14:39.517 +0000 UTC,2ff74d94c4d2de9f75f4c448d247fc17",
+          "Dirty": false
+        },
+        "cache_content_present": true,
+        "cache_content_matches": true,
+        "cached_fingerprint_md5_matches_local": true
+      }
+    ],
+    "direct_cloud_readback_verified": false,
+    "same_mount_and_cli_config": true,
+    "same_mount_and_cli_executable": true,
+    "mount_backend_overrides_present": false,
+    "interpretation": "All four files have Dirty=false and cached remote MD5 fingerprints matching local originals; consistent with completed mount writeback, but not an independent fresh cloud download."
+  },
+  "direct_cloud_ciphertext_readback_verified": true,
+  "sidecar_repair": {
+    "user_authorized": true,
+    "initial_read_retry": {
+      "checked_at_utc": "2026-10-15T11:58:51.012458+00:00",
+      "method": "user-requested direct rclone cat retry; no FUSE cache",
+      "verified": [],
+      "status": "remote_error",
+      "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "returncode": 1,
+      "HTTP_status": [
+        "403"
+      ],
+      "provider_reasons": [
+        "rateLimitExceeded"
+      ],
+      "error_classes": [],
+      "completed_at_utc": "2026-10-15T11:58:58.280737+00:00"
+    },
+    "immutable_copy": {
+      "checked_at_utc": "2026-10-15T11:59:31.779156+00:00",
+      "operation": "user-authorized immutable sidecar repair copy",
+      "filename": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "status": "immutable_copy_completed_needs_readback",
+      "cloud_readback_verified": false,
+      "returncode": 0,
+      "completed_at_utc": "2026-10-15T11:59:37.424080+00:00"
+    },
+    "readback": {
+      "checked_at_utc": "2026-10-15T11:59:53.416154+00:00",
+      "method": "direct rclone cat after user-authorized immutable sidecar copy; no FUSE cache",
+      "verified": [],
+      "status": "remote_error",
+      "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256",
+      "returncode": 1,
+      "HTTP_status": [
+        "403"
+      ],
+      "provider_reasons": [
+        "rateLimitExceeded"
+      ],
+      "error_classes": [],
+      "completed_at_utc": "2026-10-15T11:59:58.643009+00:00"
+    },
+    "interpretation": "Immutable copy command succeeded; this may preserve an equal existing object or create an absent object. No upload-versus-skip assertion; fresh verification still blocked by quota."
+  },
+  "cloud_verification_completed_at_utc": "2026-10-15T13:25:52.560106+00:00",
+  "previous_remote_error": {
+    "returncode": 1,
+    "HTTP_status": [
+      "403"
+    ],
+    "provider_reasons": [
+      "rateLimitExceeded"
+    ],
+    "failed_artifact": "rquickshare-signing-recovery-6D8854762CF0-a9de8d32972119de7ec747849c76c10e292543d0b984bb28ba0b948f0220f9bf.tar.gpg.sha256"
+  }
+}

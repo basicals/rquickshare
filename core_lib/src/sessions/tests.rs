@@ -1,0 +1,923 @@
+use super::*;
+
+#[test]
+fn given_idle_or_live_session_when_restart_closes_admission_then_no_live_lease_is_cancelled_or_new_lease_admitted_after_cutoff(
+) {
+    // Arrange
+    let hub = hub();
+    let first = lease(&hub);
+    let control = first.control();
+    // Act / Assert
+    assert_eq!(hub.close_if_idle(), Ok(false));
+    assert!(!control.is_closed());
+    let second = lease(&hub); // A rejected cutoff did not close admission.
+    drop(first);
+    drop(second);
+    assert_eq!(hub.close_if_idle(), Ok(true));
+    assert!(matches!(
+        hub.open(TransferType::Inbound, None, CancellationToken::new()),
+        Err(SessionError::Closed)
+    ));
+    assert_eq!(hub.close_if_idle(), Ok(true));
+}
+
+fn hub() -> SessionHub {
+    SessionHub::new(17).unwrap()
+}
+fn lease(hub: &SessionHub) -> SessionLease {
+    hub.open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap()
+}
+fn waiting(hub: &SessionHub) -> (SessionLease, SessionControl, ConsentToken) {
+    let mut session = lease(hub);
+    session.observe(&State::WaitingForUserConsent);
+    let control = session.control();
+    let token = control.snapshot().consent.unwrap();
+    (session, control, token)
+}
+fn states() -> Vec<State> {
+    vec![
+        State::Initial,
+        State::ReceivedConnectionRequest,
+        State::SentUkeyServerInit,
+        State::SentUkeyClientInit,
+        State::SentUkeyClientFinish,
+        State::SentPairedKeyEncryption,
+        State::ReceivedUkeyClientFinish,
+        State::SentConnectionResponse,
+        State::SentPairedKeyResult,
+        State::SentIntroduction,
+        State::ReceivedPairedKeyResult,
+        State::WaitingForUserConsent,
+        State::ReceivingFiles,
+        State::SendingFiles,
+        State::Disconnected,
+        State::Rejected,
+        State::Cancelled,
+        State::Finished,
+    ]
+}
+
+#[test]
+fn given_zero_epoch_or_budget_when_hub_is_created_then_invalid_configuration_is_rejected() {
+    // Arrange / Act / Assert
+    for (epoch, limit) in [(0, 1), (1, 0), (0, 0)] {
+        assert!(matches!(
+            SessionHub::with_limit(epoch, limit),
+            Err(SessionError::Invalid)
+        ));
+    }
+}
+
+#[test]
+fn given_different_run_epochs_when_sessions_are_opened_then_old_capabilities_cannot_alias() {
+    // Arrange
+    let left = SessionHub::new(1).unwrap();
+    let right = SessionHub::new(2).unwrap();
+    // Act
+    let one = lease(&left);
+    let two = lease(&right);
+    // Assert
+    assert_ne!(one.id, two.id);
+    assert_ne!(one.event_id(), two.event_id());
+}
+
+#[test]
+fn given_completed_incarnation_when_new_session_opens_then_identity_is_never_reused() {
+    // Arrange
+    let hub = hub();
+    let old = lease(&hub);
+    let id = old.id;
+    // Act
+    drop(old);
+    let current = lease(&hub);
+    // Assert
+    assert_ne!(current.id, id);
+    assert_eq!(current.id.sequence, id.sequence + 1);
+}
+
+#[test]
+fn given_exact_session_budget_when_owner_drops_then_retained_controls_do_not_hold_the_slot() {
+    // Arrange
+    let hub = SessionHub::with_limit(1, 1).unwrap();
+    let owner = lease(&hub);
+    let control = owner.control();
+    // Act / Assert
+    assert!(matches!(
+        hub.open(TransferType::Inbound, None, CancellationToken::new()),
+        Err(SessionError::Full)
+    ));
+    drop(owner);
+    assert!(control.is_closed());
+    let next = lease(&hub);
+    assert_ne!(next.id, control.snapshot().id);
+    assert_eq!(hub.active().unwrap().len(), 1);
+}
+
+#[test]
+fn given_exhausted_session_sequence_when_opened_then_no_partial_registration_or_alias_occurs() {
+    // Arrange
+    let hub = hub();
+    hub.0.lock().unwrap().sequence = u64::MAX - 1;
+    let last = lease(&hub);
+    assert_eq!(last.id.sequence, u64::MAX);
+    drop(last);
+    // Act / Assert
+    assert!(matches!(
+        hub.open(TransferType::Inbound, None, CancellationToken::new()),
+        Err(SessionError::Exhausted)
+    ));
+    assert!(hub.active().unwrap().is_empty());
+    assert_eq!(hub.0.lock().unwrap().sequence, u64::MAX);
+}
+
+#[test]
+fn given_live_hub_when_closed_twice_then_all_owners_cancel_and_admission_stays_closed() {
+    // Arrange
+    let hub = hub();
+    let owner = lease(&hub);
+    // Act
+    hub.close();
+    hub.close();
+    // Assert
+    assert!(owner.cancellation().is_cancelled());
+    assert!(matches!(
+        hub.open(TransferType::Inbound, None, CancellationToken::new()),
+        Err(SessionError::Closed)
+    ));
+    assert_eq!(hub.active().unwrap().len(), 1);
+    drop(owner);
+    assert!(hub.active().unwrap().is_empty());
+}
+
+#[test]
+fn given_outbound_correlation_when_session_is_registered_then_capability_is_independent_and_debug_is_redacted(
+) {
+    // Arrange
+    let hub = hub();
+    let private = "secret/path/and/peer";
+    // Act
+    let owner = hub
+        .open(
+            TransferType::Outbound,
+            Some(private.into()),
+            CancellationToken::new(),
+        )
+        .unwrap();
+    // Assert
+    assert_eq!(owner.event_id(), private);
+    assert!(!format!("{owner:?}").contains(private));
+    assert!(!format!("{:?}", owner.control().snapshot()).contains(private));
+    assert_eq!(owner.id.sequence, 1);
+}
+
+#[test]
+fn given_protocol_phase_or_direction_when_responded_then_only_inbound_current_wait_accepts_commands(
+) {
+    // Arrange
+    for direction in [TransferType::Inbound, TransferType::Outbound] {
+        for state in states() {
+            let hub = hub();
+            let mut owner = hub
+                .open(direction.clone(), None, CancellationToken::new())
+                .unwrap();
+            owner.observe(&state);
+            let control = owner.control();
+            let token = control.snapshot().consent.unwrap_or(ConsentToken {
+                session: owner.id,
+                round: 1,
+            });
+            // Act
+            let result = control.respond(token, 1, true);
+            // Assert
+            match (&direction, &state) {
+                (TransferType::Inbound, State::WaitingForUserConsent) => assert!(result.is_ok()),
+                (TransferType::Outbound, _) => {
+                    assert!(matches!(result, Err(SessionError::WrongDirection)))
+                }
+                _ => assert!(matches!(result, Err(SessionError::Stale))),
+            }
+        }
+    }
+}
+
+#[test]
+fn given_invalid_command_or_foreign_token_when_responded_then_mailbox_remains_empty() {
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, token) = waiting(&hub);
+    let other = lease(&hub);
+    // Act / Assert
+    for (token, command, error) in [
+        (token, 0, SessionError::Invalid),
+        (
+            ConsentToken {
+                session: other.id,
+                round: token.round,
+            },
+            1,
+            SessionError::Stale,
+        ),
+        (
+            ConsentToken {
+                round: token.round + 1,
+                ..token
+            },
+            1,
+            SessionError::Stale,
+        ),
+    ] {
+        assert!(matches!(control.respond(token, command, true), Err(actual) if actual == error));
+        assert!(owner.mailbox.try_recv().is_err());
+    }
+}
+
+#[tokio::test]
+async fn given_queued_consent_when_waiting_for_receipt_then_only_handler_validation_acknowledges() {
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, token) = waiting(&hub);
+    let mut receipt = control.respond(token, 7, true).unwrap();
+    // Act / Assert
+    assert!(matches!(
+        receipt.0.try_recv(),
+        Err(oneshot::error::TryRecvError::Empty)
+    ));
+    let command = owner.mailbox.recv().await.unwrap();
+    assert_eq!(
+        owner.apply(command, &State::WaitingForUserConsent),
+        Some(true)
+    );
+    receipt.wait().await.unwrap();
+    assert_eq!(control.snapshot().state, State::WaitingForUserConsent);
+}
+
+#[tokio::test]
+async fn given_accepted_consent_when_exact_command_replays_after_progress_then_receipt_replays_without_side_effect(
+) {
+    // Arrange
+    for later in [
+        State::WaitingForUserConsent,
+        State::ReceivingFiles,
+        State::Finished,
+    ] {
+        let hub = hub();
+        let (mut owner, control, token) = waiting(&hub);
+        let first = control.respond(token, 3, true).unwrap();
+        let command = owner.mailbox.recv().await.unwrap();
+        assert_eq!(
+            owner.apply(command, &State::WaitingForUserConsent),
+            Some(true)
+        );
+        first.wait().await.unwrap();
+        owner.observe(&later);
+        // Act
+        control
+            .respond(token, 3, true)
+            .unwrap()
+            .wait()
+            .await
+            .unwrap();
+        // Assert
+        assert!(owner.mailbox.try_recv().is_err());
+        assert_eq!(control.snapshot().state, later);
+    }
+}
+
+#[tokio::test]
+async fn given_accepted_decision_when_command_or_answer_conflicts_then_replay_is_rejected() {
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, token) = waiting(&hub);
+    let receipt = control.respond(token, 1, true).unwrap();
+    let command = owner.mailbox.recv().await.unwrap();
+    owner.apply(command, &State::WaitingForUserConsent);
+    receipt.wait().await.unwrap();
+    // Act / Assert
+    for (command, accept) in [(1, false), (2, true), (2, false)] {
+        assert!(matches!(
+            control.respond(token, command, accept),
+            Err(SessionError::Conflict)
+        ));
+        assert!(owner.mailbox.try_recv().is_err());
+    }
+}
+
+#[tokio::test]
+async fn given_full_consent_mailbox_when_processing_frees_capacity_then_exact_retry_obtains_receipt(
+) {
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, token) = waiting(&hub);
+    let receipt = control.respond(token, 2, false).unwrap();
+    // Act / Assert
+    assert!(matches!(
+        control.respond(token, 2, false),
+        Err(SessionError::Full)
+    ));
+    let command = owner.mailbox.recv().await.unwrap();
+    assert_eq!(
+        owner.apply(command, &State::WaitingForUserConsent),
+        Some(false)
+    );
+    receipt.wait().await.unwrap();
+    control
+        .respond(token, 2, false)
+        .unwrap()
+        .wait()
+        .await
+        .unwrap();
+    assert!(owner.mailbox.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn given_cancelled_session_when_pending_consent_is_processed_then_no_consent_is_applied() {
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, token) = waiting(&hub);
+    let receipt = control.respond(token, 1, true).unwrap();
+    // Act
+    control.cancel();
+    let command = owner.mailbox.recv().await.unwrap();
+    // Assert
+    assert_eq!(owner.apply(command, &State::WaitingForUserConsent), None);
+    assert_eq!(receipt.wait().await, Err(SessionError::Cancelled));
+    assert!(matches!(
+        control.respond(token, 1, true),
+        Err(SessionError::Cancelled)
+    ));
+}
+
+#[tokio::test]
+async fn given_actual_handler_phase_changed_when_queued_consent_is_checked_then_stale_command_has_no_effect(
+) {
+    // Arrange
+    for state in states()
+        .into_iter()
+        .filter(|state| *state != State::WaitingForUserConsent)
+    {
+        let hub = hub();
+        let (mut owner, control, token) = waiting(&hub);
+        let receipt = control.respond(token, 1, true).unwrap();
+        // Act
+        let command = owner.mailbox.recv().await.unwrap();
+        // Assert
+        assert_eq!(owner.apply(command, &state), None);
+        assert_eq!(receipt.wait().await, Err(SessionError::Stale));
+    }
+}
+
+#[tokio::test]
+async fn given_unprocessed_command_when_session_owner_disappears_then_receipt_reports_loss() {
+    // Arrange
+    let hub = hub();
+    let (owner, control, token) = waiting(&hub);
+    let receipt = control.respond(token, 1, true).unwrap();
+    // Act
+    drop(owner);
+    // Assert
+    assert_eq!(receipt.wait().await, Err(SessionError::OwnerLost));
+    assert_eq!(control.snapshot().state, State::WaitingForUserConsent);
+}
+
+#[tokio::test]
+async fn given_dropped_receipt_when_handler_processes_then_accepted_decision_is_not_rolled_back() {
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, token) = waiting(&hub);
+    drop(control.respond(token, 1, true).unwrap());
+    // Act
+    let command = owner.mailbox.recv().await.unwrap();
+    // Assert
+    assert_eq!(
+        owner.apply(command, &State::WaitingForUserConsent),
+        Some(true)
+    );
+    control
+        .respond(token, 1, true)
+        .unwrap()
+        .wait()
+        .await
+        .unwrap();
+}
+
+#[test]
+fn given_repeated_wait_and_new_round_when_state_updates_then_only_new_round_invalidates_old_tokens()
+{
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, token) = waiting(&hub);
+    // Act / Assert
+    owner.observe(&State::WaitingForUserConsent);
+    assert_eq!(control.snapshot().consent, Some(token));
+    owner.observe(&State::ReceivingFiles);
+    owner.observe(&State::WaitingForUserConsent);
+    let next = control.snapshot().consent.unwrap();
+    assert_ne!(next, token);
+    assert_eq!(next.round, token.round + 1);
+    assert!(matches!(
+        control.respond(token, 1, true),
+        Err(SessionError::Stale)
+    ));
+}
+
+#[test]
+fn given_exhausted_consent_round_when_waiting_begins_then_owner_cancels_without_token_alias() {
+    // Arrange
+    let hub = hub();
+    let mut owner = lease(&hub);
+    owner.round = u64::MAX - 1;
+    owner.observe(&State::WaitingForUserConsent);
+    assert_eq!(owner.control().snapshot().consent.unwrap().round, u64::MAX);
+    assert!(!owner.cancellation().is_cancelled());
+    owner.observe(&State::ReceivingFiles);
+    // Act
+    owner.observe(&State::WaitingForUserConsent);
+    // Assert
+    assert!(owner.cancellation().is_cancelled());
+    assert!(owner.control().snapshot().consent.is_none());
+    assert_eq!(
+        owner.control().snapshot().state,
+        State::WaitingForUserConsent
+    );
+    assert_eq!(owner.round, u64::MAX);
+}
+
+#[tokio::test]
+async fn given_live_status_when_observed_then_watch_publishes_actual_state_and_token() {
+    // Arrange
+    let hub = hub();
+    let mut owner = lease(&hub);
+    let mut control = owner.control();
+    // Act
+    owner.observe(&State::WaitingForUserConsent);
+    let snapshot = control.changed().await.unwrap();
+    // Assert
+    assert_eq!(snapshot.id, owner.id);
+    assert_eq!(snapshot.state, State::WaitingForUserConsent);
+    assert_eq!(snapshot.consent, control.snapshot().consent);
+    assert!(snapshot.consent.is_some());
+}
+
+#[test]
+fn given_terminal_session_when_cancel_and_late_states_arrive_then_every_terminal_outcome_is_absorbing(
+) {
+    // Arrange
+    for terminal in [
+        State::Finished,
+        State::Rejected,
+        State::Cancelled,
+        State::Disconnected,
+    ] {
+        for later in states() {
+            let hub = hub();
+            let mut owner = lease(&hub);
+            owner.observe(&terminal);
+            // Act
+            owner.control().cancel();
+            owner.observe(&later);
+            // Assert
+            assert_eq!(owner.control().snapshot().state, terminal);
+            assert!(owner.control().snapshot().consent.is_none());
+        }
+    }
+}
+
+#[tokio::test]
+async fn given_retained_control_when_owner_closes_then_watch_and_mailbox_close_without_fake_terminal(
+) {
+    // Arrange
+    let hub = hub();
+    let (owner, mut control, token) = waiting(&hub);
+    control.status.borrow_and_update();
+    // Act
+    drop(owner);
+    // Assert
+    assert!(control.is_closed());
+    assert!(matches!(control.changed().await, Err(SessionError::Closed)));
+    assert!(matches!(
+        control.respond(token, 1, true),
+        Err(SessionError::Closed)
+    ));
+    assert_eq!(control.snapshot().state, State::WaitingForUserConsent);
+    assert!(hub.active().unwrap().is_empty());
+}
+
+#[test]
+fn given_client_control_when_dropped_then_service_owned_session_stays_live_and_uncancelled() {
+    // Arrange
+    let hub = hub();
+    let owner = lease(&hub);
+    // Act
+    drop(owner.control());
+    // Assert
+    assert!(!owner.cancellation().is_cancelled());
+    assert_eq!(hub.active().unwrap().len(), 1);
+    assert!(!owner.control().is_closed());
+}
+
+#[tokio::test]
+async fn given_consent_queued_before_first_ack_when_first_command_applies_then_duplicate_replays_and_conflict_fails(
+) {
+    // Arrange
+    for (command_id, accept, expected) in [
+        (1, true, Ok(())),
+        (1, false, Err(SessionError::Conflict)),
+        (2, true, Err(SessionError::Conflict)),
+    ] {
+        let hub = hub();
+        let (mut owner, control, token) = waiting(&hub);
+        let first = control.respond(token, 1, true).unwrap();
+        let first_command = owner.mailbox.recv().await.unwrap();
+        let second = control.respond(token, command_id, accept).unwrap();
+        // Act
+        assert_eq!(
+            owner.apply(first_command, &State::WaitingForUserConsent),
+            Some(true)
+        );
+        owner.observe(&State::ReceivingFiles);
+        let queued = owner.mailbox.recv().await.unwrap();
+        // Assert
+        assert_eq!(owner.apply(queued, &State::ReceivingFiles), None);
+        first.wait().await.unwrap();
+        assert_eq!(second.wait().await, expected);
+        assert_eq!(control.snapshot().state, State::ReceivingFiles);
+    }
+}
+
+#[tokio::test]
+async fn given_consent_queued_in_old_round_when_new_wait_begins_then_old_answer_cannot_accept_new_round(
+) {
+    // Arrange
+    let hub = hub();
+    let (mut owner, control, old) = waiting(&hub);
+    let obsolete = control.respond(old, 1, true).unwrap();
+    // Act
+    owner.observe(&State::ReceivingFiles);
+    owner.observe(&State::WaitingForUserConsent);
+    let current = control.snapshot().consent.unwrap();
+    let stale = owner.mailbox.recv().await.unwrap();
+    // Assert
+    assert_eq!(owner.apply(stale, &State::WaitingForUserConsent), None);
+    assert_eq!(obsolete.wait().await, Err(SessionError::Stale));
+    let live = control.respond(current, 1, false).unwrap();
+    let command = owner.mailbox.recv().await.unwrap();
+    assert_eq!(
+        owner.apply(command, &State::WaitingForUserConsent),
+        Some(false)
+    );
+    live.wait().await.unwrap();
+}
+
+#[test]
+fn given_short_lived_session_when_observed_later_then_lifecycle_order_survives_owner_drop() {
+    // Arrange
+    let hub = SessionHub::new(7).unwrap();
+    let mut events = hub.subscribe_fresh().unwrap();
+    let mut lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    let id = lease.control().snapshot().id;
+    // Act
+    lease.observe(&State::WaitingForUserConsent);
+    lease.observe(&State::Finished);
+    lease.observe(&State::Disconnected);
+    drop(lease);
+    // Assert
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Opened(control) if control.snapshot().id == id)
+    );
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Changed(s) if s.id == id && s.consent.is_some())
+    );
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Changed(s) if s.state == State::Finished)
+    );
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Closed(s) if s.state == State::Finished)
+    );
+    assert!(matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Empty)
+    ));
+}
+
+#[test]
+fn given_late_subscription_or_owner_loss_when_read_then_no_recovery_or_terminal_is_invented() {
+    // Arrange
+    let hub = SessionHub::new(7).unwrap();
+    let mut events = hub.subscribe_fresh().unwrap();
+    let lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    // Act / Assert
+    assert!(matches!(hub.subscribe_fresh(), Err(SessionError::Stale)));
+    drop(lease);
+    assert!(matches!(
+        events.try_recv().unwrap(),
+        SessionEvent::Opened(_)
+    ));
+    assert!(
+        matches!(events.try_recv().unwrap(), SessionEvent::Closed(s) if s.state == State::Initial)
+    );
+    hub.close();
+    assert!(matches!(hub.subscribe_fresh(), Err(SessionError::Closed)));
+}
+
+#[test]
+fn given_more_than_bounded_events_when_unpolled_then_loss_is_explicit() {
+    // Arrange
+    let hub = SessionHub::new(7).unwrap();
+    let mut events = hub.subscribe_fresh().unwrap();
+    // Act
+    for _ in 0..=EVENT_LIMIT / 2 {
+        drop(
+            hub.open(TransferType::Inbound, None, CancellationToken::new())
+                .unwrap(),
+        );
+    }
+    // Assert
+    assert!(matches!(
+        events.try_recv(),
+        Err(broadcast::error::TryRecvError::Lagged(2))
+    ));
+}
+
+#[tokio::test]
+async fn given_full_hub_when_lease_drops_or_hub_closes_then_readiness_wakes_without_timer() {
+    use futures::FutureExt;
+    // Arrange
+    let hub = SessionHub::with_limit(7, 1).unwrap();
+    let lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    let available = hub.available();
+    tokio::pin!(available);
+    // Act / Assert
+    assert!(available.as_mut().now_or_never().is_none());
+    drop(lease);
+    assert_eq!(available.await, Ok(()));
+    let _lease = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    let available = hub.available();
+    tokio::pin!(available);
+    assert!(available.as_mut().now_or_never().is_none());
+    hub.close();
+    assert_eq!(available.await, Err(SessionError::Closed));
+}
+
+#[test]
+fn given_same_consent_phase_when_details_arrive_then_ordered_readiness_preserves_round_and_clears_pin_on_exit(
+) {
+    // Arrange
+    let hub = hub();
+    let mut events = hub.subscribe_fresh().unwrap();
+    let (mut session, control, token) = waiting(&hub);
+    let details = crate::sessions::details::TransferDetails {
+        status: crate::sessions::details::DetailsStatus::Ready,
+        sender: "phone".into(),
+        pin: "0123".into(),
+        files: vec![crate::sessions::details::FileDetail {
+            name: "item".into(),
+            size: 3,
+        }]
+        .into(),
+        total_bytes: 3,
+        ..Default::default()
+    };
+    // Act
+    session.observe_details(&State::WaitingForUserConsent, details.clone());
+    // Assert
+    assert_eq!(control.snapshot().consent, Some(token));
+    assert_eq!(*control.snapshot().details, details);
+    assert!(matches!(
+        events.try_recv().unwrap(),
+        SessionEvent::Opened(_)
+    ));
+    let SessionEvent::Changed(initial) = events.try_recv().unwrap() else {
+        panic!("Missing initial round")
+    };
+    let SessionEvent::Changed(ready) = events.try_recv().unwrap() else {
+        panic!("Missing ordered details")
+    };
+    assert_eq!(initial.consent, ready.consent);
+    assert_eq!(
+        initial.details.status,
+        crate::sessions::details::DetailsStatus::Unavailable
+    );
+    assert_eq!(*ready.details, details);
+    session.observe(&State::ReceivingFiles);
+    assert_eq!(control.snapshot().details.pin, "");
+    assert_eq!(ready.details.pin, "0123");
+    session.observe(&State::Finished);
+    let terminal = control.snapshot();
+    session.observe_details(&State::WaitingForUserConsent, details);
+    assert_eq!(control.snapshot(), terminal);
+}
+
+#[test]
+fn given_ready_consent_when_description_changes_in_same_round_then_old_presentation_cannot_authorize_new_files(
+) {
+    // Arrange
+    let (mut session, control, token) = waiting(&hub());
+    let details = crate::sessions::details::TransferDetails {
+        status: crate::sessions::details::DetailsStatus::Ready,
+        sender: "phone".into(),
+        pin: "0123".into(),
+        total_bytes: 3,
+        files: vec![crate::sessions::details::FileDetail {
+            name: "item".into(),
+            size: 3,
+        }]
+        .into(),
+        ..Default::default()
+    };
+    session.observe_details(&State::WaitingForUserConsent, details.clone());
+    // Act
+    let mut replaced = details;
+    replaced.files = vec![crate::sessions::details::FileDetail {
+        name: "different-item".into(),
+        size: 3,
+    }]
+    .into();
+    session.observe_details(&State::WaitingForUserConsent, replaced);
+    // Assert
+    assert_eq!(control.snapshot().consent, Some(token));
+    assert_eq!(
+        control.snapshot().details.status,
+        crate::sessions::details::DetailsStatus::Unsupported
+    );
+    assert!(control.snapshot().details.pin.is_empty());
+    assert!(control.snapshot().details.files.is_empty());
+}
+
+#[test]
+fn given_previous_prepared_round_when_state_only_observation_enters_new_consent_then_readiness_and_old_pin_are_not_reused(
+) {
+    // Arrange
+    let (mut session, control, old_token) = waiting(&hub());
+    let details = crate::sessions::details::TransferDetails {
+        status: crate::sessions::details::DetailsStatus::Ready,
+        sender: "phone".into(),
+        pin: "0123".into(),
+        total_bytes: 3,
+        files: vec![crate::sessions::details::FileDetail {
+            name: "item".into(),
+            size: 3,
+        }]
+        .into(),
+        ..Default::default()
+    };
+    session.observe_details(&State::WaitingForUserConsent, details);
+    // Act
+    session.observe(&State::ReceivingFiles);
+    session.observe(&State::WaitingForUserConsent);
+    // Assert
+    let current = control.snapshot();
+    assert_ne!(current.consent, Some(old_token));
+    assert_eq!(
+        current.details.status,
+        crate::sessions::details::DetailsStatus::Unavailable
+    );
+    assert!(current.details.pin.is_empty());
+    assert!(current.details.files.is_empty());
+}
+
+#[tokio::test]
+async fn given_text_completion_when_consent_type_length_or_encoding_differs_then_no_resource_is_retained(
+) {
+    // Arrange / Act / Assert
+    use crate::hdl::{info::TransferMetadata, InnerState, TextPayloadInfo, TextPayloadType};
+    for (accept, body, final_type, ack, expected) in [
+        (Some(true), "abc", TextPayloadType::Text, 3, true),
+        (Some(false), "abc", TextPayloadType::Text, 3, false),
+        (None, "abc", TextPayloadType::Text, 3, false),
+        (Some(true), "ab", TextPayloadType::Text, 3, false),
+        (Some(true), "a\0c", TextPayloadType::Text, 3, false),
+        (Some(true), "abc", TextPayloadType::Url, 3, false),
+        (Some(true), "abc", TextPayloadType::Text, 2, false),
+    ] {
+        let hub = hub();
+        let mut owner = lease(&hub);
+        let mut actual = InnerState {
+            state: State::WaitingForUserConsent,
+            pin_code: Some("0123".into()),
+            remote_device_info: Some(crate::utils::RemoteDeviceInfo {
+                name: "phone".into(),
+                device_type: crate::utils::DeviceType::Phone,
+            }),
+            text_payload: Some(TextPayloadInfo::Text(1)),
+            transfer_metadata: Some(TransferMetadata {
+                total_bytes: 3,
+                text_type: Some(TextPayloadType::Text),
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        owner.observe_state(&actual);
+        owner.observe_state(&actual);
+        let control = owner.control();
+        assert_eq!(control.snapshot().details.kind, details::PayloadKind::Text);
+        if let Some(accept) = accept {
+            let receipt = control
+                .respond(control.snapshot().consent.unwrap(), 7, accept)
+                .unwrap();
+            let command = owner.mailbox.recv().await.unwrap();
+            assert_eq!(
+                owner.apply(command, &State::WaitingForUserConsent),
+                Some(accept)
+            );
+            receipt.wait().await.unwrap();
+        }
+        actual.state = State::Finished;
+        let metadata = actual.transfer_metadata.as_mut().unwrap();
+        metadata.text_payload = Some(body.into());
+        metadata.text_type = Some(final_type);
+        metadata.ack_bytes = ack;
+        owner.observe_state(&actual);
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.received_text.is_some(), expected);
+        assert!(!format!("{snapshot:?}").contains(body));
+        if expected {
+            assert_eq!(snapshot.received_text.unwrap().text(), body);
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+async fn given_received_files_when_consent_direction_phase_or_manifest_differs_then_only_accepted_matching_finished_receipt_is_published(
+) {
+    use crate::received_files::tests::fixture;
+    // Arrange / Act / Assert: actual session command/ack path, no mocked eligibility.
+    for (direction, phase, accept, mismatch, expected) in [
+        (
+            TransferType::Inbound,
+            State::Finished,
+            Some(true),
+            false,
+            true,
+        ),
+        (TransferType::Inbound, State::Finished, None, false, false),
+        (
+            TransferType::Inbound,
+            State::Finished,
+            Some(false),
+            false,
+            false,
+        ),
+        (
+            TransferType::Inbound,
+            State::ReceivingFiles,
+            Some(true),
+            false,
+            false,
+        ),
+        (TransferType::Outbound, State::Finished, None, false, false),
+        (
+            TransferType::Inbound,
+            State::Finished,
+            Some(true),
+            true,
+            false,
+        ),
+    ] {
+        let (_directory, received, mut details) = fixture();
+        let hub = SessionHub::new(123).unwrap();
+        let mut lease = hub.open(direction, None, CancellationToken::new()).unwrap();
+        let control = lease.control();
+        details.pin = "0123".into();
+        lease.observe_details(&State::WaitingForUserConsent, details.clone());
+        if let Some(accept) = accept {
+            let token = control.snapshot().consent.unwrap();
+            let receipt = control.respond(token, 1, accept).unwrap();
+            let command = lease.mailbox.recv().await.unwrap();
+            assert_eq!(
+                lease.apply(command, &State::WaitingForUserConsent),
+                Some(accept)
+            );
+            receipt.wait().await.unwrap();
+        }
+        lease.completed_files = Some(received.clone());
+        details.pin.clear();
+        if mismatch {
+            details.files = vec![details::FileDetail {
+                name: "other.txt".into(),
+                size: 8,
+            }]
+            .into();
+        }
+        lease.observe_details(&phase, details);
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.received_files.is_some(), expected);
+        if expected {
+            assert!(Arc::ptr_eq(
+                snapshot.received_files.as_ref().unwrap(),
+                &received
+            ));
+            lease.observe(&State::Disconnected);
+            assert!(control.snapshot().received_files.is_some()); // Terminal absorption preserves actual receipt.
+        }
+    }
+}

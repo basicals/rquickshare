@@ -1,3 +1,5 @@
+mod slot;
+
 use std::sync::Arc;
 
 use anyhow::anyhow;
@@ -10,12 +12,13 @@ use bluer::{Adapter, Uuid, UuidExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::broadcast::Sender;
 use tokio::sync::mpsc::{channel, Receiver};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, Semaphore};
 use tokio_util::sync::CancellationToken;
 
 use crate::channel::{ChannelDirection, ChannelMessage, TransferType};
 use crate::errors::AppError;
 use crate::hdl::{BwuRouter, InboundRequest, MigratableStream, ReceiverAdvertisingRefresh, State};
+use crate::sessions::{tasks::SessionTasks, SessionHub};
 
 const INNER_NAME: &str = "ReceiverGattServer";
 
@@ -45,13 +48,35 @@ const MAX_WEAVE_MESSAGE_SIZE: usize = MAX_INBOUND_FRAME_SIZE + 7;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ReceiverDiscoveryRefresh {
     resend_mdns: bool,
-    advertising: ReceiverAdvertisingRefresh,
+    advertising: Option<ReceiverAdvertisingRefresh>,
 }
 
-fn receiver_discovery_refresh(offset: usize) -> Option<ReceiverDiscoveryRefresh> {
+// The A/B override is restricted to debug builds. Release always retains the
+// normal deferred FEF3 recovery after a slot-0 read.
+fn slot0_deferred_advertising_enabled_for(
+    debug_build: bool,
+    diagnostic_value: Option<&str>,
+) -> bool {
+    !debug_build || diagnostic_value != Some("0")
+}
+
+fn slot0_deferred_advertising_enabled() -> bool {
+    #[cfg(debug_assertions)]
+    let diagnostic_value = std::env::var("RQS_DIAG_SLOT0_ADV_REFRESH").ok();
+
+    #[cfg(not(debug_assertions))]
+    let diagnostic_value: Option<String> = None;
+
+    slot0_deferred_advertising_enabled_for(cfg!(debug_assertions), diagnostic_value.as_deref())
+}
+
+fn receiver_discovery_refresh(
+    offset: usize,
+    deferred_advertising_enabled: bool,
+) -> Option<ReceiverDiscoveryRefresh> {
     (offset == 0).then_some(ReceiverDiscoveryRefresh {
         resend_mdns: true,
-        advertising: ReceiverAdvertisingRefresh::Deferred,
+        advertising: deferred_advertising_enabled.then_some(ReceiverAdvertisingRefresh::Deferred),
     })
 }
 
@@ -120,14 +145,29 @@ fn inbound_disconnected_message(id: &str, error: impl Into<String>) -> ChannelMe
 pub struct ReceiverGattServer {
     adapter: Arc<Adapter>,
     advertisement: Vec<u8>,
+    identity: Option<([u8; 4], crate::identity::IdentityConsumer)>,
     sender: Sender<ChannelMessage>,
     tcp_port: u16,
     bwu_router: BwuRouter,
     receiver_advertiser_refresh: tokio::sync::broadcast::Sender<ReceiverAdvertisingRefresh>,
     mdns_refresh_sender: tokio::sync::broadcast::Sender<()>,
+    sessions: Option<SessionHub>,
+    receive_policy: crate::receive::ReceivePolicy,
 }
 
 impl ReceiverGattServer {
+    pub(crate) fn with_identity(
+        mut self,
+        endpoint: [u8; 4],
+        identity: crate::identity::IdentityConsumer,
+    ) -> Self {
+        self.identity = Some((endpoint, identity));
+        self
+    }
+    pub(crate) fn with_receive_policy(mut self, policy: crate::receive::ReceivePolicy) -> Self {
+        self.receive_policy = policy;
+        self
+    }
     pub async fn new(
         advertisement: Vec<u8>,
         sender: Sender<ChannelMessage>,
@@ -135,6 +175,7 @@ impl ReceiverGattServer {
         bwu_router: BwuRouter,
         receiver_advertiser_refresh: tokio::sync::broadcast::Sender<ReceiverAdvertisingRefresh>,
         mdns_refresh_sender: tokio::sync::broadcast::Sender<()>,
+        sessions: Option<SessionHub>,
     ) -> Result<Self, anyhow::Error> {
         let session = bluer::Session::new().await?;
         let adapter = session.default_adapter().await?;
@@ -143,20 +184,46 @@ impl ReceiverGattServer {
         Ok(Self {
             adapter: Arc::new(adapter),
             advertisement,
+            identity: None,
             sender,
             tcp_port,
             bwu_router,
             receiver_advertiser_refresh,
             mdns_refresh_sender,
+            sessions,
+            receive_policy: crate::receive::ReceivePolicy::new(None),
         })
     }
 
-    pub async fn run(&self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
+    pub async fn run(mut self, ctk: CancellationToken) -> Result<(), anyhow::Error> {
+        if ctk.is_cancelled() {
+            return Ok(());
+        }
         let service_uuid = Uuid::from_u16(QS_GATT_SERVICE);
         let slot0: Uuid = QS_ADV_SLOT0_UUID.parse()?;
         let weave_write: Uuid = QS_WEAVE_TO_PERIPHERAL.parse()?;
         let weave_notify: Uuid = QS_WEAVE_FROM_PERIPHERAL.parse()?;
-        let advertisement = self.advertisement.clone();
+        let mut identity = self.identity.take();
+        let mut initial_revision = 0;
+        if let Some((endpoint, consumer)) = identity.as_mut() {
+            let snapshot = consumer.snapshot();
+            initial_revision = snapshot.revision;
+            self.advertisement = super::receiver_service_data(
+                *endpoint,
+                crate::utils::DeviceType::Laptop as u8,
+                snapshot.name.as_str(),
+            );
+        }
+        let value = Arc::new(Mutex::new(slot::SlotValue::new(
+            self.advertisement.clone(),
+            identity.is_some(),
+        )));
+        let advertisement = value.clone();
+        let deferred_slot0_advertising = slot0_deferred_advertising_enabled();
+        #[cfg(debug_assertions)]
+        info!(
+            "{INNER_NAME}: diagnostic slot0 deferred advertising refresh enabled={deferred_slot0_advertising}"
+        );
 
         const MAX_PENDING_GATT_WRITES: usize = 64;
         let (packet_sender, packet_receiver) = channel::<Vec<u8>>(MAX_PENDING_GATT_WRITES);
@@ -168,6 +235,13 @@ impl ReceiverGattServer {
         let slot_advertiser_refresh_sender = self.receiver_advertiser_refresh.clone();
         let slot_mdns_refresh_sender = self.mdns_refresh_sender.clone();
         let session_refresh_sender = self.receiver_advertiser_refresh.clone();
+        let tasks = SessionTasks::new(&ctk, 33)?;
+        let callback_tasks = tasks.clone();
+        let bridge_slots = Arc::new(Semaphore::new(1));
+        let admission = ReceiveAdmission {
+            sessions: self.sessions.clone(),
+            policy: self.receive_policy.clone(),
+        };
 
         let app = Application {
             services: vec![Service {
@@ -185,23 +259,32 @@ impl ReceiverGattServer {
                                 let mdns_refresh_sender = slot_mdns_refresh_sender.clone();
                                 Box::pin(async move {
                                     let offset = usize::from(request.offset);
-                                    let response = if offset >= advertisement.len() {
-                                        Vec::new()
-                                    } else {
-                                        advertisement[offset..].to_vec()
-                                    };
+                                    let response = advertisement
+                                        .lock()
+                                        .await
+                                        .read(request.device_address, offset)
+                                        .ok_or(ReqError::Failed)?;
                                     trace!(
                                         "{INNER_NAME}: slot0 read offset={offset}, returned={} bytes",
                                         response.len()
                                     );
-                                    if let Some(refresh) = receiver_discovery_refresh(offset) {
+                                    if let Some(refresh) = receiver_discovery_refresh(
+                                        offset,
+                                        deferred_slot0_advertising,
+                                    ) {
                                         if refresh.resend_mdns {
                                             let _ = mdns_refresh_sender.send(());
                                         }
-                                        let _ = advertiser_refresh_sender.send(refresh.advertising);
-                                        debug!(
-                                            "{INNER_NAME}: slot0 requested mDNS resend and deferred advertising recovery"
-                                        );
+                                        if let Some(advertising) = refresh.advertising {
+                                            let _ = advertiser_refresh_sender.send(advertising);
+                                            debug!(
+                                                "{INNER_NAME}: slot0 requested mDNS resend and deferred advertising recovery"
+                                            );
+                                        } else {
+                                            debug!(
+                                                "{INNER_NAME}: slot0 requested mDNS resend; deferred advertising recovery skipped (debug A/B)"
+                                            );
+                                        }
                                     }
                                     Ok(response)
                                 })
@@ -243,23 +326,42 @@ impl ReceiverGattServer {
                                 let channel_sender = channel_sender.clone();
                                 let bwu_router = bwu_router.clone();
                                 let refresh_sender = session_refresh_sender.clone();
+                                let tasks = callback_tasks.clone();
+                                let admission = admission.clone();
+                                let bridge = Arc::clone(&bridge_slots).try_acquire_owned();
                                 Box::pin(async move {
+                                    let Ok(bridge) = bridge else {
+                                        return;
+                                    };
                                     debug!("{INNER_NAME}: weave notify subscription started");
-                                    if let Err(error) = weave_session(
-                                        notifier,
-                                        packet_receiver,
-                                        channel_sender,
-                                        bwu_router,
-                                        tcp_port,
-                                    )
-                                    .await
-                                    {
-                                        warn!(
+                                    let worker_tasks = tasks.clone();
+                                    let lifetime = tasks.lifetime();
+                                    let started = tasks.spawn(async move {
+                                        let _bridge = bridge;
+                                        let result = crate::manager::session::until_stopped(
+                                            &lifetime,
+                                            weave_session(
+                                                notifier,
+                                                packet_receiver,
+                                                channel_sender,
+                                                bwu_router,
+                                                tcp_port,
+                                                worker_tasks,
+                                                admission,
+                                            ),
+                                        )
+                                        .await;
+                                        if let Some(Err(error)) = result {
+                                            warn!(
                                             "{INNER_NAME}: weave session ended with error: {error}"
                                         );
+                                        }
+                                        let _ = refresh_sender
+                                            .send(ReceiverAdvertisingRefresh::Immediate);
+                                    });
+                                    if let Ok(started) = started {
+                                        let _ = started.await;
                                     }
-                                    let _ =
-                                        refresh_sender.send(ReceiverAdvertisingRefresh::Immediate);
                                 })
                             })),
                             ..Default::default()
@@ -276,12 +378,58 @@ impl ReceiverGattServer {
             "{INNER_NAME}: registering GATT 0x{QS_GATT_SERVICE:04X} (slot0 {} bytes)",
             self.advertisement.len()
         );
-        let handle = self.adapter.serve_gatt_application(app).await?;
-        ctk.cancelled().await;
+        let registration_lifetime = tasks.lifetime();
+        let registration = tokio::select! {
+            biased;
+            _ = registration_lifetime.cancelled() => { tasks.stop().await?; return Ok(()); },
+            registration = self.adapter.serve_gatt_application(app) => registration,
+        };
+        let handle = match registration {
+            Ok(handle) => handle,
+            Err(error) => {
+                tasks.stop().await?;
+                return Err(error.into());
+            }
+        };
+        if let Some((_, consumer)) = identity.as_ref() {
+            if let Err(error) = consumer.acknowledge(initial_revision) {
+                drop(handle);
+                tasks.stop().await?;
+                return Err(error.into());
+            }
+        }
+        let lifetime = tasks.lifetime();
+        let outcome: Result<(), anyhow::Error> = loop {
+            tokio::select! {
+                biased;
+                _ = ctk.cancelled() => break Ok(()),
+                _ = lifetime.cancelled() => break Ok(()),
+                changed = async {
+                    match identity.as_mut() {
+                        Some((_, consumer)) => consumer.changed().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    if let Err(error) = changed { break Err(error.into()); }
+                    if let Some((endpoint, consumer)) = identity.as_mut() {
+                        let snapshot = consumer.snapshot();
+                        value.lock().await.install(super::receiver_service_data(*endpoint, crate::utils::DeviceType::Laptop as u8, snapshot.name.as_str()));
+                        if let Err(error) = consumer.acknowledge(snapshot.revision) { break Err(error.into()); }
+                    }
+                }
+            }
+        };
         drop(handle);
+        tasks.stop().await?;
         info!("{INNER_NAME}: stopped");
-        Ok(())
+        outcome
     }
+}
+
+#[derive(Clone)]
+struct ReceiveAdmission {
+    sessions: Option<SessionHub>,
+    policy: crate::receive::ReceivePolicy,
 }
 
 async fn weave_session(
@@ -290,8 +438,16 @@ async fn weave_session(
     sender: Sender<ChannelMessage>,
     bwu_router: BwuRouter,
     tcp_port: u16,
+    tasks: SessionTasks,
+    admission: ReceiveAdmission,
 ) -> Result<(), anyhow::Error> {
-    let mut receiver_guard = packet_receiver.lock().await;
+    let ReceiveAdmission { sessions, policy } = admission;
+    let notification_stopped = notifier.stopped();
+    tokio::pin!(notification_stopped);
+    let mut receiver_guard = tokio::select! {
+        _ = &mut notification_stopped => return Ok(()),
+        receiver = packet_receiver.lock() => receiver,
+    };
     let receiver = receiver_guard
         .as_mut()
         .ok_or_else(|| anyhow!("weave packet receiver is unavailable"))?;
@@ -299,10 +455,10 @@ async fn weave_session(
     info!("{INNER_NAME}: weave notify session opened");
 
     let selected_packet_size = loop {
-        let packet = receiver
-            .recv()
-            .await
-            .ok_or_else(|| anyhow!("weave packet channel closed during handshake"))?;
+        let packet = tokio::select! {
+            _ = &mut notification_stopped => return Ok(()),
+            packet = receiver.recv() => packet.ok_or_else(|| anyhow!("weave packet channel closed during handshake"))?,
+        };
 
         match parse_connection_request(&packet) {
             Ok(selected) => break selected,
@@ -321,42 +477,28 @@ async fn weave_session(
     let (inbound_side, weave_side) = tokio::io::duplex(64 * 1024);
     let (mut weave_read, mut weave_write) = tokio::io::split(weave_side);
     let inbound_sender = sender.clone();
-    let inbound_error_sender = sender.clone();
     let inbound_bwu_router = bwu_router.clone();
-
-    let inbound_task = tokio::spawn(async move {
-        let mut request = InboundRequest::new(
-            MigratableStream::Ble(inbound_side),
-            "ble-weave".to_owned(),
-            inbound_sender,
-        );
-        request.enable_bandwidth_upgrade();
-
-        loop {
-            match request.handle().await {
-                Ok(()) => {
-                    if request.take_bwu_pending() {
-                        if let Err(error) = request
-                            .do_bandwidth_upgrade(&inbound_bwu_router, tcp_port)
-                            .await
-                        {
-                            warn!(
-                                "{INNER_NAME}: Wi-Fi bandwidth upgrade failed; continuing on BLE: {error}"
-                            );
-                        }
-                    }
-                }
-                Err(error) => {
-                    if !matches!(error.downcast_ref(), Some(AppError::NotAnError)) {
-                        debug!("{INNER_NAME}: BLE inbound ended: {error}");
-                        let _ = inbound_error_sender
-                            .send(inbound_disconnected_message("ble-weave", error.to_string()));
-                    }
-                    break;
-                }
-            }
-        }
-    });
+    let mut request = InboundRequest::new(
+        MigratableStream::Ble(inbound_side),
+        "ble-weave".to_owned(),
+        inbound_sender,
+    )
+    .with_receive_directory(policy.snapshot());
+    let native = sessions.is_some();
+    if let Some(sessions) = sessions {
+        let session = sessions.open(TransferType::Inbound, None, CancellationToken::new())?;
+        request = request.attach_session(session);
+    }
+    request.enable_bandwidth_upgrade();
+    let lifetime = tasks.lifetime();
+    tasks.spawn(run_inbound_worker(
+        request,
+        sender,
+        inbound_bwu_router,
+        tcp_port,
+        lifetime,
+        native,
+    ))?;
 
     let mut reassembly = Vec::new();
     let mut outbound_buffer = Vec::new();
@@ -366,9 +508,6 @@ async fn weave_session(
     // A peer can disappear without sending a final weave control packet. Observe
     // the GATT subscription lifecycle explicitly so the session mutex is released
     // and a later transfer can start without restarting the application.
-    let notification_stopped = notifier.stopped();
-    tokio::pin!(notification_stopped);
-
     let result = loop {
         tokio::select! {
             _ = &mut notification_stopped => {
@@ -501,30 +640,100 @@ async fn weave_session(
         }
     };
 
-    // Dropping a Tokio JoinHandle detaches the task; it does not cancel it.
-    // Before BWU, closing the duplex bridge makes the inbound task exit on EOF.
-    // After a successful BLE -> TCP migration, the same task must stay alive
-    // and finish the transfer on its new TCP transport.
-    drop(inbound_task);
+    // The group owns the worker after this bridge closes, including after BWU.
     info!("{INNER_NAME}: weave session closed");
     result
 }
+
+async fn run_inbound_worker(
+    mut request: InboundRequest<MigratableStream>,
+    sender: Sender<ChannelMessage>,
+    router: BwuRouter,
+    tcp_port: u16,
+    lifetime: CancellationToken,
+    native: bool,
+) {
+    let cancellation = request.cancellation();
+    let result: Option<Result<(), anyhow::Error>> = crate::manager::session::until_either_stops(&lifetime, &cancellation, async {
+        loop {
+            request.handle().await?;
+            if request.take_bwu_pending() {
+                if let Err(error) = request.do_bandwidth_upgrade(&router, tcp_port).await {
+                    warn!("{INNER_NAME}: Wi-Fi bandwidth upgrade failed; retaining current transport: {error}");
+                }
+            }
+        }
+    }).await;
+    let message = match result {
+        None => crate::manager::cancellation_message(
+            &request.state.id,
+            TransferType::Inbound,
+            &request.state.state,
+            request.state.transfer_metadata.clone(),
+        ),
+        Some(Err(error))
+            if error.downcast_ref::<AppError>().is_none()
+                && !crate::sessions::terminal(&request.state.state)
+                && (!native || request.state.state != State::Initial) =>
+        {
+            let mut message = inbound_disconnected_message(
+                &request.state.id,
+                error.to_string().chars().take(512).collect::<String>(),
+            );
+            message.meta = request.state.transfer_metadata.clone();
+            Some(message)
+        }
+        _ => None,
+    };
+    if let Some(message) = message {
+        if let Some(state) = message.state.clone() {
+            request.record_termination(state);
+        }
+        let _ = sender.send(message);
+    } else if lifetime.is_cancelled() || cancellation.is_cancelled() {
+        request.record_termination(State::Cancelled);
+    }
+}
+
+#[cfg(test)]
+mod managed_tests;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn slot0_zero_offset_requests_mdns_resend_and_deferred_advertising() {
-        let refresh = receiver_discovery_refresh(0).expect("slot0 offset zero must refresh");
+    fn slot0_zero_offset_preserves_mdns_and_deferred_advertising_by_default() {
+        let refresh = receiver_discovery_refresh(0, true).expect("slot0 offset zero must refresh");
         assert!(refresh.resend_mdns);
-        assert_eq!(refresh.advertising, ReceiverAdvertisingRefresh::Deferred);
+        assert_eq!(
+            refresh.advertising,
+            Some(ReceiverAdvertisingRefresh::Deferred)
+        );
     }
 
     #[test]
-    fn slot0_nonzero_offset_does_not_refresh_discovery() {
-        assert_eq!(receiver_discovery_refresh(1), None);
-        assert_eq!(receiver_discovery_refresh(usize::MAX), None);
+    fn slot0_debug_ab_skips_only_deferred_advertising() {
+        let refresh = receiver_discovery_refresh(0, false).expect("slot0 offset zero must refresh");
+        assert!(refresh.resend_mdns);
+        assert_eq!(refresh.advertising, None);
+    }
+
+    #[test]
+    fn slot0_nonzero_offset_does_not_refresh_discovery_in_either_variant() {
+        for enabled in [true, false] {
+            assert_eq!(receiver_discovery_refresh(1, enabled), None);
+            assert_eq!(receiver_discovery_refresh(usize::MAX, enabled), None);
+        }
+    }
+
+    #[test]
+    fn slot0_ab_flag_is_debug_only_and_opt_out_only() {
+        assert!(slot0_deferred_advertising_enabled_for(true, None));
+        assert!(slot0_deferred_advertising_enabled_for(true, Some("1")));
+        assert!(slot0_deferred_advertising_enabled_for(true, Some("false")));
+        assert!(!slot0_deferred_advertising_enabled_for(true, Some("0")));
+        assert!(slot0_deferred_advertising_enabled_for(false, Some("0")));
     }
 
     #[test]

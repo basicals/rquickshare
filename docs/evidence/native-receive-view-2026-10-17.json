@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "scope": "Receive preserves the card mode without an incoming request",
+  "binary_source_commit": "61fb6b10dd7c3b330a8b1f055595e7123e8b29a7",
+  "package": {
+    "name": "rquickshare_0.11.5+native18_amd64.deb",
+    "bytes": 6507586,
+    "sha256": "4a8a22d275366ec483dcce9cc138fa9ac341b8340dc8a5ccec7364fb0e910b87",
+    "offline_verified": true,
+    "regular_files": 14
+  },
+  "checks": {
+    "affected_actual_gtk_smoke": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 0.56,
+      "no_request_combinations": [
+        "Compact/Full",
+        "hidden/visible",
+        "two consecutive activations"
+      ],
+      "exact_visibility_target": "temporary",
+      "mode_and_page_preserved": true,
+      "pending_review_branch": "source-reviewed; physical incoming acceptance remains open; no opaque transfer handle fabricated"
+    },
+    "strict_native_all_targets_no_deps_clippy": {
+      "passed": true,
+      "seconds": 1.31,
+      "existing_core_dependency_warnings": 9
+    },
+    "format_and_whitespace": true,
+    "full_native_or_core_suite_repeated": false,
+    "ten_repetitions": false
+  },
+  "installation": {
+    "observed_at": "2026-10-16T23:16:01.887178+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native17",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2168586"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2168587"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 0,
+      "owned_selections": 0,
+      "transfers": 0
+    },
+    "terminal_history_count": 0,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native18",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2170697"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2170698"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "tray": {
+    "observed_at": "2026-10-16T23:16:30.132679+00:00",
+    "installed_version": "0.11.5+native18",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      4,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true
+  },
+  "acceptance": {
+    "physical_receive_preserves_compact_verified": true,
+    "physical_shared_bottom_edge_verified": true,
+    "physical_checks_requested": false,
+    "historical_native16_drag_and_settings_ok_cancel": "explicit user confirmations in native-card-usability-2026-10-16.json; not repeated or attributed to native18",
+    "current_candidate_android_windows_accepted": false,
+    "user_observation": {
+      "local_date": "2026-10-17",
+      "source": "explicit user reply to the native18 combined Receive/edge question",
+      "installed_version": "0.11.5+native18",
+      "result": "both corrections work; earlier edge question also confirmed alignment",
+      "automated_compositor_test": false
+    }
+  },
+  "signed": false,
+  "published": false,
+  "apt_staged": false
+}

@@ -3,11 +3,11 @@ use std::sync::Arc;
 use bluer::adv::{Advertisement, AdvertisementHandle};
 use bluer::UuidExt;
 use bytes::Bytes;
-use tokio::sync::{broadcast, watch};
+use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
-use crate::hdl::mdns::Visibility;
+use crate::Visibility;
 
 const SERVICE_DATA: Bytes = Bytes::from_static(&[
     252, 18, 142, 1, 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 191, 45, 91, 160, 225, 216, 117, 36, 202, 0,
@@ -18,13 +18,11 @@ const INNER_NAME: &str = "BleAdvertiser";
 #[derive(Debug, Clone)]
 pub struct BleAdvertiser {
     adapter: Arc<bluer::Adapter>,
-    visibility_receiver: watch::Receiver<Visibility>,
+    visibility_receiver: crate::VisibilityReader,
 }
 
 impl BleAdvertiser {
-    pub async fn new(
-        visibility_receiver: watch::Receiver<Visibility>,
-    ) -> Result<Self, anyhow::Error> {
+    pub async fn new(visibility_receiver: crate::VisibilityReader) -> Result<Self, anyhow::Error> {
         let session = bluer::Session::new().await?;
         let adapter = session.default_adapter().await?;
         adapter.set_powered(true).await?;
@@ -48,7 +46,7 @@ impl BleAdvertiser {
 
         let service_uuid = Uuid::from_u16(0xFE2C);
         let mut handle: Option<AdvertisementHandle> = None;
-        let mut visibility = *self.visibility_receiver.borrow_and_update();
+        let mut visibility = self.visibility_receiver.current_and_update();
 
         if Self::should_advertise(visibility) {
             handle = Some(
@@ -71,7 +69,7 @@ impl BleAdvertiser {
                         break;
                     }
 
-                    visibility = *self.visibility_receiver.borrow_and_update();
+                    visibility = self.visibility_receiver.current_and_update();
                     debug!("{INNER_NAME}: visibility changed: {visibility:?}");
 
                     if Self::should_advertise(visibility) {
@@ -184,6 +182,35 @@ mod tests {
     }
 
     #[test]
+    fn receiver_periodic_refresh_default_and_release_are_fixed() {
+        assert_eq!(receiver_periodic_refresh_secs_for(true, None), 30);
+        assert_eq!(receiver_periodic_refresh_secs_for(false, None), 30);
+        assert_eq!(receiver_periodic_refresh_secs_for(false, Some("10")), 30);
+        assert_eq!(receiver_periodic_refresh_secs_for(false, Some("120")), 30);
+    }
+
+    #[test]
+    fn receiver_periodic_refresh_debug_accepts_only_bounded_seconds() {
+        assert_eq!(receiver_periodic_refresh_secs_for(true, Some("5")), 5);
+        assert_eq!(receiver_periodic_refresh_secs_for(true, Some("10")), 10);
+        assert_eq!(receiver_periodic_refresh_secs_for(true, Some("30")), 30);
+        assert_eq!(receiver_periodic_refresh_secs_for(true, Some("120")), 120);
+        for invalid in [
+            "",
+            "0",
+            "1",
+            "4",
+            "121",
+            "-1",
+            "10s",
+            " 10",
+            "18446744073709551616",
+        ] {
+            assert_eq!(receiver_periodic_refresh_secs_for(true, Some(invalid)), 30);
+        }
+    }
+
+    #[test]
     fn receiver_advertisement_truncates_multibyte_names_on_utf8_boundary() {
         let data = receiver_service_data([1, 2, 3, 4], 3, &"é".repeat(200));
 
@@ -204,6 +231,28 @@ mod tests {
 const RX_INNER_NAME: &str = "ReceiverAdvertiser";
 const QS_SERVICE_UUID: u16 = 0xFEF3;
 const QS_SVC_HASH: [u8; 3] = [0xfc, 0x9f, 0x5e];
+const RX_PERIODIC_REFRESH_DEFAULT_SECS: u64 = 30;
+
+// Only debug builds may override the safety refresh frequency. Keep the
+// release schedule unchanged while diagnosing BlueZ/Android cold discovery.
+fn receiver_periodic_refresh_secs_for(debug_build: bool, raw: Option<&str>) -> u64 {
+    if !debug_build {
+        return RX_PERIODIC_REFRESH_DEFAULT_SECS;
+    }
+
+    raw.and_then(|value| value.parse::<u64>().ok())
+        .filter(|seconds| (5..=120).contains(seconds))
+        .unwrap_or(RX_PERIODIC_REFRESH_DEFAULT_SECS)
+}
+
+fn receiver_periodic_refresh_secs() -> u64 {
+    #[cfg(debug_assertions)]
+    let raw = std::env::var("RQS_DIAG_RX_PERIODIC_ADV_SECS").ok();
+    #[cfg(not(debug_assertions))]
+    let raw: Option<String> = None;
+
+    receiver_periodic_refresh_secs_for(cfg!(debug_assertions), raw.as_deref())
+}
 
 /// Build the Nearby Connections receiver advertisement carried as 0xFEF3
 /// service data. The endpoint id must match the id used by mDNS.
@@ -214,9 +263,8 @@ pub fn receiver_service_data(endpoint_id: [u8; 4], device_type: u8, device_name:
     let identity: [u8; 16] = rand::random();
     endpoint_info.extend_from_slice(&identity);
 
-    const ENDPOINT_INFO_FIXED_BYTES: usize = 18;
     const MAX_ENDPOINT_INFO_BYTES: usize = u8::MAX as usize;
-    const MAX_RECEIVER_NAME_BYTES: usize = MAX_ENDPOINT_INFO_BYTES - ENDPOINT_INFO_FIXED_BYTES;
+    const MAX_RECEIVER_NAME_BYTES: usize = crate::identity::MAX_NAME_BYTES;
 
     let name = device_name.as_bytes();
     let mut name_len = name.len().min(MAX_RECEIVER_NAME_BYTES);
@@ -256,13 +304,13 @@ pub enum ReceiverAdvertisingRefresh {
 #[derive(Debug, Clone)]
 pub struct ReceiverAdvertiser {
     adapter: Arc<bluer::Adapter>,
-    visibility_receiver: watch::Receiver<Visibility>,
+    visibility_receiver: crate::VisibilityReader,
     refresh_sender: broadcast::Sender<ReceiverAdvertisingRefresh>,
 }
 
 impl ReceiverAdvertiser {
     pub async fn new(
-        visibility_receiver: watch::Receiver<Visibility>,
+        visibility_receiver: crate::VisibilityReader,
         refresh_sender: broadcast::Sender<ReceiverAdvertisingRefresh>,
     ) -> Result<Self, anyhow::Error> {
         let session = bluer::Session::new().await?;
@@ -285,6 +333,11 @@ impl ReceiverAdvertiser {
         let mut handle: Option<AdvertisementHandle> = None;
         let mut refresh_receiver = self.refresh_sender.subscribe();
         let mut deferred_refresh_deadline: Option<tokio::time::Instant> = None;
+        let periodic_refresh_secs = receiver_periodic_refresh_secs();
+        #[cfg(debug_assertions)]
+        info!(
+            "{RX_INNER_NAME}: diagnostic periodic advertising refresh interval={periodic_refresh_secs}s"
+        );
 
         info!(
             "{RX_INNER_NAME}: prepared Quick Share receiver advertisement on {} ({})",
@@ -293,7 +346,7 @@ impl ReceiverAdvertiser {
         );
 
         loop {
-            let visibility = *self.visibility_receiver.borrow_and_update();
+            let visibility = self.visibility_receiver.current_and_update();
             if BleAdvertiser::should_advertise(visibility) && handle.is_none() {
                 // Keep the on-air packet legacy-sized: advertise only the 0xFEF3
                 // service UUID and serve the full Nearby receiver advertisement
@@ -340,7 +393,7 @@ impl ReceiverAdvertiser {
                 refresh = refresh_receiver.recv() => {
                     match refresh {
                         Ok(ReceiverAdvertisingRefresh::Immediate) => {
-                            let visibility = *self.visibility_receiver.borrow();
+                            let visibility = self.visibility_receiver.current();
                             if Self::should_refresh(visibility, handle.is_some()) {
                                 debug!("{RX_INNER_NAME}: immediate advertising refresh requested");
                                 deferred_refresh_deadline = None;
@@ -348,7 +401,7 @@ impl ReceiverAdvertiser {
                             }
                         }
                         Ok(ReceiverAdvertisingRefresh::Deferred) | Err(broadcast::error::RecvError::Lagged(_)) => {
-                            let visibility = *self.visibility_receiver.borrow();
+                            let visibility = self.visibility_receiver.current();
                             if Self::should_refresh(visibility, handle.is_some()) {
                                 deferred_refresh_deadline = Some(
                                     tokio::time::Instant::now()
@@ -367,14 +420,14 @@ impl ReceiverAdvertiser {
                         tokio::time::Instant::now() + std::time::Duration::from_secs(86_400)
                     })
                 ), if deferred_refresh_deadline.is_some() => {
-                    let visibility = *self.visibility_receiver.borrow();
+                    let visibility = self.visibility_receiver.current();
                     deferred_refresh_deadline = None;
                     if Self::should_refresh(visibility, handle.is_some()) {
                         debug!("{RX_INNER_NAME}: applying deferred advertising refresh");
                         handle.take();
                     }
                 }
-                _ = tokio::time::sleep(std::time::Duration::from_secs(30)), if handle.is_some() => {
+                _ = tokio::time::sleep(std::time::Duration::from_secs(periodic_refresh_secs)), if handle.is_some() => {
                     // Safety fallback. BlueZ consumes connectable advertising sets on some
                     // adapters; normal recovery is event-driven from GATT activity.
                     debug!("{RX_INNER_NAME}: periodic advertising refresh");

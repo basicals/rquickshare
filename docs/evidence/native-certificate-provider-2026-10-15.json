@@ -1,0 +1,114 @@
+{
+  "schema": 1,
+  "date": "2026-10-15",
+  "mode": "A",
+  "source_commit": "75383dee42d1a85dd00f688b9a4940953e6d6233",
+  "status": "supported-authorization-only-selected",
+  "official_reference_revision": "d128b5fca30b3fa8d4642f8c75dd9e314e090e74",
+  "independent_provider": {
+    "repository": "https://github.com/scottydev40/scotty-mydevices",
+    "revision": "3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f",
+    "paths": [
+      "LICENSE",
+      "README.md",
+      "THIRD_PARTY_NOTICES.md",
+      "docs/AUTHORIZATION.md",
+      "docs/PROVENANCE.md",
+      "interface/dev.scotty.MyDevices1.xml",
+      "src/main.cc",
+      "src/mydevices_service.cc",
+      "src/mydevices_service.h",
+      "src/nearby_rest_client.cc",
+      "src/nearby_rest_client.h",
+      "src/proto_wire.cc",
+      "src/proto_wire.h",
+      "src/signin_dialog.cc",
+      "src/signin_dialog.h",
+      "src/signin_main.cc",
+      "src/token_provider.cc",
+      "src/token_provider.h"
+    ],
+    "files": [
+      {
+        "path": "README.md",
+        "url": "https://raw.githubusercontent.com/scottydev40/scotty-mydevices/3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f/README.md",
+        "bytes": 2327,
+        "sha256": "8aa0a1a787e0224499a06192c1c3e041c8b928e069b22c093232c51eebc68bec"
+      },
+      {
+        "path": "docs/AUTHORIZATION.md",
+        "url": "https://raw.githubusercontent.com/scottydev40/scotty-mydevices/3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f/docs/AUTHORIZATION.md",
+        "bytes": 1550,
+        "sha256": "92e0c5a432f6eb5af65925770912f609ec1718df8b63c1e40f015ab1b98c7443"
+      },
+      {
+        "path": "docs/PROVENANCE.md",
+        "url": "https://raw.githubusercontent.com/scottydev40/scotty-mydevices/3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f/docs/PROVENANCE.md",
+        "bytes": 976,
+        "sha256": "83cc597f3b87bbef2a25d0bd59afdbf57ac7e862edf6765e70bf564870db5583"
+      },
+      {
+        "path": "src/token_provider.cc",
+        "url": "https://raw.githubusercontent.com/scottydev40/scotty-mydevices/3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f/src/token_provider.cc",
+        "bytes": 21030,
+        "sha256": "53413308e551eb63f805bcde90ed8a81e7685a26512b323bd1dc78f21d2ec81d"
+      },
+      {
+        "path": "src/signin_dialog.cc",
+        "url": "https://raw.githubusercontent.com/scottydev40/scotty-mydevices/3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f/src/signin_dialog.cc",
+        "bytes": 5900,
+        "sha256": "2eeda8366d12f8e3bebd51d873eb4b42b3f5813910e347555fef9fe130aadf57"
+      },
+      {
+        "path": "src/nearby_rest_client.cc",
+        "url": "https://raw.githubusercontent.com/scottydev40/scotty-mydevices/3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f/src/nearby_rest_client.cc",
+        "bytes": 7071,
+        "sha256": "a2f0225d86cc45c8aab6f855d04e375e8bec0354a52c9e7857f64aa2ca8cc326"
+      },
+      {
+        "path": "interface/dev.scotty.MyDevices1.xml",
+        "url": "https://raw.githubusercontent.com/scottydev40/scotty-mydevices/3ef70c4a3bdf935e49e89b3ab59c2104d1c83f1f/interface/dev.scotty.MyDevices1.xml",
+        "bytes": 1329,
+        "sha256": "57857604bd8643b96bb5bd5457bef041a39ec15a8c0919c673635c2dd42f651d"
+      }
+    ]
+  },
+  "main_project_reference": {
+    "repository": "https://github.com/scottydev40/Scotty",
+    "revision": "fe5aec038de4feb4615fd69c9330a9e61c84026e"
+  },
+  "official_docs": [
+    "https://developers.google.com/identity/protocols/oauth2/native-app",
+    "https://developers.google.com/identity/protocols/oauth2/scopes"
+  ],
+  "negative_research": {
+    "scope_catalog_nearby_match_found": false,
+    "supported_rquickshare_certificate_scope_client_path_established": false,
+    "proves_no_private_or_partner_path_exists": false
+  },
+  "observed_unofficial_flow": {
+    "master_token_secret_service": true,
+    "google_play_services_request_identity": true,
+    "embedded_oauth_cookie_exchange": true,
+    "legacy_public_certificate_rest_transport": true,
+    "independent_source_claims_experimental_unsupported": true
+  },
+  "account_login_attempted": false,
+  "existing_credentials_read": false,
+  "google_account_api_called": false,
+  "downloaded_code_executed": false,
+  "operational_access_verified": false,
+  "physical_interoperability_tested": false,
+  "production_code_changed": false,
+  "native7_rebuilt": false,
+  "installed": false,
+  "release_signed": false,
+  "published": false,
+  "user_selection": {
+    "option": 1,
+    "date": "2026-10-15",
+    "account_integration_deferred": true,
+    "continue_independent_parity": true,
+    "unofficial_provider_authorized": false
+  }
+}

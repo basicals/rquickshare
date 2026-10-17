@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "date": "2026-10-15",
+  "mode": "A",
+  "branch": "dev",
+  "implementation_commit": "604df3f7d644d4cc866f0a095274ff7bab778416",
+  "plan_commit": "78a7ba4",
+  "guide": "/home/morozhenko/.codex/AGENTS.md",
+  "limits": {
+    "incomplete_payloads": 16,
+    "sum_declared_reservations_bytes": 5242880,
+    "per_payload_bytes": 5242880,
+    "per_request_not_global": true
+  },
+  "shared_real_handlers": [
+    "inbound",
+    "outbound"
+  ],
+  "invariants": [
+    "explicit id/size/offset",
+    "stable admitted size",
+    "exact contiguous offsets and final size",
+    "fallible buffer reservation",
+    "completed ownership removed before dispatch",
+    "assembler error releases pending ownership",
+    "redacted Debug"
+  ],
+  "source_files": [
+    {
+      "path": "core_lib/src/byte_payload.rs",
+      "sha256": "5cfc5f88690d1bc6e4d789dab8d6413decbe1a844f5855dd262f794018c59210"
+    },
+    {
+      "path": "core_lib/src/byte_payload/tests.rs",
+      "sha256": "848302009d3d167aadc523a1bb1429afd6968aff23a943442c5d036a380200c5"
+    },
+    {
+      "path": "core_lib/src/hdl/inbound.rs",
+      "sha256": "8514c6bb8577a9f27bd24c9a54fdb870318543caac68342050ad473befece1b9"
+    },
+    {
+      "path": "core_lib/src/hdl/outbound.rs",
+      "sha256": "8980a3f44a78e9868746973170911cd3adb5db73acd2bd64fe67616e89bc8d7a"
+    },
+    {
+      "path": "core_lib/src/hdl/mod.rs",
+      "sha256": "be90f73adb69015e13a72488f3089e0d63d8b2feb9756039cdb05042d85d2162"
+    },
+    {
+      "path": "core_lib/src/lib.rs",
+      "sha256": "5a9b6c89e96ed44a8d92592f58dd2ddef2687eb934774b29b0d3c4884df372b9"
+    }
+  ],
+  "checks": {
+    "whole_core_lib": {
+      "total": 626,
+      "passed": 624,
+      "failed": 2,
+      "seconds": 25.42,
+      "failure_cause": "Two new handler fixtures omitted reply keys or incorrectly expected absent outbound metadata; corrected fixture contracts."
+    },
+    "affected_handler_rerun": {
+      "passed": 2,
+      "failed": 0,
+      "filtered": 624,
+      "seconds": 0.01
+    },
+    "new_methods": 9,
+    "primary_category_counts": {
+      "Positive": 1,
+      "N1": 2,
+      "N2": 2,
+      "N4": 1,
+      "N7": 2,
+      "N10": 1
+    },
+    "clippy": {
+      "all_features": true,
+      "all_targets": true,
+      "deny_warnings": true,
+      "passed": true,
+      "seconds": 23.43,
+      "existing_future_incompatibility_notice": "bluer 0.17.3"
+    },
+    "format_check_passed": true,
+    "diff_check_passed": true,
+    "ten_runs_performed": false,
+    "full_final_626_rerun_performed": false,
+    "mutation_runner_used": false
+  },
+  "primary_research": {
+    "repository": "google/nearby",
+    "revision": "d128b5fca30b3fa8d4642f8c75dd9e314e090e74",
+    "files": [
+      {
+        "path": "sharing/incoming_share_session.cc",
+        "size": 22911,
+        "sha256": "a714547c0cab632c6d15defdc0b379c9bded6a465bc4bde21eb7c8c251b61385",
+        "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/incoming_share_session.cc"
+      },
+      {
+        "path": "sharing/outgoing_share_session.cc",
+        "size": 27105,
+        "sha256": "e441449d831e6d665645d229a3a7cea6c82a249057c396d77290c6c50993f43a",
+        "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/outgoing_share_session.cc"
+      },
+      {
+        "path": "sharing/nearby_sharing_service_impl.cc",
+        "size": 138305,
+        "sha256": "bbe3e2202f4b13ffdf2f73d1f01cde392d04d3ef2a116140fc8297ff698933fc",
+        "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/nearby_sharing_service_impl.cc"
+      },
+      {
+        "path": "sharing/file_attachment.cc",
+        "size": 4026,
+        "sha256": "8d3a92acfdcaffd20d6dd7074b0e9adf5c305229e151a8b4125c3f59e1b358c0",
+        "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/file_attachment.cc"
+      },
+      {
+        "path": "sharing/constants.h",
+        "size": 2990,
+        "sha256": "8dde627af859fc4211b5d5d33c3742a63708ae8e676fd19a137f57e4cd24475d",
+        "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/constants.h"
+      }
+    ]
+  },
+  "preview_codec_or_mapping_established": false,
+  "resume_integrity_semantics_established": false,
+  "google_account_provider_enabled": false,
+  "preview_decoder_enabled": false,
+  "preview_decoder_user_choice": "pending",
+  "package_rebuilt": false,
+  "latest_measured_package": "0.11.5+native7",
+  "new_fix_in_native7": false,
+  "physical_peer_tested": false,
+  "installed": false,
+  "signed": false,
+  "published": false,
+  "terminal_processes_exited": true
+}

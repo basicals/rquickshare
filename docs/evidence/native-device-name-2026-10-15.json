@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "feature": "owner-local live device name",
+  "mode": "A",
+  "source_commit": "005c0f888caee21d9b01c5a0c0f955487a24b964",
+  "native_settings_schema": 2,
+  "settings_interface": "io.github.morozhenko_apps.RQuickShare.Settings2",
+  "new_test_methods": {
+    "identity": 6,
+    "transport": 4,
+    "persistence_and_bus": 5,
+    "gtk_status": 1,
+    "visibility_privacy": 1
+  },
+  "primary_test_categories": {
+    "N1": 1,
+    "N3": 1,
+    "N4": 2,
+    "N5": 6,
+    "N6": 2,
+    "N7": 2,
+    "N9": 2,
+    "N10": 1
+  },
+  "observations": {
+    "N2_whole_core_library": {
+      "passed": 588,
+      "seconds": 8.01
+    },
+    "N3_affected_service": {
+      "passed": 270,
+      "seconds": 6.47
+    },
+    "N4_native_suite": {
+      "passed": 39,
+      "seconds": 0.54
+    },
+    "N5_affected_identity": {
+      "passed": 6
+    },
+    "N5_native_binary_integrations": {
+      "passed": 4
+    },
+    "N5_modern_protocol_integrations": {
+      "passed": 4
+    },
+    "N5_package_python": {
+      "passed": 5,
+      "seconds": 1.076
+    },
+    "N5_affected_gtk": {
+      "passed": 1,
+      "seconds": 0.45
+    },
+    "N5_expanded_visibility": {
+      "passed": 1
+    },
+    "N5_settings_broker_after_fixture_fix": {
+      "passed": 7
+    },
+    "N5_current_visibility_mdns_guard": {
+      "passed": 1
+    },
+    "N5_partial_policy_root_retention": {
+      "passed": 1
+    },
+    "core_strict_clippy": "passed after final privacy changes",
+    "native_strict_clippy": "passed before internal privacy receipt refinement; final release compilation succeeded",
+    "format": "passed for changed source",
+    "gtk_environment": "existing task-private GTK4 4.22.4 / Layer Shell 1.3.0; no host installation"
+  },
+  "package": {
+    "filename": "rquickshare_0.11.5+native4_amd64.deb",
+    "size": 4636458,
+    "sha256": "4a2ec4885e9a8b3fed67d1c778757cd7772b5740a5fd9d2eb0eda5479622a6ca",
+    "binary_source_commit": "005c0f888caee21d9b01c5a0c0f955487a24b964",
+    "offline_verified": true,
+    "target": "Ubuntu26.04 amd64"
+  },
+  "unsigned_apt": {
+    "suite": "rquickshare-native-ubuntu26.04",
+    "date": "Thu, 15 Oct 2026 17:01:09 GMT",
+    "valid_until": "Thu, 22 Oct 2026 17:01:09 GMT",
+    "signed": false
+  },
+  "signing_request": {
+    "sha256": "9634b5d0abcb560378c6949c0fb4815c1739e5b07e236245ee0d2cc033a8853d",
+    "source_commit_assertion": "005c0f888caee21d9b01c5a0c0f955487a24b964",
+    "first_release_baseline_assertion": true,
+    "independently_approved": false,
+    "source_provenance_attestation": false
+  },
+  "intermediate_native3": {
+    "binary_source_commit": "4b99b648f5fc648151ae5162b45a88a2ac45e27e",
+    "build_requested_at_utc": "2026-10-15T16:38:06.344890+00:00",
+    "version": "0.11.5+native3",
+    "mode": "uninstalled release; no signing/publishing/install",
+    "package": "rquickshare_0.11.5+native3_amd64.deb",
+    "sha256": "ceed6f6b97dfdccd0b70ed76980c412cab1cb756f83e73348acc1ad2055ef23a",
+    "superseded": true,
+    "reason": "Temporary visibility and partial-policy receipt corrections",
+    "unsigned_repository_created": true,
+    "signing_request_created": false,
+    "release_signed": false,
+    "published": false
+  },
+  "physical_google_or_kde_acceptance": false,
+  "ten_run_stability": false,
+  "release_signed": false,
+  "published": false,
+  "installed": false,
+  "owned_processes_closed": true
+}

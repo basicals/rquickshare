@@ -27,6 +27,7 @@ impl BwuRouter {
 
         let (sender, receiver) = oneshot::channel();
         let mut pending = self.pending.lock().await;
+        pending.retain(|_, sender| !sender.is_closed());
         if pending.contains_key(&endpoint_id) {
             return Err(anyhow!(
                 "bandwidth upgrade is already pending for endpoint {endpoint_id}"
@@ -46,6 +47,7 @@ impl BwuRouter {
         socket: TcpStream,
     ) -> Result<String, TcpStream> {
         let mut pending = self.pending.lock().await;
+        pending.retain(|_, sender| !sender.is_closed());
         let route_id = if pending.contains_key(endpoint_id) {
             endpoint_id.to_owned()
         } else if let Some(last_endpoint_id) =
@@ -56,9 +58,9 @@ impl BwuRouter {
             return Err(socket);
         };
 
-        let sender = pending
-            .remove(&route_id)
-            .expect("selected BWU route must exist while the router lock is held");
+        let Some(sender) = pending.remove(&route_id) else {
+            return Err(socket);
+        };
         drop(pending);
 
         sender.send(socket).map(|()| route_id)
@@ -69,7 +71,9 @@ impl BwuRouter {
     }
 
     pub async fn has_pending(&self) -> bool {
-        !self.pending.lock().await.is_empty()
+        let mut pending = self.pending.lock().await;
+        pending.retain(|_, sender| !sender.is_closed());
+        !pending.is_empty()
     }
 }
 
@@ -228,6 +232,52 @@ mod tests {
         router.cancel("missing-peer").await;
         router.cancel("missing-peer").await;
 
+        assert!(!router.has_pending().await);
+    }
+
+    #[tokio::test]
+    async fn given_abandoned_bwu_waiter_when_checked_or_registered_then_closed_route_is_pruned() {
+        // Arrange
+        let router = BwuRouter::new();
+        let old = router.register("peer".into()).await.unwrap();
+        // Act
+        drop(old);
+        // Assert
+        assert!(!router.has_pending().await);
+        let current = router.register("peer".into()).await.unwrap();
+        assert!(router.has_pending().await);
+        router.cancel("peer").await;
+        let replacement = router.register("peer".into()).await.unwrap();
+        drop(current);
+        assert!(router.has_pending().await);
+        drop(replacement);
+        assert!(!router.has_pending().await);
+    }
+
+    #[tokio::test]
+    async fn given_closed_current_route_when_alias_is_live_then_socket_routes_only_to_live_waiter()
+    {
+        // Arrange
+        let router = BwuRouter::new();
+        let current = router.register("current".into()).await.unwrap();
+        let previous = router.register("previous".into()).await.unwrap();
+        drop(current);
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
+        let (socket, _) = listener.accept().await.unwrap();
+        // Act
+        let route = router
+            .route_with_alias("current", Some("previous"), socket)
+            .await
+            .unwrap();
+        // Assert
+        assert_eq!(route, "previous");
+        assert_eq!(
+            previous.await.unwrap().peer_addr().unwrap(),
+            client.local_addr().unwrap()
+        );
         assert!(!router.has_pending().await);
     }
 }

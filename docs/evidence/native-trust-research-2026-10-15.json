@@ -1,0 +1,80 @@
+{
+  "repository": "https://github.com/google/nearby",
+  "revision": "d128b5fca30b3fa8d4642f8c75dd9e314e090e74",
+  "revision_basis": "Latest commit touching paired_key_verification_runner.cc returned by public GitHub API; not a release-version or Android binary attestation",
+  "files": [
+    {
+      "path": "sharing/paired_key_verification_runner.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/paired_key_verification_runner.cc",
+      "bytes": 15485,
+      "sha256": "edac015e18fffd1b04c88e735284d355f8ec545975103ec04bee204961944ece"
+    },
+    {
+      "path": "sharing/certificates/nearby_share_decrypted_public_certificate.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/nearby_share_decrypted_public_certificate.cc",
+      "bytes": 10585,
+      "sha256": "9d05ca67e55b5afe1a605581801dc92d528c290d27a1a52fba84763fd84ccaf5"
+    },
+    {
+      "path": "sharing/certificates/nearby_share_private_certificate.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/nearby_share_private_certificate.cc",
+      "bytes": 15761,
+      "sha256": "5863510af7e3561654d48389b09256a9ff0f84decf13b344bc4d275bd47d9029"
+    },
+    {
+      "path": "sharing/certificates/constants.h",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/constants.h",
+      "bytes": 5213,
+      "sha256": "30d33739eeb9683c5d8fcdd1c49c4d0265de778410d642ead3d2d4c263009791"
+    },
+    {
+      "path": "sharing/proto/wire_format.proto",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/proto/wire_format.proto",
+      "bytes": 14260,
+      "sha256": "7aaa49b27abe3d28ea8cceb7e9be2db53583c2ee65ae6598166b86e0e23325cd"
+    },
+    {
+      "path": "sharing/certificates/common.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/common.cc",
+      "bytes": 4397,
+      "sha256": "a80eb38846555eed05544bfcee23059a5fcb5961f2bdb9caccabb186096d7ea0"
+    },
+    {
+      "path": "sharing/nearby_connections_manager_impl.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/nearby_connections_manager_impl.cc",
+      "bytes": 36808,
+      "sha256": "cd1e9688b3c95d5c0a08e83ba87868654de7d4f2d60004419a1f2f03d64c95ad"
+    },
+    {
+      "path": "connections/implementation/encryption_runner.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/connections/implementation/encryption_runner.cc",
+      "bytes": 14098,
+      "sha256": "565f3ff4134f5e46cb448f1aa0a023e65b6391bd24c51f06f704b0c95c87c941"
+    },
+    {
+      "path": "sharing/certificates/nearby_share_certificate_manager_impl.cc",
+      "url": "https://raw.githubusercontent.com/google/nearby/d128b5fca30b3fa8d4642f8c75dd9e314e090e74/sharing/certificates/nearby_share_certificate_manager_impl.cc",
+      "bytes": 40889,
+      "sha256": "7b692793df8da32c4446e2c8cf317baa01de741680465ec20f4fae546665fc66"
+    }
+  ],
+  "schema": 1,
+  "observed_date": "2026-10-15",
+  "mode": "A",
+  "local_source_commit": "386ed1a",
+  "status": "option1-foundation-complete-operational-provider-open",
+  "primary_help": [
+    {
+      "url": "https://support.google.com/android/answer/13801258?hl=en",
+      "observation": "Google documents automatic acceptance between own devices signed into the same Google Account"
+    }
+  ],
+  "production_code_changed": false,
+  "account_access_attempted": false,
+  "physical_interoperability_tested": false,
+  "crypto_implementation_tested": false,
+  "release_signed": false,
+  "published": false,
+  "implementation_evidence": "native-peer-authentication-2026-10-15.json",
+  "research_only": true
+}

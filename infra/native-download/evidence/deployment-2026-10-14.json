@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "source_commit": "9fe77dc",
+  "worker": "rquickshare-download",
+  "version_id": "3d3a4542-b0c8-4717-a615-bf85efd6fd77",
+  "startup_ms": 1,
+  "new_route": {
+    "id": "7a7f0f681b794453b1fe8407ec3b7097",
+    "pattern": "https://download.morozhenko.com/dist/rQuickShare/*",
+    "script": "rquickshare-download",
+    "request_limit_fail_open": false
+  },
+  "existing_routes_unchanged": 10,
+  "picturix_baseline_sha256": "73a2d36a8a1e4b37ba9ddd05266f66323b9a763a845a9de45defbc88238b7fdc",
+  "http_checks": [
+    {
+      "url": "https://download.morozhenko.com/dist/rQuickShare/",
+      "method": "GET",
+      "status": 404,
+      "size": 33,
+      "sha256": "fba49d80f5714441b7f8febcb85a7f244574689c8dc68886f973a368055966a4",
+      "cache_control": "no-store",
+      "cf_cache_status": null,
+      "etag": null,
+      "allow": null
+    },
+    {
+      "url": "https://download.morozhenko.com/dist/rQuickShare/dists/rquickshare-native-ubuntu26.04/InRelease",
+      "method": "GET",
+      "status": 404,
+      "size": 33,
+      "sha256": "fba49d80f5714441b7f8febcb85a7f244574689c8dc68886f973a368055966a4",
+      "cache_control": "no-store",
+      "cf_cache_status": null,
+      "etag": null,
+      "allow": null
+    },
+    {
+      "url": "https://download.morozhenko.com/dist/rQuickShare/dists/rquickshare-native-ubuntu26.04/InRelease",
+      "method": "POST",
+      "status": 405,
+      "size": 33,
+      "sha256": "6d69195683693f1829656fc01101334aabbd91ca100d156038d5487d3d04d7ec",
+      "cache_control": "no-store",
+      "cf_cache_status": null,
+      "etag": null,
+      "allow": "GET, HEAD"
+    },
+    {
+      "url": "https://download.morozhenko.com/dist/rQuickShare/snapshots/private",
+      "method": "GET",
+      "status": 404,
+      "size": 33,
+      "sha256": "fba49d80f5714441b7f8febcb85a7f244574689c8dc68886f973a368055966a4",
+      "cache_control": "no-store",
+      "cf_cache_status": null,
+      "etag": null,
+      "allow": null
+    },
+    {
+      "url": "https://download.morozhenko.com/dist/rQuickShare/dists/rquickshare-native-ubuntu26.04/InRelease?x=y",
+      "method": "GET",
+      "status": 404,
+      "size": 33,
+      "sha256": "fba49d80f5714441b7f8febcb85a7f244574689c8dc68886f973a368055966a4",
+      "cache_control": "no-store",
+      "cf_cache_status": null,
+      "etag": null,
+      "allow": null
+    },
+    {
+      "url": "https://download.morozhenko.com/dist/Picturix/latest.json",
+      "method": "GET",
+      "status": 200,
+      "size": 565,
+      "sha256": "73a2d36a8a1e4b37ba9ddd05266f66323b9a763a845a9de45defbc88238b7fdc",
+      "cache_control": "no-cache",
+      "cf_cache_status": "DYNAMIC",
+      "etag": "\"cf94ee5d7e30761435102fc0b4a01bb3\"",
+      "allow": null
+    }
+  ],
+  "production_objects_uploaded": false,
+  "production_signing_performed": false,
+  "remote_settings": {
+    "settings": {
+      "bindings": [
+        {
+          "bucket_name": "rquickshare-native-apt",
+          "name": "ARCHIVE",
+          "type": "r2_bucket"
+        }
+      ],
+      "compatibility_date": "2026-10-14",
+      "compatibility_flags": [
+        "nodejs_compat"
+      ],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": true,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": false
+        },
+        "traces": {
+          "enabled": false,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      }
+    },
+    "subdomain": {
+      "enabled": false,
+      "previews_enabled": false
+    }
+  }
+}

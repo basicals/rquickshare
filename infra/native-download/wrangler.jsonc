@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rquickshare-download",
+  "main": "src/worker.ts",
+  "account_id": "e5501830b73f9b3b7c730555e879856a",
+  "compatibility_date": "2026-10-14",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "https://download.morozhenko.com/dist/rQuickShare/*",
+      "zone_id": "ae58570320d7024d7fd5e97205b4ff76"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ARCHIVE",
+      "bucket_name": "rquickshare-native-apt"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false
+    },
+    "traces": {
+      "enabled": false
+    }
+  }
+}

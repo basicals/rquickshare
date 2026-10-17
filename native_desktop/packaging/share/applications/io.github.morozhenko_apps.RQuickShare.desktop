@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=rQuickShare
+Comment=Share files and text with nearby devices
+Exec=/usr/bin/rquickshare
+Icon=rquickshare
+Terminal=false
+Categories=Network;FileTransfer;
+StartupNotify=false

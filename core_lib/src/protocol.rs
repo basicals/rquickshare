@@ -1,9 +1,6 @@
-use std::time::Duration;
-
 use anyhow::anyhow;
 
 pub(crate) const SANE_FRAME_LENGTH: i32 = 5 * 1024 * 1024;
-pub(crate) const SANITY_DURATION: Duration = Duration::from_micros(10);
 
 pub(crate) fn checked_payload_buffer_size(total_size: i64) -> Result<usize, anyhow::Error> {
     if total_size < 0 || total_size > i64::from(SANE_FRAME_LENGTH) {

@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "feature": "core-owned temporary discovery visibility and mDNS SDK lifetime",
+  "mode": "A",
+  "selected_option": 1,
+  "source_commit": "32fc64f99bfd37b382cd732eaa97ff31c863fe05",
+  "duration_seconds": 60,
+  "native_settings_schema": 2,
+  "settings_interface": "io.github.morozhenko_apps.RQuickShare.Settings2",
+  "new_test_methods": {
+    "visibility_policy": 8,
+    "core_lifecycle": 2,
+    "mdns_completion": 1
+  },
+  "primary_test_categories": {
+    "N2": 1,
+    "N3": 2,
+    "N4": 1,
+    "N5": 2,
+    "N7": 1,
+    "N8": 1,
+    "N9": 3
+  },
+  "observations": {
+    "core_library_before_enum_and_sdk_refinements": {
+      "passed": 604,
+      "seconds": 8.68
+    },
+    "visibility_filter_after_enum_relocation": {
+      "passed": 11,
+      "seconds": 0.01,
+      "filtered": 593
+    },
+    "mdns_filter_after_sdk_fix": {
+      "passed": 5,
+      "seconds": 0.01,
+      "filtered": 600
+    },
+    "final_core_library_compiled_inventory": 605,
+    "whole_final_605_execution": false,
+    "native_gtk_before_sdk_refinement": {
+      "passed": 39,
+      "seconds": 0.57
+    },
+    "legacy_tauri_before_enum_and_sdk_refinement": {
+      "passed": 10,
+      "seconds": 0.0
+    },
+    "native_daemon_before_sdk_refinement": {
+      "passed": 4,
+      "seconds": 0.03
+    },
+    "modern_protocol_before_sdk_refinement": {
+      "passed": 4,
+      "seconds": 0.0
+    },
+    "final_core_strict_all_features_all_targets_clippy": {
+      "passed": true,
+      "seconds": 17.4
+    },
+    "native_no_deps_strict_clippy_before_final_refinements": {
+      "passed": true,
+      "seconds": 7.97
+    },
+    "native_dependency_warnings": "9 existing unused/dead-code warnings in no-experimental core; not suppressed",
+    "bluer_future_incompatibility_warning": "existing upstream dependency observation",
+    "format": "core/native/Tauri passed; affected core repeated after SDK fix",
+    "gtk_environment": "existing private GTK4 4.22.4 / Layer Shell 1.3.0; no installation"
+  },
+  "package": {
+    "filename": "rquickshare_0.11.5+native6_amd64.deb",
+    "size": 4643346,
+    "sha256": "5b4f07fc3546ac0dc493ed1d69740baae7c7b8c188d30eb4d61c30480a930692",
+    "binary_source_commit": "32fc64f99bfd37b382cd732eaa97ff31c863fe05",
+    "offline_verified": true,
+    "target": "Ubuntu26.04 amd64",
+    "core_release_build_seconds": 229,
+    "gtk_release_build_seconds": 122
+  },
+  "intermediate_native5": {
+    "source_commit": "fb5c83dfd265215e079ed01baac63a173fd8a915",
+    "filename": "rquickshare_0.11.5+native5_amd64.deb",
+    "size": 4639060,
+    "sha256": "8644f7b9daf26755522b268958c0f4cd07c02d34d627d0bf477ce7d3e9eb30ea",
+    "offline_verified": true,
+    "superseded": true,
+    "reason": "Explicit owned mDNS SDK shutdown follow-up",
+    "exported_as_current": false
+  },
+  "physical_google_or_kde_acceptance": false,
+  "suspend_resume_acceptance": false,
+  "ten_run_stability": false,
+  "release_signed": false,
+  "published": false,
+  "installed": false,
+  "remote_state_rechecked": false,
+  "unsigned_apt": {
+    "suite": "rquickshare-native-ubuntu26.04",
+    "date": "2026-10-15T20:09:55Z",
+    "valid_until": "2026-10-22T20:09:55Z",
+    "files": [
+      "dists/rquickshare-native-ubuntu26.04/Release",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/Packages.gz",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/394e93d8cb5d632f939f9090b4685dc1316244d63eba972f20fa2970234f21d7",
+      "dists/rquickshare-native-ubuntu26.04/main/binary-amd64/by-hash/SHA256/54463b892679c92f08bba90b9170a2bc1143666bd82c1872c52c5f802d97c3ad",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native6_amd64.deb",
+      "pool/main/r/rquickshare/rquickshare_0.11.5+native6_amd64.deb.sha256"
+    ],
+    "signed": false,
+    "verified_offline": true
+  },
+  "signing_request": {
+    "sha256": "551a9499ab5ee893cdc3cdd4ed6a58009cdaf0762428f3f3f1ebe6bca2f96821",
+    "source_commit_assertion": "32fc64f99bfd37b382cd732eaa97ff31c863fe05",
+    "first_release_baseline_assertion": true,
+    "independently_approved": false,
+    "source_provenance_attestation": false
+  },
+  "owned_processes_closed": true,
+  "public_export": {
+    "source_commit": "8d4af939c6d85cba19509601262390976d86651e",
+    "source_zip_sha256": "bf1c88e896aa8990b47d7b117edb38690e1259d8916d2a25ac8901dd42bed1d7",
+    "source_tracked_files": 440,
+    "unsigned_repository_zip_sha256": "161cb49eea01da7fb452ddc6874cf665bca67c3eba4e542d1129258a539c2e07",
+    "signing_request_sha256": "551a9499ab5ee893cdc3cdd4ed6a58009cdaf0762428f3f3f1ebe6bca2f96821",
+    "verified": true,
+    "completion_docs_commit_is_later": true
+  }
+}

@@ -1,0 +1,312 @@
+# Native multi-recipient sharing: ownership review
+
+2026-10-16. Mode A, direct dev. Guide: /home/morozhenko/.codex/AGENTS.md,
+sections3/3.1/11/12/13. This is the next independent parity slice while canonical
+preview codec/mapping remains unestablished. Implementation follows selected option1. The user chose daemon-owned
+queue/results on2026-10-16.
+
+## Analysis
+
+Coordinator::enqueue_selection consumes exactly one client-owned Selection after
+all current single-target admission checks. Transfer owns Arc<PreparedSource>,
+Reservation holds Weak ownership and resources are released after all readers.
+The current queue defaults to10 sends,256 retained transfers and128 endpoints;
+these are internal budgets, not public protocol capacities. Operations1 has an
+ordered exact-retry ledger, with a scalar transfer result. Manager2, SDK/controller
+and GTK nearby rows expose one recipient per Send. The native Transfers projection
+has no explicit batch/member model or stable queued-recipient lookup.
+
+A GUI loop over current Send cannot reuse the consumed selection. Reopening paths
+for each target can lose the admitted source identity. Retaining and resubmitting
+pinned descriptors can avoid path reopening, but unsent-intent ownership/recovery
+would remain in that GUI. The daemon already owns admitted transfers beyond GUI
+close; multi-recipient intent should have equally clear ownership.
+
+PreparedSource is a shared capability, not a byte-for-byte snapshot of an external
+mutable file. read_file_chunk uses positional reads and checks advertised size;
+sharing must preserve those existing guarantees without inventing immutable
+file-content or durable restart-resume claims. Ordinary peer sessions remain
+separate, with separate consent, progress, cancellation and failure. This is local
+orchestration, not a proposed Quick Share wire extension or auto-accept mechanism.
+
+## Significant alternatives (selection required)
+
+| Option | Description | Advantages | Costs / risks |
+|---|---|---|---|
+| 1 — daemon-owned bounded batch, recommended | One explicit GUI Send submits the selected recipients and prepared source. Daemon owns admitted batch/member outcomes and pinned shared source; exact retry returns the same admission result. Member transfer outcomes remain independent; no automatic resend of accepted members. GTK selects recipients and projects per-peer status. | Unsent/admitted work does not depend on a card/widget lifetime; one admission/retry authority; resources and per-peer failures are explicit and recoverable in the current daemon epoch. | New typed batch/receipt/status contracts and coordinated UI are required. Risks: duplicate sends after lost replies, partial outcomes, capacity accounting, stale recipient names/discovery and accidental cross-recipient cancellation. Freeze these before implementation. |
+| 2 — GUI-owned sequence of ordinary sends | GTK/controller retains a pinned source and orchestrates preparation/send separately for each selected peer using existing daemon operations; records which targets were started. | Smaller daemon API change; reuses single-send admission and receipt primitives. | Pending recipient intent depends on GUI lifetime and reconnect state; repeated descriptor/preparation ownership and per-peer retries sit in the presentation owner. Risks: lost unsent targets on GUI exit, duplicate attempts after uncertain results, additional handle/resource reservations and diverging UI recovery paths. |
+
+Recommend1 for clear ownership, correct retry behavior, bounded accounting and
+maintenance, independently of implementation volume. Option2 can be deliberately
+implemented but is a poorer fit for daemon-owned background sharing. Do not
+silently start either, expand queue budgets, add parallel-radio policy, auto-retry
+failed peers or claim disk-durable batches/resume as part of this choice.
+
+User-visible selected scope in both options: nearby recipient multi-selection,
+explicit selection summary and one Send action; separate status/cancel per recipient.
+Merely checking a recipient or choosing source files never sends. Full/Compact,
+lock/DND/preview/disconnect gates and incoming PIN/Accept remain intact. Single
+recipient remains supported. No hidden immediate sends while building the set.
+
+## Staged plan after selection
+
+1. [x] M0: inspect actual selection/transfer/resource/receipt/UI owners and record
+   options and recommendation. Documentation-only; no runtime checks repeated.
+2. [x] M1: freeze exact bounded admission, partial-outcome/structural-failure,
+   member identity/order, source retention, capacity/counter preflight and
+   request/acknowledgement/reconnect contracts. Preserve supported single-send
+   behavior or document the coordinated API extension explicitly. Bound recipient
+   projection/receipt storage and disclose existing source mutation semantics.
+3. [x] M2: implement real coordinator/domain admission and lifetime/receipt logic;
+   inventory branches before deterministic unit/integration regressions. No
+   domain mocks or GUI-owned substitute for the selected authority.
+4. [x] M3: authenticated typed native IPC, exact-retry SDK/controller, safe
+   per-recipient projection and GTK selection/summary/status/cancel. No new peer
+   wire format, account mode, automatic retry or unrequested trust behavior.
+5. [x] M4: affected checks once, actual observations in SSOT, atomic commits,
+   changed complete candidate build and exact handoff. Preserve native9 immutable
+   artifacts and keep installed/physical-peer and release gates separate.
+
+Rollback: remove client/UI exposure before reverting the new daemon admission;
+preserve existing one-recipient transfer and receipt contracts. No persistence
+migration or durable background queue is assumed. No package rebuild for M0.
+Option1 is selected; implementation follows the frozen M1 contract below.
+
+
+## M1 frozen implementation contract (before code)
+
+Local admission is atomic, remote transfer outcomes are independent. One Send
+requests1..10 unique discovered endpoint IDs in explicit order (existing default
+queue budget10, no capacity increase). Validate the whole request, ownership,
+Running/synchronized state, all endpoints, queue/transfer budgets and the full
+revision-ID range before consuming the prepared Selection or allocating a member.
+Unknown/stale peer, invalid/duplicate ID, insufficient capacity or exhaustion
+leaves the selection and queue intact. No partial local send is hidden behind an
+error. After admission, each ordinary peer session independently accepts/rejects,
+progresses, fails or cancels; no group-wide rollback or automatic retry. Retry of
+a terminal failed peer remains a new explicit preparation/send as in single-send.
+
+The daemon creates one ordinary Transfer per recipient, in request order, sharing
+the existing Arc<PreparedSource>. The original Reservation is charged once until
+all queued/active readers release it. No reopened path, copied payload, extra
+long-lived source holder, new parallel-radio policy, disk queue or restart resume.
+GUI close/disconnect releases only unadmitted client preparation; admitted queued
+and active transfers retain source authority. Source external-mutation guarantees
+stay those of existing positional/size-checked reads, not immutable byte snapshots.
+
+Extend the one ordered operation ledger with SendMany and vector transfer receipt.
+Exact same sequence/selection/ordered IDs returns the same vector; changed retry
+is ReplayConflict, acknowledged sequence RequestExpired. Check enough revision
+space before creating any member. Receipt pins every member until acknowledged;
+retired/acknowledged entries cannot start new work. Do not create another replay
+ledger or an unbounded Batch history owner. Rust OperationResult loses Copy and
+adds Transfers(Vec<TransferId>); coordinated local consumers migrate together.
+Existing single-send methods/semantics and all existing D-Bus tuple signatures stay.
+
+New authenticated Batch1 facade on the existing path:
+Send(selection:s, recipients:as, sequence:t)->transfers:as;
+GetReceipt(sequence:t)->(kind:s, transfers:as);
+GetRecipientPage(snapshot:s, offset:u)->(next:u, rows:a(ss)).
+Use existing Operations1 state/acknowledgement and Manager2 capture lifetime.
+Operations1 scalar GetReceipt explicitly rejects a batch receipt (InvalidState);
+batch SDK uses Batch1 receipt endpoint, old clients cannot issue that new command.
+Bound recipient array decoding before collecting more than10 IDs, validate strings
+<=256 ASCII graphic and duplicates. No descriptors, caller-provided addresses or
+names. Same-UID sender authentication, connection ownership, epoch/counter syntax,
+frame/inbox limits and unknown-method checks apply unchanged.
+
+Capture recipient display names from daemon discovery at admission, not from the
+caller. Bound names to256 bytes, no controls; empty advertised name becomes
+Unnamed nearby device. Names are presentation, never identity/authentication.
+Store a private optional name on each outbound Transfer; do not remove it when
+next_send consumes its endpoint. Keep recipient rows in the same immutable
+Manager2 capture, aligned one-to-one with its transfer rows. Existing capture
+memory accounting includes owned name strings/row storage; retain current budgets.
+New client TransferView adds optional recipient name with redacted Debug. Validate
+row ID alignment/count/name and forbid a recipient on inbound rows. Existing
+single-send rows may have no captured name; existing payload detail/PIN behavior
+is preserved. No separate batch ID or persistent user history is introduced.
+
+SDK retains exact SendMany in the existing one pending mutation slot, validates
+all returned unique canonical IDs/count/order, recovers a lost response through
+the shared sequence state and Batch1 receipt, then acknowledges once. Daemon epoch
+change never silently replays. PanelController queues one action and publishes
+member transfers via the existing watch; no GUI loop over SendSelection.
+
+GTK nearby rows use bounded checkboxes and a selection summary with one explicit
+Send button. Checking peers or choosing files never sends. Selection may precede
+file preparation. Keep a checked vanished peer visible with its last name and an
+unavailable marker, allow explicit uncheck, disable Send until all selected peers
+are currently present. Do not silently drop recipients or auto-send on reappearance.
+On a race, daemon rejection retains source/recipient choices for review. Clear
+choices after confirmed batch result or its exact recovery, and on daemon epoch
+change/close. Keep existing Full/Compact, preview/lock/busy/disconnect/ingress gates.
+Display stable recipient on each transfer; per-transfer Cancel stays independent.
+Compact continues directing recipient choice to Full; no additional large window.
+
+## M1 focused regression inventory
+
+| Artifact | Branches / interactions | Level / planned new methods | Categories |
+|---|---|---|---|
+| Coordinator/ordered batch |1/10 and invalid0/11 recipients; duplicate/invalid IDs/names; owner/epoch/running/sync; unknown peer; queue/transfer/revision preflight all-or-none; ordered exact/altered/acknowledged replay | unit /3 table-driven | Positive,N1,N2,N4,N5,N7,N10 |
+| Shared source/lifecycle | one reservation across members; independent positional reads; disconnect; cancel one member; release only after all readers; receipt pins each terminal member | unit /2 | Positive,N2,N4,N5,N9,N12 |
+| Bus/SDK/controller | actual private broker; ordered result/captured names; lost reply and ack recovery; malformed types/FD/oversized arrays/foreign owner; immutable capture and privacy; one controller command creates N transfers | integration /3 | Positive,N1,N2,N3,N4,N5,N6,N7,N9,N10 |
+| GTK projection | checkbox-only never sends; limit/uncheck; vanished checked peer retained; explicit summary/Send; unavailable/pending/locked/preview gates; result/recovery clears choices; stable recipient labels and per-peer cancel | extend existing GTK smoke /1 helper | Positive,N1,N2,N4,N5,N7,N9,N10 |
+
+Use real coordinator/resources/receipt logic, temporary files/private broker and
+existing reply interruption seams. No subject mocks or sleeps. Existing transport/
+file reader/source mutation/store suites protect unchanged peer/session and disk
+logic. N8/N11 inapplicable (no new wall clock/billing); N6 concerns malformed IPC,
+not a new persisted schema. Important assertions kill partial local admission,
+shared-offset or per-recipient resource double charging, replay duplicates, wrong
+member pins, lost names on queue dispatch, hidden vanished targets and automatic
+send from selection. This is Mode A, checks once per change/failure, not Mode B
+whole-product coverage or ten-run stability. Update observed counts after execution.
+
+## M2 descriptor-accounting refinement before final source
+
+The initial full645-method check passed644 and caught an incorrect SDK fixture
+assumption: native upload reserves two handles per file (original plus one future
+worker clone), not one. Inspecting prepare_outbound_selection also exposed the
+new batch-specific extension needed before final code: N concurrent peer workers
+can each clone every source descriptor. Shared Arc ownership alone does not make
+those physical handles free. Keep one source/byte reservation, but preflight and
+conservatively extend its handle slots to at least files*(N+1), retaining them
+until the last shared reader/queued owner drops. Check the aggregate existing
+reserved_handles budget before ID allocation or source consumption. Do not raise
+the default1024-handle budget or weaken assertions to hide cloning. Text has no
+file handles. Extend the validation matrix with handle exhaustion and assert the
+exact N+1 reservation in source/SDK lifetime cases. This is scoped admission
+accounting, not a shared-file type or transport architecture refactor.
+
+## M2 observed verification (2026-10-16)
+
+Implemented atomic coordinator admission, shared descriptor reservation, common
+operation ledger/vector receipts and receipt pins. The coordinated Batch1 bus,
+SDK/controller and captured recipient projection are implemented for integration
+verification before the GTK exposure is committed. No parallel transport policy
+or persisted batch owner was added.
+
+Initial compile found missing recipient zvariant Type metadata and a test helper
+match arm; both were corrected. First full core run:645 methods,644 passed, one
+SDK reservation assertion failed (13.96s). All637 pre-existing methods passed in
+that run. The failure led to the descriptor-accounting refinement above. After
+that source/test change, all8 affected new methods passed (0.29s),637 filtered.
+Strict all-feature/all-target Clippy initially caught two byte-slice style errors
+in the new domain assertion; corrected without changing its values. Final strict
+Clippy passed (see command log for elapsed build time). No repeated full-suite or
+ten-run stability claim. Logs: /tmp/rqs-multi-core.log,
+/tmp/rqs-multi-affected.log, /tmp/rqs-multi-core-clippy-final.log.
+
+Terminal commands completed and their owned sessions exited: Terminal closed.
+M3 GTK widgets are in progress; native9 and installed applications are unchanged.
+
+## M3 projection detail before final source
+
+Update the offline Nearby preview fixture to inert recipient checkboxes and an
+explicit selection summary, and the Transfers fixture to named independent rows.
+Synthetic fixtures remain disabled and are not peer evidence. Production checkbox
+callbacks retain IDs and resolve names from the current snapshot; keyed widget
+resynchronization returns before model mutation when already equal, avoiding
+reentrant RefCell writes during render. Prepared-source guidance now says choose
+recipients; one-recipient selection remains supported.
+
+## M3 observed verification (2026-10-16)
+
+GTK nearby rows now hold bounded recipient choices, preserve selected unavailable
+peers, show a selection summary and submit one SendMany command. Successful batch
+results/exact recovered batch receipts clear choices; failed or uncertain outcomes
+retain them. Epoch change/disconnect/close clears stale local choice authority.
+Each outbound member shows its admitted recipient name and independent Cancel.
+Full/Compact and preview/lock/busy/disconnect/ingress gates remain in force.
+
+Native suite:39 passed,0 failed (0.56s), including the extended existing single GTK
+smoke thread and updated preparation guidance assertions. Strict native all-target
+Clippy passed8.62s; the nine pre-existing dependency warnings in the nonexperimental
+core build remain visible, with no new suppression. Updating inert preview fixture
+widgets afterward affects only the GTK smoke/visual artifact check; its scoped
+rerun is recorded in M4. Core strict all-target/all-feature Clippy passed12.57s.
+Logs: /tmp/rqs-multi-gtk.log, /tmp/rqs-multi-gtk-clippy.log. Owned sessions exited:
+Terminal closed. No real broker/radio/account/service installation was used.
+
+Final inert-preview/widget smoke rerun:1 passed,0 failed (0.49s),38 filtered;
+build2.01s. Log /tmp/rqs-multi-gtk-affected.log. Candidate revision is incremented
+to native10 before building; native9 package/export remains immutable. M4 now
+builds the committed source, verifies the eleven-file package and offline
+Full/Compact/Nearby/Transfers fixtures, then exports only public source/artifacts
+and a fresh unsigned APT/unapproved request. No install/sign/publication.
+
+## M4 visual finding and repair plan (before code)
+
+The extracted native10 Nearby/Transfers/Compact captures exposed an actual
+projection defect: the existing visible-child callback updates only source
+visibility, so the new recipient footer remains on Transfers until a full model
+render. Fix that same callback to project both Nearby-only containers; do not add
+recursive rendering. Extend the current GTK navigation assertion to verify both
+containers immediately after page changes. Native10 package6,408,016 bytes/SHA256
+65c2a1e2154094c42490288946dc414bab130cb0bedaff61db487a36ab606e8d
+is retained as a superseded uninstalled intermediate candidate; its images and
+unsigned request remain immutable diagnostic evidence, not final handoff.
+Increment the changed package to native11. Recheck only the affected GTK smoke,
+native lint and corrected package/visual/export; no unaffected core suite rerun.
+
+Footer repair verification: affected GTK smoke1/0 (0.45s,38 filtered), native
+strict all-target/no-deps Clippy passed1.16s. Logs:
+/tmp/rqs-multi-footer-gtk.log and /tmp/rqs-multi-footer-clippy.log.
+Both owned verification commands exited; Terminal closed.
+
+## M4 corrected candidate observations (2026-10-16)
+
+Final binary source:ebb08cd47ca3db50e012a675b351004838fa0b43; coordinator source:cf27d685b5f00dce87916f7147890d9f3b4c649b.
+Native11 build: cached core0.11s, changed GTK12.49s, cached helper0.17s.
+The earlier native10 build used core113s/GTK33.84s/helper0.76s and is preserved
+as the visual-finding checkpoint. The new package passed all11 exact file,
+ownership/permission, dependency, ELF, checksum, extracted help and private
+settings smoke checks. Package6,407,766 bytes, SHA256
+229d3be15aaa1d812e242b61885fedd80cacdac817806df0b1052c861ad3c293.
+No installation/activation/real tray/radio/account operation was performed.
+
+Inspected the corrected extracted Full Transfers PNG: Nearby-only controls are
+absent, both named independent peer rows/Cancel are visible without clipping.
+Nearby Full and Transfers Compact bytes exactly match the corresponding inspected
+native10 images. All are labeled inert synthetic previews, not hardware evidence.
+
+Fresh unsigned APT staging contains7 files, no InRelease/Release.gpg; metadata
+expires2026-10-23T16:50:53Z. Public canonical request SHA256
+a814d974f95b45dcf332cf5b9e8bb517f57dcd77aea132679884e66c17f9acfb is unapproved,
+with no independent source attestation or live empty-baseline proof supplied.
+No protected-key operation/signature/publication was performed. Native9/native10
+packages and prior source handoffs were preserved. Logs: /tmp/rqs-native11-build.log,
+/tmp/rqs-native11-review.log. Owned offline processes exited; Terminal closed.
+
+M4 exact committed-source/public-artifact export completed as recorded below.
+
+Documentation verification:69 relevant local links resolve, JSON evidence parses
+and whitespace check passes. This did not rerun unaffected runtime checks.
+
+## M4 completed public handoff
+
+Immutable source archive rquickshare-native11-source.zip contains all477 tracked
+files from13afb892d55c5b67b8de9df2d3d7c02fb3ca6dcb; CRC, exact inventory and
+selected Git bytes passed. SHA256:bce6f864d05b20f40b6bc2d35acffdc0f1e041403298d03afa17ad4b83a8def2.
+Its code matches binary sourceebb08cd47ca3db50e012a675b351004838fa0b43;
+the archive includes the measured pre-handoff documents, while this final handoff
+entry is later documentation only. Do not rewrite that immutable archive.
+Generic rquickshare-native-gtk-source.zip was refreshed to those exact bytes;
+previous named native9 and older source/package artifacts were preserved.
+
+Copied release .deb and sidecar matched the verified package. Unsigned7-file APT
+ZIP CRC/inventory/every file byte passed; ZIP SHA256
+5326d30398bf65ff4e6dd1496ab6546701e8e84aea783bdff7c809efaab69cf1. Public request copy digest matched.
+Current-state/roadmap/audit/feature/package/readme copies, progress and readiness
+were updated in chat outputs. Remote observations remain explicitly dated
+2026-10-14; no new cloud/account request or backup monitor was made.
+
+M0-M4 complete for the selected multi-recipient scope. Existing radios/wire/consent
+remain independent per peer; no crash-resume, automatic resend, persistent group
+history, native UI completeness or full Google interoperability claim. Next
+independent significant contracts are resume/dedup and advanced peer capabilities;
+canonical preview encoding/mapping and installed Android/Windows/KDE acceptance
+remain open. Signing/publication still needs the exact request approval and
+existing selected provenance/publisher gates. All owned processes exited:
+Terminal closed. Rollback the GTK exposure before reverting coordinator/IPC.
