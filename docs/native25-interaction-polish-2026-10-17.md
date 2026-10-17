@@ -287,3 +287,35 @@ core lint passed15.57s. Native50/0 in0.66s, including new transition/replay/hide
 rules and private-portal directory-only cases; strict native lint passed4.17s.
 No real desktop/clipboard effects or installed update during these tests.
 P6 discovery diagnosis and P7 final package/physical acceptance remain open.
+
+## P6 evidenced protocol mismatch and correction plan before code
+
+Current receiver advertises only FEF3 service UUID, with no service-data header.
+Google Nearby's current Ble::StartGattAdvertisingLocked instead puts a compact
+V2 header in FEF3 service data, pointing to the full GATT slot. This is a proven
+format mismatch; it is a candidate cause of slow discovery, not a measured
+end-to-end latency fix. Preserve legacy advertising and current GATT/session
+framing. Do not put the full receiver payload on air or invent faster timers.
+
+Primary implementation inspected2026-10-17:
+- https://github.com/google/nearby/blob/main/connections/implementation/mediums/ble.cc
+- https://github.com/google/nearby/blob/main/connections/implementation/mediums/ble/ble_advertisement_header.cc
+- https://github.com/google/nearby/blob/main/connections/implementation/mediums/ble/bloom_filter.cc
+- https://github.com/google/nearby/blob/main/connections/implementation/mediums/ble/ble_utils.cc
+
+Add a17-byte legacy V2 header: one slot, no extended flag,80-bit service bloom,
+4-byte salted advertisement hash, zero PSM. NearbySharing service ID has the
+existing FC9F5E SHA-256 prefix. Use the documented Murmur3/5-position bloom
+calculation and random dummy service salt; hash the exact current GATT bytes.
+GATT owns publication to one internal watch channel after its service is ready;
+receiver advertising waits for that header, refreshes on changed header, and
+stops when its publisher disappears. Update slot bytes before publishing their
+new header, retaining existing coherent per-peer long-read snapshots. Keep header
+stable across periodic/deferred refreshes; change it only with actual GATT data.
+This scoped internal ownership correction adds no user action, consent, paired
+identity or public IPC boundary. Root the fix in the actual protocol contract.
+
+Before tests: independent Murmur reference vectors, exact V2/header/bloom/hash
+layout,31-byte legacy packet budget, same-slot/stable header across refresh,
+changed slot hash, GATT-ready/header channel closure and existing long-read/
+identity/shutdown invariants. Physical Android latency remains a separate gate.
