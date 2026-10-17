@@ -1072,7 +1072,7 @@ impl Panel {
                 Some(rqs_lib::service::ControlAction::Accept) => "Accepting request…",
                 Some(rqs_lib::service::ControlAction::Reject) => "Declining request…",
                 Some(rqs_lib::service::ControlAction::Cancel) => "Cancelling transfer…",
-                None => phase_text(transfer.phase),
+                None => "",
             }
         } else {
             error_message(None)

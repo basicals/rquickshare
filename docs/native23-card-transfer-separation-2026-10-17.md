@@ -234,3 +234,11 @@ change. Refresh touches only the advertisement, not the separate GATT/session
 owner. Paused-clock regressions must prove repeated events cannot postpone either
 recovery and stop/restart resets their lifetimes. This fixes those code defects;
 real Android discovery latency still needs a measured phone reproduction.
+
+
+Receiver verification: BLE advertiser/schedule9 passed, trace allowlist1 passed;
+all use deterministic clock/format rules, no hardware or timing claim. Strict
+core all-feature/all-target lint passed13.06s; the actor's original Debug/Clone
+traits remain intact. Routine transfer-phase text was removed from the card's
+global header because live device rows already convey it; pending-control/error
+messages remain. Final affected GTK/widget and daemon lifecycle checks follow.
