@@ -660,6 +660,24 @@ pub(super) fn verify_keyed_layout() {
     assert!(named(cache.entries[&key].root.upcast_ref(), "transfer-details").is_some());
     expander.set_expanded(false);
     assert!(!expansion_for_replacement(&cache, &key, false));
+    let live = ["ep-1", "ep-2"].into_iter().collect::<BTreeSet<_>>();
+    assert_eq!(
+        bound_current_endpoint(Direction::Outbound, Some("ep-1"), &live),
+        Some("ep-1")
+    );
+    assert_eq!(
+        bound_current_endpoint(Direction::Outbound, Some("ep-3"), &live),
+        None
+    );
+    assert_eq!(
+        bound_current_endpoint(Direction::Outbound, Some("Mercury"), &live),
+        None
+    );
+    assert_eq!(
+        bound_current_endpoint(Direction::Inbound, Some("ep-1"), &live),
+        None
+    );
+    assert_eq!(bound_current_endpoint(Direction::Outbound, None, &live), None);
     let untrusted_header = section_title("<Mercury> is not a verified identity");
     assert_eq!(
         untrusted_header
