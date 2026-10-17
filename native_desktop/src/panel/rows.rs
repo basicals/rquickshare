@@ -141,13 +141,16 @@ pub(super) fn transfer_row(
     title.set_hexpand(true);
     title.set_wrap(false);
     title.set_ellipsize(gtk::pango::EllipsizeMode::End);
-    title.set_max_width_chars(24);
+    title.set_max_width_chars(20);
+    title.set_width_request(0);
     heading.append(&title);
     let expander = gtk::Expander::new(None);
     expander.set_widget_name("transfer-details");
     expander.set_child(Some(details));
     expander.set_expanded(expanded);
-    let review = gtk::Button::with_label(if incoming { "Receive" } else { "Details" });
+    let review = gtk::Button::with_label(if incoming { "Review" } else { "Details" });
+    review.set_hexpand(false);
+    review.set_halign(gtk::Align::End);
     let expanded = expander.clone();
     review.connect_clicked(move |_| {
         expanded.set_expanded(!expanded.is_expanded());
@@ -189,6 +192,16 @@ impl Panel {
                 .is_some_and(|old| same_description(old, transfer))
         });
         if !reusable {
+            // Live phase changes must not discard the user's expansion choice.
+            let expanded = rows
+                .entries
+                .get(&key)
+                .and_then(|entry| {
+                    named(entry.root.upcast_ref(), "transfer-details")
+                        .and_downcast::<gtk::Expander>()
+                })
+                .map(|expander| expander.is_expanded())
+                .unwrap_or(page == "incoming");
             let details = if incoming {
                 self.incoming_card(transfer, ready, true)
             } else {
@@ -202,8 +215,27 @@ impl Panel {
                 transfer.details.device,
                 transfer.phase,
                 &details,
-                page == "incoming",
+                expanded,
             );
+            // The expander changes layout independently of daemon state updates.
+            // Re-measure after GTK applies the new child allocation, keeping the
+            // current lower edge pinned before the height changes.
+            if let Some(expander) =
+                named(root.upcast_ref(), "transfer-details").and_downcast::<gtk::Expander>()
+            {
+                let weak = Rc::downgrade(self);
+                expander.connect_expanded_notify(move |_| {
+                    if let Some(panel) = weak.upgrade() {
+                        panel.pin_surface_bottom();
+                        let weak = Rc::downgrade(&panel);
+                        glib::idle_add_local_once(move || {
+                            if let Some(panel) = weak.upgrade() {
+                                panel.resize_to_content();
+                            }
+                        });
+                    }
+                });
+            }
             rows.entries.insert(
                 key.clone(),
                 Entry {
