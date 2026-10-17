@@ -220,3 +220,91 @@ claim 100% branches, 10 successful runs or exact coverage until measured.
   device-first flow, terminal unsupported metadata, and expander state. The
   isolated native GTK CI now exists on dev and runs the GTK suite ten times.
   Whole-repository Mode B coverage and native installed acceptance remain OPEN.
+
+
+## Selected architecture: B now, migration path to C (2026-10-17)
+
+The user explicitly approved **B with a future migration to C**. This lifts the
+prior API STOP FACTOR for the scoped, read-only endpoint association only.
+No persistent peer identity, account, pairing, trust, auto-consent, migration
+or new credentials are approved by this decision.
+
+### Root cause and identity semantics
+
+Outbound coordinator transfers use `endpoint: Option<String>` for queued
+dispatch, which is explicitly cleared when dispatch takes ownership or fails.
+That mutable field cannot be used as historical identity. Inbound requests
+currently have only unverified advertised sender name/type. A separate,
+immutable `associated_endpoint: Option<String>` is attached on outbound
+admission and retained until that transfer record is released from current-run
+history. It is **ephemeral**, scoped to its coordinator epoch, not an
+authenticated or persisted device identity, and must never be used to authorize
+sending or acceptance. Neither name equality nor reuse across daemon epochs
+creates an identity. Preserve cancellation, dispatch and retention semantics.
+
+Expose optional transfer association via a new additive
+`Batch1.GetTransferEndpointPage(snapshot, offset) -> (next, a(ss))`.
+Rows are ordered exactly with existing `GetTransferPage`: transfer ID and the
+admitted endpoint ID or empty string; only outbound has an association.
+This remains an authenticated, bounded, immutable **capture** owned by a bus
+client; no added payload access, no credentials. Old readers need not call the
+new method; old writers continue using existing Send/GetRecipientPage.
+For a new reader talking to an older service, a missing optional method must
+degrade to *no association*, never to name-based guessing. Any malformed
+response, divergent transfer ID/order, wrong epoch, invalid endpoint or
+non-empty inbound association must fail closed (protocol error), not silently
+group untrusted state. Snapshot retention budget must account for its rows.
+
+GTK nests terminal outbound entries under the exact currently discovered
+endpoint row only when `associated_endpoint` equals an endpoint ID in the
+same synchronized state snapshot. All other transfers remain in a collapsible
+unlinked activity section. Grouping is presentation only: daemon transfer IDs,
+consent, cancel, results, source and file/text capabilities remain independent.
+Device groups collapse while retaining expanded transfer controls/focus when
+possible. Disappearance/reappearance of a peer does not confer trust.
+
+**Migration to C:** introduce an independently verified, stable
+`device_identity` as a *new optional, separately typed association* in a future
+versioned API. Map current ephemeral endpoints to that identity only after
+verified device ownership/trust; never rewrite, persist or promote
+`associated_endpoint` into a durable key. Gate security/privacy decisions,
+consent, credential storage/migration, revocation and any auto-accept by a
+separate user-approved ADR. No implicit pairing claims in UI.
+
+### Implementation stages and rollback
+
+- [x] C0: inspect Coordinator dispatch clearing, Batch1 snapshot/SDK,
+  GTK keyed rows, existing CI and explicit compatibility requirements.
+  Freeze the B/C split and regression inventory before production edits.
+- [ ] C1: retain immutable ephemeral association in core; project additive
+  bounded, authenticated and snapshot-frozen Batch1 rows; update XML.
+- [ ] C2: SDK optional read/strict validation, compatible absence on old
+  daemon only; never use untrusted display names as fallback.
+- [ ] C3: GTK nested, collapsible completed rows under matching live endpoint,
+  unlinked fallback for stale/inbound/absent; preserve independent actions.
+- [ ] C4: regression suite on coordinator, capture, bus/SDK and GTK;
+  strict format/Clippy/CI, ten runs and coverage evidence.
+- [ ] C5: report exact head, execution and remaining hardware gates.
+  No master promotion, install or release publication.
+
+Each stage is committed independently and reverted from presentation to SDK
+to read API to coordinator retention. Retained records and files survive the
+display change; no schema on disk is introduced.
+
+### B-to-C Mode B delta inventory (planned before tests)
+
+| Production file | Branch map / interactions | Positive | N1 | N2 | N3 | N4 | N5 | N6 | N7 | N8 | N9 | N10 | N11 | N12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `core_lib/src/service.rs` | outbound one/multi sends, release before/after terminal, retry, cancel, inbound, epoch and retention, mutating dispatch endpoint never erases association | P | P | P | NA | P | P | P | P | NA | P | P | NA | NA |
+| `core_lib/src/service/bus/state.rs` | empty/1/256 pages, immutable capture after changes, ordered paired rows, memory charging, malicious/outbound alias and read auth | P | P | P | NA | P | P | P | P | NA | P | P | NA | NA |
+| `core_lib/src/service/bus.rs` + XML | new method, unknown method, invalid signature/offset/foreign snapshot, exact bounded page/FD refusal and existing methods unchanged | P | P | P | NA | P | P | P | P | NA | P | P | NA | NA |
+| `core_lib/src/service/client/state.rs` | old daemon/missing optional method, 0/one/many, wrong ID/order, stale epoch, inbound non-empty, unknown live endpoint, correct cap | P | P | P | P | P | P | P | P | NA | P | P | NA | NA |
+| `native_desktop/src/panel/rows.rs` | matching live endpoint vs stale/absent, same-name different ID, active+terminal, multiple recipients, collapse, refresh/reconnect, text capability retention | P | P | P | NA | P | P | P | P | NA | P | P | NA | NA |
+
+Tests must include at least: a shared display name with distinct endpoint IDs;
+outbound terminal after `next_send` clears dispatch authority; inbound sender
+with the same name remains unlinked; stale/missing endpoint falls back; a
+same-epoch confirmed match displays once; all receipts/consent and cancel remain
+unmodified; optional older daemon is handled without fake association.
+Measure production-file coverage and verify the mutation variants before
+claiming MODE B complete. Physical KDE/Android/Windows acceptance is separate.
