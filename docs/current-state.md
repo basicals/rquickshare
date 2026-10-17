@@ -1,6 +1,45 @@
 # Current implementation and continuation state
 
 
+## Routine stable 1x / race-sensitive 10x CI — 2026-10-17
+
+Ordinary `Preflight` now partitions `core_lib` using
+`scripts/ci-core-test-groups.sh`: **all remaining stable unit tests
+and every core integration suite run once**, with eight
+full-namespace transport/concurrency/teardown risk probes excluded
+by name and rerun exactly once each across **ten consecutive
+attempts**. A compiled-test inventory check fails if any selected
+test is missing, duplicated, or does not actually execute; no
+`#[ignore]`, assertions, no-fail retries or product source changes.
+The eight probes are *race-sensitive*, not confirmed intermittent
+failures. All other Preflight suites remain 1x, and the separate
+GTK verification retains its normal 1x checks on relevant pushes.
+
+The strict **final** MODE B still requires ten **complete**
+Core+Tauri+Vue+Python suites plus ten native GTK suites before
+coverage: routine CI optimization is **not** a change to the
+user's Mode B Stage 11 SSOT. Its first run at `7107339e`
+failed on Python run 1 due missing pinned boto3/botocore dependency
+setup, while the ordinary single Preflight was 5/5 successful.
+This was an environment mismatch, not an identified flaky test.
+Commit `f8e5d2d0` installed `scripts/requirements-r2.txt`
+into Mode B's isolated Python venv to match Preflight. Exact
+split-source Preflight:
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477112
+and corrected strict Mode B:
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477128
+were **in progress** when this entry was recorded. Do not claim
+a green full 10x or coverage measurement from a started run.
+
+See [CI stable/stress test classification and execution](ci-stable-race-sensitive-2026-10-17.md)
+and [strict final Mode B evidence](mode-b-full-ci-2026-10-17.md).
+All public methods/branches and Stage 12 completion remain OPEN,
+as do package, physical Android/Windows/KDE, real BLE and live
+system filesystem acceptance. Installed native29, native30 package,
+`master`, release/signing, external services untouched.
+
+
+
 ## Mode B whole-suite Linux GTK gate — 2026-10-17
 
 Mode B execution coverage previously omitted the active native GTK
