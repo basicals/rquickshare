@@ -49,6 +49,28 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/mode-b-python"
           "$RUNNER_TEMP/mode-b-python/bin/python" -m pip install -r scripts/requirements-r2.txt
 
+      - name: Verify critical sharing scenarios are present in the full suite
+        working-directory: ./core_lib
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo test --all-features --lib -- --list > "$RUNNER_TEMP/mode-b-tests.list"
+          for case in \
+            given_managed_user_decline_when_two_files_are_offered_then_real_encrypted_reject_has_no_file_authority \
+            given_user_decline_and_peer_socket_loss_when_reject_cannot_be_sent_then_terminal_rejected_has_no_publication \
+            given_remote_cancel_after_accept_before_or_after_first_file_when_handled_then_only_durable_members_survive \
+            given_managed_text_or_link_when_explicitly_accepted_and_fragmented_then_exact_utf8_is_exposed_only_after_finished \
+            given_nested_folder_and_existing_root_when_managed_transfer_completes_then_original_tree_and_verified_files_coexist \
+            given_interrupted_multifile_receive_when_retry_is_explicit_then_new_consent_preserves_first_and_writes_only_new_names
+          do
+            full="hdl::inbound::security_tests::receive_reliability::${case}: test"
+            count="$(grep -Fxc -- "$full" "$RUNNER_TEMP/mode-b-tests.list" || true)"
+            if [[ "$count" != 1 ]]; then
+              echo "Critical sharing test missing or duplicated: $case (found $count)" >&2
+              exit 1
+            fi
+          done
+
       - name: Run complete suite ten consecutive times
         shell: bash
         run: |
