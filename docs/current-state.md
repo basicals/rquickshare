@@ -1,6 +1,30 @@
 # Current implementation and continuation state
 
 
+## Offline transport-loss and partial-file verification — 2026-10-17
+
+A focused accepted two-file inbound regression now closes the external peer
+socket during a length header at each prefix position 0-3 or in its frame
+body. The first member is already published and the second contains only
+unpublished bytes. On real request-owned `DuplexStream` EOF, the existing
+terminal cleanup preserved the first exact file/receipt and original manifest,
+dropped incomplete anonymous storage and did not replay or fabricate success.
+The test harness initially retained an extra legacy broadcast subscriber
+that does not exist on the managed path; that fixture interference was
+corrected without changing production code. See
+[transport interruption ledger](native-transport-interruption-2026-10-17.md).
+
+Exact source `7820b155`: core library 697/0 plus 8/0 integration,
+native GTK 52/0, offline Python 54/0 and Rust format/core Clippy/frontend
+passed. The fifth Preflight job (legacy Tauri Clippy) was still pending
+at this written checkpoint. This is a single CI pass, not the full MODE B
+10-run/coverage gate or a physical Android/Windows acceptance result.
+Installed native29 is unchanged. Native30 revision is still source-only and
+requires exact package/idle gate and explicit installation acceptance.
+No host process, personal files or actual peer was touched.
+
+
+
 ## Offline inbound final-chunk reliability — 2026-10-17
 
 After native30 source-only UI work, dev now handles an inbound FILE data frame
