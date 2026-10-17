@@ -369,3 +369,148 @@ async fn given_peer_eof_during_active_multifile_receive_when_terminated_then_onl
         assert_eq!(control.snapshot().received_files, after.received_files);
     }
 }
+
+#[tokio::test]
+async fn given_real_storage_fault_at_receive_or_publish_when_terminated_then_only_durable_members_remain(
+) {
+    for first_completed in [false, true] {
+        for fault in ["no-space", "read-only", "truncated-inode"] {
+            // Arrange: the actual accepted Linux O_TMPFILE and managed receipt.
+            let (mut request, control, _peer) = admitted().await;
+            let directory = request._directory.path().to_owned();
+            request.accept_transfer().await.unwrap();
+            if first_completed {
+                request
+                    .process_offline_frame(received_file_frame(101, 1, 0, b"a", 1))
+                    .await
+                    .unwrap();
+                assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+            }
+            assert!(!directory.join("b.bin").exists());
+            assert!(control.snapshot().received_files.is_none());
+            let before = control.snapshot();
+            let prior = u64::from(first_completed);
+            assert_eq!(before.state, State::ReceivingFiles);
+            assert_eq!(before.details.total_bytes, 4);
+            assert_eq!(before.details.transferred_bytes, prior);
+
+            // Select real kernel I/O failure at the external descriptor
+            // boundary. A normal unrelated read-only file is never modified.
+            let read_only_source = tempfile::NamedTempFile::new().unwrap();
+            std::fs::write(read_only_source.path(), b"user-original").unwrap();
+            match fault {
+                "no-space" => {
+                    request.state.transferred_files.get_mut(&102).unwrap().file =
+                        Some(std::fs::OpenOptions::new().write(true).open("/dev/full").unwrap());
+                }
+                "read-only" => {
+                    request.state.transferred_files.get_mut(&102).unwrap().file =
+                        Some(std::fs::File::open(read_only_source.path()).unwrap());
+                }
+                "truncated-inode" => {
+                    request
+                        .process_offline_frame(received_file_frame(102, 3, 0, b"bcd", 0))
+                        .await
+                        .unwrap();
+                    assert_eq!(
+                        control.snapshot().details.transferred_bytes,
+                        prior + 3
+                    );
+                    // The anonymous inode no longer matches the admitted
+                    // size, even though all its payload bytes were received.
+                    request
+                        .state
+                        .transferred_files
+                        .get(&102)
+                        .unwrap()
+                        .file
+                        .as_ref()
+                        .unwrap()
+                        .set_len(2)
+                        .unwrap();
+                }
+                _ => unreachable!(),
+            }
+
+            // Act: attempt the real FILE handler's write/final publication.
+            let result = if fault == "truncated-inode" {
+                request
+                    .process_offline_frame(received_file_frame(102, 3, 3, &[], 1))
+                    .await
+            } else {
+                request
+                    .process_offline_frame(received_file_frame(102, 3, 0, b"b", 0))
+                    .await
+            };
+            let error = result.unwrap_err();
+
+            // Assert before cleanup: no success, no failed member publication
+            // or receipt; only complete writes may advance local progress.
+            let expected_ack = prior + u64::from(fault == "truncated-inode") * 3;
+            assert_eq!(request.state.state, State::ReceivingFiles);
+            assert_eq!(
+                request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                expected_ack,
+                "{fault} first_completed={first_completed}"
+            );
+            assert_eq!(control.snapshot().details.transferred_bytes, expected_ack);
+            assert!(!directory.join("b.bin").exists());
+            assert!(control.snapshot().received_files.is_none());
+            if fault == "truncated-inode" {
+                assert_eq!(error.to_string(), "Cannot finish received file safely");
+            } else {
+                let kind = error
+                    .root_cause()
+                    .downcast_ref::<std::io::Error>()
+                    .and_then(std::io::Error::raw_os_error);
+                // Linux ENOSPC and EBADF come from actual kernel writes.
+                assert_eq!(kind, Some(if fault == "no-space" { 28 } else { 9 }));
+            }
+            assert_eq!(
+                std::fs::read(read_only_source.path()).unwrap(),
+                b"user-original"
+            );
+
+            request.record_termination(State::Disconnected);
+            let after = control.snapshot();
+            assert_eq!(after.state, State::Disconnected);
+            assert_eq!(after.details.files, before.details.files);
+            assert_eq!(after.details.total_bytes, 4);
+            assert_eq!(after.details.transferred_bytes, expected_ack);
+            assert_eq!(std::fs::read_dir(&directory).unwrap().count(), usize::from(first_completed));
+            assert!(!directory.join("b.bin").exists());
+            assert!(request.publications.is_empty());
+            assert!(request.pending_files.is_none());
+            assert!(request
+                .state
+                .transferred_files
+                .values()
+                .all(|file| file.file.is_none()));
+
+            if first_completed {
+                assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+                let received = after.received_files.as_ref().unwrap();
+                assert_eq!(received.len(), 1);
+                assert!(received.subset_of(&after.details));
+                assert!(!received.valid_for(&after.details));
+                assert_eq!(received.details()[0].name, "a.bin");
+                assert!(received.open(1).is_err());
+                let mut body = [0_u8; 1];
+                std::os::unix::fs::FileExt::read_exact_at(
+                    &received.open(0).unwrap(),
+                    &mut body,
+                    0,
+                )
+                .unwrap();
+                assert_eq!(&body, b"a");
+            } else {
+                assert!(after.received_files.is_none());
+                assert!(!directory.join("a.bin").exists());
+            }
+            // A late synthetic Finish must not alter a failed transfer.
+            request.record_termination(State::Finished);
+            assert_eq!(control.snapshot().state, State::Disconnected);
+            assert_eq!(control.snapshot().received_files, after.received_files);
+        }
+    }
+}
