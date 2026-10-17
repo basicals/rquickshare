@@ -143,9 +143,9 @@ current-branch map and coverage percentages remain OPEN.
 
 1. [x] Analyze current workflows/SSOT, verify 5/5 Preflight and
    exact Mode B failure; inventory and cadence contract first.
-2. [ ] Implement the explicit 8-test selector, stable 1x/stress 10x
+2. [x] Implement the explicit 8-test selector, stable 1x/stress 10x
    Preflight split with no loss, no retries and strict failure.
-3. [ ] Fix botocore parity in Mode B with the same pinned venv
+3. [x] Fix botocore parity in Mode B with the same pinned venv
    strategy as Preflight; retain full ten-loop SSOT requirement,
    GTK gate and coverage dependencies.
 4. [ ] Verify exact-source CI and record failures and counts. Never
@@ -159,6 +159,58 @@ once; revert only mode-b venv patch to recreate old environment
 on the user's machine, installed packages, master or live services
 are touched.
 
-## Execution
+## Execution and handoff
 
-Pending.
+- Documentation-first baseline `74ae5906`.
+- `9e703caa`: `scripts/ci-core-test-groups.sh` declares the
+  exact eight original fully qualified test names. It validates
+  the live compiled `cargo test --all-features --lib -- --list`
+  inventory before either mode, fails on missing/duplicate names,
+  checks stable expected count and verifies **exactly one** test
+  passed on each stress invocation. No ignored tests, no retries.
+  Modes: `bash scripts/ci-core-test-groups.sh stable`,
+  `bash scripts/ci-core-test-groups.sh stress` and
+  `bash scripts/ci-core-test-groups.sh list`.
+- `364a32bd`: ordinary `Preflight` executes the stable group
+  once then the eight exact original cases 10x **in the same Core
+  job**, sharing compilation. Other frontend, Python, Clippy
+  and desktop checks remain once. The Rust format job also
+  validates shell syntax, rejects unknown modes and requires
+  exactly eight selectors.
+- `f8e5d2d0`: strict `mode-b.yml` installs
+  `scripts/requirements-r2.txt` into a task-owned Python virtual
+  environment before the complete ten-suite loop, matching the
+  already-green ordinary `Preflight` contract. No publication
+  command or real bucket access is added.
+- Exact-source GitHub runs:
+  [ordinary Preflight](https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477112)
+  and
+  [strict full Mode B](https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477128).
+  Both were queued/running at the initial documentation checkpoint.
+  Earlier source-only Preflight runs were cancelled due to
+  GitHub's normal dev concurrency supersession and are **not**
+  evidence of stable/stress test success. Exact counts and
+  ten-pass / coverage results must be gathered from completed logs.
+
+### Per-production-file split map
+
+All eight original risk-oriented methods remain identical and still
+exercise these production areas, now at 10× cadence in normal CI:
+`hdl/inbound.rs` (inbound socket EOF and atomic receive),
+`hdl/outbound.rs` (outbound TCP RST),
+`manager/session.rs` (terminal ownership),
+`service/bus.rs` (bus startup and shutdown),
+`service/client/controller.rs` (watcher/coalescing),
+`service/runtime.rs` (barrier and join),
+`service/wakeup.rs` (worker activation scheduling),
+and `sessions/tasks.rs` (child cancellation).
+Production function/branch coverage **is unchanged** by scheduling.
+The stable group includes all other core unit and integration
+methods exactly once. The final strict MODE B still repeats
+all of them ten times and only then measures core/desktop/Vue
+coverage; native GTK 10x remains required there.
+
+No measured coverage, mutation execution, proven failure-free
+10-pass status, physical Android/Windows acceptance or overall
+Mode B Stage 12 completion is claimed while CI is pending.
+
