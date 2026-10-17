@@ -188,3 +188,96 @@ async fn given_receive_preparation_or_accept_socket_failure_when_aborted_then_no
         }
     }
 }
+
+#[tokio::test]
+async fn given_final_data_chunk_when_completed_then_each_member_is_published_once_and_receipt_is_exact(
+) {
+    for split_second_file in [false, true] {
+        // Arrange: real staged destinations, accepted consent and managed receipt.
+        let (mut request, control, _peer) = admitted().await;
+        let directory = request._directory.path().to_owned();
+        request.accept_transfer().await.unwrap();
+        assert!(std::fs::read_dir(&directory).unwrap().next().is_none());
+
+        // Act: data and final flag share the same first-file frame.
+        request
+            .process_offline_frame(received_file_frame(101, 1, 0, b"a", 1))
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+        assert!(!directory.join("b.bin").exists());
+        assert!(control.snapshot().received_files.is_none());
+
+        if split_second_file {
+            request
+                .process_offline_frame(received_file_frame(102, 3, 0, b"b", 0))
+                .await
+                .unwrap();
+            assert!(!directory.join("b.bin").exists());
+        }
+
+        let (offset, tail) = if split_second_file {
+            (1, b"cd".as_slice())
+        } else {
+            (0, b"bcd".as_slice())
+        };
+        let end = request
+            .process_offline_frame(received_file_frame(102, 3, offset, tail, 1))
+            .await
+            .unwrap_err();
+
+        // Assert: exactly two final names, exact bytes and read-only receipt.
+        assert!(end.is::<crate::errors::AppError>());
+        assert_eq!(request.state.state, State::Finished);
+        assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+        assert_eq!(std::fs::read(directory.join("b.bin")).unwrap(), b"bcd");
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 2);
+        assert!(request.publications.is_empty());
+        assert!(request.state.transferred_files.is_empty());
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.details.transferred_bytes, 4);
+        let receipt = snapshot.received_files.as_ref().unwrap();
+        assert_eq!(receipt.len(), 2);
+        assert!(receipt.valid_for(&snapshot.details));
+        assert_eq!(receipt.details()[0].name, "a.bin");
+        assert_eq!(receipt.details()[1].name, "b.bin");
+        let mut body = [0_u8; 3];
+        std::os::unix::fs::FileExt::read_exact_at(
+            &receipt.open(1).unwrap(),
+            &mut body,
+            0,
+        )
+        .unwrap();
+        assert_eq!(&body, b"bcd");
+    }
+}
+
+#[tokio::test]
+async fn given_premature_or_oversized_last_data_chunk_when_rejected_then_no_final_name_is_published(
+) {
+    for (body, written) in [(b"b".as_slice(), 1_u64), (b"bcde".as_slice(), 0)] {
+        // Arrange: consent admits the same three-byte target.
+        let (mut request, control, _peer) = admitted().await;
+        let directory = request._directory.path().to_owned();
+        request.accept_transfer().await.unwrap();
+
+        // Act: the last flag is not permission to change the admitted byte limit.
+        let error = request
+            .process_offline_frame(received_file_frame(102, 3, 0, body, 1))
+            .await
+            .unwrap_err();
+
+        // Assert: a failed frame neither finishes nor exposes the partial name.
+        assert!(!error.is::<crate::errors::AppError>());
+        assert_eq!(request.state.state, State::ReceivingFiles);
+        assert!(!directory.join("b.bin").exists());
+        assert_eq!(
+            request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+            written
+        );
+        request.record_termination(State::Disconnected);
+        assert_eq!(control.snapshot().state, State::Disconnected);
+        assert!(control.snapshot().received_files.is_none());
+        assert!(std::fs::read_dir(&directory).unwrap().next().is_none());
+    }
+}
