@@ -37,10 +37,10 @@ wire/API, trust or retry feature.
    exact byte count, existing owner and publication/sync/receipt order.
    Preserve the pre-accept and offset checks. Do not change request state on
    invalid/truncated frames or relax any assertion.
-4. [ ] Run real core regression coverage and strict formatting/lint in CI.
+4. [x] Run real core regression coverage and strict formatting/lint in CI.
    Capture exact counts/failed jobs, remedy only proven failures. No physical
    compatibility claim, 10-run MODE B claim or source-to-installed inference.
-5. [ ] Update current-state and this ledger with observed results. Keep installed
+5. [x] Update current-state and this ledger with observed results. Keep installed
    native29, native30 release packaging and peer/desktop acceptance gates open.
 
 ## Focused branch/risk inventory
@@ -90,3 +90,31 @@ applying the exact nightly diff. Core Clippy and frontend passed at that
 source. The post-expectation CI runs remain pending; do not claim final green,
 a ten-run stability gate or actual Google peer compatibility.
 
+
+## Final headless verification
+
+After strengthening the failed assertion, source commit `1d286316` passed
+the exact independent GitHub CI jobs:
+
+- Core Rust: 696 library methods, 0 failed, plus 4 modern-protocol and 4
+  native-daemon integration tests (all passed). The three added actual-handler
+  tests include both published Linux final-data scenarios and invalid-final
+  no-write tests.
+- Native GTK: 52 isolated widget/controller tests, 0 failed, with native
+  formatting and strict lint passed. This is a noninteractive X11 test display.
+- Rust format, core strict Clippy, and frontend checks: passed in dev Preflight
+  run 39051081414.
+- Legacy Tauri Clippy: still in progress at this recorded checkpoint. It is
+  not required to claim this scoped core fix green, but the overall Preflight
+  must remain pending until it completes.
+
+CI: https://github.com/morozhenko-apps/rquickshare/actions/runs/39051081414
+and https://github.com/morozhenko-apps/rquickshare/actions/runs/39051081413.
+
+The initial red test was not a production regression: the improved pre-write
+rejection was stricter than the original test expectation. The corrected
+assertion requires no write and no ack on invalid EOF; it was not weakened.
+No full MODE B inventory refresh, ten-run stability gate, physical peer,
+installed binary test, package build, release signing or promotion to master
+is claimed. Installed native29 remains unchanged. Native30 remains source
+only and retains the separate exact artifact/idle/upgrade/acceptance gates.
