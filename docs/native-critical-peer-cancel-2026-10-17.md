@@ -85,7 +85,7 @@ and full Stage 12 mapping remain OPEN.
 
 1. [x] Scan critical priority, code, previous regressions;
    record specific missing branch and two-variant matrix.
-2. [ ] Implement real protocol + actual on-disk status
+2. [x] Implement real protocol + actual on-disk status
    test in existing inbound reliability fixture.
 3. [ ] Verify both variants on same-source CI, no
    weakening; correct test fixture only if needed.
@@ -95,6 +95,26 @@ and full Stage 12 mapping remain OPEN.
 Rollback removes one test method and this ledger,
 without changing runtime/network/OS behavior.
 
-## Execution
+## Execution — source committed, CI pending
 
-Pending.
+Test-only source commit `65f63e7232514a41410ee8fc296fe1847eda432d`
+implements one table-driven two-variant async test in the actual
+inbound receive-reliability fixture. No production files,
+contract or public behavior changed. The test:
+(1) checks actual encrypted two-chunk Accept response;
+(2) routes a real Nearby Cancel body through the byte
+payload parser after file admission; (3) checks real encrypted
+Disconnection response and absence of subsequent frames;
+(4) verifies zero-file vs preserved-first-file outcomes,
+exact durable file bytes and read-only received-file
+capability, no partially written second file, zero
+open stage owners, and an absorbing Cancelled state.
+
+Actions automatically started
+[Preflight 39076370296](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076370296)
+and
+[Native GTK 39076370294](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076370294).
+**Both were still executing at the source checkpoint.**
+Do not count this new cancel case as verified until the
+exact-source CI results are inspected; no physical
+Pixel cancellation or installed release is implied.
