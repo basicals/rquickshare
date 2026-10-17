@@ -1,0 +1,66 @@
+name: Native GTK UI verification
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "native_desktop/**"
+      - "core_lib/**"
+      - ".github/workflows/native-gtk-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-gtk-dev
+  cancel-in-progress: true
+
+jobs:
+  native_gtk:
+    name: Native GTK widget tests and strict lint
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.04
+    steps:
+      - name: Install native test prerequisites
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git curl build-essential pkg-config \
+            protobuf-compiler libdbus-1-dev libudev-dev libgtk-4-dev \
+            libgtk4-layer-shell-dev libfontconfig-dev libseccomp-dev \
+            bubblewrap glycin-loaders dbus-daemon dbus-x11 xvfb xauth
+
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v2.9.0
+        with:
+          workspaces: |
+            core_lib -> target
+            native_desktop -> target
+          shared-key: native-gtk-ui-ubuntu-26.04
+
+      - name: Native GTK source formatting and lint
+        run: |
+          cargo +nightly fmt --manifest-path native_desktop/Cargo.toml -- --check
+          cargo +stable clippy --locked --manifest-path native_desktop/Cargo.toml --all-targets --no-deps -- -D warnings
+
+      - name: Native GTK isolated widget and controller suite
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
+          export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
+          cargo +stable build --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare-preview-helper
+          for attempt in $(seq 1 10); do
+            echo "=== Native GTK regression attempt ${attempt}/10 ==="
+            GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
+              dbus-run-session --config-file docs/prototypes/preview-bus.conf -- \
+              xvfb-run -a cargo +stable test --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare
+          done

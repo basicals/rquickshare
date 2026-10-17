@@ -143,6 +143,15 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .unwrap();
     assert_eq!(scroll.min_content_height(), 0);
     assert_eq!(scroll.max_content_height(), 300);
+    panel.resize_to_content();
+    if let Some(monitor) = panel.window.monitor() {
+        let expected = monitor
+            .geometry()
+            .height()
+            .saturating_sub(220)
+            .clamp(120, 760);
+        assert_eq!(scroll.max_content_height(), expected);
+    }
     assert!(panel.box_widget("compact").get_visible());
     assert!(*panel.ingress.gate.subscribe().borrow());
     panel.button("quick-devices").emit_clicked();
@@ -150,6 +159,13 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(!panel.box_widget("device-drawer").get_visible());
     panel.button("quick-devices").emit_clicked();
     assert_eq!(panel.drawer(), Drawer::Open);
+    panel.show_sending();
+    assert_eq!(panel.pages.visible_child_name().as_deref(), Some("nearby"));
+    assert_eq!(panel.drawer(), Drawer::Open);
+    assert!(
+        !panel.sending.is_visible(),
+        "Send must select a device before content"
+    );
     drop(permit);
     assert!(!*panel.ingress.gate.subscribe().borrow());
     panel.actions.activate_action("files", None);
@@ -157,6 +173,29 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     for name in ["files", "folder", "discard", "recover", "abort"] {
         assert!(!panel.button(name).is_sensitive(), "{name}");
     }
+    let unsupported = TransferDetails {
+        status: DetailsStatus::Unsupported,
+        ..Default::default()
+    };
+    for phase in [
+        Phase::Finished,
+        Phase::Rejected,
+        Phase::Cancelled,
+        Phase::Failed,
+        Phase::Disconnected,
+    ] {
+        let details = safe_transfer_details(&unsupported, phase, true, None);
+        let messages: Vec<_> = labels(&details)
+            .iter()
+            .map(|item| item.text().to_string())
+            .collect();
+        assert_eq!(messages.len(), 1);
+        assert_eq!(messages[0], "Content details are unavailable for review.");
+    }
+    let pending = safe_transfer_details(&unsupported, Phase::AwaitingConsent, true, None);
+    assert!(labels(&pending)
+        .iter()
+        .any(|item| item.text().contains("Decline or cancel")));
     for status in [DetailsStatus::Unavailable, DetailsStatus::Unsupported] {
         let row = details_card(&TransferDetails {
             status,

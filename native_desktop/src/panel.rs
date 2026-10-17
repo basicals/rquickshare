@@ -195,6 +195,21 @@ fn details_card_mode_with_files(
     row
 }
 
+fn safe_transfer_details(
+    details: &TransferDetails,
+    phase: Phase,
+    full: bool,
+    action: Option<Rc<FileAction>>,
+) -> gtk::Box {
+    if phase.is_terminal() && details.status == DetailsStatus::Unsupported {
+        let row = card();
+        row.append(&label("Content details are unavailable for review."));
+        row
+    } else {
+        details_card_mode_with_files(details, full, action)
+    }
+}
+
 fn saved_files_card(
     files: Arc<[rqs_lib::sessions::details::FileDetail]>,
     total: usize,
@@ -1109,7 +1124,21 @@ impl Panel {
         self.resize_to_content();
     }
     fn resize_to_content(&self) {
-        // Request the measured natural height, not the scroller's minimum allocation.
+        // Keep the bottom toolbar visible on short monitors while using the
+        // available vertical space for expanded details on larger monitors.
+        if let Some(monitor) = self.window.monitor() {
+            if let Some(scroll) = self.builder.object::<gtk::ScrolledWindow>("nearby-scroll") {
+                scroll.set_max_content_height(
+                    monitor
+                        .geometry()
+                        .height()
+                        .saturating_sub(220)
+                        .clamp(120, 760),
+                );
+            }
+        }
+        // Request natural height after each transfer-expander layout change,
+        // not only after a new daemon snapshot arrives.
         self.window.set_default_size(420, 1);
         let height = self
             .window
@@ -1118,6 +1147,17 @@ impl Panel {
             .max(1);
         self.clamp_moved_surface(height);
         self.window.set_default_size(420, height);
+        if std::env::var_os("RQUICKSHARE_UI_DEBUG").is_some() {
+            eprintln!(
+                "rquickshare-ui: height={height} scroll_max={} pinned={} visible={}",
+                self.builder
+                    .object::<gtk::ScrolledWindow>("nearby-scroll")
+                    .map(|scroll| scroll.max_content_height())
+                    .unwrap_or_default(),
+                self.model.borrow().position_pinned,
+                self.window.is_visible()
+            );
+        }
     }
     fn incoming_card(
         self: &Rc<Self>,
@@ -1157,8 +1197,9 @@ impl Panel {
         ready: bool,
         full: bool,
     ) -> gtk::Box {
-        let row = details_card_mode_with_files(
+        let row = safe_transfer_details(
             &transfer.details,
+            transfer.phase,
             full,
             if transfer.phase == Phase::Finished {
                 self.file_action(transfer, full)

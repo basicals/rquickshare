@@ -11,6 +11,12 @@
       <arg name="kind" type="s" direction="out"/>
       <arg name="transfers" type="as" direction="out"/>
     </method>
+    <method name="GetTransferEndpointPage">
+      <arg name="snapshot" type="s" direction="in"/>
+      <arg name="offset" type="u" direction="in"/>
+      <arg name="next" type="u" direction="out"/>
+      <arg name="associations" type="a(ss)" direction="out"/>
+    </method>
     <method name="GetRecipientPage">
       <arg name="snapshot" type="s" direction="in"/>
       <arg name="offset" type="u" direction="in"/>

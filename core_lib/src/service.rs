@@ -221,6 +221,8 @@ struct Replay {
 
 struct Transfer {
     recipient: Option<String>,
+    // Current-run discovery association only; never authorizes a send or trust.
+    associated_endpoint: Option<String>,
     received_files: Option<Arc<crate::received_files::ReceivedFiles>>,
     received_text: Option<Arc<crate::sessions::text::ReceivedText>>,
     view: TransferSnapshot,
@@ -600,6 +602,7 @@ impl Coordinator {
             id,
             Transfer {
                 recipient,
+                associated_endpoint: Some(endpoint.clone()),
                 received_text: None,
                 received_files: None,
                 view: TransferSnapshot {
@@ -659,6 +662,7 @@ impl Coordinator {
             id,
             Transfer {
                 recipient: None,
+                associated_endpoint: None,
                 received_text: None,
                 received_files: None,
                 view: TransferSnapshot {

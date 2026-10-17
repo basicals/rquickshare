@@ -165,9 +165,18 @@ fn given_one_or_ten_recipients_when_dispatched_then_source_is_shared_once_and_in
                 core.transfers[id].recipient.as_deref(),
                 Some(format!("Device {index}").as_str())
             );
+            assert_eq!(
+                core.transfers[id].associated_endpoint.as_deref(),
+                Some(format!("peer{index}").as_str())
+            );
             let job = core.next_send().unwrap().unwrap();
             assert_eq!(job.transfer, *id);
             assert_eq!(job.endpoint, format!("peer{index}"));
+            assert!(core.transfers[id].endpoint.is_none());
+            assert_eq!(
+                core.transfers[id].associated_endpoint.as_deref(),
+                Some(job.endpoint.as_str())
+            );
             jobs.push(job);
         }
         assert!(core.next_send().unwrap().is_none());

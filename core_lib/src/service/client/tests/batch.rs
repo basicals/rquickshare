@@ -57,6 +57,18 @@ async fn given_many_recipient_command_when_sdk_and_controller_send_then_captured
             .deserialize()
             .unwrap();
         assert_eq!((next, old), (0, vec![]));
+        let (empty_next, empty_links): (u32, Vec<(String, String)>) = client
+            .wire(
+                BATCH,
+                "GetTransferEndpointPage",
+                &(capture.0.as_str(), 0u32),
+            )
+            .await
+            .unwrap()
+            .body()
+            .deserialize()
+            .unwrap();
+        assert_eq!((empty_next, empty_links), (0, vec![]));
         client
             .wire(MANAGER, "EndSnapshot", &capture.0)
             .await
@@ -69,6 +81,14 @@ async fn given_many_recipient_command_when_sdk_and_controller_send_then_captured
         assert_eq!(view.resources.reserved_handles, 3);
         assert_eq!(view.transfers[0].recipient.as_deref(), Some("First phone"));
         assert_eq!(view.transfers[1].recipient.as_deref(), Some("Second phone"));
+        assert_eq!(
+            view.transfers[0].associated_endpoint.as_deref(),
+            Some("peer")
+        );
+        assert_eq!(
+            view.transfers[1].associated_endpoint.as_deref(),
+            Some("second")
+        );
         assert!(!format!("{view:?}").contains("First phone"));
         client.close().await.unwrap();
         let second = NativeClient::connect(private.socket().await).await.unwrap();

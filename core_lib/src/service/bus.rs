@@ -1103,6 +1103,18 @@ impl SelectionBus {
                         Err(error) => self.domain_error(&header, error).await,
                     };
                 }
+                Some("GetTransferEndpointPage") => {
+                    let result = body
+                        .deserialize::<(String, u32)>()
+                        .map_err(|_| Error::InvalidInput)
+                        .and_then(|(id, offset)| {
+                            self.state.transfer_endpoint_page(client, &id, offset)
+                        });
+                    return match result {
+                        Ok(page) => self.state_reply(&header, &page).await,
+                        Err(error) => self.domain_error(&header, error).await,
+                    };
+                }
                 Some("GetRecipientPage") => {
                     let result = body
                         .deserialize::<(String, u32)>()

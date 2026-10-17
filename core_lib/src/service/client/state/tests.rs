@@ -270,6 +270,7 @@ async fn given_real_collection_boundaries_when_all_pages_are_read_then_complete_
                 .iter()
                 .all(|v| v.direction == Direction::Inbound
                     && v.phase == Phase::Active
+                    && v.associated_endpoint.is_none()
                     && v.consent_revision.is_none()));
             assert_eq!(client.cached_state(), Some(&view));
             assert!(client.capture.is_none());
@@ -479,10 +480,16 @@ async fn given_foreign_or_pending_selection_when_discarded_then_only_owner_idle_
         assert!(view.selections.is_empty());
         assert_eq!(view.transfers.len(), 1);
         assert_eq!(view.transfers[0].phase, Phase::Queued);
-        other.cancel(&view.transfers[0].transfer).await.unwrap();
         assert_eq!(
-            client.read_state().await.unwrap().transfers[0].phase,
-            Phase::Cancelled
+            view.transfers[0].associated_endpoint.as_deref(),
+            Some("peer")
+        );
+        other.cancel(&view.transfers[0].transfer).await.unwrap();
+        let cancelled = client.read_state().await.unwrap();
+        assert_eq!(cancelled.transfers[0].phase, Phase::Cancelled);
+        assert_eq!(
+            cancelled.transfers[0].associated_endpoint.as_deref(),
+            Some("peer")
         );
         assert!(original.path().is_file());
         other.close().await.unwrap();
@@ -626,6 +633,7 @@ fn given_detail_header_and_consent_readiness_boundaries_when_decoded_then_malfor
         content_revision: None,
         reveal_revision: None,
         recipient: None,
+        associated_endpoint: None,
         transfer: Transfer {
             id: header.0,
             connection: "test".into(),

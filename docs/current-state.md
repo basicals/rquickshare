@@ -1,5 +1,42 @@
 # Current implementation and continuation state
 
+2026-10-17 renewed integration: the user authorized including the additional
+41 dev commits in master. The current source candidate adds recipient-first
+Send, retained upward expansion and ephemeral endpoint-based completed-operation
+grouping. Preflight passed at dev 7e5e793; native GTK format/Clippy and 42 tests
+ten times passed at source-equivalent 29322530 (later changes are docs only).
+This is source integration, not an installed upgrade or release. Full native
+package preview-sandbox validation, broader Mode B coverage and physical
+KDE/Android/Windows acceptance remain open. Follow the
+[renewed integration plan](native-mainline-integration-2026-10-17.md#renewed-integration-card-operations-and-endpoint-association).
+
+2026-10-17 later dev-only checkpoint: the user approved optional
+session-scoped outbound endpoint association (B) with a clean path toward a
+future independently verified durable identity (C). The immutable association
+survives dispatch/terminal status, is exposed through an additive authenticated
+Batch1 snapshot method and validated by the SDK. GTK nests completed outgoing
+operations under an exactly matching currently discovered endpoint; inbound and
+unmatched operations remain separate. This is not pairing or stable trust.
+Contract/UI regressions passed on code commit 29322530: GTK 42 tests ten
+consecutive times (420 successful executions) and complete Preflight green.
+Whole-repository MODE B coverage and physical acceptance remain open. The broader MODE B completion gate, real peer
+testing and release publication remain open. See
+[native card operation contract](native-card-operations-2026-10-17.md).
+
+
+Historical pre-association checkpoint (2026-10-17; superseded by the later selected B implementation above): user selected B for
+completed operation grouping, with only provable device association. The current
+D-Bus recipient projection supplies names but not endpoint IDs, so no safe
+same-device merger is possible yet. New scoped UI changes keep active transfers,
+discovered endpoints and collapsed unlinked completed activity separate, retain
+transfer capabilities, repair transfer expansion/bottom anchoring and terminal
+unsupported-content labels, and open recipients before source choice on Send.
+See [card operations plan](native-card-operations-2026-10-17.md) for explicit
+API STOP FACTOR, MODE B inventory and change/rollback ledger. New native GTK
+test workflow is running; pre-change tests do not validate this candidate.
+No native22 installation, release signing or public APT publication is implied.
+
+
 Mainline integration (2026-10-17): native21 source is merged into the actual
 default branch master by PR #4, merge SHA 25cf7dd17ea28e98b2765efd09e0474d0028334a;
 remote dev was fast-forwarded to that merge checkpoint without force. The exact

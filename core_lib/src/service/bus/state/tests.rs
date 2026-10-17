@@ -64,6 +64,12 @@ fn given_collection_boundaries_when_every_offset_is_read_then_pages_are_complete
                 rows,
                 cache.captures[&client].transfers[offset..next as usize]
             );
+            let (link_next, links) = cache
+                .transfer_endpoint_page(client, id, offset as u32)
+                .unwrap();
+            assert_eq!(link_next, next);
+            assert_eq!(links.len(), rows.len());
+            assert!(links.iter().all(|(_, endpoint)| endpoint.is_empty()));
         }
         for offset in 0..=endpoints_count {
             let (next, rows) = cache.endpoint_page(client, id, offset as u32).unwrap();
@@ -82,6 +88,10 @@ fn given_collection_boundaries_when_every_offset_is_read_then_pages_are_complete
         for offset in [count as u32 + 1, u32::MAX] {
             assert_eq!(
                 cache.transfer_page(client, id, offset),
+                Err(Error::InvalidInput)
+            );
+            assert_eq!(
+                cache.transfer_endpoint_page(client, id, offset),
                 Err(Error::InvalidInput)
             );
         }
@@ -445,6 +455,13 @@ fn given_released_source_reservation_when_captured_then_metadata_uses_refreshed_
         .unwrap();
     // Assert
     assert_eq!((header.5, header.6, header.7), (0, 0, 0));
+    assert_eq!(
+        cache
+            .transfer_endpoint_page(client, &header.0, 0)
+            .unwrap()
+            .1,
+        vec![(token(transfer.0, transfer.1), "nearby".to_owned())],
+    );
     assert_eq!(header.2, coordinator.revision);
     assert_eq!(coordinator.usage(), Default::default());
 }
