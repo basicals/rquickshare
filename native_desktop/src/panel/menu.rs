@@ -237,21 +237,14 @@ impl Panel {
         }
     }
     pub(super) fn show_sending(self: &Rc<Self>) {
+        // Recipient first: Send opens discovery even without a prepared source.
+        // File/text selection is offered only after explicit peer selection.
+        self.sending.popdown();
         self.set_drawer(Drawer::Open);
         self.pages.set_visible_child_name("nearby");
         self.render();
         if !self.window.is_visible() {
             self.present_surface();
-        }
-        if self
-            .model
-            .borrow()
-            .state
-            .view
-            .as_ref()
-            .is_none_or(|view| view.selections.is_empty())
-        {
-            self.sending.popup();
         }
     }
     pub(super) fn send_to(self: &Rc<Self>, endpoint: &str) {
@@ -284,6 +277,8 @@ impl Panel {
             self.model.borrow_mut().recipients.clear();
             self.choose_recipient(endpoint, true);
             self.show_sending();
+            // The user selected an actual discovered endpoint: now choose content.
+            self.sending.popup();
         }
     }
     pub fn set_drawer(self: &Rc<Self>, drawer: Drawer) {
