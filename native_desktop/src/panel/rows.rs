@@ -624,6 +624,16 @@ pub(super) fn verify_keyed_layout() {
     assert_eq!(expanded.child(), Some(child));
     arrange(&container, std::slice::from_ref(&first));
     assert!(second.parent().is_none());
+    assert_eq!(container.first_child(), Some(first.clone().upcast()));
+
+    // Reparenting is required when a completed operation moves between the
+    // unlinked activity drawer and an authoritative same-endpoint group.
+    let activity = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    arrange(&activity, std::slice::from_ref(&first));
+    assert!(container.first_child().is_none());
+    assert_eq!(activity.first_child(), Some(first.clone().upcast()));
+    arrange(&container, std::slice::from_ref(&first));
+    assert!(activity.first_child().is_none());
     assert_eq!(container.first_child(), Some(first.upcast()));
 
     // Arrange: a synthetic transfer with an untrusted sender name.
