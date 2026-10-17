@@ -1341,6 +1341,13 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                             ));
                         }
 
+                        // A final chunk may carry the last bytes as well as its
+                        // EOF flag. Reject a premature EOF before writing anything.
+                        let is_final_chunk = (chunk.flags() & 1) == 1;
+                        if is_final_chunk && new_offset != file_internal.total_size {
+                            return Err(anyhow!("File payload ended before its declared size"));
+                        }
+
                         let file = file_internal.file.as_ref().ok_or_else(|| {
                             anyhow!("File payload received before destination file was opened")
                         })?;
@@ -1357,10 +1364,14 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                                 true,
                             )
                             .await;
-                        } else if (chunk.flags() & 1) == 1 {
-                            if new_offset != file_internal.total_size {
-                                return Err(anyhow!("File payload ended before its declared size"));
-                            }
+                        }
+
+                        if is_final_chunk {
+                            let file_internal = self.state.transferred_files.get(&payload_id)
+                                .ok_or_else(|| anyhow!("Missing final file metadata"))?;
+                            let file = file_internal.file.as_ref().ok_or_else(|| {
+                                anyhow!("File payload received before destination file was opened")
+                            })?;
                             #[cfg(target_os = "linux")]
                             if let Some(publication) = self.publications.get(&payload_id) {
                                 publication
