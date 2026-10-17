@@ -463,7 +463,7 @@ async fn given_managed_text_or_link_when_explicitly_accepted_and_fragmented_then
         // Act: approval is a real managed command; bytes are not exposed early.
         critical_accept(&mut request, &control).await;
         assert!(control.snapshot().received_text.is_none());
-        let split = 4;
+        let split = source.len() - 1; // End the first chunk inside the final UTF-8 scalar.
         request
             .process_offline_frame(frame(701, source.len(), 0, &source[..split], false))
             .await
@@ -546,12 +546,15 @@ async fn given_nested_folder_and_existing_root_when_managed_transfer_completes_t
     let receipt = snapshot.received_files.as_ref().unwrap();
     assert_eq!(receipt.len(), 2);
     assert!(receipt.valid_for(&snapshot.details));
-    let mut first = [0; 3];
-    FileExt::read_exact_at(&receipt.open(0).unwrap(), &mut first, 0).unwrap();
-    assert_eq!(&first, b"abc");
-    let mut second = [0; 2];
-    FileExt::read_exact_at(&receipt.open(1).unwrap(), &mut second, 0).unwrap();
-    assert_eq!(&second, b"xy");
+    // Receipts are sorted by relative path, not by incoming payload order.
+    assert_eq!(receipt.details()[0].name, "1_Trip/photos/photo.bin");
+    assert_eq!(receipt.details()[1].name, "1_Trip/readme.txt");
+    let mut photo = [0; 2];
+    FileExt::read_exact_at(&receipt.open(0).unwrap(), &mut photo, 0).unwrap();
+    assert_eq!(&photo, b"xy");
+    let mut readme = [0; 3];
+    FileExt::read_exact_at(&receipt.open(1).unwrap(), &mut readme, 0).unwrap();
+    assert_eq!(&readme, b"abc");
     assert!(request.publications.is_empty());
 }
 
