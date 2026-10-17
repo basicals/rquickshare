@@ -91,3 +91,53 @@ application publication, force push or dev branch deletion.
 - The post-merge `master` Preflight run is [38984886879](https://github.com/morozhenko-apps/rquickshare/actions/runs/38984886879). Its completion is tracked independently from the already-passing exact `dev` head.
 - No signed release, tag, production APT publication, native package deployment, device test or full Mode B ten-run claim is implied. All three essential-release gates above remain open.
 - M5 remote synchronization is complete. **Local** `master`/`dev` checkout synchronization requires the workstation (not accessible from this GitHub-only operation): `git fetch origin`, `git switch master && git pull --ff-only`, `git switch dev && git pull --ff-only`. Preserve local work and avoid resets. The doc-only follow-up needs a regular PR to place this record in `master` as well.
+
+
+## Renewed integration: card operations and endpoint association
+
+2026-10-17, Mode A. The user asked to continue mainline integration and include
+the additional commits. This supersedes the earlier dev-only promotion limit
+for this source integration, not for installation, signing or publication.
+Existing master already contains native21 through PR #4 and its documentation
+follow-ups. Clean local/remote dev is 7e5e7935355d7b8b22dbf43029c46ec221edd910,
+41 commits ahead of master 889313d; master is its ancestor. One checkout, no
+new branch/worktree, no force push, and no running application changes.
+
+### Analysis and bounded plan before integration
+
+- [x] R1: read the new card-operation contract and reviewed core, optional
+  Batch1 read, SDK validation, GTK grouping/reparenting and CI changes. Retained
+  associations are ephemeral endpoint metadata, never trusted or name-matched
+  identity. Existing consent, source ownership and retention remain unchanged.
+- [x] R2: verify measured CI evidence. Exact dev head 7e5e793 passed all five
+  substantive Preflight jobs in run 38989655535. Native GTK source/workflow at
+  29322530 passed strict format/Clippy and 42 executable tests ten times in
+  run 38989181732. The difference from 29322530 to 7e5e793 is three docs/evidence
+  files only; the native/core/test/workflow trees are identical. Do not repeat
+  these unaffected ten-run checks for documentation changes.
+- [ ] R3: commit this plan/current-status clarification, push dev normally,
+  create and attach a dev-to-master PR. Check the candidate head and ancestry
+  before a normal merge commit preserving all 41 incoming commits.
+- [ ] R4: fast-forward existing local master/dev and remote dev to the merge,
+  record the actual receipt, and synchronize docs-only handoff artifacts. Keep
+  the installed native21 binaries and immutable archives unchanged.
+
+Risk and rollback: this promotes an additive public read and new presentation,
+not just cosmetic code. Revert the merge if source integration must be undone;
+do not reset published history. Installed native21 does not yet exercise these
+newer changes. Full native package validation previously failed the real
+Bubblewrap/Glycin preview-library fixture (run 38987892134). That test was not
+weakened; the isolated GTK executable gate deliberately covers only the approved
+UI scope. Full package acceptance remains open, and preview functionality is
+outside the user's essential feature scope. Whole-repository Mode B coverage,
+old-daemon/adversarial page cases and real KDE/Android/Windows acceptance also
+remain open as documented in native-card-operations-2026-10-17.md.
+
+Remaining release work additionally includes replacing legacy Tauri-facing
+root README/download/build instructions with the supported native release path.
+Do not remove retained legacy/macOS support or publish unapproved native builds
+as part of this source merge. The signed APT channel is still unpublished.
+
+Documentation-only receipt commits may follow the verified merge without
+rerunning unchanged production suites. Record their source-equivalent checked
+commit and explicitly distinguish skipped or pending CI from observed success.
