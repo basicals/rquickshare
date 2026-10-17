@@ -39,6 +39,8 @@ impl fmt::Debug for Endpoint {
 pub struct TransferView {
     pub completed_files: Arc<[FileDetail]>,
     pub recipient: Option<String>,
+    /// Same-epoch discovered endpoint association, never stable trust identity.
+    pub associated_endpoint: Option<String>,
     pub content_revision: Option<u64>,
     pub reveal_revision: Option<u64>,
     pub transfer: Transfer,
@@ -264,6 +266,7 @@ impl NativeClient {
         }
         Ok(TransferView {
             recipient: None,
+            associated_endpoint: None,
             content_revision: None,
             reveal_revision: None,
             completed_files: Arc::default(),
@@ -426,6 +429,37 @@ impl NativeClient {
                 return Err(ClientError::Protocol);
             }
             transfer.recipient = (!name.is_empty()).then_some(name);
+        }
+        // Optional additive Batch1 read. Old daemons answer UnknownMethod,
+        // which intentionally means no grouping instead of a guessed identity.
+        let associations: Vec<(String, String)> = match self
+            .pages_for_on(
+                crate::service::batch::INTERFACE,
+                "GetTransferEndpointPage",
+                &metadata.0,
+                metadata.10,
+                None,
+            )
+            .await
+        {
+            Ok(rows) => rows,
+            Err(ClientError::Incompatible) => Vec::new(),
+            Err(error) => return Err(error),
+        };
+        if !associations.is_empty() {
+            if associations.len() != view.transfers.len() {
+                return Err(ClientError::Protocol);
+            }
+            for (transfer, (id, endpoint)) in view.transfers.iter_mut().zip(associations) {
+                if id != transfer.transfer.id()
+                    || endpoint.len() > 256
+                    || !endpoint.bytes().all(|byte| byte.is_ascii_graphic())
+                    || (!endpoint.is_empty() && transfer.direction != Direction::Outbound)
+                {
+                    return Err(ClientError::Protocol);
+                }
+                transfer.associated_endpoint = (!endpoint.is_empty()).then_some(endpoint);
+            }
         }
         let headers: Vec<DetailRow> = self
             .pages("GetTransferDetailsPage", &metadata.0, metadata.10)
