@@ -12,6 +12,27 @@ The repository has historical coverage, regression tests, a targeted mutation au
 
 No new tests may be added without a complete inventory/branch/matrix/interaction/count/coverage plan for their scoped artifacts. The offline analyzer's preregistered scope is recorded in `docs/offline-maintenance.md`.
 
+## 2026-10-17 execution-profile clarification
+
+**Routine dev CI is not the final Mode B gate.** Routine `Preflight`
+uses an inventory-verified stable/race-sensitive partition of the
+Core Rust library: other core unit cases and the unchanged core
+integration binaries run once, while eight exact-name, risk-based
+transport/concurrency/teardown probes run 10x. Vue, Python,
+legacy Tauri and standard GTK paths keep their normal single-run
+checks. The eight probes are not asserted to be currently flaky.
+See [the stable/10x regression map](ci-stable-race-sensitive-2026-10-17.md).
+
+The final `mode-b.yml` still follows this document's mandatory
+Stage 11: complete Core, Tauri, Vue and Python test suites **10x**
+and native GTK **10x**, with coverage only after both succeed.
+The first GitHub full run from 2026-10-17 failed on Python test
+environment parity, not flaky domain behavior; the next run
+corrects it with pinned `scripts/requirements-r2.txt`.
+No Mode B completion or measured coverage is inferred from an
+in-progress run. This distinction does not relax Stage 12
+YES/NO acceptance or physical Android/Windows/KDE checks.
+
 ## Scope
 
 Primary scope is the current `dev` branch. The original inventory covers the Pixel/BLE receiver and maintenance-pass regressions; after branch consolidation, the Full Quick Share protocol/text/clipboard changes integrated into `dev` must also be included before the final Mode B completion gate.
