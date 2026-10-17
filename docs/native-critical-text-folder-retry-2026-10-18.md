@@ -107,7 +107,7 @@ physical Android/Google Windows remain OPEN.
 1. [x] Repo scan and per-flow risks; documentation-first inventory.
 2. [x] Implement the three scoped P0 managed-session integration
    methods, no product behavior/UI/policy edits.
-3. [ ] Run and inspect exact-source ordinary Preflight 5/5 plus
+3. [x] Run and inspect exact-source ordinary Preflight 5/5 plus
    existing GTK workflow; repair only test-fixture mistakes,
    preserve first red failure evidence.
 4. [ ] Trigger the strict **full Mode B** on final source:
@@ -200,3 +200,28 @@ is asserted until completed GitHub job logs are read.
 Next: strict full Mode B from the finally validated
 source with ten consecutive suite/GTK attempts and
 conditional final coverage.
+
+## Exact final-source routine CI verdict
+
+Workflow-only source commit `5776e0ea65b0240cdbf3057b5d5ab7d84d4f9935`
+is tested with all six critical managed-inbound regressions intact.
+[Preflight run 39078162267](https://github.com/morozhenko-apps/rquickshare/actions/runs/39078162267)
+completed **5/5 SUCCESS**, including both strict Rust
+Clippy jobs, Rust format/Python contracts, Vue frontend,
+and the full Core test job. Core library **702/0
+stable** (+8 separately selected risk-sensitive tests
+10× = **80/0** individual invocations), **4+4** integration,
+and the new text/link, nested folder and explicit-retry
+case names are individually `ok` in the exact-source
+job log. The preceding
+[Native GTK 39077876891](https://github.com/morozhenko-apps/rquickshare/actions/runs/39077876891)
+completed **success** on the unchanged product/test code.
+
+The strict 10× suite
+[39078162262](https://github.com/morozhenko-apps/rquickshare/actions/runs/39078162262)
+has passed the mandatory compiled inventory gate
+covering six critical scenarios and is running the
+complete repeated groups at this checkpoint. Do not
+mark milestone 4 or 5 complete without exact
+final statuses and attempts. Physical peer acceptance
+and whole-repository Stage 12 remain separately OPEN.
