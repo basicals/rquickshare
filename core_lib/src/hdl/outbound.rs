@@ -196,9 +196,7 @@ fn final_file_frame(file: &InternalFileInfo) -> OfflineFrame {
     OfflineFrame {
         version: Some(location_nearby_connections::offline_frame::Version::V1.into()),
         v1: Some(location_nearby_connections::V1Frame {
-            r#type: Some(
-                location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into(),
-            ),
+            r#type: Some(location_nearby_connections::v1_frame::FrameType::PayloadTransfer.into()),
             payload_transfer: Some(PayloadTransferFrame {
                 packet_type: Some(PacketType::Data.into()),
                 payload_chunk: Some(PayloadChunk {
@@ -1571,7 +1569,8 @@ impl OutboundRequest {
                                 curr_state.total_size
                             );
 
-                            self.encrypt_and_send(&final_file_frame(&curr_state)).await?;
+                            self.encrypt_and_send(&final_file_frame(&curr_state))
+                                .await?;
                             self.update_state(
                                 |state| {
                                     state.transferred_files.remove(&current);
@@ -2593,8 +2592,7 @@ mod security_tests {
             let directory = tempfile::tempdir().unwrap();
             let path = directory.path().join("empty.bin");
             std::fs::write(&path, b"").unwrap();
-            let (mut request, mut peer) =
-                native_request(selection(&path, "empty.bin")).await;
+            let (mut request, mut peer) = native_request(selection(&path, "empty.bin")).await;
             request
                 .process_paired_key_result(&paired_result())
                 .await
