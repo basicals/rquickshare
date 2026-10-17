@@ -10,6 +10,9 @@ pub(super) struct Results {
     pending: VecDeque<String>,
 }
 impl Results {
+    pub(super) fn pending_empty(&self) -> bool {
+        self.pending.is_empty()
+    }
     pub(super) fn observe(
         &mut self,
         epoch: u128,

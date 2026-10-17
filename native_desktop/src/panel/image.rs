@@ -405,6 +405,7 @@ impl Panel {
                 runtime: self.runtime.clone(),
             },
         );
+        self.watch_idle_widget(&image.window);
         image.window.set_transient_for(Some(&self.window));
         self.mark_manual();
         image.window.present();

@@ -23,6 +23,7 @@ use tokio::runtime::Handle;
 mod backdrop;
 mod compose;
 mod countdown;
+mod idle;
 mod image;
 mod incoming_preview;
 mod menu;
@@ -80,6 +81,7 @@ pub struct Panel {
     text_review: RefCell<Option<Rc<text::Review>>>,
     transfers: RefCell<Option<Rc<transfers::Window>>>,
     history_columns: transfers::Columns,
+    idle: RefCell<idle::Idle>,
     composer: RefCell<Option<Rc<compose::Composer>>>,
     image: RefCell<Option<Rc<image::Image>>>,
     preview_image: incoming_preview::Fixture,
@@ -414,6 +416,7 @@ impl Panel {
             text_review: RefCell::new(None),
             transfers: RefCell::new(None),
             history_columns: transfers::Columns::default(),
+            idle: RefCell::new(idle::Idle::default()),
             composer: RefCell::new(None),
             image: RefCell::new(None),
             preview_image: incoming_preview::Fixture::default(),
@@ -501,6 +504,7 @@ impl Panel {
             });
         }
         panel.configure_menu(application);
+        panel.configure_idle();
         let weak = Rc::downgrade(&panel);
         panel.pages.connect_visible_child_name_notify(move |pages| {
             if let Some(panel) = weak.upgrade() {
@@ -673,6 +677,7 @@ impl Panel {
             .set_visible(!text.is_empty());
     }
     pub fn close(&self) {
+        self.stop_idle();
         if self.model.borrow().closing {
             return;
         }
@@ -1175,6 +1180,7 @@ impl Panel {
             .unwrap()
             .set_visible(!status.is_empty());
         self.sync_countdown();
+        self.sync_idle();
         self.sync_tray_menu();
 
         let Some(view) = &model.state.view else {

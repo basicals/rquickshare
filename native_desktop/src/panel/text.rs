@@ -291,6 +291,7 @@ impl Panel {
                 }
             }
         });
+        self.watch_idle_widget(&review.window);
         review.window.set_transient_for(Some(&self.window));
         self.mark_manual();
         review.window.present();

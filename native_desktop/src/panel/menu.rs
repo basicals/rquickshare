@@ -371,6 +371,7 @@ impl Panel {
             .website_label("Project website")
             .build();
         about.set_hide_on_close(true);
+        self.watch_idle_widget(&about);
         self.about.replace(Some(about.clone()));
         about.present();
     }

@@ -39,10 +39,10 @@ movement repairs may proceed. Hide means card only, never stop/cancel daemon wor
 
 - [x] A1: read screenshot, current row builders, movement and presentation ownership.
 - [x] A2: record approved independent changes and pending idle policy.
-- [ ] A3: card result-action removal and one measured history column contract;
+- [x] A3: card result-action removal and one measured history column contract;
   footer actions, no healthy-state prose, preserved error/recovery controls.
-- [ ] A4: common draggable-target/cursor predicate and capture-phase admission.
-- [ ] A5: implement only the user-selected idle policy after response.
+- [x] A4: common draggable-target/cursor predicate and capture-phase admission.
+- [x] A5: implement only the user-selected idle policy after response.
 - [ ] A6: affected checks once, exact-package visual inspection, reversible commits,
   distinct package and fresh idle-gated upgrade; installed/evidence/export receipts.
 
@@ -57,3 +57,52 @@ clicks, hiding pending consent or breaking position retention. Reuse existing
 checked callbacks/SizeGroups/GTK event contracts. Roll back each independent UI
 commit or the preserved native27 package after an idle gate. No BLE/protocol,
 public release, cloud access or unrelated cleanup.
+
+## Approved idle policy before implementation
+
+User selected option1:15 seconds, pointer outside, only a free card. Pause/reset
+eligibility while any nonterminal transfer, prepared source, input/preparation,
+command/reconciliation, source/visibility pending state, dialog/popover or owned
+secondary editor/result/settings/about window exists. Current minute visibility
+alone is not a transfer; hiding never stops its daemon-owned expiry. Empty healthy
+cards and completed rows can hide; errors/disconnect remain visible for recovery.
+Use one local monotonic one-shot timer, reset on pointer/key/button/scroll input,
+visibility changes and blocked->eligible transition. State/progress redraws do not
+reset an already eligible idle deadline. Pointer inside prevents scheduling.
+The callback rechecks all guards before the existing card-only hide path; no
+service polling, cancellation, visibility mutation or synthetic daemon idle state.
+Timer is removed on close/hide; no hidden/background tick loop. Tests use explicit
+time/deadline inputs and direct eligibility guards rather than waiting15s.
+
+## Implementation and measured verification checkpoint
+
+Card manual result actions are limited to Transfers; automatic completion reveal
+is unchanged. Shared measured six-column rows reserve date/action positions for
+both live and metadata-only records. Footer owns Refresh/Clear; healthy retention
+text is a tooltip and errors remain visible. Movement uses one ancestry predicate
+for capture-phase drag and cursor feedback; inert scroll content is allowed,
+actual controls/selectable text are excluded. Ordinary device labels are inert.
+Approved card-only idle uses one monotonic15s one-shot, guarded at expiry and
+cancelled while occupied; redraws do not renew an eligible deadline. Visibility
+callbacks defer rearming to the GTK idle boundary to avoid model-borrow reentrancy.
+
+Initial affected check19/0 in0.76s passed. After adding actual row-allocation and
+drag-target assertions plus idle guard table, affected panel20/0 in0.56s passed.
+Strict lint caught deprecated allocation() in the new test and a helper below the
+test module; replace with compute_bounds() and move the helper before the module.
+Assertions remain unchanged. These are scoped implementation checks, not complete
+Mode B or real KDE drag/idle acceptance. No repeated ten-run development gate.
+
+Final lint repair check: affected widget1/0 in0.54s, strict native lint3.47s.
+The action column additionally reserves112 logical pixels even if all records
+are metadata-only; SizeGroups still grow with actual controls/theme sizing. This
+keeps the empty action slot present instead of collapsing it when the last live
+capability disappears. Recheck only the affected widget and native lint for this
+small allocation change before packaging; do not rerun unchanged core checks.
+
+Reserved-slot affected widget1/0 in0.70s and strict native lint2.10s passed.
+Implementation is split into independently reversible history-layout, movement
+and idle-lifecycle commits. Full affected panel20/0 is before the test-only lint
+repair/minimum-slot addition; final widget covers those actual column allocations.
+No core/BLE changes or full-repository/Mode B claim. All check terminals closed.
+Packaging revision28 uniquely identifies the new GUI bytes.

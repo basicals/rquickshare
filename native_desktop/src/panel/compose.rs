@@ -413,6 +413,7 @@ impl Panel {
                 .heading
                 .set_text("Write or paste text, then send it to the selected device.");
         }
+        self.watch_idle_widget(&composer.window);
         composer.window.set_transient_for(Some(&self.window));
         self.mark_manual();
         composer.window.present();
