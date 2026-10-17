@@ -281,3 +281,88 @@ async fn given_premature_or_oversized_last_data_chunk_when_rejected_then_no_fina
         assert!(std::fs::read_dir(&directory).unwrap().next().is_none());
     }
 }
+
+#[tokio::test]
+async fn given_peer_eof_during_active_multifile_receive_when_terminated_then_only_published_member_survives(
+) {
+    use tokio::io::AsyncWriteExt;
+
+    for interruption in 0..=4 {
+        // Arrange: real accepted session and O_TMPFILE destinations.
+        let (mut request, control, mut peer) = admitted().await;
+        let directory = request._directory.path().to_owned();
+        request.accept_transfer().await.unwrap();
+        request
+            .process_offline_frame(received_file_frame(101, 1, 0, b"a", 0))
+            .await
+            .unwrap();
+        request
+            .process_offline_frame(received_file_frame(101, 1, 1, &[], 1))
+            .await
+            .unwrap();
+        request
+            .process_offline_frame(received_file_frame(102, 3, 0, b"b", 0))
+            .await
+            .unwrap();
+        let before = control.snapshot();
+        assert_eq!(before.state, State::ReceivingFiles);
+        assert_eq!(before.details.transferred_bytes, 2);
+        assert!(before.received_files.is_none());
+        assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+        assert!(!directory.join("b.bin").exists());
+
+        // Act: control the peer only, not the handler or filesystem.
+        let frame_length = 5_u32.to_be_bytes();
+        if interruption < 4 {
+            peer.write_all(&frame_length[..interruption]).await.unwrap();
+        } else {
+            peer.write_all(&frame_length).await.unwrap();
+            peer.write_all(&[0x01, 0x02]).await.unwrap();
+        }
+        drop(peer);
+        let error = request.handle().await.unwrap_err();
+        assert_eq!(
+            error
+                .root_cause()
+                .downcast_ref::<std::io::Error>()
+                .map(std::io::Error::kind),
+            Some(std::io::ErrorKind::UnexpectedEof),
+            "interruption={interruption}"
+        );
+        request.record_termination(State::Disconnected);
+
+        // Assert: exact partial outcome and no auto-resend or final partial file.
+        let after = control.snapshot();
+        assert_eq!(after.state, State::Disconnected);
+        assert_eq!(after.details.transferred_bytes, 2);
+        assert_eq!(after.details.files, before.details.files);
+        assert_eq!(std::fs::read(directory.join("a.bin")).unwrap(), b"a");
+        assert!(!directory.join("b.bin").exists());
+        assert_eq!(std::fs::read_dir(&directory).unwrap().count(), 1);
+        let completed = after.received_files.as_ref().unwrap();
+        assert!(completed.subset_of(&after.details));
+        assert!(!completed.valid_for(&after.details));
+        assert_eq!(completed.len(), 1);
+        assert_eq!(completed.details()[0].name, "a.bin");
+        assert!(completed.open(1).is_err());
+        let mut body = [0_u8; 1];
+        std::os::unix::fs::FileExt::read_exact_at(
+            &completed.open(0).unwrap(),
+            &mut body,
+            0,
+        )
+        .unwrap();
+        assert_eq!(&body, b"a");
+        assert!(request.publications.is_empty());
+        assert!(request.pending_files.is_none());
+        assert!(request
+            .state
+            .transferred_files
+            .values()
+            .all(|file| file.file.is_none()));
+        // Terminal state must be absorbing: no double-free or invented success.
+        request.record_termination(State::Finished);
+        assert_eq!(control.snapshot().state, State::Disconnected);
+        assert_eq!(control.snapshot().received_files, after.received_files);
+    }
+}
