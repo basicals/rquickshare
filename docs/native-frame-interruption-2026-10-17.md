@@ -113,7 +113,7 @@ installed-test workflow, not a new distribution channel or UI decision.
    launch. Read back all14 files, units, startup preference and passive tray/API.
    Never ask for a password in chat. Failure/cancel restores normal launch.
 5. [x] Record installed evidence and source preparation.
-6. [ ] Record the first user-operated two-file Pixel check.
+6. [x] Record the first user-operated two-file Pixel check.
 
 Rollback is the exact preserved native28 package after the same idle gate. No
 received content/history/settings are removed; login startup remains unchanged.
@@ -151,4 +151,9 @@ The fixture manifest independently totals65826 bytes for these two members.
 A first local diagnostic incorrectly expected legacy `owned_selections` to be1;
 it is0 for this native prepared-source path. This diagnostic assumption is not a
 failed transfer and did not trigger a source replacement/retry. Preparation and
-physical transfer are distinct: the two-file Pixel result is still UNTESTED.
+physical transfer are distinct. The user subsequently confirmed successful
+receipt of the prepared files on the available Android peer. Phone hashes are
+not independently verified. Journal readback shows two finished outbound entries
+and one disconnected attempt, with erroneous zero content counts in each; do not
+infer the cause of that attempt. The concrete metadata defect is tracked in
+[outbound metadata repair](native-outbound-metadata-2026-10-17.md).

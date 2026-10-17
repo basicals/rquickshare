@@ -104,7 +104,7 @@
     "queue_and_journal_retry_supported": true,
     "whole_result_supported": true
   },
-  "physical_pixel_acceptance": "UNTESTED",
+  "physical_pixel_acceptance": "User confirmed receipt of prepared outbound files; phone hashes/reverse/failure matrix remain unverified",
   "signed_or_published": false,
   "prepared_fixture": {
     "native_version": "0.11.5+native29",
@@ -127,5 +127,48 @@
       "active_count": 0,
       "expected_fixture_bytes": 65826
     }
+  },
+  "outbound_user_acceptance": {
+    "observed_at": "2026-10-17T14:35:19.118726+00:00",
+    "installed_version": "0.11.5+native29",
+    "journal_error": 0,
+    "since_installation": [
+      {
+        "inbound": false,
+        "status": "disconnected",
+        "kind": "files",
+        "files": 0,
+        "total": 0,
+        "transferred": 0,
+        "started": 1792247636,
+        "updated": 1792247636
+      },
+      {
+        "inbound": false,
+        "status": "finished",
+        "kind": "files",
+        "files": 0,
+        "total": 0,
+        "transferred": 0,
+        "started": 1792247644,
+        "updated": 1792247647
+      },
+      {
+        "inbound": false,
+        "status": "finished",
+        "kind": "files",
+        "files": 0,
+        "total": 0,
+        "transferred": 0,
+        "started": 1792247653,
+        "updated": 1792247655
+      }
+    ],
+    "user_report": {
+      "outbound_files_received": true,
+      "peer": "Available Android peer",
+      "content_hashes_checked_on_phone": false
+    },
+    "agent_sent": false
   }
 }
