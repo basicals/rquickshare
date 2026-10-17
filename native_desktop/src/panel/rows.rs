@@ -29,6 +29,21 @@ fn named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
     }
     None
 }
+fn cached_section(
+    rows: &mut Rows,
+    used: &mut BTreeSet<(String, String)>,
+    name: &str,
+    title: &str,
+) -> gtk::Box {
+    let key = ("nearby".to_owned(), format!("heading:{name}"));
+    let entry = rows.entries.entry(key.clone()).or_insert_with(|| Entry {
+        root: section_title(title),
+        transfer: None,
+        endpoint: None,
+    });
+    used.insert(key);
+    entry.root.clone()
+}
 fn expansion_for_replacement(rows: &Rows, key: &(String, String), default: bool) -> bool {
     rows.entries
         .get(key)
@@ -517,10 +532,10 @@ impl Panel {
         let devices = std::mem::take(pages.get_mut("nearby").unwrap());
         let nearby = pages.get_mut("nearby").unwrap();
         if !active_rows.is_empty() {
-            nearby.push(section_title("Current transfers"));
+            nearby.push(cached_section(&mut rows, &mut used, "current", "Current transfers"));
             nearby.extend(active_rows.into_iter().rev());
         }
-        nearby.push(section_title("Discovered devices"));
+        nearby.push(cached_section(&mut rows, &mut used, "discovered", "Discovered devices"));
         if devices.is_empty() {
             let empty = card();
             empty.append(&label(
