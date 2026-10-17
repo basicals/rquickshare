@@ -532,10 +532,20 @@ impl Panel {
         let devices = std::mem::take(pages.get_mut("nearby").unwrap());
         let nearby = pages.get_mut("nearby").unwrap();
         if !active_rows.is_empty() {
-            nearby.push(cached_section(&mut rows, &mut used, "current", "Current transfers"));
+            nearby.push(cached_section(
+                &mut rows,
+                &mut used,
+                "current",
+                "Current transfers",
+            ));
             nearby.extend(active_rows.into_iter().rev());
         }
-        nearby.push(cached_section(&mut rows, &mut used, "discovered", "Discovered devices"));
+        nearby.push(cached_section(
+            &mut rows,
+            &mut used,
+            "discovered",
+            "Discovered devices",
+        ));
         if devices.is_empty() {
             let empty = card();
             empty.append(&label(
