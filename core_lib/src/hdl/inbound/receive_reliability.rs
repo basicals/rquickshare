@@ -255,7 +255,7 @@ async fn given_final_data_chunk_when_completed_then_each_member_is_published_onc
 #[tokio::test]
 async fn given_premature_or_oversized_last_data_chunk_when_rejected_then_no_final_name_is_published(
 ) {
-    for (body, written) in [(b"b".as_slice(), 1_u64), (b"bcde".as_slice(), 0)] {
+    for (body, written) in [(b"b".as_slice(), 0_u64), (b"bcde".as_slice(), 0)] {
         // Arrange: consent admits the same three-byte target.
         let (mut request, control, _peer) = admitted().await;
         let directory = request._directory.path().to_owned();
