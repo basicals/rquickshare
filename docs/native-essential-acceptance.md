@@ -1,13 +1,14 @@
 # Essential installed/peer acceptance
 
-Updated2026-10-17. Native28 is installed on the existing KDE/Wayland host.
+Updated2026-10-17. Native29 is installed on the existing KDE/Wayland host with
+the frame-prefix interruption repair; UI is unchanged from accepted native28.
 Current UI iteration is user-accepted: flat incoming consent, compact device
 surface, automatic result location, aligned Transfers and latest idle/movement
 polish. This is general feedback, not a measured per-case checklist. The user
 confirmed fast Android discovery and successful sending on native25. Earlier
 native13 one-file outbound/code match remains historical. Broader transfer,
 failure and lifecycle entries are UNTESTED unless explicitly recorded below.
-See [native28 evidence](evidence/native28-installation-2026-10-17.json) and
+See [native29 evidence](evidence/native29-installation-2026-10-17.json) and
 [priorities](native-essential-priorities.md).
 
 ## Preconditions
@@ -18,8 +19,8 @@ UNTESTED. Local deterministic sources and SHA-256 manifest are prepared under
 `outputs/rquickshare-peer-check-2026-10-17` in the conversation workspace; these
 are preparation only. See [current reliability slice](native-frame-interruption-2026-10-17.md).
 
-Use the exact installed native28 package/hash from
-[evidence](evidence/native28-installation-2026-10-17.json), with the actual Android
+Use the exact installed native29 package/hash from
+[evidence](evidence/native29-installation-2026-10-17.json), with the actual Android
 and Google Quick Share for Windows versions recorded before checking each peer.
 The package targets Ubuntu26.04 amd64; unavailable peers/platforms remain UNTESTED.
 Use disposable files/destination and preserve content/hash evidence locally

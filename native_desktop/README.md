@@ -3,7 +3,7 @@
 Current implementation, selected distribution/signing bindings and remaining gates:
 [current state](../docs/current-state.md). Dated checkpoints below retain historical observations.
 
-The installed native28 uses one Receive, Send, Devices, Hide toolbar. Devices
+The installed native29 retains the accepted native28 Receive, Send, Devices, Hide toolbar. Devices
 opens the upper device list; incoming consent is immediately inline as type/code
 and Decline/Accept, followed by byte progress and a transient Completed status.
 Received files are automatically revealed safely; text opens a plain Copy/Close

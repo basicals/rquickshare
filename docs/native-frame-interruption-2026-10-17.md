@@ -102,17 +102,53 @@ After source repair commit e31b3d5, prepare a distinct native29 local package so
 the available Pixel can exercise the repaired code. This is the next existing
 installed-test workflow, not a new distribution channel or UI decision.
 
-1. [ ] Increment the tracked package revision to29 and commit it before building.
-2. [ ] Build/verify the locked release artifact with the established private GTK
+1. [x] Increment the tracked package revision to29 and commit it before building.
+2. [x] Build/verify the locked release artifact with the established private GTK
    sysroot and actual shlibs metadata. Preserve native28 for rollback.
-3. [ ] Read fresh installed version, service owners and global idle/source/tray
+3. [x] Read fresh installed version, service owners and global idle/source/tray
    gate. If preparation or nonterminal work exists, preserve it and ask the user;
    do not restart. Pin the exact observed owners before any stop.
-4. [ ] If idle, join only the two rQuickShare units, request system package
+4. [x] If idle, join only the two rQuickShare units, request system package
    authorization through Pinentry/Polkit, upgrade through APT and restore normal
    launch. Read back all14 files, units, startup preference and passive tray/API.
    Never ask for a password in chat. Failure/cancel restores normal launch.
-5. [ ] Record installed evidence and the first user-operated two-file Pixel check.
+5. [x] Record installed evidence and source preparation.
+6. [ ] Record the first user-operated two-file Pixel check.
 
 Rollback is the exact preserved native28 package after the same idle gate. No
 received content/history/settings are removed; login startup remains unchanged.
+
+Native29 package was built from c05e776 and verified offline by the existing
+builder:6660010 bytes, SHA-256
+f22a8c1eb7726c9fba3c983d4ab75bfd1435ed64ef988ca3ad8811bae1a79b88.
+All three locked release binaries and14-file inventory passed. The native client's
+existing no-experimental core dependency emits9 unused-code warnings; the core
+all-features strict check above is separate. `dpkg-shlibdeps` reports the existing
+libc usr-merge diversion warning; all dependencies were resolved and verified.
+
+At14:31:01Z, native28 had zero reservations/handles/bytes/owned selections and
+zero nonterminal transfers; one retained terminal entry and4 nearby devices.
+Observed daemon/desktop owners were2885495/2885499, startup disabled. The actual
+upgrade repeats the full idle/tray gate and checks unchanged unit owners before
+joining the two units. Native28 rollback bytes were rehashed. Its task-local
+upgrade script restores normal launch even on installation error/cancellation.
+APT then upgraded28 ->29 successfully. Both units are active with new owners
+2972173/2972174; all14 files match exact package bytes/modes/ownership. Passive
+checks at14:32:03Z found one Active14-entry tray, valid Visibility2/Journal1/
+Batch1/AcquireResult interfaces and11 retained journal records. Login startup
+remains disabled; no runtime trace override. See
+[installation evidence](evidence/native29-installation-2026-10-17.json).
+The exact package and SHA-256 sidecar are copied under distinct output names.
+Physical Pixel results remain pending; next prepare only the known two-file
+fixture through the existing installed Send entry point after a fresh empty-source
+and no-active-transfer check. The user selects the recipient and explicitly sends.
+
+The installed `rquickshare send -- <two exact fixture paths>` returned
+`Files prepared. Choose a recipient in the panel to send.` No recipient or Send
+was selected by the agent. Subsequent snapshot: synchronized/running, one native
+source reservation,4 reserved handles,65826 selected bytes, zero transfers.
+The fixture manifest independently totals65826 bytes for these two members.
+A first local diagnostic incorrectly expected legacy `owned_selections` to be1;
+it is0 for this native prepared-source path. This diagnostic assumption is not a
+failed transfer and did not trigger a source replacement/retry. Preparation and
+physical transfer are distinct: the two-file Pixel result is still UNTESTED.

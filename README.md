@@ -6,9 +6,10 @@ show explicit Decline/Accept controls and a verification code; admitted transfer
 continue when the card is hidden. The Transfers window keeps bounded operation
 metadata and provides checked access to received results.
 
-The current local candidate is native28, tested on Ubuntu 26.04 amd64 with KDE
-Wayland. The user has confirmed Android discovery and successful transfers, and
-accepted the current UI iteration. The broader Android/Google Quick Share for
+The current local candidate is native29, tested on Ubuntu 26.04 amd64 with KDE
+Wayland. It adds a frame-prefix interruption repair to the accepted native28 UI.
+The user has confirmed Android discovery and successful transfers on earlier
+candidates. The broader Android/Google Quick Share for
 Windows, interruption and desktop lifecycle checklist remains open. See the
 [current state](docs/current-state.md) and
 [acceptance checklist](docs/native-essential-acceptance.md) for exact evidence.

@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "source_commit": "c05e776f89c811df5b11d18d8dd89912dbb373a9",
+  "repair_commit": "e31b3d5",
+  "package": {
+    "name": "rquickshare_0.11.5+native29_amd64.deb",
+    "bytes": 6660010,
+    "sha256": "f22a8c1eb7726c9fba3c983d4ab75bfd1435ed64ef988ca3ad8811bae1a79b88",
+    "offline_verified": true
+  },
+  "installation": {
+    "observed_at": "2026-10-17T14:31:24.784651+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native28",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2885495"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2885499"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 4,
+      "owned_selections": 0,
+      "transfers": 1
+    },
+    "terminal_history_count": 1,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native29",
+    "normal_launch_restored": true,
+    "temporary_trace_override_absent": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2972173"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2972174"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "passive_installed_checks": {
+    "observed_at": "2026-10-17T14:32:03.616795+00:00",
+    "installed_version": "0.11.5+native29",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true,
+    "endpoint_association_read": {
+      "total": 0,
+      "rows": 0,
+      "passed": true
+    },
+    "visibility2_read": {
+      "running": true,
+      "mode": 1,
+      "valid": true
+    },
+    "journal_read": {
+      "error": 0,
+      "records": 11,
+      "valid": true
+    },
+    "queue_and_journal_retry_supported": true,
+    "whole_result_supported": true
+  },
+  "physical_pixel_acceptance": "UNTESTED",
+  "signed_or_published": false,
+  "prepared_fixture": {
+    "native_version": "0.11.5+native29",
+    "source_count": 2,
+    "fixture_selection": "multiple",
+    "empty_source_and_idle_gate_passed": true,
+    "installed_send_entry_exit_code": 0,
+    "recipient_selected_by_agent": false,
+    "send_initiated_by_agent": false,
+    "physical_result": "UNTESTED",
+    "after_preparation_snapshot": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 1,
+      "reserved_handles": 4,
+      "selected_bytes": 65826,
+      "nearby_devices": 1,
+      "owned_selections": 0,
+      "transfers": 0,
+      "active_count": 0,
+      "expected_fixture_bytes": 65826
+    }
+  }
+}

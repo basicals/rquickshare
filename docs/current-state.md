@@ -1,16 +1,17 @@
 # Current implementation and continuation state
 
-2026-10-17 follow-up on dev: the ordinary-transfer reliability review reproduced
-partial frame-prefix loss in both request handlers when control events interrupt
-`read_exact`. A private request-owned prefix reader repairs resumable reads;
-wire/consent/size-limit contracts are unchanged. See the
-[repair and measured verification](native-frame-interruption-2026-10-17.md).
-Native28 remains installed and master remains at the accepted integration;
-this source repair is not yet installed or merged. Available physical peer is
-user-reported Pixel6a/Android17, unknown Quick Share version; Windows unavailable.
-Disposable content fixtures are ready, but no new peer result is claimed.
+2026-10-17 native29 is installed for the next Pixel acceptance check. Binary source
+c05e776 includes repair e31b3d5: both request handlers retain partial frame prefixes
+across control interruptions. Wire/consent/size-limit contracts and UI are unchanged.
+Affected handlers132/0 and strict core Clippy passed; the exact package's14 files,
+both services, one14-entry tray and passive APIs passed. Login startup stays off.
+See [repair and continuation](native-frame-interruption-2026-10-17.md) and
+[native29 evidence](evidence/native29-installation-2026-10-17.json). Native28 rollback
+is preserved. Dev contains the new source; master remains at the accepted native28
+integration. Available peer is user-reported Pixel6a/Android17, unknown Quick Share
+version; Windows unavailable. No new physical peer result or public release claim.
 
-2026-10-17 native28 is installed and user-accepted as the current UI iteration.
+Historical mainline checkpoint: native28 was installed and user-accepted.
 Its source is merged into the actual master default branch by
 [PR #7](https://github.com/morozhenko-apps/rquickshare/pull/7), merge4eaf99ada7c4232d34f3b74272d3e93c32c5e392.
 Exact candidate3d048082 passed all five Preflight jobs and one native GTK suite
