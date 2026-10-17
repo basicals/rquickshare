@@ -1,5 +1,13 @@
 # Current implementation and continuation state
 
+2026-10-17 new feedback: native24 general appearance accepted, Android discovery
+still slow. User requested inline per-device content actions/direct send, incoming
+code/type-to-progress staging, automatic safe received-result presentation and
+history row deduplication. Analysis/plan is in
+[native25 interaction polish](native25-interaction-polish-2026-10-17.md).
+Clipboard representation and transient completion lifetime await explicit product
+choices before code. Installed native24 remains unchanged.
+
 2026-10-17 installed checkpoint: native24 is installed and running. Release
 source d3cd9d3; exact package and installed receipts are in
 [evidence](evidence/native24-installation-2026-10-17.json). All14 installed files,

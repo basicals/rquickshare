@@ -158,5 +158,11 @@
     "multi_device_click_order": false,
     "android_discovery": false
   },
-  "no_public_release": true
+  "no_public_release": true,
+  "user_feedback": {
+    "general_visual_direction": "accepted",
+    "android_discovery": "still slow; no numeric end-to-end measurement",
+    "history_row_duplication": "reported with screenshot",
+    "requested_followup": "docs/native25-interaction-polish-2026-10-17.md"
+  }
 }
