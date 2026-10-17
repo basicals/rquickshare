@@ -242,3 +242,25 @@ core all-feature/all-target lint passed13.06s; the actor's original Debug/Clone
 traits remain intact. Routine transfer-phase text was removed from the card's
 global header because live device rows already convey it; pending-control/error
 messages remain. Final affected GTK/widget and daemon lifecycle checks follow.
+
+## Final journal retry correction before installation
+
+The native23 internal package built and verified, but is not installed. Final
+review found Read retried a failed journal write on every normal state refresh,
+including progress events. That contradicts the explicit Refresh recovery action
+and can amplify disk failures. Within the approved journal recovery contract,
+make ordinary reads observational except retention pruning; add authenticated
+Journal1.Retry with the same bounded response/capture validation, invoked only
+by Refresh. It preserves the same metadata/security boundary and never retries
+sharing operations. Both paths share one owner and validator; no timer/backoff.
+
+Before implementation: test the real Store with injected failing persistence,
+assert a normal read does not attempt a write after storage recovers, then an
+explicit retry saves pending records. Exercise Retry through the existing real
+private-bus SDK journal scenario. Run affected journal/SDK scopes and lint once.
+Preserve the verified, uninstalled native23 package; increment to native24 for
+this changed artifact. Rollback is an independent correction commit.
+
+Final pre-correction checks observed: affected GTK widget1/0 in0.52s, daemon
+lifecycle integration4/0 in0.02s, native strict lint8.11s passed. Native23 package
+builder verified the package; no installed-state or Android acceptance implied.
