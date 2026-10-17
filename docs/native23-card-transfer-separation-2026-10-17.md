@@ -317,3 +317,8 @@ See evidence/native24-installation-2026-10-17.json for measured receipts. All
 installer/observer commands exited; ordinary installed application units remain
 running intentionally for user testing. No signed/public release or new master
 merge. No unchanged CI/ten-run/full-repository pass is claimed.
+
+Receiver trace cleanup: after startup capture, removed only the exact task-owned
+runtime drop-in and reloaded user unit definitions. No service restart or transfer
+interruption. The current process retains its allowlisted trace for the requested
+phone check; future launches use the default-off setting. No persistent override.

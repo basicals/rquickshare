@@ -148,7 +148,9 @@
   "receiver_startup": {
     "mdns_register_ms": 10,
     "advertisement_started_ms": 69,
-    "physical_phone_latency_verified": false
+    "physical_phone_latency_verified": false,
+    "runtime_override_removed": true,
+    "running_process_trace_until_next_restart": true
   },
   "physical_acceptance": {
     "kde_card": false,

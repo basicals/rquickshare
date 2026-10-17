@@ -10,9 +10,9 @@ sources stay available and each per-device Send joins one sequential daemon
 queue in click order; no recipient checkboxes or second sender confirmation.
 Metadata retention is30 days/1000 completed entries, without payloads/name-based
 trust. Receiver recovery timers no longer restart on unrelated events; phone
-discovery speed and physical UI/queue acceptance remain pending. A temporary
-per-unit privacy-safe receiver trace is enabled for that reproduction and must
-be removed after capture. See [active plan and measured checks](native23-card-transfer-separation-2026-10-17.md).
+discovery speed and physical UI/queue acceptance remain pending. The task-owned runtime
+trace override was removed; the current daemon retains privacy-safe stage
+tracing until its next normal restart for the pending phone reproduction. See [active plan and measured checks](native23-card-transfer-separation-2026-10-17.md).
 Native22 rollback and uninstalled native23 internal package are retained. No
 new master integration, signed release or cloud publication.
 
