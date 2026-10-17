@@ -57,6 +57,7 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
           export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
+          cargo +stable build --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare-preview-helper
           for attempt in $(seq 1 10); do
             echo "=== Native GTK regression attempt ${attempt}/10 ==="
             GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
