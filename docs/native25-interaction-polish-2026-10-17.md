@@ -364,3 +364,19 @@ native25 package existed. No service, user session or other terminal was touched
 The final disclosure correction passed the affected panel scope and strict native
 lint; measured counts/timings are retained in the local logs and will be copied
 into the installation receipt. No core change after its final125/0 checks.
+
+## P7 verified package and installation plan
+
+Binary/source commit 4b6d98cdacb267335efa79fc32d3c2f8525acc02. Native25 package is6655752
+bytes, SHA-256 1b1ad0c764191f01e9c9bb2cefd3252301dfa3a9bfd2eddd0abc6356237cb00b. Locked builder verified exact14-file inventory,
+dependencies/ELF/checksums and extracted offline commands. Final disclosure
+panel19/0 in0.52s and strict native lint1.21s passed. Current installed native24
+had a passive idle gate pass at2026-10-17T13:05:32Z: known PIDs2570570/2570571,
+zero prepared resources and four terminal rows. Recheck immediately before
+joining only those units. Preserve native24 rollback package and journal/files.
+Install through APT/pkexec, launch normally, compare all14 installed files and
+one14-entry tray plus Journal1/Visibility2/AcquireResult. Temporarily enable
+per-unit privacy-safe receiver stages for new startup; remove the exact owned
+runtime override after launch and reload without another restart. Login start
+remains disabled. Physical UX/Android latency remain pending. No signing/cloud
+publication/master merge or full Mode B pass is implied.
