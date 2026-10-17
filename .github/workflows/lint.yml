@@ -35,6 +35,16 @@ jobs:
             exit 1
           fi
 
+      - name: Validate stable/race-sensitive CI group inventory script
+        run: |
+          bash -n scripts/ci-core-test-groups.sh
+          bash scripts/ci-core-test-groups.sh --help >/dev/null
+          if bash scripts/ci-core-test-groups.sh unknown >/dev/null 2>&1; then
+            echo "Unknown core CI test group must fail" >&2
+            exit 1
+          fi
+          test "$(bash scripts/ci-core-test-groups.sh list | wc -l)" -eq 8
+
       - name: Offline Python contract tests with pinned publication dependencies
         run: |
           python3 -m venv "$RUNNER_TEMP/native-publication-python"
@@ -87,9 +97,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler dbus-daemon libdbus-1-dev
 
-      - name: Run core tests
-        working-directory: ./core_lib
-        run: cargo test --all-features
+      - name: Run stable Core Rust tests once
+        run: bash scripts/ci-core-test-groups.sh stable
+
+      - name: Verify race-sensitive Core Rust tests ten consecutive times
+        run: bash scripts/ci-core-test-groups.sh stress
 
   clippy:
     name: Clippy (${{ matrix.directory }})
