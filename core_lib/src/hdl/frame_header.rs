@@ -28,8 +28,9 @@ impl FrameHeader {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tokio::io::AsyncWriteExt;
+
+    use super::*;
 
     #[tokio::test]
     async fn given_partial_header_when_read_is_cancelled_then_resuming_retains_every_byte() {
