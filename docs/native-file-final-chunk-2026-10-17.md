@@ -25,7 +25,7 @@ wire/API, trust or retry feature.
 
 1. [x] Inspect actual inbound FILE handler, existing EOF tests, Linux publication
    tests and approved essential reliability order. Record this plan first.
-2. [ ] Extend actual-handler regressions (no domain mocks) for:
+2. [x] Extend actual-handler regressions (no domain mocks) for:
    - lastChunk carrying the complete file in one data frame;
    - earlier data followed by final data+lastChunk; completed member remains
      available when another member is pending;
@@ -33,7 +33,7 @@ wire/API, trust or retry feature.
      data (must fail without publishing);
    - existing separate empty lastChunk, empty nonfinal and unknown/missing
      opened file behavior unchanged.
-3. [ ] Allow a lastChunk flag to finalize after successful body write, validating
+3. [x] Allow a lastChunk flag to finalize after successful body write, validating
    exact byte count, existing owner and publication/sync/receipt order.
    Preserve the pre-accept and offset checks. Do not change request state on
    invalid/truncated frames or relax any assertion.
@@ -65,4 +65,28 @@ preserving existing native29/30 artifacts and immutable receipts.
 
 ## Execution and source results
 
-Pending.
+Source changes: `core_lib/src/hdl/inbound.rs` and its Linux staged-receive
+regressions. One last data frame now validates its final offset before writes,
+updates byte progress once, and follows the same existing publication, receipt,
+directory sync and terminal transition as an empty terminal frame. The
+publication-only reborrow is gated to Linux, preserving legacy build boundaries.
+The original empty-EOF tests are not weakened.
+
+Three new test functions cover both managed and legacy request modes, the two
+shapes of combined data/EOF for a real multi-file staged transfer, exact file
+bytes/receipt order, premature final and overflow cases. Mutation expectations:
+reintroducing `else if` fails the positive cases; skipping the pre-write EOF
+length check fails the zero-write/zero-ack negative cases; skipping publication,
+receipt or ack fails final filesystem/state assertions.
+
+The first complete core run at source `b7883e94` was 695 passed/1 failed:
+the new legacy/managed regression expected partial bytes for a short last chunk,
+whereas the new pre-write guard correctly left the file untouched (actual
+empty bytes). Strengthened only the test expectation to require zero writes on
+all invalid final frames, commit `1d286316`. In that first run the two actual
+Linux publication regressions passed. Rust format first failed on two
+new test-only layout differences, then passed on source `b7883e94` after
+applying the exact nightly diff. Core Clippy and frontend passed at that
+source. The post-expectation CI runs remain pending; do not claim final green,
+a ten-run stability gate or actual Google peer compatibility.
+
