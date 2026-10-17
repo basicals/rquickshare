@@ -157,3 +157,28 @@ not independently verified. Journal readback shows two finished outbound entries
 and one disconnected attempt, with erroneous zero content counts in each; do not
 infer the cause of that attempt. The concrete metadata defect is tracked in
 [outbound metadata repair](native-outbound-metadata-2026-10-17.md).
+
+
+## Offline CI follow-up — 2026-10-17
+
+Mode A, source-format maintenance; no host, peer or installed-package actions.
+The dev Preflight run 39048046221 failed in Rust format before later Python
+contract checks could run. The exact nightly rustfmt diff at
+`core_lib/src/hdl/frame_header.rs` places `tokio::io::AsyncWriteExt` before
+`super::*` with one blank line between them. Core tests and core Clippy passed
+on the unformatted candidate. The observed failure is import formatting, not
+a protocol regression or evidence of peer interoperability.
+
+Plan:
+1. [x] Inspect the failed CI job log and current file; identify the only emitted
+   diff instead of changing formatter configuration or unrelated code.
+2. [ ] Apply the exact import-order/blank-line correction in the existing test
+   module. Preserve all test assertions and production logic.
+3. [ ] Verify the next dev Preflight format, Python contract and remaining jobs;
+   record observed results without claiming a local nightly build.
+4. [ ] Keep the release/installed native29 state and the native30 package/user
+   acceptance gates unchanged.
+
+Risk is limited to incidental source-test formatting. Rollback is an ordinary
+revert of the standalone formatting commit. No wire, security, privacy, stored
+data, UI, packaging, daemon state, or platform behavior changes.
