@@ -1,5 +1,9 @@
 # Current implementation and continuation state
 
+2026-10-17 authorized native22 installation is in progress for user testing.
+Native21 remains installed until the package/idle gates pass. Follow the
+[local installation plan](native22-installation-2026-10-17.md).
+
 2026-10-17 current source checkpoint: the additional card/endpoint-association
 work is merged into master by [PR #6](https://github.com/morozhenko-apps/rquickshare/pull/6),
 merge b93ac02d8d923f5cf5a4d83be41c2aff9510e217. Exact candidate fa28d183 passed
