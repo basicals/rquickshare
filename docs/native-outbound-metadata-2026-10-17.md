@@ -23,14 +23,14 @@ The recipient remains advertised/unverified; this grants no identity/trust.
 ## Plan and rollback
 
 1. [x] Record user report, sanitized readback and this plan before code.
-2. [ ] Add actual managed outbound regressions; demonstrate the missing details
+2. [x] Add actual managed outbound regressions; demonstrate the missing details
    before the repair. Cover file manifests/progress/retirement, text/URL and
    terminal interruption without mocking the handler or session.
-3. [ ] Seed the admitted recipient's display info in InnerState. Preserve the
+3. [x] Seed the admitted recipient's display info in InnerState. Preserve the
    last actual metadata when recording nonterminal -> terminal interruption.
    No new schema/API/wire/UI flow or journal rewrite; old zero-metadata history
    stays unchanged because its exact original content is unavailable.
-4. [ ] Run affected core verification once and strict lint; record observations,
+4. [x] Run affected core verification once and strict lint; record observations,
    commit the repair and update current-state. Installed29 peer checks may proceed
    independently; a source-only fix is not installed acceptance.
 
@@ -59,6 +59,39 @@ N10 covers display-only basename/relative names, with no plaintext body in detai
 
 ## Verification
 
-Pending. Real reverse transfer and content hashes, folder/text/decline/cancel and
-Windows/platform/lifecycle checks remain open. No new release or compatibility
-claim follows from the outbound user report alone.
+The initial three regressions failed with Unsupported instead of Ready (14.36s
+build,0.00s execution). After seeding recipient info, the complete core library
+run passed692 and failed1 in10.00s: actual outbound completion retained completed
+working-map entries. The normal nonempty-file final-chunk branch sends EOF and
+breaks without retiring its entry, whereas the already-complete/zero-byte branch
+does retire it. This is a second small internal lifetime inconsistency, not a
+reason to weaken the completed-map assertion. Before further edits, extend step3:
+retire the current working entry only after its final encrypted chunk has been
+successfully written. Preserve all original sources and immutable display details.
+Failure before that write still exits through existing request cleanup. Recheck
+only the affected handler group after this correction; the rest of the core suite
+already passed. Strict Clippy did not execute because the test command failed.
+
+Separately, installed native29 real two-file roundtrip passed: user confirmed
+phone receipt and reverse receipt with automatic file-manager reveal. At14:40:57Z,
+two snapshot/revision-bound Files1 read-only descriptors were checked with bounded
+pread. Both exact sizes/SHA-256 and basenames match the original local manifest
+(65792 and34 bytes). No receive directory traversal, configuration change, deletion
+or agent-initiated Send. An initial local probe hit a Python basename-property
+typo; its descriptors/snapshot were closed, then the corrected probe passed.
+This validates installed29 ordinary two-file roundtrip, not the pending source
+metadata repair. Folder/text/decline/cancel and Windows/lifecycle remain open.
+
+After the final-chunk retirement correction, the affected handler group passed
+135/0/0 in0.45s (15.47s build), including all3 new functions/6 table cases.
+Strict `cargo clippy --all-features --all-targets -- -D warnings` passed in6.03s.
+Existing bluer0.17.3 future-compatibility and stable-rustfmt nightly-option
+advisories remain distinct from failures. No repeated stability loop or full
+693/0 claim: the earlier full run was692/1, and its affected group was rerun once
+after the root-cause correction. Original source/received files remain intact.
+
+Current delivery state: repair is source-only on dev. Installed29 and immutable
+package bytes are unchanged; any later native package must increment revision
+and repeat the fresh idle/prepared-source gate. Existing outbound history cannot
+be truthfully backfilled. The ordinary two-file roundtrip is accepted on29;
+source metadata/retirement changes still need installed acceptance.

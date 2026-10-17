@@ -44,6 +44,22 @@ versions and a brief reason. This procedure supplies no current compatibility,
 physical acceptance or release-publication claim by itself. Previews, account/QR,
 resume and advanced payloads are outside these essential checks.
 
+## Observed native29 two-file roundtrip — 2026-10-17
+
+User-operated Linux -> available Pixel6a/Android17 -> Linux two-file transfer
+passed. The user confirmed phone receipt, reverse receipt and automatic folder
+reveal. At14:40:57Z, received read-only descriptors were acquired through the
+actual authenticated Files1 capability API; bounded reads matched original sizes
+and SHA-256 for both34-byte text and65792-byte binary fixtures. Basenames with
+space/UTF-8 were preserved. Sources/results were not removed or overwritten.
+See [native29 evidence](evidence/native29-installation-2026-10-17.json).
+
+This is partial check2 evidence, not completion of the whole table. Phone Quick
+Share version, per-case code confirmation, nested folders/text/clipboard, rejection,
+cancellation, Windows and failure/lifecycle remain open. A separate source-only
+[outbound metadata fix](native-outbound-metadata-2026-10-17.md) follows the observed
+zero-count journal defect; its installed verification is pending.
+
 ## Observed installed checkpoint — 2026-10-16
 
 Native12 upgrade and Layer Shell dependency installation passed with explicit

@@ -1,6 +1,21 @@
 # Current implementation and continuation state
 
-2026-10-17 native29 is installed for the next Pixel acceptance check. Binary source
+2026-10-17 native29 passed a real two-file Linux -> Android -> Linux roundtrip.
+The user confirmed both receipts and automatic file-manager reveal. Bounded,
+snapshot/revision-bound Files1 descriptor reads verified exact sizes/SHA-256 and
+basenames against the original manifest (65792+34 bytes). Available peer is
+user-reported Pixel6a/Android17; Quick Share version unknown, Windows unavailable.
+Folder/text/decline/cancel and lifecycle matrix remain open.
+
+Readback also exposed outgoing journal metadata as zero despite finished sends.
+A follow-up source-only repair on dev seeds advertised display info and retires
+completed working-file entries after successful final-chunk write. Three new
+regressions and the affected135-test group pass; strict core Clippy passes.
+The preceding full core run was692/1 before the retirement correction. See
+[metadata repair](native-outbound-metadata-2026-10-17.md). This follow-up is not
+installed or merged, and cannot backfill old metadata. Native29 stays running.
+
+Native29 binary source
 c05e776 includes repair e31b3d5: both request handlers retain partial frame prefixes
 across control interruptions. Wire/consent/size-limit contracts and UI are unchanged.
 Affected handlers132/0 and strict core Clippy passed; the exact package's14 files,
@@ -8,8 +23,7 @@ both services, one14-entry tray and passive APIs passed. Login startup stays off
 See [repair and continuation](native-frame-interruption-2026-10-17.md) and
 [native29 evidence](evidence/native29-installation-2026-10-17.json). Native28 rollback
 is preserved. Dev contains the new source; master remains at the accepted native28
-integration. Available peer is user-reported Pixel6a/Android17, unknown Quick Share
-version; Windows unavailable. No new physical peer result or public release claim.
+integration. No public release or full compatibility claim.
 
 Historical mainline checkpoint: native28 was installed and user-accepted.
 Its source is merged into the actual master default branch by

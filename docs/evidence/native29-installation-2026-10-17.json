@@ -104,7 +104,7 @@
     "queue_and_journal_retry_supported": true,
     "whole_result_supported": true
   },
-  "physical_pixel_acceptance": "User confirmed receipt of prepared outbound files; phone hashes/reverse/failure matrix remain unverified",
+  "physical_pixel_acceptance": "Two-file roundtrip passed with user receipt/reveal confirmation and independent returned size/SHA-256/basename verification; broader matrix remains open",
   "signed_or_published": false,
   "prepared_fixture": {
     "native_version": "0.11.5+native29",
@@ -170,5 +170,30 @@
       "content_hashes_checked_on_phone": false
     },
     "agent_sent": false
+  },
+  "reverse_acceptance": {
+    "observed_at": "2026-10-17T14:40:57.534543+00:00",
+    "method": "Authenticated Files1 read-only descriptors, snapshot/revision-bound; bounded pread; no directory traversal",
+    "user_report": {
+      "reverse_files_received": true,
+      "file_manager_revealed_result": true
+    },
+    "verified_files": [
+      {
+        "fixture": "multiple/caf\u00e9.bin",
+        "bytes": 65792,
+        "sha256": "120c518a83325c66464701a6ee080302f332bc768ea3f60473b209f1bfb091df",
+        "matches_original": true,
+        "original_basename_preserved": true
+      },
+      {
+        "fixture": "multiple/first file.txt",
+        "bytes": 34,
+        "sha256": "f99f4593a3d986989c0228e1643f6b9ac81ff6cf39b64076ff72bd6eb420cca3",
+        "matches_original": true,
+        "original_basename_preserved": true
+      }
+    ],
+    "passed": true
   }
 }

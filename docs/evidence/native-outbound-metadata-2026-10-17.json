@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "date": "2026-10-17",
+  "mode": "A",
+  "branch": "dev",
+  "plan_commit": "c6388f4",
+  "installed_candidate": "0.11.5+native29",
+  "installed_binary_changed": false,
+  "fixes": [
+    "Retain advertised recipient display metadata in outbound InnerState without granting trust",
+    "Publish actual metadata at terminal interruption without replacing terminal outcomes",
+    "Retire each nonempty working file only after successful final encrypted chunk write"
+  ],
+  "new_test_functions": 3,
+  "new_table_cases": 6,
+  "verification": {
+    "pre_fix_regressions": {
+      "passed": 0,
+      "failed": 3,
+      "execution_seconds": 0.0
+    },
+    "intermediate_complete_core_library": {
+      "passed": 692,
+      "failed": 1,
+      "execution_seconds": 10.0,
+      "failure": "Normal final-chunk branch retained completed working-file entries"
+    },
+    "after_retirement_correction_handler_group": {
+      "passed": 135,
+      "failed": 0,
+      "ignored": 0,
+      "execution_seconds": 0.45,
+      "repetitions": 1
+    },
+    "strict_clippy": {
+      "passed": true,
+      "seconds": 6.03
+    },
+    "full_693_pass_claimed": false,
+    "full_mode_b_completion_claimed": false
+  },
+  "existing_history_rewritten": false,
+  "public_api_or_wire_changed": false,
+  "signed_or_published": false
+}

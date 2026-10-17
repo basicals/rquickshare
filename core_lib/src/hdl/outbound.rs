@@ -652,6 +652,8 @@ impl OutboundRequest {
                 client_seq: 0,
                 state: State::Initial,
                 encryption_done: true,
+                // Advertised display metadata only; this does not verify identity.
+                remote_device_info: Some(rdi.clone()),
                 transfer_metadata: Some(TransferMetadata {
                     id: String::from(""),
                     source: Some(rdi),
@@ -757,7 +759,7 @@ impl OutboundRequest {
         if !crate::sessions::terminal(&self.state.state) {
             self.state.state = state;
             if let Some(session) = self.session.as_mut() {
-                session.observe(&self.state.state);
+                session.observe_state(&self.state);
             }
         }
     }
@@ -1554,6 +1556,13 @@ impl OutboundRequest {
 							};
 
                             self.encrypt_and_send(&wrapper).await?;
+                            self.update_state(
+                                |state| {
+                                    state.transferred_files.remove(&current);
+                                },
+                                false,
+                            )
+                            .await;
                             break;
                         }
                     }
@@ -2100,6 +2109,10 @@ mod security_tests {
 
         use super::*;
         use crate::file_source::{OpenedFile, OpenedSelection, SelectionLimits};
+
+        mod metadata {
+            include!("outbound/metadata.rs");
+        }
 
         fn selection(path: &Path, name: &str) -> OpenedSelection {
             OpenedSelection::from_files(
