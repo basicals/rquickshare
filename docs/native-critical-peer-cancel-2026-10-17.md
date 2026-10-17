@@ -87,7 +87,7 @@ and full Stage 12 mapping remain OPEN.
    record specific missing branch and two-variant matrix.
 2. [x] Implement real protocol + actual on-disk status
    test in existing inbound reliability fixture.
-3. [ ] Verify both variants on same-source CI, no
+3. [x] Verify both variants on same-source CI, no
    weakening; correct test fixture only if needed.
 4. [ ] Record evidence and update `current-state.md`
    with critical backlog next, keeping hardware
@@ -154,3 +154,41 @@ required before claiming a pass.
 This is distinct from a tested protocol defect. The
 red first run remains in the evidence record; no test
 was skipped, made permissive or quarantined.
+
+## Verified corrected-source P0 Cancel behavior
+
+After the contract-level fixture repair, source
+`b69a658115330d53e2e7f46ed575505f16078e38`
+passed the real
+[Core Rust job 117525018812](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076613994).
+The new test appears individually `ok` in the Rust
+runner, and its table loop covers **both** preregistered
+variants. Aggregate: **699/0** stable Rust unit cases,
+**4/0 + 4/0** integration binaries, and ten sequential
+race-sensitive group iterations with **80/0** exact
+single-test runs. Formatter, frontend and strict
+Core Clippy passed. Separate
+[Native GTK run 39076614010](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076614010)
+was successful, too. Legacy Tauri Clippy remained
+in-progress on the first correction checkpoint, so
+do not infer complete 5/5 Preflight from the Core
+and GTK evidence alone.
+
+This closes the **critical source-level** Cancel
+expectations: real encrypted Accept, actual byte
+payload Cancel parsing, encrypted Disconnection,
+no false Finished, zero published files and no
+fabricated receipt before the first completion, or
+exactly one retained immutable file capability
+with a partially written second member discarded.
+Progress correctly counts both already written
+bytes while the partial receipt is only a subset
+of the announced full manifest. No domain changes
+or policy decisions were introduced.
+
+The actual Android/Google Windows remote Cancel,
+lost peer and subsequent **explicit** retry are
+still UNTESTED in physical installed-device
+acceptance. The mandatory final full MODE B 10×
+on the final post-hardware source and global
+Stage 12 branch inventory also remain OPEN.
