@@ -92,8 +92,8 @@ valid independent timer regressions.
   preserve the daemon FIFO, immutable source snapshots and explicit receiver consent.
 - [x] P5: stage-aware incoming rows and guarded once-only completion presentation.
 - [x] P6: scoped receiver diagnosis/repair based on demonstrated evidence.
-- [ ] P7: run affected checks once, record actual results, atomic commits and a new
-  verified native package/known-owner idle upgrade for physical acceptance.
+- [x] P7: affected checks, verified native25 package and known-owner idle upgrade
+  completed; scoped physical feedback and remaining acceptance recorded below.
 
 Planned focused checks before tests: no duplicate history expand/status controls;
 row code/type-before-bytes and progress-during-bytes; source placement/curtain clear
@@ -380,3 +380,33 @@ per-unit privacy-safe receiver stages for new startup; remove the exact owned
 runtime override after launch and reload without another restart. Login start
 remains disabled. Physical UX/Android latency remain pending. No signing/cloud
 publication/master merge or full Mode B pass is implied.
+
+## P7 installed receipt and new user feedback
+
+APT upgraded native24 to native25 at2026-10-17T13:13:26Z, exit0 after a fresh
+zero-preparation/no-active-transfer gate. Normal launch restored both services
+(PIDs2699373/2699377); all14 installed regular files match the exact package.
+Passive check at13:15:53Z found one Active14-entry tray, valid Visibility2,
+Journal1 error0, endpoint association and AcquireResult support. Login start
+remains disabled. Exact task-owned runtime trace override was removed; only the
+current daemon retains stage tracing until its next normal restart. Real startup
+recorded mDNS4ms, GATT header ready32ms, advertisement57ms. These are service
+stages, not Android scan latency. Exact package offscreen nearby/history renders
+were visually inspected; their synthetic rows do not establish live KDE acceptance.
+
+The user then confirmed very fast Android discovery and successful sending. No
+numerical scan time was provided. This confirms the specific reproduction improved;
+it does not establish all Android/Windows compatibility or the other new flows.
+
+Follow-up requested: remove remaining sender confirmation/second Send, and move
+received-result actions into flat history rows without disclosure. Source inspection
+found direct file/clipboard completion already invokes the existing Send once,
+retained source row clicks invoke QueueRecipient once, and only text composition
+has a Send submit button. The reported extra window is not yet identified. Ask for
+the exact path/window screenshot before altering an input/security flow.
+No follow-up code, restart or reinstall is performed until clarified. History
+flattening is approved; preserve live actions and metadata-only historical limits.
+
+Evidence: [native25 installation](evidence/native25-installation-2026-10-17.json).
+No signed/public release, cloud access or renewed master merge. All task command
+sessions exited with Terminal closed. Native24 rollback is unchanged.

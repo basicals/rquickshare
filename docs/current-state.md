@@ -1,17 +1,25 @@
 # Current implementation and continuation state
 
-2026-10-17 new feedback: native24 general appearance accepted, Android discovery
-still slow. User requested inline per-device content actions/direct send, incoming
-code/type-to-progress staging, automatic safe received-result presentation and
-history row deduplication. Analysis/plan is in
-[native25 interaction polish](native25-interaction-polish-2026-10-17.md).
-User approved clipboard files > image > text and Completed until drawer/card
-hide. The additional pulse/strip/main-Send behavior is frozen in that plan;
-P3/P4/P5 are implemented and checked in scoped commits, including the approved
-typed whole-transfer result API, transient Completed and guarded automatic
-result presentation. Affected service310/0 and native50/0 passed, with strict
-core/native lint. Receiver diagnosis and package/install remain open. Installed
-native24 is unchanged.
+2026-10-17 installed checkpoint: native25 is installed and running. Binary source
+4b6d98cdacb267335efa79fc32d3c2f8525acc02; exact package, installed14-file/tray/API
+receipts and scoped development checks are in
+[native25 evidence](evidence/native25-installation-2026-10-17.json). The user
+confirmed very fast Android discovery and successful sending after this upgrade;
+no numeric latency was measured. The receiver now publishes the coherent Nearby
+V2 BLE header after real GATT registration.
+
+New UI/result flows and all approved contracts are recorded in
+[native25 interaction polish](native25-interaction-polish-2026-10-17.md). The user
+now requests removing a remaining sender confirmation and flattening history rows
+with received-result action inline. The exact reported extra confirmation window
+needs identification before changing the input flow: current contextual file and
+clipboard completion already submit Send directly, prepared rows QueueRecipient
+directly, while text input requires editor submission. No follow-up code yet.
+Other native25 physical flows are not individually accepted. Login start remains
+off; native24 rollback is retained. No new master integration or signed/public
+release.
+
+Historical installed checkpoint before native25:
 
 2026-10-17 installed checkpoint: native24 is installed and running. Release
 source d3cd9d3; exact package and installed receipts are in
