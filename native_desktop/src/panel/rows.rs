@@ -29,6 +29,13 @@ fn named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
     }
     None
 }
+fn section_title(text: &str) -> gtk::Box {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    let title = label(text);
+    title.add_css_class("dim-label");
+    row.append(&title);
+    row
+}
 fn same_description(a: &TransferView, b: &TransferView) -> bool {
     a.transfer == b.transfer
         && a.completed_files == b.completed_files
@@ -392,6 +399,8 @@ impl Panel {
             pages.get_mut("nearby").unwrap().push(root);
             used.insert(key);
         }
+        let mut active_rows = Vec::new();
+        let mut terminal_rows = Vec::new();
         let recent: BTreeSet<_> = view
             .transfers
             .iter()
@@ -418,12 +427,69 @@ impl Panel {
                 }
                 let root = self.cached_transfer(&mut rows, page, transfer, ready, incoming);
                 if page == "nearby" {
-                    pages.get_mut(page).unwrap().insert(0, root);
+                    if transfer.phase.is_terminal() {
+                        terminal_rows.push(root);
+                    } else {
+                        active_rows.push(root);
+                    }
                 } else {
                     pages.get_mut(page).unwrap().push(root);
                 }
                 used.insert((page.to_owned(), transfer.transfer.id().to_owned()));
             }
+        }
+        // A transfer's advertised name is not an endpoint identity. Keep
+        // unlinked finished operations accessible, but out of the discovery list.
+        let devices = std::mem::take(pages.get_mut("nearby").unwrap());
+        let nearby = pages.get_mut("nearby").unwrap();
+        if !active_rows.is_empty() {
+            nearby.push(section_title("Current transfers"));
+            nearby.extend(active_rows.into_iter().rev());
+        }
+        nearby.push(section_title("Discovered devices"));
+        if devices.is_empty() {
+            let empty = card();
+            empty.append(&label("No nearby devices. Make the receiving device visible."));
+            nearby.push(empty);
+        } else {
+            nearby.extend(devices);
+        }
+        if !terminal_rows.is_empty() {
+            let key = ("nearby".to_owned(), "activity:unlinked".to_owned());
+            let entry = rows.entries.entry(key.clone()).or_insert_with(|| {
+                let root = card();
+                let expander = gtk::Expander::new(Some("Recent activity · device not verified"));
+                expander.set_widget_name("unlinked-activity");
+                expander.set_expanded(false);
+                let body = gtk::Box::new(gtk::Orientation::Vertical, 8);
+                expander.set_child(Some(&body));
+                let weak = Rc::downgrade(self);
+                expander.connect_expanded_notify(move |_| {
+                    if let Some(panel) = weak.upgrade() {
+                        panel.pin_surface_bottom();
+                        let weak = Rc::downgrade(&panel);
+                        glib::idle_add_local_once(move || {
+                            if let Some(panel) = weak.upgrade() {
+                                panel.resize_to_content();
+                            }
+                        });
+                    }
+                });
+                root.append(&expander);
+                Entry {
+                    root,
+                    transfer: None,
+                    endpoint: None,
+                }
+            });
+            let expander = named(entry.root.upcast_ref(), "unlinked-activity")
+                .and_downcast::<gtk::Expander>()
+                .expect("session activity expander");
+            let body = expander.child().and_downcast::<gtk::Box>()
+                .expect("session activity container");
+            arrange(&body, &terminal_rows);
+            nearby.push(entry.root.clone());
+            used.insert(key);
         }
         for (page, title) in [
             (
