@@ -85,3 +85,24 @@ display/layer-surface and core no-experimental unused-code warnings remain separ
 Next: unique revision30 locked release build, exact package History visual review,
 then fresh idle/source/owner gate before any installation. If prepared sources
 remain, preserve them and request user action. Rollback29 is retained unchanged.
+
+## Offline CI verification, no host access
+
+At dev commit `b7ab5e7`, native GTK run
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39048046200
+passed native formatting, strict lint and the complete isolated
+widget/controller suite: 52 passed, 0 failed. This resolves the earlier
+50/2 local menu-label assertion failures without weakening the checks.
+The subsequent test-import-format-only commit `3c606db` also passed the
+same native GTK checks (run 39048444825, 52/0). The parallel dev Preflight
+at that commit passed nightly format, 54 offline Python contracts,
+core 693 library + 8 integration tests, core Clippy and frontend checks.
+Its legacy Tauri Clippy was still in progress when first recorded.
+
+The native30 tracked package revision is already 30. A locked release
+package was NOT built or installed by these GTK checks; exact package
+verification, installed History screenshot, fresh idle/prepared-source
+and process ownership gate, installation, and real peer/lifecycle tests
+remain OPEN. In this session there is no access to the user's host,
+installed services, source files or Pixel. Do not infer an upgrade from
+green source CI. Retain installed native29 and preserved rollback artifacts.
