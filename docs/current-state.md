@@ -7,8 +7,9 @@ survives dispatch/terminal status, is exposed through an additive authenticated
 Batch1 snapshot method and validated by the SDK. GTK nests completed outgoing
 operations under an exactly matching currently discovered endpoint; inbound and
 unmatched operations remain separate. This is not pairing or stable trust.
-Contract/UI regressions are committed; exact-head native GTK and core CI
-verification is still pending. The broader MODE B completion gate, real peer
+Contract/UI regressions passed on code commit 29322530: GTK 42 tests ten
+consecutive times (420 successful executions) and complete Preflight green.
+Whole-repository MODE B coverage and physical acceptance remain open. The broader MODE B completion gate, real peer
 testing and release publication remain open. See
 [native card operation contract](native-card-operations-2026-10-17.md).
 

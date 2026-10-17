@@ -89,7 +89,7 @@ layout, Send flow and honest terminal-state repairs do not require this change.
   bounded-height and state-preservation regressions.
 - [x] A3: make Send enter explicit device selection before source choice, keeping
   the existing source flows available and tested.
-- [ ] A4: repair terminal text/status projection and safely separate unlinked
+- [x] A4: repair terminal text/status projection and safely separate unlinked
   operations; implement connected grouping only after the peer-association
   decision, otherwise mark the blocked portion OPEN.
 - [x] B1: complete and update affected artifact/branch inventories,
@@ -98,7 +98,7 @@ layout, Send flow and honest terminal-state repairs do not require this change.
   test suite, strict Rust format/Clippy and whole affected CI when possible.
 - [ ] B3: complete ten consecutive successful runs and record measured coverage
   for the affected production files, or mark MODE B completion gate OPEN.
-- [ ] A5: update current-state/evidence with exact commits, CI URLs and measured
+- [x] A5: update current-state/evidence with exact commits, CI URLs and measured
   results; verify dev/master divergence; do not merge or publish.
 
 Rollback: discrete documentation, layout, Send, model/API (if approved), and
@@ -284,7 +284,7 @@ separate user-approved ADR. No implicit pairing claims in UI.
   unlinked fallback for stale/inbound/absent; preserve independent actions.
 - [ ] C4: regression suite on coordinator, capture, bus/SDK and GTK;
   strict format/Clippy/CI, ten runs and coverage evidence.
-- [ ] C5: report exact head, execution and remaining hardware gates.
+- [x] C5: report exact head, execution and remaining hardware gates.
   No master promotion, install or release publication.
 
 Each stage is committed independently and reverted from presentation to SDK
@@ -340,3 +340,38 @@ Fresh exact-head compilation, ten-repeat suite, per-file coverage, physical
 KDE/Android/Windows acceptance and MODE B Completion Gate remain OPEN until
 observed evidence is recorded. The UI workflow is intentionally independent
 of release signing and installed package changes.
+
+## Verified CI checkpoint (source commit 29322530, 2026-10-17)
+
+- Native GTK UI verification: https://github.com/morozhenko-apps/rquickshare/actions/runs/38989181732
+  **SUCCESS**. Strict native GTK rustfmt and Clippy passed. The
+  `--bin rquickshare` executable test suite ran in isolated Xvfb/DBus on
+  Ubuntu 26.04 **10 consecutive times**, each reporting **42 passed / 0
+  failed** (420 test-method executions; 42 unique tests, not 420 different
+  scenarios). See [measured evidence](evidence/native-card-grouping-2026-10-17.json).
+- Preflight: https://github.com/morozhenko-apps/rquickshare/actions/runs/38989181863
+  **SUCCESS**, including core Rust tests, Rust formatting, core/Tauri
+  Clippy, desktop Rust tests, frontend checks and offline Python contracts.
+- Earlier full native library run
+  https://github.com/morozhenko-apps/rquickshare/actions/runs/38987892134
+  **FAILED** on the real Bubblewrap/Glycin preview fixture with
+  `Unavailable` despite building the helper. The preview test remains
+  unchanged and enforced in the separate full-native package gate.
+  Preview compatibility is outside the approved essential UI scope; it
+  must not be counted as passed by the GTK-only workflow.
+- The B-to-C core/API/GTK changes were implemented and scoped regression
+  checks passed. No verified-device trust, cross-epoch history, persisted
+  identity, automatic acceptance, signed package or installed upgrade.
+- Full repository MODE B **OPEN**: no measured per-production-file line/
+  branch coverage; no ten-run full core/frontend/legacy-suite record for
+  this source head; some matrix branches remain only inventoried, especially
+  optional old-daemon method fallback and adversarial D-Bus page responses.
+  Physical KDE/Wayland layout, Android/Windows interoperability and
+  package lifecycle are also UNTESTED on this source candidate.
+- This is a *dev-only source checkpoint*; no merge into master, no
+  local service restart, no install, no public release.
+
+Stage status: C1-C3 completed in source; C4 complete only for the
+scoped native GTK ten-run regression, with broader Mode B coverage open.
+The next agent should first measure actual coverage and implement missing
+planned negative cases before calling the whole feature Mode B-complete.

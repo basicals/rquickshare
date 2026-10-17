@@ -1,0 +1,42 @@
+{
+  "observed_date": "2026-10-17",
+  "repository": "morozhenko-apps/rquickshare",
+  "verified_source_commit": "29322530d47f8406d99c2dff0293e71373c0e41a",
+  "branch": "dev",
+  "source_changes_only": true,
+  "master_modified": false,
+  "workflows": {
+    "native_gtk": {
+      "run_id": 38989181732,
+      "url": "https://github.com/morozhenko-apps/rquickshare/actions/runs/38989181732",
+      "conclusion": "success",
+      "suite": "cargo test --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare",
+      "iterations": 10,
+      "unique_tests": 42,
+      "passed_executions": 420,
+      "failed_executions": 0,
+      "format_and_clippy": "passed"
+    },
+    "preflight": {
+      "run_id": 38989181863,
+      "url": "https://github.com/morozhenko-apps/rquickshare/actions/runs/38989181863",
+      "conclusion": "success"
+    },
+    "excluded_native_preview_library": {
+      "run_id": 38987892134,
+      "url": "https://github.com/morozhenko-apps/rquickshare/actions/runs/38987892134",
+      "conclusion": "failure",
+      "reason": "Real Bubblewrap/Glycin decoder returned Unavailable in container; test not bypassed"
+    }
+  },
+  "coverage_percentages": "not measured",
+  "entire_repository_mode_b": "open",
+  "unverified": [
+    "older daemon optional method fallback negative integration",
+    "malformed authenticated endpoint-link page negative tests",
+    "installed KDE/Wayland layout",
+    "physical Android/Windows peer acceptance",
+    "published signed APT update"
+  ],
+  "signing_and_publication": "not attempted"
+}
