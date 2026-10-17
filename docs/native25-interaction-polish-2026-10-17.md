@@ -225,3 +225,45 @@ automatic text/result presentation, P6 discovery and P7 package/install remain
 open. Do not mark native25 installed or auto-result complete. No new public API,
 file-manager launch, clipboard capture from the live session or service restart
 was performed in these source stages. All command sessions exited.
+
+## P5 approved result contract before implementation
+
+User selected option1. Add Files1.AcquireResult(transfer:s,revision:t)->(kind:y,fd:h)
+as an additive same-UID authenticated method; AcquireFile remains unchanged.
+Only complete Finished inbound Files with an exact immutable receipt qualify.
+Kind0: one loose file (regular read-only FD), kind1: one common received top-level
+directory (read-only directory FD, show containing folder/select this directory),
+kind2: several roots (original receive-root directory FD, open directory contents).
+A single nested file selects its received top-level directory. Derive from actual
+collision-resolved receipt paths, never advertised names/current settings/caller
+paths. Open directories beneath the pinned root without symlinks; validate every
+receipt member through that pinned selected directory before returning it. Root
+rename is supported; missing/changed/replaced files or unsafe parents fail closed.
+Do not auto-open partial/cancelled/failed batches. Old per-file partial-reveal
+remains available manually. One shared bounded/joined acquisition owner handles
+both methods and revalidates client/transfer/revision after filesystem IO.
+
+SDK requires exactly one read-only non-PATH FD, validates kind versus actual
+regular/directory type and current Finished authority; no FDs in ordinary state.
+Controller returns the private typed result. Portal OpenFile is used only for a
+checked directory and only to display its contents; automatic received regular
+files use OpenDirectory (select in containing folder), never their default app.
+Reuse the owned Request/Response/cancellation protocol and the one ingress permit.
+
+Track current-run phase transitions, seeded on initial/changed epoch to suppress
+historical replay. Successful inbound completion adds a transient Completed row
+and a bounded result queue. Serialize result presentation while input/review or
+portal work is active; text windows retain Copy/Close and never overwrite each
+other. Closing a result wakes the queue. Lock/disconnect/epoch changes prevent
+unsafe presentation. Card/drawer hide clears transient completion rows; hiding
+the card also cancels not-yet-presented results, while future active->Finished
+transitions remain observable. Daemon journal retention is unaffected.
+
+Focused inventory before new tests: receipt modes0/1/2, nested/multiple roots,
+renamed root and replaced/missing/symlink members, readonly directory flags;
+real broker/SDK AcquireResult success/foreign/stale/partial/malformed FD/type;
+portal rejects regular FD for contents and preserves existing cancellation tests;
+result tracker initial/epoch baseline, success-only once, queue order, eviction,
+hide and no active-transfer cancellation; GTK staged summary/progress, Completed
+retention and explicit-only text Copy. Run affected scopes once and record actual
+failures/fixes; no full Mode B/ten-run expansion.
