@@ -3743,6 +3743,85 @@ mod security_tests {
         }
     }
 
+    #[tokio::test]
+    async fn given_nonempty_last_file_chunk_when_managed_or_legacy_then_exact_end_is_required() {
+        for managed in [false, true] {
+            for (size, body, completes, expected_bytes) in [
+                (1_i64, b"a".as_slice(), true, 1_u64),
+                (3, b"abc".as_slice(), true, 3),
+                (3, b"ab".as_slice(), false, 2),
+                (3, b"abcd".as_slice(), false, 0),
+            ] {
+                // Arrange
+                let mut request = test_request();
+                let (socket, _peer) = tokio::io::duplex(4096);
+                request.socket = socket;
+                request.state.encrypt_key = Some(vec![0; 32]);
+                request.state.send_hmac_key = Some(vec![0; 32]);
+                if managed {
+                    let hub = crate::sessions::SessionHub::new(42).unwrap();
+                    request.session = Some(
+                        hub.open(
+                            crate::channel::TransferType::Inbound,
+                            None,
+                            tokio_util::sync::CancellationToken::new(),
+                        )
+                        .unwrap(),
+                    );
+                }
+                request.state.state = State::ReceivingFiles;
+                request.state.transfer_metadata = Some(TransferMetadata {
+                    total_bytes: size as u64,
+                    ..Default::default()
+                });
+                let destination = tempfile::NamedTempFile::new().unwrap();
+                request.state.transferred_files.insert(
+                    101,
+                    InternalFileInfo {
+                        payload_id: 101,
+                        file_url: destination.path().to_owned(),
+                        parent_folder: None,
+                        bytes_transferred: 0,
+                        total_size: size,
+                        file: Some(destination.as_file().try_clone().unwrap()),
+                    },
+                );
+
+                // Act: final flag and body arrive in one valid or invalid frame.
+                let result = request
+                    .process_offline_frame(received_file_frame(101, size, 0, body, 1))
+                    .await;
+
+                // Assert: strict declared bounds and exactly one terminal state.
+                assert_eq!(
+                    result.as_ref().err().is_some_and(|error| error.is::<crate::errors::AppError>()),
+                    completes,
+                    "managed={managed}, size={size}, body={body:?}"
+                );
+                assert_eq!(
+                    request.state.state,
+                    if completes {
+                        State::Finished
+                    } else {
+                        State::ReceivingFiles
+                    }
+                );
+                assert_eq!(
+                    request.state.transferred_files.contains_key(&101),
+                    !completes
+                );
+                assert_eq!(
+                    request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                    expected_bytes
+                );
+                assert_eq!(
+                    std::fs::read(destination.path()).unwrap(),
+                    if body.len() as i64 <= size { body } else { b"".as_slice() }
+                );
+            }
+        }
+    }
+
     #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn given_accepted_managed_files_when_completed_out_of_order_then_private_receipt_uses_actual_collision_names_and_survives_session_close(
