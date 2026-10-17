@@ -153,13 +153,12 @@ async fn given_peer_reset_after_first_real_file_chunk_when_sending_then_no_false
     // Act: allow exactly one observable encrypted chunk to arrive, then
     // abort the receiving TCP peer. Synchronization is by real protocol
     // readiness; timeout only diagnoses a stalled test.
+    let accepted = consent_frame(sharing_nearby::connection_response_frame::Status::Accept);
     let (send_result, first_chunk) = tokio::time::timeout(
         std::time::Duration::from_secs(10),
         async {
             tokio::join!(
-                request.process_consent(&consent_frame(
-                    sharing_nearby::connection_response_frame::Status::Accept,
-                )),
+                request.process_consent(&accepted),
                 async {
                     let frame = read_native_frame(&mut peer, 3).await;
                     let transfer = frame.v1.unwrap().payload_transfer.unwrap();
