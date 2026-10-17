@@ -60,6 +60,7 @@ pub(super) type SourceRow = (String, &'static str, u32, u64);
 struct Capture {
     completed: Vec<(String, Arc<[crate::sessions::details::FileDetail]>)>,
     recipients: Vec<EndpointRow>,
+    transfer_endpoints: Vec<EndpointRow>,
     sources: Vec<SourceRow>,
     received: Vec<super::files::MetadataRow>,
     text: Vec<super::text::MetadataRow>,
@@ -269,6 +270,19 @@ impl StateCache {
                 )
             })
             .collect();
+        let transfer_endpoints = snapshot
+            .transfers
+            .iter()
+            .map(|view| {
+                (
+                    token(view.id.0, view.id.1),
+                    coordinator.transfers[&view.id]
+                        .associated_endpoint
+                        .clone()
+                        .unwrap_or_default(),
+                )
+            })
+            .collect();
         let transfers: Vec<_> = snapshot
             .transfers
             .into_iter()
@@ -315,6 +329,7 @@ impl StateCache {
         let capture = Capture {
             completed,
             recipients,
+            transfer_endpoints,
             sources,
             received,
             text,
@@ -335,6 +350,12 @@ impl StateCache {
                 .completed
                 .iter()
                 .map(|(id, _)| id.capacity())
+                .sum::<usize>()
+            + capture.transfer_endpoints.capacity() * size_of::<EndpointRow>()
+            + capture
+                .transfer_endpoints
+                .iter()
+                .map(|(id, endpoint)| id.capacity() + endpoint.capacity())
                 .sum::<usize>()
             + capture.recipients.capacity() * size_of::<EndpointRow>()
             + capture
@@ -453,6 +474,14 @@ impl StateCache {
         offset: u32,
     ) -> Result<(u32, Vec<NoticeRow>), Error> {
         page(&self.get(client, id)?.notices, offset)
+    }
+    pub(super) fn transfer_endpoint_page(
+        &self,
+        client: ClientId,
+        id: &str,
+        offset: u32,
+    ) -> Result<(u32, Vec<EndpointRow>), Error> {
+        page(&self.get(client, id)?.transfer_endpoints, offset)
     }
     pub(super) fn recipient_page(
         &self,
