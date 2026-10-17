@@ -196,6 +196,7 @@ pub(super) fn transfer_row(
     let incoming = phase == Phase::AwaitingConsent;
     let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
     let heading = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    heading.set_widget_name("transfer-heading");
     heading.append(&device_icon(
         kind,
         phase_text(phase),
@@ -252,7 +253,93 @@ pub(super) fn transfer_row(
     root.append(&expander);
     root
 }
+fn flatten_history(root: &gtk::Box, details: &gtk::Box) -> gtk::Box {
+    let expander = named(root.upcast_ref(), "transfer-details")
+        .and_downcast::<gtk::Expander>()
+        .expect("transfer row owns its disclosure");
+    let heading = expander
+        .label_widget()
+        .and_downcast::<gtk::Box>()
+        .expect("transfer heading");
+    expander.set_label_widget(None::<&gtk::Widget>);
+    expander.set_child(None::<&gtk::Widget>);
+    root.remove(&expander);
+    root.append(&heading);
+    for name in ["review-text", "cancel", "cancel-reveal"] {
+        if let Some(action) = named(details.upcast_ref(), name) {
+            let parent = action.parent().and_downcast::<gtk::Box>().unwrap();
+            parent.remove(&action);
+            heading.append(&action);
+        }
+    }
+    heading
+}
 impl Panel {
+    fn flatten_history_transfer(
+        self: &Rc<Self>,
+        root: &gtk::Box,
+        details: &gtk::Box,
+        transfer: &TransferView,
+        ready: bool,
+        incoming: bool,
+    ) {
+        let heading = flatten_history(root, details);
+        if incoming {
+            let review = gtk::Button::with_label("Review");
+            review.set_widget_name("history-review");
+            review.set_sensitive(ready);
+            let weak = Rc::downgrade(self);
+            let id = transfer.transfer.id().to_owned();
+            review.connect_clicked(move |_| {
+                if let Some(panel) = weak.upgrade() {
+                    panel.set_drawer(Drawer::Open);
+                    panel.pages.set_visible_child_name("nearby");
+                    panel.render();
+                    panel.expand_transfer(&id);
+                    panel.present_surface();
+                }
+            });
+            heading.append(&review);
+        } else if transfer.direction == Direction::Inbound {
+            if let Some(revision) = transfer.reveal_revision {
+                if transfer.phase == Phase::Finished {
+                    let reveal = gtk::Button::with_label("Show in folder");
+                    reveal.set_widget_name("result-reveal");
+                    reveal.set_sensitive(ready);
+                    let weak = Rc::downgrade(self);
+                    let target = transfer.transfer.clone();
+                    reveal.connect_clicked(move |_| {
+                        if let Some(panel) = weak.upgrade() {
+                            panel.reveal_result(target.clone(), revision);
+                        }
+                    });
+                    heading.append(&reveal);
+                } else if !transfer.completed_files.is_empty() {
+                    let saved = gtk::Box::new(gtk::Orientation::Vertical, 8);
+                    for (index, file) in transfer.completed_files.iter().enumerate() {
+                        let name = label(&file.name);
+                        name.set_max_width_chars(40);
+                        name.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
+                        saved.append(&name);
+                        if let Some(action) =
+                            named(details.upcast_ref(), &format!("reveal-{index}"))
+                        {
+                            let parent = action.parent().and_downcast::<gtk::Box>().unwrap();
+                            parent.remove(&action);
+                            saved.append(&action);
+                        }
+                    }
+                    let popover = gtk::Popover::new();
+                    popover.set_child(Some(&saved));
+                    let menu = gtk::MenuButton::builder()
+                        .label("Saved files")
+                        .popover(&popover)
+                        .build();
+                    heading.append(&menu);
+                }
+            }
+        }
+    }
     pub(super) fn expand_transfer(&self, id: &str) {
         if let Some(entry) = self
             .rows
@@ -363,6 +450,9 @@ impl Panel {
                     parent.remove(&manifest);
                 }
             }
+            if page == "transfers" {
+                self.flatten_history_transfer(&root, &details, transfer, ready, incoming);
+            }
             rows.entries.insert(
                 key.clone(),
                 Entry {
@@ -374,6 +464,8 @@ impl Panel {
         }
         let root = rows.entries[&key].root.clone();
         for (name, enabled) in [
+            ("history-review", ready),
+            ("result-reveal", ready && transfer.reveal_revision.is_some()),
             ("review-text", ready && transfer.content_revision.is_some()),
             (
                 "accept",
@@ -757,6 +849,42 @@ pub(super) fn verify_keyed_layout() {
     assert!(named(cache.entries[&key].root.upcast_ref(), "transfer-details").is_some());
     expander.set_expanded(false);
     assert!(!expansion_for_replacement(&cache, &key, false));
+
+    // Arrange: history content actions exist below the old disclosure.
+    let details = card();
+    let clicks = Rc::new(Cell::new(0));
+    for name in ["review-text", "cancel", "cancel-reveal"] {
+        let action = gtk::Button::with_label(name);
+        action.set_widget_name(name);
+        let clicks = clicks.clone();
+        action.connect_clicked(move |_| clicks.set(clicks.get() + 1));
+        details.append(&action);
+    }
+    details.append(&label("Duplicate detail metadata"));
+    let history = transfer_row(
+        "<Mercury>",
+        rqs_lib::service::client::state::DeviceKind::Phone,
+        Phase::Finished,
+        &details,
+        true,
+    );
+    // Act: reuse the original controls, removing the disclosure and detail body.
+    let heading = flatten_history(&history, &details);
+    // Assert: controls are directly clickable and no hidden duplicate body remains.
+    assert!(named(history.upcast_ref(), "transfer-details").is_none());
+    assert_eq!(history.observe_children().n_items(), 1);
+    assert_eq!(history.first_child(), Some(heading.clone().upcast()));
+    assert!(details.parent().is_none());
+    for name in ["review-text", "cancel", "cancel-reveal"] {
+        let action = named(history.upcast_ref(), name)
+            .and_downcast::<gtk::Button>()
+            .unwrap();
+        assert_eq!(action.parent(), Some(heading.clone().upcast()));
+        action.emit_clicked();
+    }
+    assert_eq!(clicks.get(), 3);
+    assert_eq!(details.observe_children().n_items(), 1);
+
     let live = ["ep-1", "ep-2"].into_iter().collect::<BTreeSet<_>>();
     assert_eq!(
         bound_current_endpoint(Direction::Outbound, Some("ep-1"), &live),

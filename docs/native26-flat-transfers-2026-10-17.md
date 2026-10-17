@@ -35,8 +35,8 @@ additional sender dialog; keep the independently authorized history work moving.
 
 - [x] S1: inspect live/history row construction, checked result actions and sender paths.
 - [x] S2: record flat-row contract, preservation rules and focused verification.
-- [ ] S3: flatten history rows; retain direct result/review/cancel controls.
-- [ ] S4: run affected real GTK scope and strict native lint once; record observations.
+- [x] S3: flatten history rows; retain direct result/review/cancel controls.
+- [x] S4: run affected real GTK scope and strict native lint once; record observations.
 - [ ] S5: commit source, build a distinct package and perform an idle-gated upgrade.
 - [ ] S6: record exact installed/export receipts and request physical acceptance.
 
@@ -51,3 +51,23 @@ Before tests: actual widget assertions for no history Expander, inline received
 text/result/cancel controls, pending Review directing to existing card, unchanged
 card disclosure, and readonly metadata records. Retain existing source/clipboard
 checks; no ten-run Mode B expansion and no phone/network operation in tests.
+
+## Source and measured checks
+
+History live rows now attach the heading directly, without an Expander or hidden
+detail body. Existing text/cancel controls are reparented, preserving callbacks;
+complete file results use one checked whole-result button. Pending Review opens
+the existing card; partial receipts use checked per-file actions in Saved files.
+No daemon/receiver change, new source admission or receiver-consent bypass.
+
+Affected actual native panel scope passed19/0 in0.54s (32 unrelated filtered).
+The widget smoke verifies no history disclosure, detached duplicate body, direct
+parenting and all preserved control callbacks; existing card disclosure tests
+still pass. Strict all-target native no-dependency Clippy passed1.55s. Existing
+core dependency warnings and offscreen Layer Shell warnings remain unchanged.
+No full Mode B or repeated-run claim. Both command sessions exited; Terminal closed.
+
+Package revision26 distinguishes these bytes from installed25. Preserve25 exactly;
+build/verify the release package, then fresh known-owner/global-idle upgrade only.
+Do not restart with prepared content or nonterminal work. Sender-window identity
+remains a separate required clarification; history does not depend on it.
