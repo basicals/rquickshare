@@ -174,9 +174,9 @@ Plan:
    diff instead of changing formatter configuration or unrelated code.
 2. [x] Apply the exact import-order/blank-line correction in the existing test
    module. Preserve all test assertions and production logic.
-3. [ ] Verify the next dev Preflight format, Python contract and remaining jobs;
+3. [x] Verify the next dev Preflight format, Python contract and remaining jobs;
    record observed results without claiming a local nightly build.
-4. [ ] Keep the release/installed native29 state and the native30 package/user
+4. [x] Keep the release/installed native29 state and the native30 package/user
    acceptance gates unchanged.
 
 Risk is limited to incidental source-test formatting. Rollback is an ordinary
@@ -195,3 +195,11 @@ or physical peer evidence, and do not constitute the 10-run Mode B gate.
 Native30 remains source-only; installed native29 is unchanged.
 The separate legacy Tauri Clippy job was still in progress when these results
 were first recorded.
+
+Final CI result: the fifth Preflight job (legacy Tauri Clippy and desktop
+checks) also completed successfully. Exact-source run 39048444812 is
+5/5 successful jobs: Rust format including 54 Python contracts, frontend
+lint/typecheck plus 46 Vitest cases, core 693 library plus 8 integration
+tests, core Clippy, and legacy Tauri Clippy. GTK run 39048444825 is
+successful with 52/0 isolated tests. No source regression, package build,
+installed upgrade, peer session or ten-fold stability test is inferred.
