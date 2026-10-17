@@ -44,6 +44,11 @@ jobs:
         working-directory: ./app/main
         run: pnpm install --frozen-lockfile
 
+      - name: Install pinned Python publication contract dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/mode-b-python"
+          "$RUNNER_TEMP/mode-b-python/bin/python" -m pip install -r scripts/requirements-r2.txt
+
       - name: Run complete suite ten consecutive times
         shell: bash
         run: |
@@ -68,7 +73,7 @@ jobs:
             )
 
             echo "=== Mode B attempt ${attempt}/10: offline analyzer ==="
-            python3 -m unittest discover -s scripts/tests
+            "$RUNNER_TEMP/mode-b-python/bin/python" -m unittest discover -s scripts/tests
           done
 
   native_gtk:
