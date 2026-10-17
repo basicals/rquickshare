@@ -162,6 +162,23 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     for name in ["files", "folder", "discard", "recover", "abort"] {
         assert!(!panel.button(name).is_sensitive(), "{name}");
     }
+    let unsupported = TransferDetails {
+        status: DetailsStatus::Unsupported,
+        ..Default::default()
+    };
+    for phase in [
+        Phase::Finished,
+        Phase::Rejected,
+        Phase::Cancelled,
+        Phase::Failed,
+        Phase::Disconnected,
+    ] {
+        let details = safe_transfer_details(&unsupported, phase, true, None);
+        let messages: Vec<_> = labels(&details).iter().map(|item| item.text().to_string()).collect();
+        assert_eq!(messages, ["Content details are unavailable for review."]);
+    }
+    let pending = safe_transfer_details(&unsupported, Phase::AwaitingConsent, true, None);
+    assert!(labels(&pending).iter().any(|item| item.text().contains("Decline or cancel")));
     for status in [DetailsStatus::Unavailable, DetailsStatus::Unsupported] {
         let row = details_card(&TransferDetails {
             status,
