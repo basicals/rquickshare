@@ -8,7 +8,7 @@ pub(super) const PATH: &str = "/Menu";
 #[cfg(test)]
 pub(super) const INTERFACE: &str = "com.canonical.dbusmenu";
 const MAX_PROPERTIES: usize = 16;
-const ROWS: [i32; 15] = [1, 23, 2, 12, 4, 5, 13, 18, 19, 20, 14, 8, 22, 15, 11];
+const ROWS: [i32; 14] = [1, 23, 2, 12, 5, 13, 18, 19, 20, 14, 8, 22, 15, 11];
 pub type Layout = (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>);
 type Properties = Vec<(i32, HashMap<String, OwnedValue>)>;
 
@@ -73,7 +73,7 @@ impl Action {
             Self::RetryVisibility => "Retry visibility change",
             Self::Folder => "Send a folder…",
             Self::Incoming => "Incoming requests",
-            Self::Transfers => "Active transfers",
+            Self::Transfers => "Transfers",
             Self::Compact => "Compact view",
             Self::Full => "Full view",
             Self::Settings => "Settings…",
@@ -194,7 +194,10 @@ fn properties(id: i32, state: State, names: &[String]) -> HashMap<String, OwnedV
         let label = match action {
             Action::Open if state.projection.card_visible => "Hide card".to_owned(),
             Action::Incoming => format!("Incoming requests ({})", state.projection.incoming),
-            Action::Transfers => format!("Active transfers ({})", state.projection.active),
+            Action::Transfers => format!(
+                "Transfers ({})",
+                state.projection.active + state.projection.incoming
+            ),
             _ => action.label().to_owned(),
         };
         put("label", OwnedValue::from(Str::from(label)));

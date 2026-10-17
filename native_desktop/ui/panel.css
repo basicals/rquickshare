@@ -36,3 +36,6 @@ button.quick-action.receive-active {
   border-color: mix(@theme_bg_color, @success_color, 0.28);
   animation: receive-pulse 1.8s ease-in-out infinite;
 }
+
+/* The primary drawer is one flat list, including transient incoming peer rows. */
+.rqs-card-body .device-row { padding: 8px 0; border: none; border-radius: 0; }

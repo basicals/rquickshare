@@ -66,9 +66,9 @@ visibility, network configuration or authorization during passive analysis.
   record the requested corrections and missing persistence/identity decisions.
 - [x] A2: freeze the chosen journal/device contract, ownership, compatibility,
   retention/error semantics, implementation milestones and rollback before code.
-- [ ] A3: implement file-first direct single-recipient Send and flat card device
+- [x] A3: implement file-first direct single-recipient Send and flat card device
   presentation, keeping admitted multi-recipient/source ownership unchanged.
-- [ ] A4: implement the selected daemon/window/tray separation, preserving live
+- [x] A4: implement the selected daemon/window/tray separation, preserving live
   review/cancel and content capabilities. Do not invent durable trust.
 - [ ] A5: trace receiver discovery stages with bounded privacy-safe evidence;
   fix only the demonstrated cause and record what needs a live phone check.
@@ -144,3 +144,72 @@ Focused verification inventory before implementation:
 
 A2 is complete for the approved scope. Record actual checks per milestone;
 no whole-repository Mode B/coverage or repeated ten-run claim is planned.
+
+### Recipient interaction refinement (explicit user instruction)
+
+Remove recipient checkboxes and the aggregate Send button entirely. Each Send
+beside a discovered device independently admits the current immutable prepared
+source to the daemon FIFO. The prepared selection remains available for later
+clicks; queued/active copies retain their own source snapshot. Dispatch one
+outbound recipient at a time, waiting for its terminal status and joined source
+release before starting the next. Cancel/reject/failure advances the FIFO; closing
+GTK does not drop admitted work. The existing bounded queue returns an explicit
+capacity error rather than silently dropping clicks. Do not add a GTK-owned
+queue or infer recipient order from alphabetic device sorting.
+
+Source-reuse root cause found: existing Batch1.Send consumes the prepared
+selection, so repeated per-device clicks cannot reuse it. Add Batch1.Queue with
+a distinct ordered-operation kind, retaining the unsent selection and sharing
+its immutable source snapshot with admitted queue entries. Keep Batch1.Send
+consumption semantics intact. Queue/replay/source budgets stay in Coordinator;
+GTK uses Queue, not a reconstructed local source. Add retained-source/FIFO/retry
+regressions before installation. Clearing or extending the prepared selection
+must not change already queued snapshots.
+
+
+## Service implementation and measured checks
+
+Daemon journal, safe private-file primitive reuse, additive Journal1 read/clear,
+SDK checked pages/cache/invalidation and retained-source Batch1.Queue are in
+source. FIFO now waits for terminal status plus owner/source release. Existing
+consuming Batch1.Send remains unchanged. No persistent trust or payload storage.
+
+Initial compile stopped on misplaced controller arms and an extra Path reference;
+these were corrected before execution. A test compile then exposed three fixture
+API/import mistakes, corrected without changing production contracts. The first
+service execution had five failures and one old concurrent-dispatch test waiting
+for a second job before finishing the first. Only the owned test run was stopped
+with its terminal interrupt. The two journal failures used non-private fixture
+parent directories; fixture directories now explicitly use0700, with production
+storage validation unchanged. Backpressure fixtures now saturate the real external
+transport queue rather than violating the newly selected single-outbound policy;
+FIFO checks assert no next job before terminal status and joined source release.
+
+Final affected service run:308 passed/0 failed in8.05s (367 unrelated filtered).
+No ten-run loop or complete repository/coverage claim. Native GTK checks, passive
+receiver diagnosis and package/installation have not yet run for this source.
+All completed terminal tasks exited; installed native22 remains unchanged.
+
+
+GTK implementation observed: device rows are flat and contain no checkboxes;
+there is no aggregate Send control. Live outbound progress is associated only
+with its exact current endpoint; inbound/unbound live work has its own peer row.
+Terminal transfers never enter the card. Code/manifest review remains explicit.
+Transfers opens a separate themed window, preserves current content controls,
+merges older metadata without duplicating live IDs, and exposes fenced Clear.
+Tray now has14 rows with one Transfers entry instead of Incoming/Active entries.
+
+Measured GTK run initially42 passed/2 failed: one old summary-wording assertion
+and an event test still clicking the removed Incoming entry. After correcting
+those expected contracts, its independent group scenario also needed its Transfers
+action explicitly re-enabled after testing disabled-action rejection. Final GTK
+run44 passed/0 failed in0.67s. Native strict all-target/no-dependency Clippy passed
+in5.15s. Actual offscreen card and Transfers-window frames were inspected: one
+flat device list and a separate metadata list. Removed unwanted automatic text
+selection from device/header labels. Offscreen Layer Shell/DRI warnings are
+expected for Xvfb and are not KDE/Wayland acceptance.
+
+Core strict Clippy first identified a redundant borrow introduced while extracting
+the unchanged private-directory helper; remove that borrow and rerun only lint.
+No protocol/runtime behavior changed in that correction. A5 receiver timing and
+A7 package/physical acceptance remain open; installed native22 remains unchanged.

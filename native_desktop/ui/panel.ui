@@ -1,4 +1,3 @@
-<?xml version='1.0' encoding='utf-8'?>
 <interface>
   <requires lib="gtk" version="4.12" />
   <object class="GtkWindow" id="panel">
@@ -146,7 +145,7 @@
                     <property name="name">transfers</property>
                     <property name="title">Transfers</property>
                     <property name="child">
-                      <object class="GtkScrolledWindow">
+                      <object class="GtkScrolledWindow" id="transfers-scroll">
                         <property name="hscrollbar-policy">never</property>
                         <property name="min-content-height">120</property>
                         <property name="max-content-height">300</property>
@@ -163,28 +162,7 @@
                 </child>
               </object>
             </child>
-            <child>
-              <object class="GtkBox" id="recipients">
-                <property name="spacing">8</property>
-                <child>
-                  <object class="GtkLabel" id="recipient-summary">
-                    <property name="xalign">0</property>
-                    <property name="wrap">true</property>
-                    <property name="hexpand">true</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkButton" id="send-many">
-                    <property name="label">Send</property>
-                    <property name="action-name">panel.send-many</property>
-                    <style>
-                      <class name="suggested-action" />
-                    </style>
-                  </object>
-                </child>
-              </object>
-            </child>
-          </object>
+            </object>
         </child>
         <child>
           <object class="GtkBox" id="compact">

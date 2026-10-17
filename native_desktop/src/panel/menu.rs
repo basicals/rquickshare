@@ -44,11 +44,12 @@ impl Panel {
             "nearby",
             "incoming",
             "transfers",
+            "journal-refresh",
+            "journal-clear",
             "files",
             "folder",
             "send-text",
             "send-image",
-            "send-many",
             "discard",
             "recover",
             "abort",
@@ -68,7 +69,25 @@ impl Panel {
                     return;
                 }
                 match name {
-                    "nearby" | "incoming" | "transfers" => {
+                    "transfers" => panel.show_transfers(),
+                    "journal-refresh" => {
+                        if let Some(handle) = &panel.handle {
+                            panel.submit(|| handle.refresh_journal());
+                        }
+                    }
+                    "journal-clear" => {
+                        let token = panel
+                            .model
+                            .borrow()
+                            .state
+                            .journal
+                            .as_ref()
+                            .map(|v| v.token.clone());
+                        if let (Some(token), Some(handle)) = (token, &panel.handle) {
+                            panel.submit(|| handle.clear_journal(token));
+                        }
+                    }
+                    "nearby" | "incoming" => {
                         panel.set_drawer(Drawer::Open);
                         panel.pages.set_visible_child_name("nearby");
                         panel.render();
@@ -103,7 +122,6 @@ impl Panel {
                     "send" => panel.show_sending(),
                     "send-text" => panel.show_composer(),
                     "send-image" => panel.show_image(),
-                    "send-many" => panel.send_recipients(),
                     "files" | "folder" => {
                         panel.set_drawer(Drawer::Open);
                         panel.pages.set_visible_child_name("nearby");
@@ -155,8 +173,7 @@ impl Panel {
         for (name, title) in [
             ("receive", "Receive files"),
             ("send", "Send files…"),
-            ("incoming", "Incoming requests"),
-            ("transfers", "Active transfers"),
+            ("transfers", "Transfers"),
         ] {
             navigation.append(Some(title), Some(&format!("panel.{name}")));
         }
@@ -237,14 +254,23 @@ impl Panel {
         }
     }
     pub(super) fn show_sending(self: &Rc<Self>) {
-        // Recipient first: Send opens discovery even without a prepared source.
-        // File/text selection is offered only after explicit peer selection.
+        // Choose content first; a later device-row Send is the sole admission action.
         self.sending.popdown();
         self.set_drawer(Drawer::Open);
         self.pages.set_visible_child_name("nearby");
         self.render();
         if !self.window.is_visible() {
             self.present_surface();
+        }
+        if self
+            .model
+            .borrow()
+            .state
+            .view
+            .as_ref()
+            .is_some_and(|view| view.selections.is_empty())
+        {
+            self.sending.popup();
         }
     }
     pub(super) fn send_to(self: &Rc<Self>, endpoint: &str) {
@@ -271,14 +297,11 @@ impl Panel {
         };
         if let Some(selection) = selection {
             if let Some(handle) = &self.handle {
-                self.submit(|| handle.send_many(selection, vec![endpoint.to_owned()]));
+                self.submit(|| handle.queue_recipient(selection, endpoint.to_owned()));
             }
         } else {
-            self.model.borrow_mut().recipients.clear();
-            self.choose_recipient(endpoint, true);
+            // Choosing content never binds a recipient or transmits it automatically.
             self.show_sending();
-            // The user selected an actual discovered endpoint: now choose content.
-            self.sending.popup();
         }
     }
     pub fn set_drawer(self: &Rc<Self>, drawer: Drawer) {

@@ -29,21 +29,6 @@ fn named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
     }
     None
 }
-fn cached_section(
-    rows: &mut Rows,
-    used: &mut BTreeSet<(String, String)>,
-    name: &str,
-    title: &str,
-) -> gtk::Box {
-    let key = ("nearby".to_owned(), format!("heading:{name}"));
-    let entry = rows.entries.entry(key.clone()).or_insert_with(|| Entry {
-        root: section_title(title),
-        transfer: None,
-        endpoint: None,
-    });
-    used.insert(key);
-    entry.root.clone()
-}
 fn expansion_for_replacement(rows: &Rows, key: &(String, String), default: bool) -> bool {
     rows.entries
         .get(key)
@@ -53,6 +38,7 @@ fn expansion_for_replacement(rows: &Rows, key: &(String, String), default: bool)
         .map(|expander| expander.is_expanded())
         .unwrap_or(default)
 }
+#[cfg(test)]
 fn section_title(text: &str) -> gtk::Box {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     let title = label(text);
@@ -69,6 +55,21 @@ fn bound_current_endpoint<'a>(
         return None;
     }
     associated.filter(|id| discovered.contains(id))
+}
+fn card_transfer_visible(
+    direction: Direction,
+    phase: Phase,
+    associated: Option<&str>,
+    discovered: &BTreeSet<&str>,
+) -> bool {
+    !phase.is_terminal() && bound_current_endpoint(direction, associated, discovered).is_none()
+}
+fn progress_fraction(done: u64, total: u64) -> f64 {
+    if total == 0 {
+        0.0
+    } else {
+        done.min(total) as f64 / total as f64
+    }
 }
 fn same_description(a: &TransferView, b: &TransferView) -> bool {
     a.transfer == b.transfer
@@ -151,6 +152,7 @@ fn device_icon(
     let (symbol, class) = badge_style(badge);
     let marker = gtk::Label::new(Some(symbol));
     marker.add_css_class("device-status");
+    marker.set_widget_name("device-status");
     marker.add_css_class(class);
     marker.set_halign(gtk::Align::End);
     marker.set_valign(gtk::Align::End);
@@ -189,12 +191,22 @@ pub(super) fn transfer_row(
     title.set_max_width_chars(20);
     title.set_width_request(0);
     heading.append(&title);
+    let progress = gtk::ProgressBar::new();
+    progress.set_widget_name("row-progress");
+    progress.set_width_request(72);
+    progress.set_valign(gtk::Align::Center);
+    progress.set_visible(!phase.is_terminal());
+    heading.append(&progress);
+    let status = label(phase_text(phase));
+    status.set_widget_name("row-status");
+    heading.append(&status);
     let expander = gtk::Expander::new(None);
     expander.set_resize_toplevel(true);
     expander.set_widget_name("transfer-details");
     expander.set_child(Some(details));
     expander.set_expanded(expanded);
     let review = gtk::Button::with_label(if incoming { "Review" } else { "Details" });
+    review.set_widget_name("row-action");
     review.set_hexpand(false);
     review.set_halign(gtk::Align::End);
     let expanded = expander.clone();
@@ -262,7 +274,11 @@ impl Panel {
                 named(root.upcast_ref(), "transfer-details").and_downcast::<gtk::Expander>()
             {
                 let weak = Rc::downgrade(self);
+                let card_page = page == "nearby";
                 expander.connect_expanded_notify(move |_| {
+                    if !card_page {
+                        return;
+                    }
                     if let Some(panel) = weak.upgrade() {
                         panel.pin_surface_bottom();
                         let weak = Rc::downgrade(&panel);
@@ -329,6 +345,15 @@ impl Panel {
                 }
             ));
         }
+        if let Some(progress) =
+            named(root.upcast_ref(), "row-progress").and_downcast::<gtk::ProgressBar>()
+        {
+            progress.set_fraction(progress_fraction(
+                transfer.details.transferred_bytes,
+                transfer.details.total_bytes,
+            ));
+            progress.set_tooltip_text(Some(phase_text(transfer.phase)));
+        }
         root
     }
     pub(super) fn render_rows(
@@ -337,7 +362,6 @@ impl Panel {
         selection: Option<rqs_lib::service::client::Selection>,
         ready: bool,
         _current: Option<&TransferView>,
-        recipients: &BTreeMap<String, String>,
     ) {
         let mut rows = self.rows.borrow_mut();
         let mut used = BTreeSet::new();
@@ -345,19 +369,13 @@ impl Panel {
             .into_iter()
             .map(|page| (page, vec![]))
             .collect();
-        let mut endpoints = view
+        let endpoints = view
             .endpoints
             .iter()
             .map(|peer| (peer.id.clone(), (peer.name.clone(), true)))
             .collect::<BTreeMap<_, _>>();
-        for (id, name) in recipients {
-            endpoints
-                .entry(id.clone())
-                .or_insert_with(|| (name.clone(), false));
-        }
         for (id, projection) in endpoints {
             let key = ("nearby".to_owned(), id.clone());
-            let selected = recipients.contains_key(&id);
             if rows
                 .entries
                 .get(&key)
@@ -380,32 +398,32 @@ impl Panel {
                     },
                     state,
                 ));
-                let choice = gtk::CheckButton::with_label(&projection.0);
-                choice.set_hexpand(true);
-                choice.set_widget_name("select-recipient");
-                if let Some(title) = choice.child().and_downcast::<gtk::Label>() {
-                    title.set_ellipsize(gtk::pango::EllipsizeMode::End);
-                    title.set_max_width_chars(24);
-                }
-                choice.set_active(selected);
-                let endpoint = id.clone();
-                let weak = Rc::downgrade(self);
-                choice.connect_toggled(move |choice| {
-                    if let Some(panel) = weak.upgrade() {
-                        panel.choose_recipient(&endpoint, choice.is_active());
-                    }
-                });
-                controls.append(&choice);
+                let title = label(&projection.0);
+                title.set_selectable(false);
+                title.set_hexpand(true);
+                title.set_wrap(false);
+                title.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                title.set_max_width_chars(20);
+                controls.append(&title);
+                let progress = gtk::ProgressBar::new();
+                progress.set_widget_name("device-progress");
+                progress.set_width_request(72);
+                progress.set_valign(gtk::Align::Center);
+                controls.append(&progress);
                 let send = gtk::Button::with_label("Send");
                 send.set_widget_name("send-device");
                 let weak = Rc::downgrade(self);
+                let endpoint_for_send = id.clone();
                 send.connect_clicked(move |_| {
                     if let Some(panel) = weak.upgrade() {
-                        panel.send_to(&id);
+                        panel.send_to(&endpoint_for_send);
                     }
                 });
                 controls.append(&send);
                 root.append(&controls);
+                let code = label("");
+                code.set_widget_name("device-code");
+                root.append(&code);
                 rows.entries.insert(
                     key.clone(),
                     Entry {
@@ -416,184 +434,87 @@ impl Panel {
                 );
             }
             let root = rows.entries[&key].root.clone();
-            let choice = named(root.upcast_ref(), "select-recipient")
-                .and_downcast::<gtk::CheckButton>()
-                .unwrap();
-            choice.set_active(selected);
-            choice.set_sensitive(
-                ready
-                    && (selected
-                        || (projection.1
-                            && recipients.len() < rqs_lib::service::batch::RECIPIENTS)),
-            );
+            let active = view.transfers.iter().find(|transfer| {
+                transfer.direction == Direction::Outbound
+                    && !transfer.phase.is_terminal()
+                    && transfer.associated_endpoint.as_deref() == Some(id.as_str())
+            });
+            if let Some(marker) =
+                named(root.upcast_ref(), "device-status").and_downcast::<gtk::Label>()
+            {
+                let (symbol, class) = badge_style(
+                    active.map_or(Badge::Available, |transfer| Badge::Transfer(transfer.phase)),
+                );
+                marker.set_text(symbol);
+                for old in ["success", "warning", "error", "accent", "dim-label"] {
+                    marker.remove_css_class(old);
+                }
+                marker.add_css_class(class);
+            }
+            if let Some(progress) =
+                named(root.upcast_ref(), "device-progress").and_downcast::<gtk::ProgressBar>()
+            {
+                progress.set_visible(active.is_some());
+                if let Some(transfer) = active {
+                    progress.set_fraction(progress_fraction(
+                        transfer.details.transferred_bytes,
+                        transfer.details.total_bytes,
+                    ));
+                    progress.set_tooltip_text(Some(phase_text(transfer.phase)));
+                }
+            }
+            if let Some(code) = named(root.upcast_ref(), "device-code").and_downcast::<gtk::Label>()
+            {
+                let pin = active
+                    .map(|transfer| transfer.details.pin.as_str())
+                    .unwrap_or_default();
+                code.set_visible(!pin.is_empty());
+                code.set_text(&format!("Code: {pin}"));
+            }
             if let Some(send) = named(root.upcast_ref(), "send-device") {
-                send.set_sensitive(ready && projection.1);
+                send.set_sensitive(ready && projection.1 && active.is_none());
             }
             pages.get_mut("nearby").unwrap().push(root);
             used.insert(key);
         }
-        let mut active_rows = Vec::new();
-        let mut terminal_rows = Vec::new();
-        let mut grouped: BTreeMap<String, Vec<gtk::Box>> = BTreeMap::new();
         let discovered: BTreeSet<&str> =
             view.endpoints.iter().map(|peer| peer.id.as_str()).collect();
-        let recent: BTreeSet<_> = view
-            .transfers
-            .iter()
-            .rev()
-            .filter(|transfer| transfer.phase.is_terminal())
-            .take(5)
-            .map(|transfer| transfer.transfer.id())
-            .collect();
         for transfer in &view.transfers {
-            if transfer.phase.is_terminal()
-                && !recent.contains(transfer.transfer.id())
-                && transfer.completed_files.is_empty()
-                && transfer.content_revision.is_none()
-            {
-                continue;
-            }
             for page in ["nearby", "incoming", "transfers"] {
                 let incoming = transfer.direction == Direction::Inbound
                     && transfer.phase == Phase::AwaitingConsent;
-                if (page == "incoming" && !incoming)
-                    || (page == "transfers" && transfer.phase.is_terminal())
+                if page == "incoming" && !incoming {
+                    continue;
+                }
+                if page == "nearby"
+                    && !card_transfer_visible(
+                        transfer.direction,
+                        transfer.phase,
+                        transfer.associated_endpoint.as_deref(),
+                        &discovered,
+                    )
                 {
                     continue;
                 }
                 let root = self.cached_transfer(&mut rows, page, transfer, ready, incoming);
                 if page == "nearby" {
-                    if transfer.phase.is_terminal() {
-                        if let Some(endpoint) = bound_current_endpoint(
-                            transfer.direction,
-                            transfer.associated_endpoint.as_deref(),
-                            &discovered,
-                        ) {
-                            grouped.entry(endpoint.to_owned()).or_default().push(root);
-                        } else {
-                            terminal_rows.push(root);
-                        }
-                    } else {
-                        active_rows.push(root);
+                    if let Some(status) = named(root.upcast_ref(), "row-status") {
+                        status.set_visible(false);
                     }
-                } else {
-                    pages.get_mut(page).unwrap().push(root);
+                    if let Some(button) =
+                        named(root.upcast_ref(), "row-action").and_downcast::<gtk::Button>()
+                    {
+                        button.set_label(if transfer.direction == Direction::Inbound {
+                            "Receive"
+                        } else {
+                            "Send"
+                        });
+                        button.set_sensitive(transfer.direction == Direction::Inbound);
+                    }
                 }
+                pages.get_mut(page).unwrap().push(root);
                 used.insert((page.to_owned(), transfer.transfer.id().to_owned()));
             }
-        }
-        // Only same-epoch endpoint IDs from the daemon can link an outbound
-        // result to discovery. Inbound advertised names are never identity.
-        for endpoint in &view.endpoints {
-            let key = ("nearby".to_owned(), endpoint.id.clone());
-            let Some(entry) = rows.entries.get(&key) else {
-                continue;
-            };
-            let root = entry.root.clone();
-            let existing =
-                named(root.upcast_ref(), "device-activity").and_downcast::<gtk::Expander>();
-            if let Some(operations) = grouped.remove(&endpoint.id) {
-                let expander = existing.unwrap_or_else(|| {
-                    let expander = gtk::Expander::new(Some("Completed operations"));
-                    expander.set_widget_name("device-activity");
-                    expander.set_resize_toplevel(true);
-                    expander.set_expanded(false);
-                    let body = gtk::Box::new(gtk::Orientation::Vertical, 8);
-                    expander.set_child(Some(&body));
-                    let weak = Rc::downgrade(self);
-                    expander.connect_expanded_notify(move |_| {
-                        if let Some(panel) = weak.upgrade() {
-                            panel.pin_surface_bottom();
-                            let weak = Rc::downgrade(&panel);
-                            glib::idle_add_local_once(move || {
-                                if let Some(panel) = weak.upgrade() {
-                                    panel.resize_to_content();
-                                }
-                            });
-                        }
-                    });
-                    root.append(&expander);
-                    expander
-                });
-                let body = expander
-                    .child()
-                    .and_downcast::<gtk::Box>()
-                    .expect("device activity container");
-                arrange(&body, &operations);
-            } else if let Some(expander) = existing {
-                root.remove(&expander);
-            }
-        }
-        // When a peer disappears, its in-memory operations remain accessible,
-        // but they cannot be grouped with a later device of the same name.
-        for (_, operations) in grouped {
-            terminal_rows.extend(operations);
-        }
-        let devices = std::mem::take(pages.get_mut("nearby").unwrap());
-        let nearby = pages.get_mut("nearby").unwrap();
-        if !active_rows.is_empty() {
-            nearby.push(cached_section(
-                &mut rows,
-                &mut used,
-                "current",
-                "Current transfers",
-            ));
-            nearby.extend(active_rows.into_iter().rev());
-        }
-        nearby.push(cached_section(
-            &mut rows,
-            &mut used,
-            "discovered",
-            "Discovered devices",
-        ));
-        if devices.is_empty() {
-            let empty = card();
-            empty.append(&label(
-                "No nearby devices. Make the receiving device visible.",
-            ));
-            nearby.push(empty);
-        } else {
-            nearby.extend(devices);
-        }
-        if !terminal_rows.is_empty() {
-            let key = ("nearby".to_owned(), "activity:unlinked".to_owned());
-            let entry = rows.entries.entry(key.clone()).or_insert_with(|| {
-                let root = card();
-                let expander = gtk::Expander::new(Some("Recent activity · device not verified"));
-                expander.set_resize_toplevel(true);
-                expander.set_widget_name("unlinked-activity");
-                expander.set_expanded(false);
-                let body = gtk::Box::new(gtk::Orientation::Vertical, 8);
-                expander.set_child(Some(&body));
-                let weak = Rc::downgrade(self);
-                expander.connect_expanded_notify(move |_| {
-                    if let Some(panel) = weak.upgrade() {
-                        panel.pin_surface_bottom();
-                        let weak = Rc::downgrade(&panel);
-                        glib::idle_add_local_once(move || {
-                            if let Some(panel) = weak.upgrade() {
-                                panel.resize_to_content();
-                            }
-                        });
-                    }
-                });
-                root.append(&expander);
-                Entry {
-                    root,
-                    transfer: None,
-                    endpoint: None,
-                }
-            });
-            let expander = named(entry.root.upcast_ref(), "unlinked-activity")
-                .and_downcast::<gtk::Expander>()
-                .expect("session activity expander");
-            let body = expander
-                .child()
-                .and_downcast::<gtk::Box>()
-                .expect("session activity container");
-            arrange(&body, &terminal_rows);
-            nearby.push(entry.root.clone());
-            used.insert(key);
         }
         for (page, title) in [
             (
@@ -756,5 +677,74 @@ mod badge_tests {
         }
         assert_eq!(badge_style(Badge::Available), ("●", "success"));
         assert_eq!(badge_style(Badge::Unavailable), ("−", "dim-label"));
+    }
+}
+
+#[cfg(test)]
+mod device_contract_tests {
+    use super::*;
+    #[test]
+    fn given_transfer_direction_phase_and_association_when_projected_then_card_contains_only_live_peer_rows(
+    ) {
+        // Arrange / Act / Assert
+        let peers = ["current"].into_iter().collect();
+        for phase in [
+            Phase::Finished,
+            Phase::Rejected,
+            Phase::Cancelled,
+            Phase::Failed,
+            Phase::Disconnected,
+        ] {
+            for direction in [Direction::Inbound, Direction::Outbound] {
+                assert!(!card_transfer_visible(direction, phase, None, &peers));
+            }
+        }
+        for phase in [
+            Phase::Queued,
+            Phase::Active,
+            Phase::AwaitingConsent,
+            Phase::Sending,
+            Phase::Receiving,
+            Phase::CancelRequested,
+        ] {
+            assert!(!card_transfer_visible(
+                Direction::Outbound,
+                phase,
+                Some("current"),
+                &peers
+            ));
+            assert!(card_transfer_visible(
+                Direction::Outbound,
+                phase,
+                Some("vanished"),
+                &peers
+            ));
+            assert!(card_transfer_visible(
+                Direction::Outbound,
+                phase,
+                None,
+                &peers
+            ));
+            assert!(card_transfer_visible(
+                Direction::Inbound,
+                phase,
+                Some("current"),
+                &peers
+            ));
+        }
+    }
+    #[test]
+    fn given_byte_progress_when_unknown_or_overrun_then_bar_stays_finite_and_bounded() {
+        for (done, total, expected) in [
+            (0, 0, 0.0),
+            (1, 0, 0.0),
+            (0, 1, 0.0),
+            (1, 2, 0.5),
+            (2, 2, 1.0),
+            (3, 2, 1.0),
+            (u64::MAX, u64::MAX, 1.0),
+        ] {
+            assert_eq!(progress_fraction(done, total), expected);
+        }
     }
 }

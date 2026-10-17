@@ -354,11 +354,12 @@ fn run_gui(
         if options.preview {
             panel.set_drawer(options.mode);
             panel.preview(&options.page);
+            let preview_surface=panel.preview_surface(&options.page);
             if let Some(output) = options.output.clone() {
                 let application = application.clone();
                 let failure = failure_ui.clone();
                 let preview = Rc::downgrade(&panel);
-                panel.window.add_tick_callback(move |window, _| {
+                preview_surface.add_tick_callback(move |window, _| {
                     if preview.upgrade().is_none_or(|panel| !panel.preview_ready()) {
                         return glib::ControlFlow::Continue;
                     }
@@ -385,7 +386,7 @@ fn run_gui(
                     glib::ControlFlow::Break
                 });
             }
-            panel.window.present();
+            preview_surface.present();
         } else {
             if let Some(updates) = safety_updates.clone() {
                 let weak = Rc::downgrade(&panel);

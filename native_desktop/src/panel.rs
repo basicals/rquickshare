@@ -15,7 +15,6 @@ use rqs_lib::service::client::{
 use rqs_lib::service::{Direction, Lifecycle, Phase};
 use std::{
     cell::{Cell, RefCell},
-    collections::BTreeMap,
     rc::Rc,
     sync::Arc,
 };
@@ -28,11 +27,11 @@ mod incoming_preview;
 mod menu;
 mod movement;
 mod presentation;
-mod recipients;
 mod reveal;
 mod rows;
 mod settings;
 mod text;
+mod transfers;
 mod tray;
 
 #[derive(Default)]
@@ -55,7 +54,6 @@ struct Model {
     manual_requested: bool,
     preview: bool,
     position_pinned: bool,
-    recipients: BTreeMap<String, String>,
 }
 pub struct Panel {
     pub window: gtk::Window,
@@ -75,6 +73,7 @@ pub struct Panel {
     about: RefCell<Option<gtk::AboutDialog>>,
     settings_owner: RefCell<Option<Rc<settings::Editor>>>,
     text_review: RefCell<Option<Rc<text::Review>>>,
+    transfers: RefCell<Option<Rc<transfers::Window>>>,
     composer: RefCell<Option<Rc<compose::Composer>>>,
     image: RefCell<Option<Rc<image::Image>>>,
     preview_image: incoming_preview::Fixture,
@@ -248,9 +247,9 @@ fn source_summary(
 ) -> String {
     use rqs_lib::sessions::details::PayloadKind;
     match kind {
-        PayloadKind::Files => format!("{} files prepared · choose recipients", file_count),
+        PayloadKind::Files => format!("{} files prepared · choose a device", file_count),
         PayloadKind::Text | PayloadKind::Url => format!(
-            "{} prepared · {} bytes · choose recipients",
+            "{} prepared · {} bytes · choose a device",
             if kind == PayloadKind::Url {
                 "Link"
             } else {
@@ -297,7 +296,7 @@ fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'stat
             "A recipient is no longer available. Review the selected devices; nothing was queued."
         }
         Some(Rejected(rqs_lib::service::Error::Capacity)) => {
-            "Sharing resources are busy. Nothing was queued. Try fewer recipients or wait."
+            "Sharing resources are busy. Nothing was queued. Wait for a queued transfer to finish."
         }
         Some(_) => "The operation was not accepted. Review the current state and try again.",
         None => "",
@@ -372,6 +371,7 @@ impl Panel {
             about: RefCell::new(None),
             settings_owner: RefCell::new(None),
             text_review: RefCell::new(None),
+            transfers: RefCell::new(None),
             composer: RefCell::new(None),
             image: RefCell::new(None),
             preview_image: incoming_preview::Fixture::default(),
@@ -466,15 +466,6 @@ impl Panel {
                             .as_ref()
                             .is_some_and(|view| !view.selections.is_empty()),
                 );
-                panel.box_widget("recipients").set_visible(
-                    nearby
-                        && (!model.recipients.is_empty()
-                            || model
-                                .state
-                                .view
-                                .as_ref()
-                                .is_some_and(|view| !view.selections.is_empty())),
-                );
             }
         });
         panel.render();
@@ -515,16 +506,6 @@ impl Panel {
         }
         {
             let mut model = self.model.borrow_mut();
-            if state.disconnected || previous_epoch != current_epoch {
-                model.recipients.clear();
-            }
-            if let Some(view) = &state.view {
-                for endpoint in &view.endpoints {
-                    if let Some(name) = model.recipients.get_mut(&endpoint.id) {
-                        *name = endpoint.name.clone();
-                    }
-                }
-            }
             model.state = state;
         }
         if let Some(editor) = self.settings_owner.borrow().as_ref() {
@@ -656,11 +637,13 @@ impl Panel {
         if let Some(about) = self.about.borrow_mut().take() {
             about.destroy();
         }
+        if let Some(window) = self.transfers.borrow_mut().take() {
+            window.close();
+        }
         self.context.unparent();
         self.sending.unparent();
         let mut model = self.model.borrow_mut();
         model.closing = true;
-        model.recipients.clear();
         model.dialog_permit.take();
         if let Some(dialog) = model.dialog.take() {
             dialog.cancel();
@@ -704,9 +687,6 @@ impl Panel {
                 {
                     let mut model = panel.model.borrow_mut();
                     model.waiting = false;
-                    if recipients::confirmed(&result) {
-                        model.recipients.clear();
-                    }
                     model.notice = match &result {
                         Ok(rqs_lib::service::client::controller::ActionResult::Settings(view)) if view.error != 0 =>
                             Some("Visibility was saved but could not be fully applied. Review discovery status and Settings."),
@@ -829,6 +809,9 @@ impl Panel {
     pub fn render(self: &Rc<Self>) {
         // Publish after readiness/action updates using an immutable model projection.
         let model = self.model.borrow();
+        if let Some(window) = self.transfers.borrow().as_ref() {
+            window.render(&model);
+        }
         let preview = model.preview;
         let full = model.drawer == Drawer::Open;
         self.box_widget("source").set_visible(
@@ -956,7 +939,6 @@ impl Panel {
                 .is_some_and(|source| {
                     source.kind == rqs_lib::sessions::details::PayloadKind::Files
                 });
-        self.render_recipients(&model, selected);
         self.button("files").set_sensitive(ready && can_add);
         self.button("folder").set_sensitive(ready && can_add);
         self.button("discard").set_sensitive(ready && selected);
@@ -1120,7 +1102,7 @@ impl Panel {
             }
             return;
         };
-        self.render_rows(view, selection, ready, current, &model.recipients);
+        self.render_rows(view, selection, ready, current);
         self.resize_to_content();
     }
     fn resize_to_content(&self) {
@@ -1381,9 +1363,37 @@ impl Panel {
     pub fn preview(self: &Rc<Self>, page: &str) {
         self.model.borrow_mut().preview_page = Some(page.into());
         self.render_preview(page);
+        if page == "transfers" {
+            self.model.borrow_mut().state.journal =
+                Some(Arc::new(rqs_lib::service::journal::View {
+                    token: "preview-only".into(),
+                    error: 0,
+                    records: vec![rqs_lib::service::journal::Record {
+                        id: format!("{:032x}-{:016x}", 7, 1),
+                        peer: "Example phone".into(),
+                        inbound: true,
+                        status: "finished".into(),
+                        kind: "files".into(),
+                        files: 2,
+                        total: 12345,
+                        transferred: 12345,
+                        started: 1_792_224_000,
+                        updated: 1_792_224_060,
+                    }],
+                }));
+            self.show_transfers();
+        }
         if page == "incoming" {
             incoming_preview::Fixture::start(self);
         }
+    }
+    pub fn preview_surface(&self, page: &str) -> gtk::Window {
+        if page == "transfers" {
+            if let Some(window) = self.transfers.borrow().as_ref() {
+                return window.surface();
+            }
+        }
+        self.window.clone()
     }
     pub fn preview_ready(&self) -> bool {
         self.model.borrow().preview_page.as_deref() != Some("incoming")
@@ -1413,16 +1423,7 @@ impl Panel {
                 },
             ],
         };
-        let choices = fixture
-            .endpoints
-            .iter()
-            .map(|peer| (peer.id.clone(), peer.name.clone()))
-            .collect();
-        self.render_rows(&fixture, None, false, None, &choices);
-        self.box_widget("recipients")
-            .set_visible(self.drawer() == Drawer::Open && page == "nearby");
-        self.text("recipient-summary", "2 selected · preview");
-        self.button("send-many").set_label("Send to 2");
+        self.render_rows(&fixture, None, false, None);
         let details = TransferDetails {
             status: DetailsStatus::Ready,
             sender: "Example phone".into(),

@@ -164,7 +164,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(panel.drawer(), Drawer::Open);
     assert!(
         !panel.sending.is_visible(),
-        "Send must select a device before content"
+        "Source choice must stay closed while preparation is busy and no service view exists"
     );
     drop(permit);
     assert!(!*panel.ingress.gate.subscribe().borrow());
@@ -360,7 +360,48 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(*panel.settings.borrow().as_ref().unwrap(), settings);
     assert!(settings.is_visible());
     tray::verify_tray_projection(&panel);
-    recipients::tests::verify_ui(&panel);
+    assert!(panel.builder.object::<gtk::Widget>("recipients").is_none());
+    assert!(panel.builder.object::<gtk::Widget>("send-many").is_none());
+    // Arrange: a connected presentation with no prepared source, without a mutation handle.
+    panel.model.borrow_mut().state.view =
+        Some(Arc::new(rqs_lib::service::client::state::StateView {
+            sources: vec![],
+            epoch: 123,
+            revision: 1,
+            lifecycle: Lifecycle::Running,
+            synchronized: true,
+            resources: Default::default(),
+            endpoints: vec![rqs_lib::service::client::state::Endpoint {
+                id: "device".into(),
+                name: "Example device".into(),
+            }],
+            selections: vec![],
+            transfers: vec![],
+            warnings: vec![],
+            notices: vec![],
+        }));
+    panel.model.borrow_mut().preview = false;
+    panel.show_sending();
+    assert!(
+        panel.sending.is_visible(),
+        "content choice must precede recipient Send"
+    );
+    panel.sending.popdown();
+    panel.render();
+    fn assert_no_choices(widget: &gtk::Widget) {
+        assert!(!widget.is::<gtk::CheckButton>());
+        let mut child = widget.first_child();
+        while let Some(next) = child {
+            child = next.next_sibling();
+            assert_no_choices(&next);
+        }
+    }
+    assert_no_choices(panel.box_widget("nearby").upcast_ref());
+    panel.show_transfers();
+    assert!(panel.transfers.borrow().is_some());
+    assert_eq!(panel.pages.visible_child_name().as_deref(), Some("nearby"));
+    assert!(!panel.model.borrow().closing);
+
     image::tests::verify_image_smoke(&panel, &application);
     compose::tests::verify_composer_smoke(&panel, &application);
     text::tests::verify_review_smoke(&panel, &application);
