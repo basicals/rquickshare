@@ -46,7 +46,7 @@ this invocation provides no meaningful Rust branch measure.
 | `core_lib` cargo llvm-cov all-features | 86.20% regions | 85.30% | **89.35%** | 37,042 regions; 26,281 lines; 2,800 missed lines |
 | Vue/Vitest V8 src | 56.00% statements | 75.86% | **56.00%** | 88.04% branches |
 | Legacy `app/main/src-tauri` llvm-cov | 24.98% regions | 19.29% | **23.86%** | 1,577 regions; 1,052 lines; 801 missed lines |
-| Native `native_desktop` GTK4 | **not instrumented** | **not instrumented** | **not instrumented** | 52 cases × 10 were executed but are not an instrumented coverage measurement |
+| Native `native_desktop` GTK4 — separate focused run | 65.35% regions | 63.09% | **67.00%** | 52/0 one-shot instrumented GTK cases; 33-file per-source report; still no Rust branch coverage |
 
 The core aggregate includes instrumented Rust test modules
 and `include!` fixture files such as
@@ -220,8 +220,10 @@ no regressions.
   baseline with per-source file map.
 - [x] Normal Preflight stable 1x / eight risk-oriented
   tests 10x with 5/5 complete jobs.
-- [ ] Instrument current **native GTK** file/function/line
-  coverage in its isolated real X11/D-Bus runner.
+- [x] Instrument current **native GTK** file/function/line
+  coverage in its isolated real X11/D-Bus runner; **67.00% lines,
+  63.09% functions, 65.35% regions**, 52/0 tests,
+  [33-file map](native-gtk-coverage-baseline-2026-10-17.md).
 - [ ] Classify uncovered production code as deterministic
   testable vs hardware-only, with explicit per-function
   branch/N1-N12 matrix, before adding any tests.
