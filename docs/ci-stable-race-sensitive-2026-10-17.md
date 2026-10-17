@@ -159,6 +159,37 @@ once; revert only mode-b venv patch to recreate old environment
 on the user's machine, installed packages, master or live services
 are touched.
 
+## Verified routine Core CI source results
+
+Exact code source `f8e5d2d01d62200fcfd570c7bdf1f9051874845d`,
+ordinary Preflight run
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477112,
+Core Rust job 117495164526 **completed SUCCESS**:
+
+- Compiled original core test registry contains **704** library tests,
+  and the selected race-sensitive group contains **8** distinct full
+  names, all present once. The selector rejects unknown test names
+  or runs that execute zero actual tests.
+- Stable pass: **696 passed, 0 failed, 0 ignored**, with **8
+  intentionally filtered**; both original core integration binaries
+  also passed **4 + 4**. No test in the stable remainder is skipped
+  by unspecified filters.
+- Stress pass: exactly ten distinct attempt headers 1..10 and
+  **80 separate `test result: ok. 1 passed; 0 failed; 0 ignored`**
+  summaries, covering all eight selected methods per attempt.
+  Final log: `Core race-sensitive suite: all ten complete attempts
+  passed.` No retry-on-failure, ignored test or mocked behavior.
+- Rust format, frontend lint/type/unit and core strict Clippy
+  jobs also passed. Legacy Tauri Clippy was still running when
+  this checkpoint was recorded; the overall 5/5 Preflight status
+  must be verified separately.
+
+This evidence confirms the **ordinary Core partition** but not
+that the eight methods are historically flaky, nor that *every*
+Core test passed ten times. It does not imply a full MODE B
+completion gate; separate full MODE B 39066477128 still ran
+at the record checkpoint.
+
 ## Execution and handoff
 
 - Documentation-first baseline `74ae5906`.
