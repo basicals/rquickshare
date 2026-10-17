@@ -46,15 +46,15 @@ changing any source contract, and fix code only if the real regressions fail.
    from the existing `admitted()` fixture: finish file A, write incomplete
    bytes of file B, close the peer before/within length/body of its next frame.
    Require actual `handle()` error (UnexpectedEof) before terminal mapping.
-3. [ ] Apply the same terminal mapping as the manager and assert exact original
+3. [x] Apply the same terminal mapping as the manager and assert exact original
    manifest, Disconnected state, one retained A receipt with a verified
    read-only descriptor, no B final filename, no staging FD/publication owner,
    no change to accepted A bytes, and no second transfer/source replay.
    Compare pre-terminal versus post-terminal capability visibility.
-4. [ ] Run affected core CI, format, strict lint and GUI check once, investigate
+4. [x] Run affected core CI, format, strict lint and GUI check once, investigate
    any concrete failures and only then fix their cause. Record source SHA,
    jobs, assertions and unresolved physical limits.
-5. [ ] Update current state and handoff. Keep native29 installed and native30
+5. [x] Update current state and handoff. Keep native29 installed and native30
    packaging/desktop/peer acceptance pending. No new branch or merge.
 
 Rollback is the isolated test commit and any separately justified production
@@ -129,3 +129,37 @@ https://github.com/morozhenko-apps/rquickshare/actions/runs/39052547479
 
 No completed pass is claimed for the corrected test at this checkpoint.
 
+
+## Verified final source checkpoint
+
+Final production/test source: `7820b155`. The new real-socket test exercises
+five table cases (0, 1, 2, 3 consumed header bytes, plus truncated body)
+after the first published member and one incomplete second member.
+Each case reaches actual `UnexpectedEof` via `InboundRequest::handle`.
+The same explicit disconnected terminal mapping as the manager preserves
+the first member, exact file bytes, one read-only receipt and the original
+manifest/progress, discards the unfinished anonymous inode, and leaves no
+active publication/file handle. A repeated terminal notification cannot
+override the outcome or duplicate the result. No resend is called.
+
+Exact-source checks:
+- Core library: 697 passed / 0 failed; modern protocol: 4 / 0; native daemon:
+  4 / 0. Run 39052547406.
+- Native GTK isolated UI: 52 passed / 0 failed. Run 39052547479.
+- Python contract: 54 passed / 0 failed in the Preflight Rust format job.
+- Rust nightly format, core strict Clippy and frontend jobs passed.
+- The legacy Tauri Clippy job remained in progress when this checkpoint was
+  written; do not infer its outcome until GitHub marks it completed.
+
+This is scoped regression evidence, not an instrumented percentage,
+ten-run MODE B stability, a full device/network test or a new installed binary.
+The existing high-level manager socket-error-to-terminal route was inspected,
+not newly re-executed with a full end-to-end Google peer handshake.
+Previously covered write failure, collision, cancellation and explicit
+operation-ledger retry remain separate tests; they are not counted among
+the new five EOF cases.
+
+Remaining: real Pixel/Windows peer acceptance; intentional cancel during
+handshake and active transfer; actual KDE notification/lifecycle; host disk,
+permission and suspend tests; package/upgrade. The installed native29 and
+native30 source-only package revision are unchanged.
