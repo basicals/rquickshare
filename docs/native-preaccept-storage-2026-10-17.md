@@ -139,13 +139,76 @@ confirmed defect requires a separately documented MODE A repair.
 
 1. [x] Scan actual root/staging/consent/error code; inventory risks,
    branches, five cases, matrix, mutation review and rollback here.
-2. [ ] Implement all five cases using real request/session and kernel
+2. [x] Implement all five cases using real request/session and kernel
    file descriptors; source comments/code English.
-3. [ ] Run source-exact CI, triage any failure without assertion
+3. [x] Run source-exact CI, triage any failure without assertion
    weakening, record exact results.
-4. [ ] Update this ledger and `docs/current-state.md`; retain all
+4. [x] Update this ledger and `docs/current-state.md`; retain all
    physical/coverage gates and source-only dev handoff.
 
-## Execution
+## Execution and exact-source CI evidence
 
-Pending.
+Plan commit `017ccae2` preceded all code. Test source `db19ca8f`
+added two parameterized tests and one optional receive-root fixture
+parameter. Its first Preflight failed during test compilation, not
+domain execution: `futures::poll!` needed the duplex-read future to
+be pinned (`E0277: PhantomPinned`). Changed the assertion to use
+`tokio::pin!(read); futures::poll!(read.as_mut())` in
+`c011f10f` without weakening the no-Accept contract. No production
+code, dependency, schema, protocol or host permissions changed.
+
+**Verified source commit: `c011f10f`.**
+
+- GitHub [Preflight](https://github.com/morozhenko-apps/rquickshare/actions/runs/39062398167):
+  core library **704 passed / 0 failed**, modern protocol **4/0**,
+  native daemon **4/0**. Both added test methods are explicitly
+  reported `ok` by the job log; they execute all five cases.
+  Rust format, core strict Clippy, offline Python contract
+  **54 passed / 0 failed**, and frontend lint/type/unit passed.
+- [Native GTK](https://github.com/morozhenko-apps/rquickshare/actions/runs/39062398170):
+  strict GTK build/lint and **52/0** isolated tests passed.
+- Legacy Tauri Clippy was **still in progress** at this write.
+  Do not report full 5/5 Preflight until this job completes.
+
+### Coverage map by production file, primary categories
+
+| Source and method | New coverage | Existing/remaining |
+|---|---|---|
+| `receive.rs::Directory::pin` | Missing root before Introduction, safe generic error | Positive configured/adopted and moved root in prior tests |
+| `receive.rs::Root::stage_file` / `destination_parent` | Unlinked root; regular and symlink later parent; unsupported procfs `O_TMPFILE` | Real selected full/read-only mounts and permission ACL variation remain physical |
+| `hdl/inbound.rs::process_introduction` | Pin failure prevents metadata/files | Existing valid Introduction and consent |
+| `hdl/inbound.rs::accept_transfer` | First-stage failure and first-success/later-failure; no outbound Accept; no active owners | Existing complete Accept, network send error and cancellation |
+| `hdl/inbound.rs::record_termination` / `finish_received` | Zero completed members, zero receipt and absorbing Disconnected for all post-Introduction failures | Existing saved partial first member on later receive failure |
+| `sessions.rs`, `received_files.rs` | Original manifest unchanged, no file capabilities, exact zero progress | Existing complete/partial and stale capture contracts |
+| Other unchanged core/UI files | All existing tests reexecuted | Not counted as new targeted branch coverage |
+
+Five subcases across two methods by **primary N-category**:
+N6=1 (deleted root after Introduction), N7=2 (regular-file
+and symlink parent replacing expected directory), N12=2
+(missing configured root; unsupported-fs anonymous staging).
+Positive, N1–N5, N8–N11 have **zero newly added subcases**,
+but their applicable existing regressions were reexecuted.
+N8 (clock/locale) and N11 (billing) are inapplicable. N3 is
+not applicable to the Root alone; existing handler socket-failure
+tests remain green. N5 interaction (successful first preparation
+then failure of second), N9 cleanup and N10 generic error redaction
+are checked **across the relevant new cases**, not counted as
+additional independent scenarios.
+
+Assertion mutation review: treating an absent root as pinning success,
+following an unsafe parent symlink, committing a first staged file
+before all are prepared, sending encrypted Accept before all stage
+operations succeed, leaking open staged owners, incrementing bytes
+on failure, fabricating a completed-file receipt or overwriting
+Disconnected with Finished each conflicts with one or more direct
+assertions. No mutation-testing engine was run.
+
+**Scoped pre-Accept stage complete; repository-wide MODE B remains
+OPEN.** The `mode-b.yml` ten-run/coverage workflow was not executed,
+and no whole-repo statement/branch percentage is asserted. The
+procfs case models actual unsupported O_TMPFILE, not an exhaustive
+survey of mounted filesystems. Physical ACL/suspend/full disk,
+installed KDE/Wayland, and real Android/Google Windows interoperability
+remain external acceptance gates. No native29 install, native30
+package refresh, `master` change, background service, signing
+or release took place. All GitHub changes stayed on dev.
