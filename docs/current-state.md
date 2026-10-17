@@ -1,6 +1,54 @@
 # Current implementation and continuation state
 
 
+## P0-first critical sharing reliability — 2026-10-17
+
+The user's explicit execution order is **critical real
+transfer, consent, cancellation and error-recovery scenarios
+first; secondary coverage-percent improvement only after
+the critical functional gates**. Active priorities are
+[Essential native sharing priorities](native-essential-priorities.md)
+and [physical acceptance](native-essential-acceptance.md).
+High coverage totals do not override untested Google
+Android/Windows interoperability, consent, text/folder,
+peer cancellation, user retry or actual KDE/Wayland.
+
+Source-only P0 managed multi-file user-decline audit:
+[test plan and verified evidence](native-critical-inbound-rejection-2026-10-17.md),
+code `da71cdcd`: two original real managed/network
+protocol tests pass. Their 5-job ordinary Preflight
+39075819730 and Native GTK 39075819773 passed; the
+actual wire response is encrypted Reject and **no
+accepted file or read capability** survives even
+when the peer closes its socket.
+
+The next real P0 source test addresses **remote Cancel
+after Accept**, before/after a completed first file,
+including an incomplete staged second file and
+encrypted Disconnection. Plan and first-failure/
+test-contract correction:
+[native-critical-peer-cancel-2026-10-17.md](native-critical-peer-cancel-2026-10-17.md).
+The first test run established `transferred_bytes`
+includes written but *unpublished* staged bytes;
+partial receipts must satisfy `subset_of`, not
+`valid_for` all members. **No production behavior
+was changed**. Corrected test-only source
+`b69a6581` is being revalidated on GitHub
+[Preflight 39076613994](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076613994)
+and [Native GTK 39076614010](https://github.com/morozhenko-apps/rquickshare/actions/runs/39076614010).
+Neither running job is claimed successful yet.
+Full MODE B 10x previously passed at prior source
+`f8e5d2d0`; after new P0 tests, strict current-source
+10x/post-hardware acceptance remains to be redone.
+
+No installed native29, user workstation, accounts,
+physical peer, `master`, release/signing or native30
+package was changed. User-led Android/Windows and
+installed real tray/portal checks remain UNTESTED
+where the evidence matrix says so.
+
+
+
 ## Native GTK exact instrumented coverage — 2026-10-17
 
 At workflow-only source `3bb41cb6`,
