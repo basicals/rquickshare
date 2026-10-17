@@ -159,6 +159,24 @@ once; revert only mode-b venv patch to recreate old environment
 on the user's machine, installed packages, master or live services
 are touched.
 
+## Follow-up: completed ordinary Preflight (all jobs green)
+
+GitHub Preflight run 39066477112 completed **5/5 SUCCESS**
+on the exact production/CI source `f8e5d2d0`. The jobs are:
+Rust format and Python offline contracts, Frontend lint/type/unit,
+Core Rust stable 1x plus eight risk-oriented cases 10x,
+Core strict Clippy and legacy Tauri strict Clippy/desktop Rust tests.
+All five conclusions were read from GitHub Actions, not inferred
+from the test group output. Core log independently shows 696/0
+stable, integration binaries 4/0 + 4/0, and 80/0 exact stress
+invocations with ten attempt headers. These establish the ordinary
+CI cadence's execution gate for this source.
+
+The independent *final* full MODE B run 39066477128 was still
+executing when this follow-up was recorded: do not count it as
+ten complete consecutive all-suite passes or infer new per-file
+coverage until the run is complete.
+
 ## Verified routine Core CI source results
 
 Exact code source `f8e5d2d01d62200fcfd570c7bdf1f9051874845d`,
