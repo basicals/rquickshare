@@ -1146,6 +1146,17 @@ impl Panel {
             .max(1);
         self.clamp_moved_surface(height);
         self.window.set_default_size(420, height);
+        if std::env::var_os("RQUICKSHARE_UI_DEBUG").is_some() {
+            eprintln!(
+                "rquickshare-ui: height={height} scroll_max={} pinned={} visible={}",
+                self.builder
+                    .object::<gtk::ScrolledWindow>("nearby-scroll")
+                    .map(|scroll| scroll.max_content_height())
+                    .unwrap_or_default(),
+                self.model.borrow().position_pinned,
+                self.window.is_visible()
+            );
+        }
     }
     fn incoming_card(
         self: &Rc<Self>,
