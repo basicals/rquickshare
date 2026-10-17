@@ -64,6 +64,160 @@ async fn admitted() -> (
     admitted_with_directory(None).await
 }
 
+// This critical user-decline fixture uses the actual managed consent lane and
+// encrypted production reply. Unlike admitted(), it never grants file access.
+async fn declined() -> (
+    TestRequest,
+    crate::sessions::SessionControl,
+    tokio::io::DuplexStream,
+) {
+    let mut request = test_request();
+    let (socket, peer) = tokio::io::duplex(8192);
+    request.socket = socket;
+    request.state.encrypt_key = Some(vec![0x11; 32]);
+    request.state.send_hmac_key = Some(vec![0x22; 32]);
+    request.state.remote_device_info = Some(RemoteDeviceInfo {
+        name: "phone".into(),
+        device_type: crate::utils::DeviceType::Phone,
+    });
+    request.state.pin_code = Some("0123".into());
+    let hub = crate::sessions::SessionHub::new(43).unwrap();
+    let session = hub
+        .open(
+            crate::channel::TransferType::Inbound,
+            None,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .unwrap();
+    let control = session.control();
+    request.session = Some(session);
+    request
+        .process_introduction(&introduction_frame(
+            vec![
+                file_metadata("a.bin", 101, 1),
+                file_metadata("b.bin", 102, 3),
+            ],
+            vec![],
+            vec![],
+        ))
+        .await
+        .unwrap();
+    assert_eq!(request.state.state, State::WaitingForUserConsent);
+    let token = control.snapshot().consent.unwrap();
+    let receipt = control.respond(token, 1, false).unwrap();
+    let command = crate::sessions::consent_command(&mut request.session)
+        .await
+        .unwrap();
+    let state = request.state.state.clone();
+    assert_eq!(
+        request.session.as_mut().unwrap().apply(command, &state),
+        Some(false)
+    );
+    receipt.wait().await.unwrap();
+    (request, control, peer)
+}
+
+#[tokio::test]
+async fn given_managed_user_decline_when_two_files_are_offered_then_real_encrypted_reject_has_no_file_authority(
+) {
+    use tokio::io::AsyncReadExt;
+
+    // Arrange: a real pending two-file consent, with no staged file descriptors.
+    let (mut request, control, peer_socket) = declined().await;
+    let directory = request._directory.path().to_owned();
+    assert!(request.state.transferred_files.values().all(|file| file.file.is_none()));
+    assert!(request.publications.is_empty());
+    assert!(std::fs::read_dir(&directory).unwrap().next().is_none());
+
+    let (sender, _) = tokio::sync::broadcast::channel(4);
+    let mut peer = InboundRequest::new(peer_socket, "reject-peer".into(), sender);
+    peer.state.decrypt_key = Some(vec![0x11; 32]);
+    peer.state.recv_hmac_key = Some(vec![0x22; 32]);
+
+    // Act: deny via the same production consent handler used by the daemon.
+    let stopped = request.apply_consent(false).await.unwrap_err();
+
+    // Assert: the peer sees exactly a real encrypted Reject, never Accept.
+    assert!(stopped.is::<crate::errors::AppError>());
+    let raw = read_plain_frame_from(&mut peer.socket).await.unwrap();
+    let secure = SecureMessage::decode(raw.as_slice()).unwrap();
+    let offline = peer.decrypt_secure_message(&secure).await.unwrap();
+    let transfer = offline.v1.unwrap().payload_transfer.unwrap();
+    let header = transfer.payload_header.as_ref().unwrap();
+    let first = transfer.payload_chunk.as_ref().unwrap();
+    assert_eq!(first.offset(), 0);
+    assert_eq!(first.flags(), 0);
+    let frame = sharing_nearby::Frame::decode(first.body.as_ref().unwrap().as_slice()).unwrap();
+    let response = frame.v1.unwrap();
+    assert_eq!(response.r#type(), sharing_nearby::v1_frame::FrameType::Response);
+    assert_eq!(
+        response.connection_response.unwrap().status(),
+        sharing_nearby::connection_response_frame::Status::Reject
+    );
+    let size = first.body.as_ref().unwrap().len();
+    assert_eq!(header.total_size(), size as i64);
+
+    let raw = read_plain_frame_from(&mut peer.socket).await.unwrap();
+    let secure = SecureMessage::decode(raw.as_slice()).unwrap();
+    let final_chunk = peer
+        .decrypt_secure_message(&secure)
+        .await
+        .unwrap()
+        .v1
+        .unwrap()
+        .payload_transfer
+        .unwrap()
+        .payload_chunk
+        .unwrap();
+    assert_eq!(final_chunk.offset(), size as i64);
+    assert_eq!(final_chunk.flags(), 1);
+    assert!(final_chunk.body.as_deref().unwrap_or_default().is_empty());
+    let mut probe = [0_u8; 1];
+    let no_more_frames = peer.socket.read(&mut probe);
+    tokio::pin!(no_more_frames);
+    assert!(futures::poll!(no_more_frames.as_mut()).is_pending());
+
+    let snapshot = control.snapshot();
+    assert_eq!(request.state.state, State::Rejected);
+    assert_eq!(snapshot.state, State::Rejected);
+    assert_eq!(snapshot.details.transferred_bytes, 0);
+    assert!(snapshot.received_files.is_none());
+    assert!(request.pending_files.is_none());
+    assert!(request.publications.is_empty());
+    assert!(request.state.transferred_files.values().all(|file| file.file.is_none()));
+    assert!(std::fs::read_dir(&directory).unwrap().next().is_none());
+    request.record_termination(State::Disconnected);
+    assert_eq!(request.state.state, State::Rejected);
+    assert_eq!(control.snapshot().state, State::Rejected);
+}
+
+#[tokio::test]
+async fn given_user_decline_and_peer_socket_loss_when_reject_cannot_be_sent_then_terminal_rejected_has_no_publication(
+) {
+    // Arrange: the real managed negative answer is already committed, but
+    // the peer drops the transport before the Reject write.
+    let (mut request, control, peer) = declined().await;
+    let directory = request._directory.path().to_owned();
+    drop(peer);
+
+    // Act: network failure must not reverse the user's refusal.
+    let failed_send = request.apply_consent(false).await.unwrap_err();
+
+    // Assert: no implicit Accept, retry, publication or receipt exists.
+    assert!(!failed_send.is::<crate::errors::AppError>());
+    assert_eq!(request.state.state, State::Rejected);
+    assert_eq!(control.snapshot().state, State::Rejected);
+    assert_eq!(control.snapshot().details.transferred_bytes, 0);
+    assert!(control.snapshot().received_files.is_none());
+    assert!(request.pending_files.is_none());
+    assert!(request.publications.is_empty());
+    assert!(request.state.transferred_files.values().all(|file| file.file.is_none()));
+    assert!(std::fs::read_dir(&directory).unwrap().next().is_none());
+    request.record_termination(State::Disconnected);
+    assert_eq!(request.state.state, State::Rejected);
+    assert_eq!(control.snapshot().state, State::Rejected);
+}
+
 #[tokio::test]
 async fn given_missing_receive_root_before_introduction_when_pinning_then_no_file_consent_or_authority_is_created(
 ) {
