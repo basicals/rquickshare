@@ -290,6 +290,9 @@ async fn given_peer_eof_during_active_multifile_receive_when_terminated_then_onl
     for interruption in 0..=4 {
         // Arrange: real accepted session and O_TMPFILE destinations.
         let (mut request, control, mut peer) = admitted().await;
+        // The test fixture retains a legacy subscriber in addition to the
+        // managed session. Real attach_session disables it before the read loop.
+        request.receiver = None;
         let directory = request._directory.path().to_owned();
         request.accept_transfer().await.unwrap();
         request
