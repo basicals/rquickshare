@@ -125,3 +125,72 @@ remain the repository-wide inventories and are not superseded by this scope.
 **Execution/coverage at plan freeze:** no tests or package builds have been run
 for these changes; CI was green on the pre-change dev/master shared head.
 Physical peer, timeout/disconnect and live card screenshots are pending.
+
+## MODE B expansion: affected-artifact inventory before adding tests
+
+The following covers the production files touched by this slice. It does not
+replace the whole-repository MODE B inventory or claim complete release signoff.
+
+| Production artifact | Testable rules and branches | Risk | Level | Planned direct cases |
+|---|---|---|---|---:|
+| `panel/rows.rs` | unchanged-key row reuse, changed-key replacement, expansion restored true/false, incoming default, terminal/active partition, discovery-key isolation, empty/device/active/recent ordering, unlinked-row disclosure, row control sensitivity and update, GTK title ellipsis | P0/P1 | GTK widget and pure | 13 |
+| `panel.rs` | monitor present/absent and short/tall cap, content growth/reduction, terminal unsupported vs ready, nonterminal unsupported consent remains blocked, content/reveal capability retention, device drawer visible/hidden and bottom bar visibility | P0/P1 | GTK widget + geometry | 11 |
+| `panel/menu.rs` | Send idle/no payload, Send prepared payload, discovered/no devices, picked device/no source, picked device/prepared source, stale/unknown endpoint, busy/disconnected, repeated send never starts a transfer | P1 | GTK/action | 10 |
+| `panel/movement.rs` (unchanged contract) | bottom margin invariant with expanded/collapsed content, too-small display and overflow-reject, moved/pinned/restore | P0 | geometry/unit | 7 existing + interaction extensions |
+| `panel/presentation.rs` (unchanged contract) | consent remains explicit and survives card Hide and Expand; no side effects from layout | P0 | GTK/domain contract | existing + 2 interactions |
+| `service/client/state.rs` (unchanged contract) | endpoint name and transfer recipient name are different untrusted fields, reject malformed/invalid rows; no phantom identity binding | P0 | protocol/contract | existing + association gate pending API decision |
+
+### Executable branch map and interactions
+
+- `same_description`: equality for all retained metadata, inequality for each
+  changed identifying/status/content field; progress-only updates must update
+  their label without rebuilding the row.
+- `cached_transfer`: existing row unchanged; existing row changed while
+  expanded or collapsed; unseen incoming default expanded; unseen outgoing
+  default collapsed; restored state must survive phase and sender updates.
+- `render_rows`: 0/1/many endpoints crossed with 0/active/terminal transfers;
+  active consent is never hidden in Recent; terminal with readable text or file
+  capability remains accessible behind one explicit expander; unlinked transfer
+  must not attach to same-name endpoint.
+- `resize_to_content`: monitor unknown vs known; height 0/1/below-reserve/
+  above-reserve, high DPI logical units and content below/at/above scroll cap;
+  pinned bottom does not move when the upper panel height changes.
+- `show_sending` / `send_to`: no source vs prepared source crossed with
+  endpoint valid/vanished and busy/idle. Recipient choice precedes content
+  picker and no action automatically admits a transfer.
+- `transfer_card`: terminal unsupported vs ready, finished vs failed or
+  cancelled, inbound vs outbound; content review only on fresh content revision.
+
+### Positive and negative matrix
+
+Legend: P = planned targeted check, E = existing regression to retain,
+NA = not applicable to the pure UI slice. All cells are explicit.
+
+| Artifact | Positive | N1 | N2 | N3 | N4 | N5 | N6 | N7 | N8 | N9 | N10 | N11 | N12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Rows / grouping | P | P(long names) | P(0/many) | NA(no network) | P(reorder) | P(phase race) | P(stale state) | P(no name association) | NA(no clock) | P(collapse) | P(no forged identity) | NA(no billing) | NA(no write) |
+| Window geometry | P | P(invalid dims) | P(screen bounds) | NA(no network) | P(repeat resize) | P(rapid toggle) | NA(no schema) | NA(no auth) | P(logical scaling) | P(hide/reopen) | NA(no PII) | NA(no billing) | NA(no storage) |
+| Send flow | P | P(invalid ID) | P(0/10 peers) | E(disconnect) | P(repeated click) | P(disappear) | P(stale selection) | E(explicit consent) | NA(no clock) | P(cancel chooser) | E(no payload log) | NA(no billing) | E(source failure) |
+| Terminal details | P | P(unsupported) | P(long text) | E(loss) | NA(read only) | P(phase change) | P(expired revision) | E(capability) | NA(no clock) | P(review denied) | P(no implicit clipboard) | NA(no billing) | E(partial file retention) |
+
+Important mutations: drop the phase/sender equality guard, replace a selected
+endpoint ID with its display name, force every expander closed on refresh, omit
+`pin_surface_bottom`, increase scroller minimum above viewport, open source
+popover before a peer is chosen, or represent Finished+Unsupported as a pending
+consent prompt. At least one specific assertion should fail for each mutation.
+
+Coverage map (required per affected production file):
+
+| File | Functions | Branch evidence before this change | Remaining |
+|---|---|---|---|
+| `native_desktop/src/panel/rows.rs` | `same_description`, `transfer_row`, `cached_transfer`, `render_rows`, `arrange` | badge and keyed-list smoke | explicit changed projection, expanded-state, section split, all boundaries |
+| `native_desktop/src/panel.rs` | `resize_to_content`, `transfer_card`, `details_card_mode`, `render` | full-card smoke, static 300px cap | dynamic monitor bounds and terminal state labeling |
+| `native_desktop/src/panel/menu.rs` | `show_sending`, `send_to`, `set_drawer` | tray action/status smoke | recipient-first positive and no-source/unknown-peer negative |
+| `native_desktop/src/panel/movement.rs` | `pin_surface_bottom`, `clamp_moved_surface`, `bottom_margin` | pure 720/1080/2160 geometry tests | actual GTK expanded/hide/reopen geometry |
+| `native_desktop/src/panel/presentation.rs` | `apply_presentation`, `hide` | safety, reset and notice tests | explicit interplay with nested Recent |
+| `core_lib/src/service/client/state.rs` | `capture_state`, `transfer_view`, recipient page | typed and bounded read checks | authenticated endpoint association (blocked choice) |
+
+Expected count in the new targeted slice: around 34 explicit positive/negative
+scenario assertions plus existing GTK, geometry and core regressions; adjust the
+actual count to the implemented inventory, not the other way around. Do not
+claim 100% branches, 10 successful runs or exact coverage until measured.
