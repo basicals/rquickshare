@@ -1,6 +1,22 @@
 # Current implementation and continuation state
 
 
+## Verified ordinary Core partition — 2026-10-17
+
+Ordinary `Preflight` run
+https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477112
+on code `f8e5d2d0` has a green **Core Rust** job:
+**696 passed once**, **8 excluded from stable** and run
+**10/10** attempts (**80 single-test passes**). Both separate
+core integration test binaries passed **4 + 4**. The job log
+records exact selector inventory and ten attempt headers;
+a zero-test selector fails closed. Formatter, frontend and
+core strict Clippy were also green at the recorded checkpoint;
+legacy desktop Tauri Clippy had not yet finished. The exact
+selector names and preserved final strict Mode B 10x requirements
+are documented in
+[CI stable/race-sensitive audit](ci-stable-race-sensitive-2026-10-17.md).
+
 ## Routine stable 1x / race-sensitive 10x CI — 2026-10-17
 
 Ordinary `Preflight` now partitions `core_lib` using
