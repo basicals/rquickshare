@@ -2443,6 +2443,175 @@ mod security_tests {
         }
 
         #[tokio::test]
+        async fn given_zero_byte_native_files_when_accepted_then_every_member_has_exactly_one_terminal_frame(
+        ) {
+            // Arrange / Act / Assert: actual retained files, encrypted loopback and wire IDs.
+            for bodies in [
+                vec![Vec::new()],
+                vec![Vec::new(), b"abc".to_vec(), Vec::new()],
+            ] {
+                let directory = tempfile::tempdir().unwrap();
+                let mut opened = Vec::new();
+                let mut expected = std::collections::HashMap::new();
+                for (index, body) in bodies.iter().enumerate() {
+                    let name = format!("item-{index}.bin");
+                    let path = directory.path().join(&name);
+                    std::fs::write(&path, body).unwrap();
+                    expected.insert(name.clone(), body.clone());
+                    opened.push(OpenedFile::adopt(File::open(path).unwrap(), name).unwrap());
+                }
+                let selection =
+                    OpenedSelection::from_files(opened, SelectionLimits::default()).unwrap();
+                let (mut request, mut peer) = native_request(selection).await;
+                request
+                    .process_paired_key_result(&paired_result())
+                    .await
+                    .unwrap();
+                let intro = read_native_frame(&mut peer, 1).await;
+                let body = intro
+                    .v1
+                    .unwrap()
+                    .payload_transfer
+                    .unwrap()
+                    .payload_chunk
+                    .unwrap()
+                    .body
+                    .unwrap();
+                let introduction = sharing_nearby::Frame::decode(body.as_slice())
+                    .unwrap()
+                    .v1
+                    .unwrap()
+                    .introduction
+                    .unwrap();
+                assert_eq!(introduction.file_metadata.len(), bodies.len());
+                let end = read_native_frame(&mut peer, 2).await;
+                assert_eq!(
+                    end.v1
+                        .unwrap()
+                        .payload_transfer
+                        .unwrap()
+                        .payload_chunk
+                        .unwrap()
+                        .flags(),
+                    1
+                );
+
+                let manifest = introduction
+                    .file_metadata
+                    .iter()
+                    .map(|metadata| {
+                        let name = metadata.name().to_owned();
+                        let bytes = expected.get(&name).unwrap();
+                        assert_eq!(metadata.size(), bytes.len() as i64);
+                        (metadata.payload_id(), (name, bytes.clone()))
+                    })
+                    .collect::<std::collections::HashMap<_, _>>();
+                assert_eq!(manifest.len(), bodies.len());
+
+                request
+                    .process_consent(&consent_frame(
+                        sharing_nearby::connection_response_frame::Status::Accept,
+                    ))
+                    .await
+                    .unwrap();
+
+                let mut observed = std::collections::HashMap::<i64, (u32, u32)>::new();
+                let expected_frame_count =
+                    bodies.len() + bodies.iter().filter(|body| !body.is_empty()).count();
+                // This outer deadline detects a missing EOF without sleep-based synchronization.
+                tokio::time::timeout(std::time::Duration::from_secs(5), async {
+                    for sequence in 3..3 + expected_frame_count as i32 {
+                        let frame = read_native_frame(&mut peer, sequence).await;
+                        let transfer = frame.v1.unwrap().payload_transfer.unwrap();
+                        let header = transfer.payload_header.unwrap();
+                        let chunk = transfer.payload_chunk.unwrap();
+                        let (_, bytes) = manifest.get(&header.id()).unwrap();
+                        assert_eq!(header.total_size(), bytes.len() as i64);
+                        let counts = observed.entry(header.id()).or_default();
+                        if chunk.flags() == 1 {
+                            assert_eq!(chunk.offset(), bytes.len() as i64);
+                            assert!(chunk.body().is_empty());
+                            counts.1 += 1;
+                        } else {
+                            assert_eq!(chunk.flags(), 0);
+                            assert_eq!(chunk.offset(), 0);
+                            assert_eq!(chunk.body(), bytes.as_slice());
+                            counts.0 += 1;
+                        }
+                    }
+                    let disconnect =
+                        read_native_frame(&mut peer, 3 + expected_frame_count as i32).await;
+                    assert_eq!(
+                        disconnect.v1.unwrap().r#type(),
+                        location_nearby_connections::v1_frame::FrameType::Disconnection
+                    );
+                })
+                .await
+                .expect("outbound member EOF and disconnection must arrive");
+
+                assert_eq!(observed.len(), manifest.len());
+                for (id, (_, bytes)) in manifest {
+                    assert_eq!(
+                        observed.get(&id),
+                        Some(&(u32::from(!bytes.is_empty()), 1)),
+                        "id={id}"
+                    );
+                }
+                assert_eq!(request.state.state, State::Finished);
+                assert!(request.state.transferred_files.is_empty());
+                assert_eq!(
+                    request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                    bodies.iter().map(Vec::len).sum::<usize>() as u64
+                );
+                drop(request);
+                for (name, body) in expected {
+                    assert_eq!(std::fs::read(directory.path().join(name)).unwrap(), body);
+                }
+            }
+        }
+
+        #[tokio::test]
+        async fn given_zero_byte_terminal_frame_failure_when_sending_then_no_member_is_retired_or_marked_finished(
+        ) {
+            // Arrange: the crypto/I/O boundary fails after a valid introduction.
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("empty.bin");
+            std::fs::write(&path, b"").unwrap();
+            let (mut request, mut peer) =
+                native_request(selection(&path, "empty.bin")).await;
+            request
+                .process_paired_key_result(&paired_result())
+                .await
+                .unwrap();
+            read_native_frame(&mut peer, 1).await;
+            read_native_frame(&mut peer, 2).await;
+            let retained_id = *request.state.transferred_files.keys().next().unwrap();
+            request.state.encrypt_key = None;
+
+            // Act / Assert: a terminal-frame failure must not fabricate completion.
+            let error = request
+                .process_consent(&consent_frame(
+                    sharing_nearby::connection_response_frame::Status::Accept,
+                ))
+                .await
+                .unwrap_err();
+            assert!(error.to_string().contains("Missing encrypt key"));
+            assert_ne!(request.state.state, State::Finished);
+            assert!(request.state.transferred_files.contains_key(&retained_id));
+            assert_eq!(
+                request.state.transfer_metadata.as_ref().unwrap().ack_bytes,
+                0
+            );
+            let mut extra = [0_u8; 1];
+            assert_eq!(
+                peer.try_read(&mut extra).unwrap_err().kind(),
+                std::io::ErrorKind::WouldBlock
+            );
+            drop(request);
+            assert_eq!(std::fs::read(path).unwrap(), b"");
+        }
+
+        #[tokio::test]
         async fn given_prepared_source_changes_when_consent_arrives_then_no_false_completion_occurs(
         ) {
             // Arrange / Act / Assert.
