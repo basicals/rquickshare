@@ -1,6 +1,35 @@
 # Current implementation and continuation state
 
 
+## Offline pre-Accept storage admission and rollback — 2026-10-17
+
+MODE B verified that errors in the Linux receive directory or anonymous
+staging **before encrypted Accept** cannot create a final file or claim
+received data. Five scenarios: missing root before Introduction,
+unlinked pinned root after Introduction, a regular-file or symlink
+ancestor for the later file after the first has staged, and unsupported
+O_TMPFILE on procfs. New test fixture preserves the actual randomized
+per-request member iteration order, proving the first staged member
+does not escape when the next stage fails. It also checks that no Accept
+frame is written, progress stays zero, manifest is unchanged, zero
+receipt authority survives Disconnected, and terminal state is
+absorbing. Tests use kernel file descriptors and an actual managed
+request. No runtime code changes were necessary.
+
+Exact source `c011f10f`: core Rust **704/0**, 8/0 integration,
+Python contract **54/0**, GTK isolated **52/0**, Rust fmt/core strict
+Clippy/frontend all passed. Legacy Tauri Clippy was still in progress
+when first documented. First test compilation needed explicit Pin for
+a nonblocking DuplexStream check; `c011f10f` corrected only that
+fixture, without removing the assertion. See
+[pre-Accept filesystem admission review](native-preaccept-storage-2026-10-17.md).
+Whole-repo MODE B/ten consecutive full passes/measured coverage and
+physical permission/mount, KDE and Android/Windows peer gates remain
+OPEN. Installed native29 and source-only native30, master, system
+services, signing and release were untouched.
+
+
+
 ## Offline inbound storage fault matrix — 2026-10-17
 
 MODE B scoped native inbound receive hardening now checks six actual
