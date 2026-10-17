@@ -1127,12 +1127,13 @@ impl Panel {
         // Keep the bottom toolbar visible on short monitors while using the
         // available vertical space for expanded details on larger monitors.
         if let Some(monitor) = self.window.monitor() {
-            if let Some(scroll) = self
-                .builder
-                .object::<gtk::ScrolledWindow>("nearby-scroll")
-            {
+            if let Some(scroll) = self.builder.object::<gtk::ScrolledWindow>("nearby-scroll") {
                 scroll.set_max_content_height(
-                    monitor.geometry().height().saturating_sub(220).clamp(120, 760),
+                    monitor
+                        .geometry()
+                        .height()
+                        .saturating_sub(220)
+                        .clamp(120, 760),
                 );
             }
         }

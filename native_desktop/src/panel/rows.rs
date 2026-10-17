@@ -33,8 +33,7 @@ fn expansion_for_replacement(rows: &Rows, key: &(String, String), default: bool)
     rows.entries
         .get(key)
         .and_then(|entry| {
-            named(entry.root.upcast_ref(), "transfer-details")
-                .and_downcast::<gtk::Expander>()
+            named(entry.root.upcast_ref(), "transfer-details").and_downcast::<gtk::Expander>()
         })
         .map(|expander| expander.is_expanded())
         .unwrap_or(default)
@@ -452,7 +451,9 @@ impl Panel {
         nearby.push(section_title("Discovered devices"));
         if devices.is_empty() {
             let empty = card();
-            empty.append(&label("No nearby devices. Make the receiving device visible."));
+            empty.append(&label(
+                "No nearby devices. Make the receiving device visible.",
+            ));
             nearby.push(empty);
         } else {
             nearby.extend(devices);
@@ -489,7 +490,9 @@ impl Panel {
             let expander = named(entry.root.upcast_ref(), "unlinked-activity")
                 .and_downcast::<gtk::Expander>()
                 .expect("session activity expander");
-            let body = expander.child().and_downcast::<gtk::Box>()
+            let body = expander
+                .child()
+                .and_downcast::<gtk::Box>()
                 .expect("session activity container");
             arrange(&body, &terminal_rows);
             nearby.push(entry.root.clone());
@@ -591,9 +594,15 @@ pub(super) fn verify_keyed_layout() {
     expander.set_expanded(false);
     assert!(!expansion_for_replacement(&cache, &key, false));
     let untrusted_header = section_title("<Mercury> is not a verified identity");
-    assert_eq!(untrusted_header.first_child().unwrap()
-        .downcast::<gtk::Label>().unwrap().text(),
-        "<Mercury> is not a verified identity");
+    assert_eq!(
+        untrusted_header
+            .first_child()
+            .unwrap()
+            .downcast::<gtk::Label>()
+            .unwrap()
+            .text(),
+        "<Mercury> is not a verified identity"
+    );
 }
 
 #[cfg(test)]
