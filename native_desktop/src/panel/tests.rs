@@ -155,6 +155,10 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(!panel.box_widget("device-drawer").get_visible());
     panel.button("quick-devices").emit_clicked();
     assert_eq!(panel.drawer(), Drawer::Open);
+    panel.show_sending();
+    assert_eq!(panel.pages.visible_child_name().as_deref(), Some("nearby"));
+    assert_eq!(panel.drawer(), Drawer::Open);
+    assert!(!panel.sending.is_visible(), "Send must select a device before content");
     drop(permit);
     assert!(!*panel.ingress.gate.subscribe().borrow());
     panel.actions.activate_action("files", None);
