@@ -106,3 +106,31 @@ and process ownership gate, installation, and real peer/lifecycle tests
 remain OPEN. In this session there is no access to the user's host,
 installed services, source files or Pixel. Do not infer an upgrade from
 green source CI. Retain installed native29 and preserved rollback artifacts.
+
+## Historical local package checkpoint recovered 2026-10-18
+
+The following local-host report was committed separately as `b9eef4a` on
+2026-10-17 and is retained alongside the remote-only CI report above. The
+remote report describes that session's lack of host access; it does not negate
+this earlier local package build. Neither report confirms installation. Current
+source, installed-state and acceptance gates remain in `current-state.md`.
+The original local report marked plan step 5 complete; the combined step stays
+open above because its later upgrade/acceptance prerequisites remain pending.
+
+### Package and installation gate (original local report)
+
+
+Locked native30 build from b7ab5e7 verified all14 staged files, ELF/dependencies,
+sidecar hashes and offline extracted commands. Artifact6660550 bytes, SHA-256
+db1a44ae9548985a656f1a9139777117b8996105b01643a35b0fce8abc81d0a0.
+Exact extracted-package History was rendered on a private bus/display and visually
+inspected: contiguous visible six-column grid, footer controls, retained theme.
+No real user session/service was used by that preview.
+
+At15:01:30Z, native29 is running/synchronized with zero reservations, handles,
+selected bytes or owned selections and no active transfer among5 retained entries.
+Daemon/desktop owners2972173/2972174 and disabled login startup are pinned. The
+upgrade repeats the source/tray/idle gate and verifies unchanged owners before
+joining only those two units. Exact native29 rollback package is rehashed. The
+task-local installer restores normal launch after errors/cancel. System package
+authorization has been requested; successful installation is not yet claimed.
