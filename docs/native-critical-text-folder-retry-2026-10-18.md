@@ -105,7 +105,7 @@ physical Android/Google Windows remain OPEN.
 ## Milestones and rollback
 
 1. [x] Repo scan and per-flow risks; documentation-first inventory.
-2. [ ] Implement the three scoped P0 managed-session integration
+2. [x] Implement the three scoped P0 managed-session integration
    methods, no product behavior/UI/policy edits.
 3. [ ] Run and inspect exact-source ordinary Preflight 5/5 plus
    existing GTK workflow; repair only test-fixture mistakes,
@@ -126,3 +126,38 @@ assertions; never broaden to all dev pushes. Document the
 run SHA and verification. Rollback removes the scoped tests,
 docs and optional workflow trigger; leaves production,
 master and installed binary unaffected.
+
+## Source-only implementation checkpoint
+
+The three requested high-risk methods and scoped managed-session
+helper were added only to
+`core_lib/src/hdl/inbound/receive_reliability.rs`
+at source `d1a662ec` and corrected for deliberate UTF-8
+fragmentation and path-sorted immutable receipt records in
+`940a3a9f`. No production source was edited.
+These exercise actual `process_introduction`, managed
+`respond`/`consent_command`/`apply_consent`,
+Nearby `PayloadTransferFrame` byte/file processing,
+immutable session snapshots and the real temporary
+Linux filesystem rather than mocking the domain.
+
+The text/link method verifies both `Text` and `Url`
+after positive consent; the first packet intentionally
+ends within a multibyte UTF-8 scalar.
+The nested-folder method verifies non-overwrite of an
+existing user-owned tree and both file-capability bytes.
+The retry method interrupts a real duplex frame header,
+confirms only the first completed file is retained,
+then creates an independent session and waits for a
+new user consent before accepting any bytes under new
+collision-safe filenames.
+
+Exact-source ordinary
+[Preflight 39077876927](https://github.com/morozhenko-apps/rquickshare/actions/runs/39077876927)
+and isolated
+[Native GTK 39077876891](https://github.com/morozhenko-apps/rquickshare/actions/runs/39077876891)
+were pending/running when recorded. No green result
+is asserted until completed GitHub job logs are read.
+Next: strict full Mode B from the finally validated
+source with ten consecutive suite/GTK attempts and
+conditional final coverage.
