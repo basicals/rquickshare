@@ -1,0 +1,70 @@
+name: Native GTK instrumented coverage
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/native-gtk-coverage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-gtk-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    name: Native GTK isolated test and llvm-cov
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.04
+    steps:
+      - name: Install native GTK instrumentation prerequisites
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git curl build-essential pkg-config \
+            protobuf-compiler libdbus-1-dev libudev-dev libgtk-4-dev \
+            libgtk4-layer-shell-dev libfontconfig-dev libseccomp-dev \
+            bubblewrap glycin-loaders dbus-daemon dbus-x11 xvfb xauth
+
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install locked Rust coverage reporter
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: Build actual preview helper before instrumenting the GTK tests
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
+          export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
+          cargo +stable build --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare-preview-helper
+
+      - name: Measure GTK test coverage under isolated X11 and D-Bus
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
+          export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
+          GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
+            dbus-run-session --config-file docs/prototypes/preview-bus.conf -- \
+            xvfb-run -a cargo +stable llvm-cov \
+              --locked \
+              --no-clean \
+              --manifest-path native_desktop/Cargo.toml \
+              --bin rquickshare \
+              --summary-only \
+              --ignore-filename-regex 'target/|bindings/|core_lib/' \
+            2>&1 | tee "$RUNNER_TEMP/native-gtk-coverage.log"
+          if ! grep -Eq 'test result: ok\\. [1-9][0-9]* passed; 0 failed; 0 ignored;' "$RUNNER_TEMP/native-gtk-coverage.log"; then
+            echo "Native GTK instrumented run must execute actual non-ignored passing tests" >&2
+            exit 1
+          fi
+          if ! grep -Eq '^TOTAL[[:space:]]+[0-9]+[[:space:]]+[0-9]+' "$RUNNER_TEMP/native-gtk-coverage.log"; then
+            echo "Native GTK instrumented coverage must produce real per-source totals" >&2
+            exit 1
+          fi
