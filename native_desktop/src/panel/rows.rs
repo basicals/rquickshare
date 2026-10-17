@@ -1,4 +1,4 @@
-//! Keyed rows keep focus and expanded manifests across progress/readiness updates.
+//! Keyed flat rows keep direct controls and focus across progress/readiness updates.
 use super::*;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -28,15 +28,6 @@ fn named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
         next = child.next_sibling();
     }
     None
-}
-fn expansion_for_replacement(rows: &Rows, key: &(String, String), default: bool) -> bool {
-    rows.entries
-        .get(key)
-        .and_then(|entry| {
-            named(entry.root.upcast_ref(), "transfer-details").and_downcast::<gtk::Expander>()
-        })
-        .map(|expander| expander.is_expanded())
-        .unwrap_or(default)
 }
 #[cfg(test)]
 fn section_title(text: &str) -> gtk::Box {
@@ -83,11 +74,6 @@ fn payload_label(details: &TransferDetails) -> String {
 }
 fn transferring(phase: Phase) -> bool {
     matches!(phase, Phase::Sending | Phase::Receiving)
-}
-fn collapse_disclosure(page: &str, previous: Option<Phase>, next: Phase) -> bool {
-    page == "nearby"
-        && (next.is_terminal()
-            || (previous == Some(Phase::AwaitingConsent) && next != Phase::AwaitingConsent))
 }
 fn progress_fraction(done: u64, total: u64) -> f64 {
     if total == 0 {
@@ -191,7 +177,6 @@ pub(super) fn transfer_row(
     kind: rqs_lib::service::client::state::DeviceKind,
     phase: Phase,
     details: &gtk::Box,
-    expanded: bool,
 ) -> gtk::Box {
     let incoming = phase == Phase::AwaitingConsent;
     let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -232,75 +217,34 @@ pub(super) fn transfer_row(
     status.set_widget_name("row-status");
     status.set_visible(phase.is_terminal());
     heading.append(&status);
-    let expander = gtk::Expander::new(None);
-    expander.set_resize_toplevel(true);
-    expander.set_widget_name("transfer-details");
-    expander.set_child(Some(details));
-    expander.set_expanded(expanded);
-    let review = gtk::Button::with_label("Review");
-    review.set_widget_name("row-action");
-    review.set_hexpand(false);
-    review.set_halign(gtk::Align::End);
-    let expanded = expander.clone();
-    review.connect_clicked(move |_| {
-        expanded.set_expanded(!expanded.is_expanded());
-    });
-    // The history expander already provides the only disclosure control.
-    if incoming {
-        heading.append(&review);
-    }
-    expander.set_label_widget(Some(&heading));
-    root.append(&expander);
+    root.append(&heading);
+    append_inline_controls(&heading, details);
     root
 }
-fn flatten_history(root: &gtk::Box, details: &gtk::Box) -> gtk::Box {
-    let expander = named(root.upcast_ref(), "transfer-details")
-        .and_downcast::<gtk::Expander>()
-        .expect("transfer row owns its disclosure");
-    let heading = expander
-        .label_widget()
-        .and_downcast::<gtk::Box>()
-        .expect("transfer heading");
-    expander.set_label_widget(None::<&gtk::Widget>);
-    expander.set_child(None::<&gtk::Widget>);
-    root.remove(&expander);
-    root.append(&heading);
-    for name in ["review-text", "cancel", "cancel-reveal"] {
+fn append_inline_controls(heading: &gtk::Box, details: &gtk::Box) {
+    for name in [
+        "decline",
+        "accept",
+        "review-text",
+        "cancel",
+        "cancel-reveal",
+    ] {
         if let Some(action) = named(details.upcast_ref(), name) {
             let parent = action.parent().and_downcast::<gtk::Box>().unwrap();
             parent.remove(&action);
             heading.append(&action);
         }
     }
-    heading
 }
 impl Panel {
-    fn flatten_history_transfer(
+    fn append_result_actions(
         self: &Rc<Self>,
         root: &gtk::Box,
-        details: &gtk::Box,
         transfer: &TransferView,
         ready: bool,
-        incoming: bool,
     ) {
-        let heading = flatten_history(root, details);
-        if incoming {
-            let review = gtk::Button::with_label("Review");
-            review.set_widget_name("history-review");
-            review.set_sensitive(ready);
-            let weak = Rc::downgrade(self);
-            let id = transfer.transfer.id().to_owned();
-            review.connect_clicked(move |_| {
-                if let Some(panel) = weak.upgrade() {
-                    panel.set_drawer(Drawer::Open);
-                    panel.pages.set_visible_child_name("nearby");
-                    panel.render();
-                    panel.expand_transfer(&id);
-                    panel.present_surface();
-                }
-            });
-            heading.append(&review);
-        } else if transfer.direction == Direction::Inbound {
+        let heading = root.first_child().and_downcast::<gtk::Box>().unwrap();
+        if transfer.direction == Direction::Inbound {
             if let Some(revision) = transfer.reveal_revision {
                 if transfer.phase == Phase::Finished {
                     let reveal = gtk::Button::with_label("Show in folder");
@@ -321,12 +265,8 @@ impl Panel {
                         name.set_max_width_chars(40);
                         name.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
                         saved.append(&name);
-                        if let Some(action) =
-                            named(details.upcast_ref(), &format!("reveal-{index}"))
-                        {
-                            let parent = action.parent().and_downcast::<gtk::Box>().unwrap();
-                            parent.remove(&action);
-                            saved.append(&action);
+                        if let Some(action) = self.file_action(transfer, true) {
+                            action(&saved, index as u32);
                         }
                     }
                     let popover = gtk::Popover::new();
@@ -340,18 +280,18 @@ impl Panel {
             }
         }
     }
-    pub(super) fn expand_transfer(&self, id: &str) {
+    pub(super) fn focus_transfer(&self, id: &str) {
         if let Some(entry) = self
             .rows
             .borrow()
             .entries
             .get(&("nearby".to_owned(), id.to_owned()))
         {
-            if let Some(expander) =
-                named(entry.root.upcast_ref(), "transfer-details").and_downcast::<gtk::Expander>()
-            {
-                expander.set_expanded(true);
-                expander.grab_focus();
+            if let Some(accept) = named(entry.root.upcast_ref(), "accept") {
+                accept.grab_focus();
+            } else {
+                entry.root.set_focusable(true);
+                entry.root.grab_focus();
             }
         }
     }
@@ -371,14 +311,6 @@ impl Panel {
                 .is_some_and(|old| same_description(old, transfer))
         });
         if !reusable {
-            // Live phase changes must not discard the user's expansion choice.
-            let expanded = expansion_for_replacement(rows, &key, page == "incoming");
-            let previous = rows
-                .entries
-                .get(&key)
-                .and_then(|entry| entry.transfer.as_ref())
-                .map(|transfer| transfer.phase);
-            let expanded = expanded && !collapse_disclosure(page, previous, transfer.phase);
             let details = if incoming {
                 self.incoming_card(transfer, ready, true)
             } else {
@@ -392,67 +324,23 @@ impl Panel {
                 transfer.details.device,
                 transfer.phase,
                 &details,
-                expanded,
             );
-            // The expander changes layout independently of daemon state updates.
-            // Re-measure after GTK applies the new child allocation, keeping the
-            // current lower edge pinned before the height changes.
-            if let Some(expander) =
-                named(root.upcast_ref(), "transfer-details").and_downcast::<gtk::Expander>()
-            {
-                let weak = Rc::downgrade(self);
-                let card_page = page == "nearby";
-                expander.connect_expanded_notify(move |_| {
-                    if !card_page {
-                        return;
-                    }
-                    if let Some(panel) = weak.upgrade() {
-                        panel.pin_surface_bottom();
-                        let weak = Rc::downgrade(&panel);
-                        glib::idle_add_local_once(move || {
-                            if let Some(panel) = weak.upgrade() {
-                                panel.resize_to_content();
-                            }
-                        });
-                    }
-                });
-            }
             if page == "nearby" && incoming {
                 root.add_css_class("incoming-request");
             }
-            if page != "nearby" {
-                if let Some(disclosure) = named(root.upcast_ref(), "row-action") {
-                    disclosure.set_visible(false);
+            if let Some(summary) = named(root.upcast_ref(), "row-summary") {
+                let mut description = if incoming {
+                    String::from("Check this code on the sending device before accepting.")
+                } else {
+                    String::new()
+                };
+                for file in transfer.details.files.iter() {
+                    description.push_str(&format!("\n{} · {} bytes", file.name, file.size));
                 }
+                summary.set_tooltip_text(Some(&description));
+                summary.update_property(&[gtk::accessible::Property::Description(&description)]);
             }
-            for name in [
-                "detail-peer",
-                "detail-summary",
-                "detail-code",
-                "phase",
-                "progress",
-            ] {
-                if let Some(duplicate) = named(details.upcast_ref(), name) {
-                    duplicate.set_visible(false);
-                }
-            }
-            // One disclosure exposes the manifest directly; no nested Review-all toggle.
-            if let Some(manifest) =
-                named(details.upcast_ref(), "detail-manifest").and_downcast::<gtk::Expander>()
-            {
-                manifest.set_expanded(true);
-                if let (Some(list), Some(parent)) = (
-                    manifest.child(),
-                    manifest.parent().and_downcast::<gtk::Box>(),
-                ) {
-                    manifest.set_child(None::<&gtk::Widget>);
-                    parent.insert_child_after(&list, manifest.prev_sibling().as_ref());
-                    parent.remove(&manifest);
-                }
-            }
-            if page == "transfers" {
-                self.flatten_history_transfer(&root, &details, transfer, ready, incoming);
-            }
+            self.append_result_actions(&root, transfer, ready);
             rows.entries.insert(
                 key.clone(),
                 Entry {
@@ -464,7 +352,6 @@ impl Panel {
         }
         let root = rows.entries[&key].root.clone();
         for (name, enabled) in [
-            ("history-review", ready),
             ("result-reveal", ready && transfer.reveal_revision.is_some()),
             ("review-text", ready && transfer.content_revision.is_some()),
             (
@@ -493,22 +380,6 @@ impl Panel {
         }
         if let Some(cancel) = named(root.upcast_ref(), "cancel-reveal") {
             cancel.set_visible(self.revealing(&transfer.transfer));
-        }
-        if let Some(progress) = named(root.upcast_ref(), "progress").and_downcast::<gtk::Label>() {
-            progress.set_text(&format!(
-                "{} / {} bytes locally {}",
-                transfer.details.transferred_bytes,
-                transfer.details.total_bytes,
-                if transfer.direction == Direction::Inbound {
-                    if transfer.details.kind == rqs_lib::sessions::details::PayloadKind::Files {
-                        "written"
-                    } else {
-                        "received"
-                    }
-                } else {
-                    "sent"
-                }
-            ));
         }
         if let Some(summary) = named(root.upcast_ref(), "row-summary").and_downcast::<gtk::Label>()
         {
@@ -729,16 +600,6 @@ impl Panel {
                     if let Some(status) = named(root.upcast_ref(), "row-status") {
                         status.set_visible(transfer.phase.is_terminal());
                     }
-                    if let Some(button) =
-                        named(root.upcast_ref(), "row-action").and_downcast::<gtk::Button>()
-                    {
-                        button.set_label(if transfer.direction == Direction::Inbound {
-                            "Receive"
-                        } else {
-                            "Send"
-                        });
-                        button.set_sensitive(transfer.direction == Direction::Inbound);
-                    }
                 }
                 pages.get_mut(page).unwrap().push(root);
                 used.insert((page.to_owned(), transfer.transfer.id().to_owned()));
@@ -815,45 +676,16 @@ pub(super) fn verify_keyed_layout() {
     assert!(activity.first_child().is_none());
     assert_eq!(container.first_child(), Some(first.upcast()));
 
-    // Arrange: a synthetic transfer with an untrusted sender name.
-    let mut cache = Rows::default();
-    let key = ("nearby".to_owned(), "transfer-one".to_owned());
-    assert!(!expansion_for_replacement(&cache, &key, false));
-    assert!(expansion_for_replacement(&cache, &key, true));
-    let details = card();
-    details.append(&label("Text · 2507 bytes"));
-    let row = transfer_row(
-        "<Mercury>",
-        rqs_lib::service::client::state::DeviceKind::Phone,
-        Phase::Finished,
-        &details,
-        false,
-    );
-    let expander = named(row.upcast_ref(), "transfer-details")
-        .and_downcast::<gtk::Expander>()
-        .unwrap();
-    assert!(!expander.is_expanded());
-    cache.entries.insert(
-        key.clone(),
-        Entry {
-            root: row,
-            transfer: None,
-            endpoint: None,
-        },
-    );
-    // Act / Assert: collapsed state is retained even for an incoming fallback.
-    assert!(!expansion_for_replacement(&cache, &key, true));
-    expander.set_expanded(true);
-    assert!(expansion_for_replacement(&cache, &key, false));
-    assert_eq!(expander.child(), Some(details.upcast()));
-    assert!(named(cache.entries[&key].root.upcast_ref(), "transfer-details").is_some());
-    expander.set_expanded(false);
-    assert!(!expansion_for_replacement(&cache, &key, false));
-
     // Arrange: history content actions exist below the old disclosure.
     let details = card();
     let clicks = Rc::new(Cell::new(0));
-    for name in ["review-text", "cancel", "cancel-reveal"] {
+    for name in [
+        "decline",
+        "accept",
+        "review-text",
+        "cancel",
+        "cancel-reveal",
+    ] {
         let action = gtk::Button::with_label(name);
         action.set_widget_name(name);
         let clicks = clicks.clone();
@@ -866,23 +698,28 @@ pub(super) fn verify_keyed_layout() {
         rqs_lib::service::client::state::DeviceKind::Phone,
         Phase::Finished,
         &details,
-        true,
     );
     // Act: reuse the original controls, removing the disclosure and detail body.
-    let heading = flatten_history(&history, &details);
+    let heading = history.first_child().and_downcast::<gtk::Box>().unwrap();
     // Assert: controls are directly clickable and no hidden duplicate body remains.
     assert!(named(history.upcast_ref(), "transfer-details").is_none());
     assert_eq!(history.observe_children().n_items(), 1);
     assert_eq!(history.first_child(), Some(heading.clone().upcast()));
     assert!(details.parent().is_none());
-    for name in ["review-text", "cancel", "cancel-reveal"] {
+    for name in [
+        "decline",
+        "accept",
+        "review-text",
+        "cancel",
+        "cancel-reveal",
+    ] {
         let action = named(history.upcast_ref(), name)
             .and_downcast::<gtk::Button>()
             .unwrap();
         assert_eq!(action.parent(), Some(heading.clone().upcast()));
         action.emit_clicked();
     }
-    assert_eq!(clicks.get(), 3);
+    assert_eq!(clicks.get(), 5);
     assert_eq!(details.observe_children().n_items(), 1);
 
     let live = ["ep-1", "ep-2"].into_iter().collect::<BTreeSet<_>>();
@@ -997,27 +834,7 @@ mod device_contract_tests {
             ));
         }
     }
-    #[test]
-    fn given_consent_or_completion_when_phase_changes_then_only_card_disclosure_resets_and_history_choice_survives(
-    ) {
-        for page in ["nearby", "transfers", "incoming"] {
-            for (previous, next, expected) in [
-                (None, Phase::AwaitingConsent, false),
-                (Some(Phase::AwaitingConsent), Phase::AwaitingConsent, false),
-                (Some(Phase::AwaitingConsent), Phase::Active, true),
-                (Some(Phase::AwaitingConsent), Phase::Receiving, true),
-                (Some(Phase::Active), Phase::Receiving, false),
-                (Some(Phase::Receiving), Phase::Receiving, false),
-                (Some(Phase::Receiving), Phase::Finished, true),
-                (Some(Phase::Receiving), Phase::Failed, true),
-            ] {
-                assert_eq!(
-                    collapse_disclosure(page, previous, next),
-                    page == "nearby" && expected
-                );
-            }
-        }
-    }
+
     #[test]
     fn given_byte_progress_when_unknown_or_overrun_then_bar_stays_finite_and_bounded() {
         for (done, total, expected) in [

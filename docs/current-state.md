@@ -3,8 +3,9 @@
 2026-10-17 installed checkpoint: native26 installed with14-file/tray/API checks
 passed; login startup remains disabled. See [evidence](evidence/native26-installation-2026-10-17.json).
 The user clarified with a screenshot that the extra confirmation was incoming
-Receive -> expanded consent controls. Native27's approved scoped plan removes
-all row disclosure and immediately places guarded Decline/Accept beside type/code;
+Receive -> expanded consent controls. Native27 source now removes all row
+disclosure and immediately places guarded Decline/Accept beside type/code.
+Affected panel18/0 and strict native lint passed; package/install pending;
 see [continuation plan](native26-flat-transfers-2026-10-17.md). No automatic
 acceptance or sender-flow change is authorized or needed by this clarification.
 

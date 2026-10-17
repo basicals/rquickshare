@@ -334,6 +334,31 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .join(" ");
     assert!(reviewed.contains("Code: 4821") && reviewed.contains("Example.pdf"));
     assert!(!compact_text.contains("Example.pdf"));
+    // The actual card row has direct consent, no Receive indirection or lower body.
+    fn consent_controls(widget: &gtk::Widget, found: &mut Vec<String>) {
+        assert!(!widget.is::<gtk::Expander>());
+        assert_ne!(widget.widget_name(), "row-action");
+        if let Some(button) = widget.downcast_ref::<gtk::Button>() {
+            found.push(button.widget_name().to_string());
+            assert!(!button.is_sensitive(), "synthetic preview cannot accept");
+        }
+        if widget.widget_name() == "row-summary" {
+            assert_eq!(
+                widget.clone().downcast::<gtk::Label>().unwrap().text(),
+                "PDF · Code: 4821"
+            );
+            assert!(widget.tooltip_text().unwrap().contains("Example.pdf"));
+        }
+        let mut child = widget.first_child();
+        while let Some(current) = child {
+            consent_controls(&current, found);
+            child = current.next_sibling();
+        }
+    }
+    let mut direct = Vec::new();
+    consent_controls(panel.box_widget("nearby").upcast_ref(), &mut direct);
+    assert_eq!(direct, ["decline", "accept"]);
+
     panel.actions.activate_action("settings", None);
     let settings = panel.settings.borrow().as_ref().unwrap().clone();
     assert!(settings.is_visible());

@@ -1543,21 +1543,31 @@ impl Panel {
         if page == "incoming" {
             let nearby = self.box_widget("nearby");
             clear(&nearby);
-            let review = details_card(&details);
-            let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-            for title in ["Decline", "Accept"] {
+            let review = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            for (name, title) in [("decline", "Decline"), ("accept", "Accept")] {
                 let button = gtk::Button::with_label(title);
+                button.set_widget_name(name);
                 button.set_sensitive(false);
-                buttons.append(&button);
+                review.append(&button);
             }
-            review.append(&buttons);
-            nearby.append(&rows::transfer_row(
+            let row = rows::transfer_row(
                 "Example phone",
                 rqs_lib::service::client::state::DeviceKind::Phone,
                 Phase::AwaitingConsent,
                 &review,
-                true,
-            ));
+            );
+            if let Some(heading) = row.first_child().and_downcast::<gtk::Box>() {
+                let mut next = heading.first_child();
+                while let Some(child) = next {
+                    next = child.next_sibling();
+                    if child.widget_name() == "row-summary" {
+                        let summary = child.downcast::<gtk::Label>().unwrap();
+                        summary.set_text("PDF · Code: 4821");
+                        summary.set_tooltip_text(Some("Check this code on the sending device before accepting.\nExample.pdf · 12345 bytes"));
+                    }
+                }
+            }
+            nearby.append(&row);
         }
 
         let transfers = self.box_widget("transfers");

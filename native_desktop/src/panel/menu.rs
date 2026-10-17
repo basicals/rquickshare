@@ -115,7 +115,7 @@ impl Panel {
                             .unwrap_or_default();
                         if name != "nearby" {
                             for id in ids {
-                                panel.expand_transfer(&id);
+                                panel.focus_transfer(&id);
                             }
                         }
                     }
@@ -243,7 +243,7 @@ impl Panel {
             self.set_drawer(Drawer::Open);
             self.pages.set_visible_child_name("nearby");
             self.render();
-            self.expand_transfer(&id);
+            self.focus_transfer(&id);
         } else {
             self.actions
                 .activate_action("visibility", Some(&"temporary".to_variant()));

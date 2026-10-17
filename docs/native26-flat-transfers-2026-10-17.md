@@ -94,13 +94,13 @@ revision/readiness validation, before-bytes code and progress-during-bytes.
 
 ## Native27 scoped continuation plan before code
 
-- [ ] C1: remove row disclosure construction/state; attach existing guarded consent
+- [x] C1: remove row disclosure construction/state; attach existing guarded consent
   and current control callbacks directly to the heading on all live row surfaces.
-- [ ] C2: keep manifest names/sizes as plain tooltip/accessibility description;
+- [x] C2: keep manifest names/sizes as plain tooltip/accessibility description;
   no additional lower screen. Preserve inline result/text/cancel actions and
   partial receipt capabilities from native26. Receive focuses existing Accept
   rather than expanding content. Remove obsolete expansion state/tests.
-- [ ] C3: verify real widget inline consent, no Expander/Receive indirection,
+- [x] C3: verify real widget inline consent, no Expander/Receive indirection,
   callbacks/readiness, code/progress stages and unchanged retained row ordering
   once; strict native lint once. Update synthetic incoming preview to the actual
   same row builder instead of a historical expanded fixture.
@@ -110,3 +110,26 @@ This is the user's specified layout change, not automatic acceptance. No new
 protocol/API/security authority or BLE change. Reuse the existing bounded
 manifest and exact Respond callback. Retain original content checks. Rollback26
 remains immutable; do not interrupt an incoming request/active transfer to update.
+
+Native27 implementation checkpoint: live rows construct a flat heading directly;
+there is no old Expander to unwrap, expansion state or Receive disclosure button.
+Existing exact consent callbacks move into the heading, preserving readiness and
+revision checks. Receive focuses the direct consent action without activating it.
+Full received manifest names/sizes remain plain tooltip/accessibility metadata.
+The synthetic incoming card uses the same flat row builder.
+
+First affected run:17 passed/1 failed in0.25s. The preview used a typed Widget
+iterator over GTK ObserveChildren whose declared item type is Object, triggering
+GIO's type assertion. Replace it with actual first_child/next_sibling traversal;
+retain strict no-expander/direct-consent assertions. Also found that partial-file
+buttons were previously lazy inside an unattached manifest; reconstruct them
+through the existing checked file_action callback rather than searching an
+unmaterialized child. This restores intended existing partial-receipt access
+without new authority. No assertion weakening or protocol/receiver changes.
+
+Final native27 affected panel18/0 in0.51s; strict all-target native no-dependency
+Clippy passed1.68s. The obsolete expansion-reset test was removed because the
+expansion mechanism is gone, and actual-widget no-Expander/direct-consent/plain
+manifest-tooltip assertions replace the old presentation contract. Original
+readiness, exact consent callbacks, progress and bounded-content checks remain.
+No ten-run/full Mode B claim. Command sessions exited; Terminal closed.
