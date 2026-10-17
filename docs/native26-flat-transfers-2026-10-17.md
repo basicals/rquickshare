@@ -104,7 +104,7 @@ revision/readiness validation, before-bytes code and progress-during-bytes.
   callbacks/readiness, code/progress stages and unchanged retained row ordering
   once; strict native lint once. Update synthetic incoming preview to the actual
   same row builder instead of a historical expanded fixture.
-- [ ] C4: commit, build distinct27, idle-gated upgrade, record measured receipts.
+- [x] C4: commit, build distinct27, idle-gated upgrade, record measured receipts.
 
 This is the user's specified layout change, not automatic acceptance. No new
 protocol/API/security authority or BLE change. Reuse the existing bounded
@@ -142,3 +142,25 @@ arrow/lower detail block. Preview remains inert and does not prove real peer/KDE
 acceptance. Upgrade pins native26 owners2738171/2738175 and both package hashes,
 requires a fresh global idle gate, and preserves received files/journal/login state.
 No new runtime diagnostic override. Stop before mutation if any request is active.
+
+## Native27 installed and continuation receipt
+
+APT exited0; native26 upgraded to27 at2026-10-17T13:38Z after the fresh global
+idle gate. Daemon/desktop run as2808363/2808365, all14 installed regular files
+match the package, one Active14-entry tray and passive Visibility2/Journal1/
+AcquireResult checks pass. Login start remains disabled. No temporary diagnostic
+override, protocol/BLE change, file deletion, cloud access or public release.
+See evidence/native27-installation-2026-10-17.json. All owned command sessions
+exited with Terminal closed; no watcher/test process remains.
+
+The screenshot resolved the ambiguous extra Send report as the incoming card
+Receive/disclosure step. That indirection is removed. No unrelated outbound
+editor/input contract was changed. Fresh incoming consent, progress/completion
+and flat Transfers action still need physical user acceptance on this package.
+The user's fast discovery/successful transfer observation remains native25 evidence.
+
+Local handoff export after this receipt uses git archive of the final docs commit,
+separate immutable25/26/27 package/source names and neighboring SHA256 sidecars.
+The external export JSON records binary-source versus archive-documentation
+commits, archive hashes and entry counts. Generic handoff source/current-state
+copies refresh to27, preserving older exact rollback files. No signing/publication.

@@ -1,13 +1,28 @@
 # Current implementation and continuation state
 
-2026-10-17 installed checkpoint: native26 installed with14-file/tray/API checks
-passed; login startup remains disabled. See [evidence](evidence/native26-installation-2026-10-17.json).
-The user clarified with a screenshot that the extra confirmation was incoming
-Receive -> expanded consent controls. Native27 source now removes all row
-disclosure and immediately places guarded Decline/Accept beside type/code.
-Affected panel18/0 and strict native lint passed; package/install pending;
-see [continuation plan](native26-flat-transfers-2026-10-17.md). No automatic
-acceptance or sender-flow change is authorized or needed by this clarification.
+2026-10-17 installed checkpoint: native27 is installed and running. Binary source
+e523523; exact package and installed/passive receipts are in
+[native27 evidence](evidence/native27-installation-2026-10-17.json). Incoming
+requests now show guarded Decline/Accept immediately beside peer/type/code;
+there is no row Expander, Receive indirection or lower detail body. Accept remains
+explicit and revision-bound; bytes replace the code with progress. Manifest names
+remain plain tooltip/accessibility metadata. Flat history retains direct checked
+result/text/cancel actions; metadata-only historical entries gain no authority.
+
+Affected panel18/0 and strict native lint passed; the exact extracted package's
+420px incoming preview was visually inspected. All14 installed files, both units,
+one14-entry tray and passive Visibility2/Journal1/AcquireResult passed. Login start
+is off. The user screenshot resolved the extra confirmation report as incoming
+consent disclosure; no unrelated outbound editor change was made. Real incoming
+inline actions/progress/results and history still need physical acceptance on27.
+Fast Android discovery/successful sending were user-confirmed on25; BLE is unchanged.
+Native25/26 rollback packages are retained. No new master merge or signed/public
+release. See [active continuation ledger](native26-flat-transfers-2026-10-17.md).
+
+Historical native26 checkpoint: installed successfully with matching14-file/tray/
+API checks; [evidence](evidence/native26-installation-2026-10-17.json). Its history
+rows were flat, but the card still had Receive -> expanded consent. Native27
+supersedes that card behavior on the user's explicit screenshot request.
 
 Historical native25 checkpoint:
 
