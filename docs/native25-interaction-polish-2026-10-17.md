@@ -351,3 +351,16 @@ trace allowlist1/0, core strict all-feature/all-target lint7.18s passed. This pr
 format/owner logic, not Android scan latency. The installed native24 is still
 unchanged; P7 will verify the release package, idle upgrade and real startup
 GattHeaderReady stage before requesting a phone reproduction.
+
+Final pre-artifact review found the nearby transfer expander preserved its open
+consent manifest after acceptance and completion. This conflicts with the approved
+compact progress/Completed stages. Collapse the nearby disclosure when leaving
+AwaitingConsent and at terminal completion; preserve the user's later disclosure
+choice during progress, and preserve history-window disclosure across all phases.
+Add a focused state-transition table before rebuilding. Interrupted only this task's
+owned package-build session with Ctrl-C; it exited130/Terminal closed before any
+native25 package existed. No service, user session or other terminal was touched.
+
+The final disclosure correction passed the affected panel scope and strict native
+lint; measured counts/timings are retained in the local logs and will be copied
+into the installation receipt. No core change after its final125/0 checks.

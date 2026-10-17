@@ -84,6 +84,11 @@ fn payload_label(details: &TransferDetails) -> String {
 fn transferring(phase: Phase) -> bool {
     matches!(phase, Phase::Sending | Phase::Receiving)
 }
+fn collapse_disclosure(page: &str, previous: Option<Phase>, next: Phase) -> bool {
+    page == "nearby"
+        && (next.is_terminal()
+            || (previous == Some(Phase::AwaitingConsent) && next != Phase::AwaitingConsent))
+}
 fn progress_fraction(done: u64, total: u64) -> f64 {
     if total == 0 {
         0.0
@@ -281,6 +286,12 @@ impl Panel {
         if !reusable {
             // Live phase changes must not discard the user's expansion choice.
             let expanded = expansion_for_replacement(rows, &key, page == "incoming");
+            let previous = rows
+                .entries
+                .get(&key)
+                .and_then(|entry| entry.transfer.as_ref())
+                .map(|transfer| transfer.phase);
+            let expanded = expanded && !collapse_disclosure(page, previous, transfer.phase);
             let details = if incoming {
                 self.incoming_card(transfer, ready, true)
             } else {
@@ -856,6 +867,27 @@ mod device_contract_tests {
                 Some("current"),
                 &peers
             ));
+        }
+    }
+    #[test]
+    fn given_consent_or_completion_when_phase_changes_then_only_card_disclosure_resets_and_history_choice_survives(
+    ) {
+        for page in ["nearby", "transfers", "incoming"] {
+            for (previous, next, expected) in [
+                (None, Phase::AwaitingConsent, false),
+                (Some(Phase::AwaitingConsent), Phase::AwaitingConsent, false),
+                (Some(Phase::AwaitingConsent), Phase::Active, true),
+                (Some(Phase::AwaitingConsent), Phase::Receiving, true),
+                (Some(Phase::Active), Phase::Receiving, false),
+                (Some(Phase::Receiving), Phase::Receiving, false),
+                (Some(Phase::Receiving), Phase::Finished, true),
+                (Some(Phase::Receiving), Phase::Failed, true),
+            ] {
+                assert_eq!(
+                    collapse_disclosure(page, previous, next),
+                    page == "nearby" && expected
+                );
+            }
         }
     }
     #[test]
