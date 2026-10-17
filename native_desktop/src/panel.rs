@@ -1109,7 +1109,20 @@ impl Panel {
         self.resize_to_content();
     }
     fn resize_to_content(&self) {
-        // Request the measured natural height, not the scroller's minimum allocation.
+        // Keep the bottom toolbar visible on short monitors while using the
+        // available vertical space for expanded details on larger monitors.
+        if let Some(monitor) = self.window.monitor() {
+            if let Some(scroll) = self
+                .builder
+                .object::<gtk::ScrolledWindow>("nearby-scroll")
+            {
+                scroll.set_max_content_height(
+                    monitor.geometry().height().saturating_sub(220).clamp(120, 760),
+                );
+            }
+        }
+        // Request natural height after each transfer-expander layout change,
+        // not only after a new daemon snapshot arrives.
         self.window.set_default_size(420, 1);
         let height = self
             .window
@@ -1157,15 +1170,23 @@ impl Panel {
         ready: bool,
         full: bool,
     ) -> gtk::Box {
-        let row = details_card_mode_with_files(
-            &transfer.details,
-            full,
-            if transfer.phase == Phase::Finished {
-                self.file_action(transfer, full)
-            } else {
-                None
-            },
-        );
+        let row = if transfer.phase.is_terminal()
+            && transfer.details.status == DetailsStatus::Unsupported
+        {
+            let row = card();
+            row.append(&label("Content details are unavailable for review."));
+            row
+        } else {
+            details_card_mode_with_files(
+                &transfer.details,
+                full,
+                if transfer.phase == Phase::Finished {
+                    self.file_action(transfer, full)
+                } else {
+                    None
+                },
+            )
+        };
         if transfer.direction == Direction::Inbound
             && matches!(
                 transfer.phase,
