@@ -95,3 +95,24 @@ as validation of the repair. Network-loss/disk/lifecycle matrix stays open.
 
 No automatic retry, new trust, radio/account change, installation, signing or
 publishing was performed. No terminal session remains active after checks.
+
+## Delivery follow-up plan
+
+After source repair commit e31b3d5, prepare a distinct native29 local package so
+the available Pixel can exercise the repaired code. This is the next existing
+installed-test workflow, not a new distribution channel or UI decision.
+
+1. [ ] Increment the tracked package revision to29 and commit it before building.
+2. [ ] Build/verify the locked release artifact with the established private GTK
+   sysroot and actual shlibs metadata. Preserve native28 for rollback.
+3. [ ] Read fresh installed version, service owners and global idle/source/tray
+   gate. If preparation or nonterminal work exists, preserve it and ask the user;
+   do not restart. Pin the exact observed owners before any stop.
+4. [ ] If idle, join only the two rQuickShare units, request system package
+   authorization through Pinentry/Polkit, upgrade through APT and restore normal
+   launch. Read back all14 files, units, startup preference and passive tray/API.
+   Never ask for a password in chat. Failure/cancel restores normal launch.
+5. [ ] Record installed evidence and the first user-operated two-file Pixel check.
+
+Rollback is the exact preserved native28 package after the same idle gate. No
+received content/history/settings are removed; login startup remains unchanged.
