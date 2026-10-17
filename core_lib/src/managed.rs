@@ -173,6 +173,12 @@ impl ManagedSender {
         self.sender.closed().await;
     }
 
+    /// External transport backpressure fixture; no native coordinator/session is mocked.
+    #[cfg(test)]
+    pub(crate) fn fill_transport_for_test(&self, info: SendInfo) -> bool {
+        self.sender.try_send(OutboundJob::from(info)).is_ok()
+    }
+
     #[cfg(test)]
     pub(crate) async fn wait_queue_empty(&self) {
         drop(

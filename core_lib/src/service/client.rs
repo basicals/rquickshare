@@ -81,6 +81,7 @@ pub enum OperationKind {
     Abort,
     Send,
     SendMany,
+    QueueMany,
 }
 impl OperationKind {
     fn wire(self) -> &'static str {
@@ -92,6 +93,7 @@ impl OperationKind {
             Self::Abort => "abort_selection",
             Self::Send => "send_selection",
             Self::SendMany => "send_many",
+            Self::QueueMany => "queue_many",
         }
     }
 }
@@ -125,6 +127,7 @@ enum Command {
     Abort(Upload),
     Send(Selection, String),
     SendMany(Selection, Vec<String>),
+    QueueMany(Selection, Vec<String>),
 }
 impl Command {
     fn kind(&self) -> OperationKind {
@@ -136,6 +139,7 @@ impl Command {
             Self::Abort(_) => OperationKind::Abort,
             Self::Send(_, _) => OperationKind::Send,
             Self::SendMany(_, _) => OperationKind::SendMany,
+            Self::QueueMany(_, _) => OperationKind::QueueMany,
         }
     }
 }
@@ -486,7 +490,9 @@ impl NativeClient {
                 id: value,
                 connection,
             }),
-            Command::Abort(_) | Command::SendMany(_, _) => return Err(ClientError::Protocol),
+            Command::Abort(_) | Command::SendMany(_, _) | Command::QueueMany(_, _) => {
+                return Err(ClientError::Protocol)
+            }
         })
     }
 
@@ -514,11 +520,12 @@ impl NativeClient {
         kind: &str,
         ids: Vec<String>,
     ) -> Result<Receipt> {
-        let Command::SendMany(_, endpoints) = command else {
-            return Err(ClientError::Protocol);
+        let endpoints = match command {
+            Command::SendMany(_, endpoints) | Command::QueueMany(_, endpoints) => endpoints,
+            _ => return Err(ClientError::Protocol),
         };
         if sequence == 0
-            || kind != "send_many"
+            || kind != command.kind().wire()
             || ids.len() != endpoints.len()
             || ids.is_empty()
             || ids.len() > super::batch::RECIPIENTS
@@ -536,7 +543,7 @@ impl NativeClient {
         }
         Ok(Receipt {
             sequence,
-            operation: OperationKind::SendMany,
+            operation: command.kind(),
             result: OperationValue::Transfers(transfers),
         })
     }
@@ -550,11 +557,15 @@ impl NativeClient {
                 )
                 .await?
             }
-            Command::SendMany(id, endpoints) => {
+            Command::SendMany(id, endpoints) | Command::QueueMany(id, endpoints) => {
                 let reply = self
                     .wire(
                         super::batch::INTERFACE,
-                        "Send",
+                        if matches!(command, Command::QueueMany(..)) {
+                            "Queue"
+                        } else {
+                            "Send"
+                        },
                         &(id.id(), endpoints, sequence),
                     )
                     .await?;
@@ -562,7 +573,7 @@ impl NativeClient {
                     .body()
                     .deserialize()
                     .map_err(|_| ClientError::Protocol)?;
-                return self.decode_many(command, sequence, "send_many", ids);
+                return self.decode_many(command, sequence, command.kind().wire(), ids);
             }
             Command::BeginText(count) => {
                 self.wire(OPERATIONS_INTERFACE, "BeginText", &(*count, sequence))
@@ -662,7 +673,7 @@ impl NativeClient {
                 self.owned(base.id(), &base.connection)?;
             }
             Command::Commit(id) | Command::Abort(id) => self.owned(id.id(), &id.connection)?,
-            Command::SendMany(id, endpoints) => {
+            Command::SendMany(id, endpoints) | Command::QueueMany(id, endpoints) => {
                 self.owned(id.id(), &id.connection)?;
                 super::batch::valid_recipients(endpoints).map_err(|_| ClientError::InvalidInput)?;
             }
@@ -773,6 +784,20 @@ impl NativeClient {
         }
     }
 
+    pub async fn queue_recipient(
+        &mut self,
+        selection: &Selection,
+        endpoint: String,
+    ) -> Result<Vec<Transfer>> {
+        match self
+            .mutation(Command::QueueMany(selection.clone(), vec![endpoint]))
+            .await?
+            .result
+        {
+            OperationValue::Transfers(ids) => Ok(ids),
+            _ => Err(ClientError::Protocol),
+        }
+    }
     pub async fn send_many(
         &mut self,
         selection: &Selection,
@@ -925,7 +950,9 @@ impl NativeClient {
                 }
                 let result = if accepted == self.last {
                     self.execute(&command, sequence).await
-                } else if accepted == sequence && matches!(command, Command::SendMany(_, _)) {
+                } else if accepted == sequence
+                    && matches!(command, Command::SendMany(_, _) | Command::QueueMany(_, _))
+                {
                     let reply = self
                         .wire(super::batch::INTERFACE, "GetReceipt", &sequence)
                         .await?;

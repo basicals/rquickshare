@@ -79,6 +79,7 @@ enum Action {
     ChooseText(NativeText),
     Send(Selection, String),
     SendMany(Selection, Vec<String>),
+    QueueRecipient(Selection, String),
     Discard(Selection),
     Respond(Transfer, u64, bool),
     Cancel(Transfer),
@@ -99,7 +100,9 @@ impl PanelHandle {
     pub fn refresh_journal(&self) -> Result<Completion> {
         self.submit(Action::JournalRefresh)
     }
-
+    pub fn queue_recipient(&self, selection: Selection, endpoint: String) -> Result<Completion> {
+        self.submit(Action::QueueRecipient(selection, endpoint))
+    }
     pub fn clear_journal(&self, token: String) -> Result<Completion> {
         if token.len() != 64 {
             return Err(ClientError::InvalidInput.into());
@@ -574,6 +577,11 @@ impl Worker {
                 self.preparation = None;
                 Ok(ActionResult::Completed)
             }
+            Action::QueueRecipient(selection, endpoint) => self
+                .client
+                .queue_recipient(&selection, endpoint)
+                .await
+                .map(ActionResult::Transfers),
             Action::SendMany(selection, endpoints) => self
                 .client
                 .send_many(&selection, endpoints)

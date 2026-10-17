@@ -221,6 +221,46 @@ async fn given_invalid_batch_wire_or_foreign_source_when_requested_then_no_membe
 }
 
 #[tokio::test]
+async fn given_queue_api_when_multiple_clicks_reuse_source_then_order_and_preparation_are_preserved(
+) {
+    scenario(async {
+        // Arrange
+        let (_private, host, mut client) = fixture_many().await;
+        let (_source, selection) = prepare(&mut client).await;
+        // Act
+        let first = client
+            .queue_recipient(&selection, "second".into())
+            .await
+            .unwrap();
+        let second = client
+            .queue_recipient(&selection, "peer".into())
+            .await
+            .unwrap();
+        // Assert
+        let state = client.read_state().await.unwrap();
+        assert_eq!(state.selections, vec![selection]);
+        assert_eq!(first.len(), 1);
+        assert_eq!(second.len(), 1);
+        assert!(first[0].id() < second[0].id());
+        assert_eq!(
+            state
+                .transfers
+                .iter()
+                .map(|t| t.associated_endpoint.as_deref())
+                .collect::<Vec<_>>(),
+            vec![Some("second"), Some("peer")]
+        );
+        assert!(state
+            .transfers
+            .iter()
+            .all(|t| t.phase == crate::service::Phase::Queued));
+        client.close().await.unwrap();
+        host.finish().await.1.unwrap();
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn given_saved_journal_when_read_and_cleared_then_metadata_pages_are_immutable_and_sharing_stays_available(
 ) {
     scenario(async {

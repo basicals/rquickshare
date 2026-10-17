@@ -1154,7 +1154,7 @@ impl SelectionBus {
             }
             let body = message.body();
             match member {
-                Some("Send") => {
+                Some("Send" | "Queue") => {
                     let result = body
                         .deserialize::<(String, batch::Recipients, u64)>()
                         .map_err(|_| Error::InvalidInput)
@@ -1173,7 +1173,13 @@ impl SelectionBus {
                                     (id, name)
                                 })
                                 .collect();
-                            coordinator.ordered_send_many(
+                            let enqueue = if member == Some("Queue") {
+                                Coordinator::ordered_queue_many
+                            } else {
+                                Coordinator::ordered_send_many
+                            };
+                            enqueue(
+                                coordinator,
                                 client,
                                 SelectionId(epoch, counter),
                                 recipients,

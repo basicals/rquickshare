@@ -26,6 +26,16 @@ impl Coordinator {
         endpoints: &[String],
         names: &[String],
     ) -> Result<Vec<TransferId>, Error> {
+        self.enqueue_many_owned(client, selection, endpoints, names, false)
+    }
+    pub(super) fn enqueue_many_owned(
+        &mut self,
+        client: ClientId,
+        selection: SelectionId,
+        endpoints: &[String],
+        names: &[String],
+        retain: bool,
+    ) -> Result<Vec<TransferId>, Error> {
         self.running()?;
         self.client(client)?;
         self.synchronized()?;
@@ -96,10 +106,14 @@ impl Coordinator {
             transfers.push(TransferId(self.epoch, self.revision + offset as u64));
         }
         // All checks and the entire ID range precede source consumption; no await or partial result.
-        let pending = self
-            .selections
-            .remove(&selection)
-            .expect("validated batch selection");
+        let resource = if retain {
+            self.selections[&selection].resource.clone()
+        } else {
+            self.selections
+                .remove(&selection)
+                .expect("validated batch selection")
+                .resource
+        };
         self.reservations
             .get_mut(&selection)
             .expect("validated source reservation")
@@ -113,7 +127,7 @@ impl Coordinator {
             };
             self.queue_outbound(
                 *id,
-                pending.resource.clone(),
+                resource.clone(),
                 endpoint.clone(),
                 Some(name.to_owned()),
             );

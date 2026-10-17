@@ -24,7 +24,12 @@
       <arg name="recipients" type="a(ss)" direction="out"/>
     </method>
 
-
+<method name="Queue">
+      <arg name="selection" type="s" direction="in"/>
+      <arg name="recipients" type="as" direction="in"/>
+      <arg name="sequence" type="t" direction="in"/>
+      <arg name="transfers" type="as" direction="out"/>
+    </method>
 </interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Visibility2">
     <method name="Read">
