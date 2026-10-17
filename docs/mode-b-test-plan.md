@@ -12,6 +12,29 @@ The repository has historical coverage, regression tests, a targeted mutation au
 
 No new tests may be added without a complete inventory/branch/matrix/interaction/count/coverage plan for their scoped artifacts. The offline analyzer's preregistered scope is recorded in `docs/offline-maintenance.md`.
 
+## 2026-10-17 completed strict automated stability gate
+
+At exact tested code SHA `f8e5d2d0`, GitHub Actions
+[Mode B run 39066477128](https://github.com/morozhenko-apps/rquickshare/actions/runs/39066477128)
+completed all three jobs successfully: 10/10 full Core
+704 + 8 integration, legacy Tauri 10, Vue/Vitest and
+Python 54; then 10/10 Native GTK 52, then measured
+core/legacy desktop/frontend coverage. This **closes the
+current exact-source Stage 11 headless automated ten-consecutive
+suite subgate only**. The later physical acceptance and post-fix
+rerun, Stage 12 YES/NO, mutation, all public methods/branches
+and per-production-file Native GTK coverage **remain OPEN**.
+
+Core llvm-cov: **89.35% lines / 85.30% functions / 86.20%
+regions**; frontend V8: **56.00% lines / 75.86% functions /
+88.04% branches**; legacy Tauri llvm-cov: **23.86%
+lines / 19.29% functions / 24.98% regions**. Do not
+mistake the legacy Tauri percentage for current Native GTK.
+The complete source-by-source measured baseline is in
+[mode-b-coverage-baseline-2026-10-17.md](mode-b-coverage-baseline-2026-10-17.md).
+These are instrumented coverage input aggregates, not all
+current production methods or true Rust branch coverage.
+
 ## 2026-10-17 execution-profile clarification
 
 **Routine dev CI is not the final Mode B gate.** Routine `Preflight`
