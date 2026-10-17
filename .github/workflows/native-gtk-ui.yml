@@ -62,5 +62,5 @@ jobs:
             echo "=== Native GTK regression attempt ${attempt}/10 ==="
             GTK_A11Y=none GDK_BACKEND=x11 GSK_RENDERER=cairo \
               dbus-run-session --config-file docs/prototypes/preview-bus.conf -- \
-              xvfb-run -a cargo +stable test --locked --manifest-path native_desktop/Cargo.toml
+              xvfb-run -a cargo +stable test --locked --manifest-path native_desktop/Cargo.toml --bin rquickshare
           done
