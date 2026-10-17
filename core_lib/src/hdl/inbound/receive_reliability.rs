@@ -357,6 +357,284 @@ async fn given_remote_cancel_after_accept_before_or_after_first_file_when_handle
     }
 }
 
+// A fresh end-to-end managed Introduction fixture shared by the P0 text,
+// nested-folder and explicit-retry cases. Never shortcuts the consent handler.
+async fn critical_introduction(
+    files: Vec<sharing_nearby::FileMetadata>,
+    text: Vec<sharing_nearby::TextMetadata>,
+    directory: Option<&Path>,
+    seed: u128,
+) -> (
+    TestRequest,
+    crate::sessions::SessionControl,
+    tokio::io::DuplexStream,
+) {
+    let mut request = test_request();
+    if let Some(path) = directory {
+        request.receive_directory =
+            crate::receive::ReceivePolicy::new(Some(path.to_owned())).snapshot();
+    }
+    let (socket, peer) = tokio::io::duplex(8192);
+    request.socket = socket;
+    request.state.encrypt_key = Some(vec![0; 32]);
+    request.state.send_hmac_key = Some(vec![0; 32]);
+    request.state.remote_device_info = Some(RemoteDeviceInfo {
+        name: "phone".into(),
+        device_type: crate::utils::DeviceType::Phone,
+    });
+    request.state.pin_code = Some("0123".into());
+    let hub = crate::sessions::SessionHub::new(seed).unwrap();
+    let session = hub
+        .open(
+            crate::channel::TransferType::Inbound,
+            None,
+            tokio_util::sync::CancellationToken::new(),
+        )
+        .unwrap();
+    let control = session.control();
+    request.session = Some(session);
+    request
+        .process_introduction(&introduction_frame(files, text, vec![]))
+        .await
+        .unwrap();
+    assert_eq!(request.state.state, State::WaitingForUserConsent);
+    assert!(control.snapshot().received_files.is_none());
+    assert!(control.snapshot().received_text.is_none());
+    (request, control, peer)
+}
+
+async fn critical_accept(
+    request: &mut TestRequest,
+    control: &crate::sessions::SessionControl,
+) {
+    let token = control.snapshot().consent.unwrap();
+    let receipt = control.respond(token, 1, true).unwrap();
+    let command = crate::sessions::consent_command(&mut request.session)
+        .await
+        .unwrap();
+    let state = request.state.state.clone();
+    assert_eq!(
+        request.session.as_mut().unwrap().apply(command, &state),
+        Some(true)
+    );
+    receipt.wait().await.unwrap();
+    request.apply_consent(true).await.unwrap();
+    assert_eq!(request.state.state, State::ReceivingFiles);
+}
+
+#[tokio::test]
+async fn given_managed_text_or_link_when_explicitly_accepted_and_fragmented_then_exact_utf8_is_exposed_only_after_finished(
+) {
+    use crate::byte_payload::tests::frame;
+    use crate::sessions::details::PayloadKind;
+
+    for (kind, wire_kind, expected_kind, body) in [
+        (
+            "text",
+            text_metadata::Type::Text,
+            PayloadKind::Text,
+            "olá 🌍",
+        ),
+        (
+            "url",
+            text_metadata::Type::Url,
+            PayloadKind::Url,
+            "https://example.test/café",
+        ),
+    ] {
+        // Arrange: actual two-byte-codepoint split, full metadata, real token.
+        let source = body.as_bytes();
+        let (mut request, control, _peer) = critical_introduction(
+            vec![],
+            vec![sharing_nearby::TextMetadata {
+                payload_id: Some(701),
+                size: Some(source.len() as i64),
+                r#type: Some(wire_kind.into()),
+                text_title: Some(kind.into()),
+                ..Default::default()
+            }],
+            None,
+            if kind == "text" { 71 } else { 72 },
+        )
+        .await;
+        assert!(request.state.transfer_metadata.as_ref().unwrap().text_payload.is_none());
+        assert!(std::fs::read_dir(request._directory.path()).unwrap().next().is_none());
+
+        // Act: approval is a real managed command; bytes are not exposed early.
+        critical_accept(&mut request, &control).await;
+        assert!(control.snapshot().received_text.is_none());
+        let split = 4;
+        request
+            .process_offline_frame(frame(701, source.len(), 0, &source[..split], false))
+            .await
+            .unwrap();
+        assert_eq!(request.state.state, State::ReceivingFiles);
+        assert!(control.snapshot().received_text.is_none());
+        let finished = request
+            .process_offline_frame(frame(701, source.len(), split, &source[split..], true))
+            .await
+            .unwrap_err();
+
+        // Assert: immutable exact bytes are available only after true completion.
+        assert!(finished.is::<crate::errors::AppError>(), "{kind}: {finished:?}");
+        assert_eq!(request.state.state, State::Finished);
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.state, State::Finished);
+        assert_eq!(snapshot.details.kind, expected_kind);
+        assert_eq!(snapshot.details.transferred_bytes, source.len() as u64);
+        let received = snapshot.received_text.as_ref().unwrap();
+        assert_eq!(received.kind(), expected_kind);
+        assert_eq!(received.text().as_bytes(), source);
+        assert!(snapshot.received_files.is_none());
+        assert!(request.state.byte_payloads.is_empty());
+        assert!(std::fs::read_dir(request._directory.path()).unwrap().next().is_none());
+        request.record_termination(State::Disconnected);
+        assert_eq!(control.snapshot().state, State::Finished);
+    }
+}
+
+#[tokio::test]
+async fn given_nested_folder_and_existing_root_when_managed_transfer_completes_then_original_tree_and_verified_files_coexist(
+) {
+    use std::os::unix::fs::FileExt;
+
+    let target = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(target.path().join("Trip")).unwrap();
+    std::fs::write(target.path().join("Trip/user.txt"), b"user-owned").unwrap();
+    let (mut request, control, _peer) = critical_introduction(
+        vec![
+            file_metadata_with_parent("readme.txt", 801, 3, "Trip"),
+            file_metadata_with_parent("photo.bin", 802, 2, "Trip/photos"),
+        ],
+        vec![],
+        Some(target.path()),
+        81,
+    )
+    .await;
+
+    // Arrange: both nested names are collision-remapped as one tree before consent.
+    let listed = request.state.transfer_metadata.as_ref().unwrap().files.as_ref().unwrap();
+    assert_eq!(listed, &vec!["1_Trip/readme.txt", "1_Trip/photos/photo.bin"]);
+    assert!(!target.path().join("1_Trip").exists());
+    assert!(control.snapshot().received_files.is_none());
+
+    // Act: real managed Accept and distinct terminal FILE frames.
+    critical_accept(&mut request, &control).await;
+    assert!(!target.path().join("1_Trip/readme.txt").exists());
+    request
+        .process_offline_frame(received_file_frame(801, 3, 0, b"abc", 1))
+        .await
+        .unwrap();
+    assert!(!target.path().join("1_Trip/photos/photo.bin").exists());
+    let finished = request
+        .process_offline_frame(received_file_frame(802, 2, 0, b"xy", 1))
+        .await
+        .unwrap_err();
+
+    // Assert: both durable members and original user tree are immutable.
+    assert!(finished.is::<crate::errors::AppError>());
+    assert_eq!(request.state.state, State::Finished);
+    assert_eq!(std::fs::read(target.path().join("Trip/user.txt")).unwrap(), b"user-owned");
+    assert_eq!(std::fs::read(target.path().join("1_Trip/readme.txt")).unwrap(), b"abc");
+    assert_eq!(
+        std::fs::read(target.path().join("1_Trip/photos/photo.bin")).unwrap(),
+        b"xy"
+    );
+    let snapshot = control.snapshot();
+    assert_eq!(snapshot.details.total_bytes, 5);
+    assert_eq!(snapshot.details.transferred_bytes, 5);
+    let receipt = snapshot.received_files.as_ref().unwrap();
+    assert_eq!(receipt.len(), 2);
+    assert!(receipt.valid_for(&snapshot.details));
+    let mut first = [0; 3];
+    FileExt::read_exact_at(&receipt.open(0).unwrap(), &mut first, 0).unwrap();
+    assert_eq!(&first, b"abc");
+    let mut second = [0; 2];
+    FileExt::read_exact_at(&receipt.open(1).unwrap(), &mut second, 0).unwrap();
+    assert_eq!(&second, b"xy");
+    assert!(request.publications.is_empty());
+}
+
+#[tokio::test]
+async fn given_interrupted_multifile_receive_when_retry_is_explicit_then_new_consent_preserves_first_and_writes_only_new_names(
+) {
+    use tokio::io::AsyncWriteExt;
+
+    let root = tempfile::tempdir().unwrap();
+    let files = || vec![
+        file_metadata("memo.txt", 901, 1),
+        file_metadata("photo.bin", 902, 3),
+    ];
+
+    // Arrange: initial user-approved transfer finishes one member only.
+    let (mut failed, first_control, mut first_peer) =
+        critical_introduction(files(), vec![], Some(root.path()), 91).await;
+    critical_accept(&mut failed, &first_control).await;
+    failed
+        .process_offline_frame(received_file_frame(901, 1, 0, b"a", 1))
+        .await
+        .unwrap();
+    failed
+        .process_offline_frame(received_file_frame(902, 3, 0, b"b", 0))
+        .await
+        .unwrap();
+    failed.receiver = None;
+    let prefix = 5_u32.to_be_bytes();
+    first_peer.write_all(&prefix[..2]).await.unwrap();
+    drop(first_peer);
+
+    // Act: the first real transport is interrupted and cannot become Finished.
+    let interrupted = failed.handle().await.unwrap_err();
+    assert_eq!(
+        interrupted
+            .root_cause()
+            .downcast_ref::<std::io::Error>()
+            .map(std::io::Error::kind),
+        Some(std::io::ErrorKind::UnexpectedEof)
+    );
+    failed.record_termination(State::Disconnected);
+    assert_eq!(first_control.snapshot().state, State::Disconnected);
+    assert_eq!(std::fs::read(root.path().join("memo.txt")).unwrap(), b"a");
+    assert!(!root.path().join("photo.bin").exists());
+    let partial = first_control.snapshot().received_files.as_ref().unwrap().clone();
+    assert!(partial.subset_of(&first_control.snapshot().details));
+    assert!(!partial.valid_for(&first_control.snapshot().details));
+
+    // A fresh separate transfer must wait at consent; no automatic retry.
+    let (mut retried, retry_control, _retry_peer) =
+        critical_introduction(files(), vec![], Some(root.path()), 92).await;
+    assert_ne!(first_control.snapshot().id, retry_control.snapshot().id);
+    assert_eq!(retried.state.state, State::WaitingForUserConsent);
+    let renamed = retried.state.transfer_metadata.as_ref().unwrap().files.as_ref().unwrap();
+    assert_eq!(renamed, &vec!["1_memo.txt", "photo.bin"]);
+    assert!(!root.path().join("1_memo.txt").exists());
+    assert!(!root.path().join("photo.bin").exists());
+    assert!(retry_control.snapshot().received_files.is_none());
+
+    // The user explicitly grants a NEW token; only then are bytes admitted.
+    critical_accept(&mut retried, &retry_control).await;
+    retried
+        .process_offline_frame(received_file_frame(901, 1, 0, b"z", 1))
+        .await
+        .unwrap();
+    let finished = retried
+        .process_offline_frame(received_file_frame(902, 3, 0, b"bcd", 1))
+        .await
+        .unwrap_err();
+    assert!(finished.is::<crate::errors::AppError>());
+    assert_eq!(retry_control.snapshot().state, State::Finished);
+    assert_eq!(std::fs::read(root.path().join("memo.txt")).unwrap(), b"a");
+    assert_eq!(std::fs::read(root.path().join("1_memo.txt")).unwrap(), b"z");
+    assert_eq!(std::fs::read(root.path().join("photo.bin")).unwrap(), b"bcd");
+    assert_eq!(retry_control.snapshot().details.transferred_bytes, 4);
+    let complete = retry_control.snapshot().received_files.as_ref().unwrap().clone();
+    assert!(complete.valid_for(&retry_control.snapshot().details));
+    assert_eq!(complete.len(), 2);
+    assert!(retried.publications.is_empty());
+    failed.record_termination(State::Finished);
+    assert_eq!(first_control.snapshot().state, State::Disconnected);
+}
+
 #[tokio::test]
 async fn given_missing_receive_root_before_introduction_when_pinning_then_no_file_consent_or_authority_is_created(
 ) {
