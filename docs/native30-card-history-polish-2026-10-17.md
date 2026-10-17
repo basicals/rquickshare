@@ -9,15 +9,15 @@ delay as fixed or measured. Native29 remains installed during source work.
 
 1. [x] Analyze tray activation, drawer presentation, sizing and shared history rows;
    record this plan before edits. Existing user choices authorize these UX changes.
-2. [ ] On opening from a primary tray click or the tray Open action, close the
+2. [x] On opening from a primary tray click or the tray Open action, close the
    device drawer before presentation. Clicking an already visible card still hides
    it. Explicit Devices/Send/incoming review retain their existing expansion rules;
    closing the drawer does not cancel transfers or discard prepared sources.
-3. [ ] Rename visible Transfers menu/window references to History, preserving
+3. [x] Rename visible Transfers menu/window references to History, preserving
    action names, IDs and D-Bus contracts. Add theme-aware horizontal and vertical
    cell borders to the shared six-column live/metadata layout, keeping measured
    column groups and reserved actions aligned. No new history data or controls.
-4. [ ] Diagnose the actual open/closed width requests and constrain the same card
+4. [x] Diagnose the actual open/closed width requests and constrain the same card
    width in both states. Keep bottom anchoring, visible controls, wrapping/ellipsis
    and monitor clamping. Fix the width owner rather than adding per-row offsets.
 5. [ ] Run affected native checks once and strict lint, inspect actual-widget
@@ -47,7 +47,41 @@ No repeated ten-run gate; checks affected by a concrete failure may rerun once.
 
 ## State and continuation
 
-Pending. Installed native29 two-file roundtrip remains independently hash-verified.
-The text report is user evidence only until checked against the intended fixture;
-clipboard/copy/close and delay timing are not inferred. Broader folder/cancel/
+Initial request-only width probe passed1/0 in0.54s; it does not prove mapped layer
+surface allocation or every row state. Keep the actual mapped-width assertion
+and a private fixed-width single-child surface as the horizontal size owner:
+420 logical pixels, matching the existing default/placement width. It delegates
+vertical measurement/allocation/snapshot to the existing root. This avoids a
+window default-size hint being overridden by drawer natural widths; content still
+wraps/ellipsizes and actual consent/toolbar controls must fit the allocation.
+No per-state resizing or hidden horizontal scrolling/clipped action workaround.
+
+At14:55:14Z, installed29 Text1 snapshot/revision-bound bounded read matched the
+intended26-byte UTF-8 fixture SHA-256
+40c0efd6cc70764ec4b71c302d9a8c4aa5477f6655f60b0e7def998c92b569f1.
+No body or clipboard was logged/read outside that checked capability. Clipboard/
+copy/close and the reported delay timing are not inferred. Broader folder/cancel/
 Windows/failure/lifecycle acceptance remains open.
+
+## Measured source checkpoint
+
+One private420px surface now owns horizontal measurement; the existing root owns
+all content/vertical layout. The smoke test paints both open/closed surfaces at
+frame boundaries and asserts actual width420 and a fitting root minimum. Inspected
+captures are420x196 and420x140; direct consent buttons fit. This is isolated X11
+rendering, not physical KDE/Wayland acceptance. Tray smoke covers hidden primary
+open -> collapsed, visible primary -> hidden, reopen -> collapsed and menu Open
+-> collapsed, preserving the same service StateView Arc.
+
+Shared history rows use contiguous cells with theme-derived borders and existing
+SizeGroups/reserved action slot. CSS parse, cell classes and exact column alignment
+passed in the existing widget test. Full native run:50 passed/2 failed in0.77s;
+only failures were stale expected `Transfers (3)/(0)` labels in the two menu tests.
+Update those assertions to the explicitly requested `History` strings, retaining
+IDs/counter checks. Affected menu rerun passed2/0 in0.04s; strict native Clippy
+passed in7.69s. No full52/0 rerun claim or repeated stability loop. Existing private
+display/layer-surface and core no-experimental unused-code warnings remain separate.
+
+Next: unique revision30 locked release build, exact package History visual review,
+then fresh idle/source/owner gate before any installation. If prepared sources
+remain, preserve them and request user action. Rollback29 is retained unchanged.

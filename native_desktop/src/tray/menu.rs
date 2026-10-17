@@ -73,7 +73,7 @@ impl Action {
             Self::RetryVisibility => "Retry visibility change",
             Self::Folder => "Send a folder…",
             Self::Incoming => "Incoming requests",
-            Self::Transfers => "Transfers",
+            Self::Transfers => "History",
             Self::Compact => "Compact view",
             Self::Full => "Full view",
             Self::Settings => "Settings…",
@@ -195,7 +195,7 @@ fn properties(id: i32, state: State, names: &[String]) -> HashMap<String, OwnedV
             Action::Open if state.projection.card_visible => "Hide card".to_owned(),
             Action::Incoming => format!("Incoming requests ({})", state.projection.incoming),
             Action::Transfers => format!(
-                "Transfers ({})",
+                "History ({})",
                 state.projection.active + state.projection.incoming
             ),
             _ => action.label().to_owned(),

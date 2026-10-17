@@ -81,6 +81,7 @@ impl Panel {
             self.hide();
             true
         } else {
+            self.set_drawer(Drawer::Closed);
             self.show_at(point)
         }
     }
@@ -91,6 +92,7 @@ impl Panel {
         match action {
             Action::Open if self.window.is_visible() => self.hide(),
             Action::Open => {
+                self.set_drawer(Drawer::Closed);
                 self.mark_manual();
                 self.pages.set_visible_child_name("nearby");
                 self.model.borrow_mut().manual_requested = true;
@@ -266,6 +268,25 @@ pub(super) fn verify_tray_projection(panel: &Rc<Panel>) {
         model.preview = false;
     }
     super::countdown::verify(panel);
+    let view = panel.model.borrow().state.view.clone().unwrap();
+    panel.set_drawer(Drawer::Open);
+    panel.window.set_visible(false);
+    assert!(panel.activate_at((100, 100)));
+    assert_eq!(panel.drawer(), Drawer::Closed);
+    panel.set_drawer(Drawer::Open);
+    assert!(panel.activate_at((100, 100)));
+    assert!(!panel.window.is_visible());
+    assert!(panel.activate_at((100, 100)));
+    assert_eq!(panel.drawer(), Drawer::Closed);
+    panel.set_drawer(Drawer::Open);
+    panel.window.set_visible(false);
+    panel.tray_action(Action::Open);
+    assert!(panel.window.is_visible());
+    assert_eq!(panel.drawer(), Drawer::Closed);
+    assert!(Arc::ptr_eq(
+        &view,
+        panel.model.borrow().state.view.as_ref().unwrap()
+    ));
     panel.set_drawer(Drawer::Open);
     panel.render();
     assert!(!panel.box_widget("source").get_visible());

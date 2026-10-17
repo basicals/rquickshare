@@ -123,14 +123,14 @@ impl Panel {
                     if let Some(revision) = row.reveal_revision {
                         self.reveal_result(row.transfer, revision);
                     } else {
-                        self.notice("Completed. The saved result is unavailable for automatic folder selection; review Transfers.");
+                        self.notice("Completed. The saved result is unavailable for automatic folder selection; review History.");
                     }
                 }
                 _ => {
                     if let (Some(revision), Some(handle)) = (row.content_revision, &self.handle) {
                         self.submit(|| handle.read_text(row.transfer, revision));
                     } else {
-                        self.notice("Completed. Text is no longer available; review Transfers.");
+                        self.notice("Completed. Text is no longer available; review History.");
                     }
                 }
             }

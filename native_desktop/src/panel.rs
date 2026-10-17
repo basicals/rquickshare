@@ -34,6 +34,7 @@ mod results;
 mod reveal;
 mod rows;
 mod settings;
+mod surface;
 mod text;
 mod transfers;
 mod tray;
@@ -374,6 +375,8 @@ impl Panel {
             .object::<gtk::Box>("compact")
             .expect("bottom controls");
         let root = builder.object::<gtk::Box>("root").expect("card root");
+        window.set_child(None::<&gtk::Widget>);
+        window.set_child(Some(&surface::Surface::new(&root)));
         root.remove(&compact);
         let overlay = gtk::Overlay::new();
         overlay.set_widget_name("controls-overlay");

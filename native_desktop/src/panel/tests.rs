@@ -361,6 +361,40 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     consent_controls(panel.box_widget("nearby").upcast_ref(), &mut direct);
     assert_eq!(direct, ["decline", "accept"]);
 
+    panel.set_drawer(Drawer::Open);
+    let open_width = panel.window.measure(gtk::Orientation::Horizontal, -1);
+    panel.set_drawer(Drawer::Closed);
+    let closed_width = panel.window.measure(gtk::Orientation::Horizontal, -1);
+    assert_eq!(
+        open_width.1.max(420),
+        closed_width.1.max(420),
+        "one card width: open={open_width:?}, closed={closed_width:?}"
+    );
+    for drawer in [Drawer::Open, Drawer::Closed] {
+        panel.set_drawer(drawer);
+        assert_eq!(
+            panel.window.measure(gtk::Orientation::Horizontal, -1).0,
+            surface::WIDTH
+        );
+        paint_card(
+            &panel,
+            if drawer == Drawer::Open {
+                "fixed-expanded"
+            } else {
+                "fixed-collapsed"
+            },
+            true,
+        );
+        assert_eq!(panel.window.width(), surface::WIDTH);
+        assert!(
+            panel
+                .box_widget("root")
+                .measure(gtk::Orientation::Horizontal, -1)
+                .0
+                <= surface::WIDTH
+        );
+    }
+
     panel.actions.activate_action("settings", None);
     let settings = panel.settings.borrow().as_ref().unwrap().clone();
     assert!(settings.is_visible());
@@ -525,14 +559,21 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
 
 // Optional actual-widget frames; no connected writer, timer-based state or daemon transfer fixture.
 pub(super) fn capture_card(panel: &Rc<Panel>, name: &str) {
+    paint_card(panel, name, false);
+}
+
+fn paint_card(panel: &Rc<Panel>, name: &str, force: bool) {
     use gtk::gdk::prelude::PaintableExt;
-    let Some(output) = std::env::var_os("RQS_CARD_PREVIEW_OUTPUT") else {
+    let output = std::env::var_os("RQS_CARD_PREVIEW_OUTPUT");
+    if output.is_none() && !force {
         return;
-    };
-    let output = std::path::PathBuf::from(output);
-    assert!(output.is_absolute());
-    std::fs::create_dir_all(&output).unwrap();
-    let destination = output.join(format!("{name}.png"));
+    }
+    let destination = output.map(|output| {
+        let output = std::path::PathBuf::from(output);
+        assert!(output.is_absolute());
+        std::fs::create_dir_all(&output).unwrap();
+        output.join(format!("{name}.png"))
+    });
     panel.window.present();
     panel.window.queue_draw();
     let finished = Rc::new(Cell::new(false));
@@ -552,12 +593,14 @@ pub(super) fn capture_card(panel: &Rc<Panel>, name: &str) {
         let Some(node) = snapshot.to_node() else {
             return;
         };
-        window
-            .renderer()
-            .unwrap()
-            .render_texture(&node, None)
-            .save_to_png(&destination)
-            .unwrap();
+        if let Some(destination) = destination.as_ref() {
+            window
+                .renderer()
+                .unwrap()
+                .render_texture(&node, None)
+                .save_to_png(destination)
+                .unwrap();
+        }
         captured.set(true);
         completed.quit();
     });

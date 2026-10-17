@@ -13,14 +13,17 @@ impl Default for Columns {
 }
 impl Columns {
     pub(super) fn row(&self, cells: [&gtk::Widget; 6]) -> gtk::Box {
-        let row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         row.set_height_request(36);
         row.set_widget_name("history-row");
+        row.add_css_class("history-row");
         for (index, child) in cells.into_iter().enumerate() {
             let cell = gtk::Box::new(gtk::Orientation::Horizontal, 0);
             cell.set_widget_name(&format!("history-column-{index}"));
-            cell.set_valign(gtk::Align::Center);
+            cell.add_css_class("history-cell");
+            cell.set_valign(gtk::Align::Fill);
             cell.set_hexpand(index == 0);
+            child.set_valign(gtk::Align::Center);
             if index == 5 {
                 // Preserve an action slot even when every current row is metadata-only.
                 cell.set_width_request(112);
@@ -63,7 +66,7 @@ pub(super) struct Window {
 impl Window {
     pub(super) fn new(panel: &Rc<Panel>) -> Rc<Self> {
         let window = gtk::Window::builder()
-            .title("Transfers")
+            .title("History")
             .default_width(860)
             .default_height(560)
             .application(&panel.window.application().expect("application owner"))
@@ -96,10 +99,11 @@ impl Window {
         scroll.set_propagate_natural_height(false);
         scroll.set_min_content_height(0);
         scroll.set_max_content_height(-1);
-        let body = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        let body = gtk::Box::new(gtk::Orientation::Vertical, 0);
         let live = panel.box_widget("transfers");
+        live.set_spacing(0);
         body.append(&live);
-        let history = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        let history = gtk::Box::new(gtk::Orientation::Vertical, 0);
         body.append(&history);
         scroll.set_child(Some(&body));
         root.append(&scroll);
@@ -281,6 +285,7 @@ pub(super) fn verify_columns() {
         empty.upcast_ref(),
     ]);
     // Act: allocate the actual GTK rows at the same table width.
+    assert!(one.has_css_class("history-row") && two.has_css_class("history-row"));
     one.allocate(860, 40, -1, None);
     two.allocate(860, 40, -1, None);
     // Assert: every column starts at the same coordinate with the same width.
@@ -288,6 +293,7 @@ pub(super) fn verify_columns() {
     let mut b = two.first_child();
     let mut count = 0;
     while let (Some(left), Some(right)) = (a, b) {
+        assert!(left.has_css_class("history-cell") && right.has_css_class("history-cell"));
         assert_eq!(
             left.compute_bounds(&one).unwrap().x(),
             right.compute_bounds(&two).unwrap().x(),

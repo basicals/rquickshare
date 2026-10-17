@@ -62,7 +62,7 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
         );
         assert_eq!(
             String::try_from(properties(5, current, &[]).remove("label").unwrap()).unwrap(),
-            "Transfers (3)"
+            "History (3)"
         );
     }
     for mode in [None, Some(0), Some(1), Some(2)] {
@@ -174,7 +174,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
             String::try_from(label).unwrap(),
             match id {
                 4 => "Incoming requests (0)",
-                5 => "Transfers (0)",
+                5 => "History (0)",
                 _ => Action::from_id(id).unwrap().label(),
             }
         );

@@ -51,3 +51,14 @@ button.selection-curtain {
   border-radius: 10px;
   font-weight: 600;
 }
+
+/* Shared live/history columns form one contiguous, theme-aware table. */
+.history-row {
+  border-left: 1px solid alpha(currentColor, 0.22);
+  border-bottom: 1px solid alpha(currentColor, 0.22);
+}
+.history-row:first-child { border-top: 1px solid alpha(currentColor, 0.22); }
+.history-cell {
+  padding: 4px 6px;
+  border-right: 1px solid alpha(currentColor, 0.22);
+}

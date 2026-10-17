@@ -173,7 +173,7 @@ impl Panel {
         for (name, title) in [
             ("receive", "Receive files"),
             ("send", "Send files…"),
-            ("transfers", "Transfers"),
+            ("transfers", "History"),
         ] {
             navigation.append(Some(title), Some(&format!("panel.{name}")));
         }
