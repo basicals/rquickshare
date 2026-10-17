@@ -29,6 +29,16 @@ fn named(root: &gtk::Widget, name: &str) -> Option<gtk::Widget> {
     }
     None
 }
+fn expansion_for_replacement(rows: &Rows, key: &(String, String), default: bool) -> bool {
+    rows.entries
+        .get(key)
+        .and_then(|entry| {
+            named(entry.root.upcast_ref(), "transfer-details")
+                .and_downcast::<gtk::Expander>()
+        })
+        .map(|expander| expander.is_expanded())
+        .unwrap_or(default)
+}
 fn section_title(text: &str) -> gtk::Box {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     let title = label(text);
@@ -200,15 +210,7 @@ impl Panel {
         });
         if !reusable {
             // Live phase changes must not discard the user's expansion choice.
-            let expanded = rows
-                .entries
-                .get(&key)
-                .and_then(|entry| {
-                    named(entry.root.upcast_ref(), "transfer-details")
-                        .and_downcast::<gtk::Expander>()
-                })
-                .map(|expander| expander.is_expanded())
-                .unwrap_or(page == "incoming");
+            let expanded = expansion_for_replacement(rows, &key, page == "incoming");
             let details = if incoming {
                 self.incoming_card(transfer, ready, true)
             } else {
@@ -551,6 +553,45 @@ pub(super) fn verify_keyed_layout() {
     arrange(&container, std::slice::from_ref(&first));
     assert!(second.parent().is_none());
     assert_eq!(container.first_child(), Some(first.upcast()));
+
+    // Arrange: a synthetic transfer with an untrusted sender name.
+    let mut cache = Rows::default();
+    let key = ("nearby".to_owned(), "transfer-one".to_owned());
+    assert!(!expansion_for_replacement(&cache, &key, false));
+    assert!(expansion_for_replacement(&cache, &key, true));
+    let details = card();
+    details.append(&label("Text · 2507 bytes"));
+    let row = transfer_row(
+        "<Mercury>",
+        rqs_lib::service::client::state::DeviceKind::Phone,
+        Phase::Finished,
+        &details,
+        false,
+    );
+    let expander = named(row.upcast_ref(), "transfer-details")
+        .and_downcast::<gtk::Expander>()
+        .unwrap();
+    assert!(!expander.is_expanded());
+    cache.entries.insert(
+        key.clone(),
+        Entry {
+            root: row,
+            transfer: None,
+            endpoint: None,
+        },
+    );
+    // Act / Assert: collapsed state is retained even for an incoming fallback.
+    assert!(!expansion_for_replacement(&cache, &key, true));
+    expander.set_expanded(true);
+    assert!(expansion_for_replacement(&cache, &key, false));
+    assert_eq!(expander.child(), Some(details.upcast()));
+    assert!(named(cache.entries[&key].root.upcast_ref(), "transfer-details").is_some());
+    expander.set_expanded(false);
+    assert!(!expansion_for_replacement(&cache, &key, false));
+    let untrusted_header = section_title("<Mercury> is not a verified identity");
+    assert_eq!(untrusted_header.first_child().unwrap()
+        .downcast::<gtk::Label>().unwrap().text(),
+        "<Mercury> is not a verified identity");
 }
 
 #[cfg(test)]
