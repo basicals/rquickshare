@@ -167,7 +167,9 @@ async fn given_inaccessible_or_unsafe_receive_storage_after_introduction_when_pr
             "{case}"
         );
         let mut probe = [0_u8; 1];
-        assert!(futures::poll!(peer.read(&mut probe)).is_pending(), "{case}");
+        let read = peer.read(&mut probe);
+        tokio::pin!(read);
+        assert!(futures::poll!(read.as_mut()).is_pending(), "{case}");
         assert_eq!(request.state.state, State::WaitingForUserConsent);
         assert_eq!(request.state.transfer_metadata.as_ref().unwrap().ack_bytes, 0);
         assert_eq!(request.state.transferred_files.len(), 2);
