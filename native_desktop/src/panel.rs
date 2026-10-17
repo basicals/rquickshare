@@ -195,6 +195,21 @@ fn details_card_mode_with_files(
     row
 }
 
+fn safe_transfer_details(
+    details: &TransferDetails,
+    phase: Phase,
+    full: bool,
+    action: Option<Rc<FileAction>>,
+) -> gtk::Box {
+    if phase.is_terminal() && details.status == DetailsStatus::Unsupported {
+        let row = card();
+        row.append(&label("Content details are unavailable for review."));
+        row
+    } else {
+        details_card_mode_with_files(details, full, action)
+    }
+}
+
 fn saved_files_card(
     files: Arc<[rqs_lib::sessions::details::FileDetail]>,
     total: usize,
@@ -1170,23 +1185,16 @@ impl Panel {
         ready: bool,
         full: bool,
     ) -> gtk::Box {
-        let row = if transfer.phase.is_terminal()
-            && transfer.details.status == DetailsStatus::Unsupported
-        {
-            let row = card();
-            row.append(&label("Content details are unavailable for review."));
-            row
-        } else {
-            details_card_mode_with_files(
-                &transfer.details,
-                full,
-                if transfer.phase == Phase::Finished {
-                    self.file_action(transfer, full)
-                } else {
-                    None
-                },
-            )
-        };
+        let row = safe_transfer_details(
+            &transfer.details,
+            transfer.phase,
+            full,
+            if transfer.phase == Phase::Finished {
+                self.file_action(transfer, full)
+            } else {
+                None
+            },
+        );
         if transfer.direction == Direction::Inbound
             && matches!(
                 transfer.phase,
