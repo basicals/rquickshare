@@ -76,3 +76,42 @@ Binary source remains2c14d26; this includes later docs/CI only, not new installe
 bytes. External native28 export/installed JSONs and generic source/status copies
 were refreshed. Exact native25/26/27 packages and source archives are unchanged.
 Bash syntax and git diff --check passed for the small CI policy change.
+
+## Successful source merge and next documentation slice
+
+Exact candidate3d048082ddbdf6ec9dabb7e9602c722fa103b371 passed all five substantive
+Preflight jobs in39039111171 and the native GTK gate39039111205. Actual GTK log
+contains exactly attempt1/1 and52 passed/0 failed in0.47s. Same-repository PR
+duplicate skipped checks are not substituted for these successful push runs.
+
+PR7 merged at2026-10-17T14:10:20Z as4eaf99ada7c4232d34f3b74272d3e93c32c5e392.
+The merge tree is byte-identical to the checked candidate. Local existing master
+and dev plus both remote refs were fast-forwarded to the merge; checkout stays
+dev. No branch/worktree creation, deletion, reset or force push. GitHub default
+remains master. The old gh pr edit operation hit a deprecated Projects(classic)
+GraphQL query; the supported REST body update and exact-head guarded merge
+completed successfully instead. No guard or check bypass.
+
+I3/I4 source promotion completed; final evidence/index handoff remains I5. Mainline
+post-merge checks are independent of the already-passing exact source candidate.
+Do not claim their result until observed, and do not manually rerun unchanged code.
+
+### Documentation-first continuation (I6)
+
+The user requested continuing the plan. The next independent maintenance slice is
+the already documented native release-entry gap: root README still presents old
+Tauri downloads/dependencies and screenshot as the default. Before editing,
+freeze a minimal docs-only change: native Linux status/build/package guides first,
+explicit current target and unpublished APT status, preserve original attribution/
+license and all legacy/macOS material inside a labeled reference section. Refresh
+only obsolete leading native_desktop/README paragraphs (single toolbar, direct
+consent, source FIFO, Clipboard and separate Transfers), retaining valid build and
+historical sandbox notes. No new platform, release, trust or parity claim.
+
+Validate local relative links, exact retained legacy body and whitespace once.
+No binary rebuild, installation or unchanged production tests for this docs slice.
+Keep a source-equivalent docs-only receipt, mirror normally to existing refs and
+refresh mutable handoff separately from immutable native28 package/source outputs.
+Rollback I6 independently from the accepted implementation. Keys and encrypted
+cloud backup are already verified; remaining distribution gates concern exact
+release/provenance/scoped publishing and public APT consumption.
