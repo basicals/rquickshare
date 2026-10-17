@@ -29,6 +29,7 @@ mod menu;
 mod movement;
 mod outbound;
 mod presentation;
+mod results;
 mod reveal;
 mod rows;
 mod settings;
@@ -84,6 +85,8 @@ pub struct Panel {
     reveal: RefCell<Option<Rc<reveal::Pending>>>,
     text_generation: RefCell<Rc<()>>,
     rows: RefCell<rows::Rows>,
+    results: RefCell<results::Results>,
+    result_idle: RefCell<Option<glib::SourceId>>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
     reconnect: Cell<bool>,
     reconnect_button: gtk::Button,
@@ -325,6 +328,9 @@ impl Panel {
         self.refresh_login();
     }
     pub fn refresh_login(&self) {
+        if self.window.is_visible() && self.results.borrow().has_visible() {
+            self.mark_manual();
+        }
         if let Some(editor) = self.settings_owner.borrow().as_ref() {
             editor.refresh_login();
         }
@@ -412,6 +418,8 @@ impl Panel {
             reveal: RefCell::new(None),
             text_generation: RefCell::new(Rc::new(())),
             rows: RefCell::new(rows::Rows::default()),
+            results: RefCell::new(results::Results::default()),
+            result_idle: RefCell::new(None),
             dismissal: RefCell::new(None),
             reconnect: Cell::new(false),
             reconnect_button,
@@ -540,6 +548,7 @@ impl Panel {
         if state.disconnected || previous_epoch != current_epoch {
             self.close_input();
             self.rows.borrow_mut().clear();
+            self.results.replace(results::Results::default());
             self.close_text_review();
             self.close_composer();
             self.close_image();
@@ -548,6 +557,16 @@ impl Panel {
         {
             let mut model = self.model.borrow_mut();
             model.state = state;
+            if !model.state.disconnected {
+                if let Some(view) = &model.state.view {
+                    self.results.borrow_mut().observe(
+                        view.epoch,
+                        view.transfers
+                            .iter()
+                            .map(|t| (t.transfer.id().to_owned(), t.direction, t.phase)),
+                    );
+                }
+            }
         }
         if let Some(editor) = self.settings_owner.borrow().as_ref() {
             editor.refresh();
@@ -659,6 +678,10 @@ impl Panel {
             tick.remove();
         }
         self.preview_image.cancel();
+        if let Some(idle) = self.result_idle.borrow_mut().take() {
+            idle.remove();
+        }
+        self.results.borrow_mut().dismiss();
         self.close_input();
         self.close_text_review();
         self.close_composer();
@@ -867,6 +890,7 @@ impl Panel {
         }
     }
     pub fn render(self: &Rc<Self>) {
+        self.schedule_results();
         // Publish after readiness/action updates using an immutable model projection.
         let model = self.model.borrow();
         if let Some(window) = self.transfers.borrow().as_ref() {

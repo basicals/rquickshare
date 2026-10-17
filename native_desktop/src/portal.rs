@@ -33,6 +33,27 @@ fn checked(message: &Message, owner: &str) -> Result<(), Error> {
     }
 }
 pub async fn show(file: Arc<File>, cancel: CancellationToken) -> Result<(), Error> {
+    show_mode(file, cancel, false).await
+}
+pub async fn show_directory_contents(
+    file: Arc<File>,
+    cancel: CancellationToken,
+) -> Result<(), Error> {
+    // OpenFile can execute a regular file's handler; this path admits directories only.
+    let flags = rustix::fs::fcntl_getfl(&*file).map_err(|_| Error::Protocol)?;
+    if !file.metadata().map_err(|_| Error::Protocol)?.is_dir()
+        || flags.contains(rustix::fs::OFlags::PATH)
+        || flags & rustix::fs::OFlags::ACCMODE != rustix::fs::OFlags::RDONLY
+    {
+        return Err(Error::Protocol);
+    }
+    show_mode(file, cancel, true).await
+}
+async fn show_mode(
+    file: Arc<File>,
+    cancel: CancellationToken,
+    contents: bool,
+) -> Result<(), Error> {
     let connect = async {
         let directory =
             rqs_lib::service::process::runtime_directory().map_err(|_| Error::Unavailable)?;
@@ -46,17 +67,29 @@ pub async fn show(file: Arc<File>, cancel: CancellationToken) -> Result<(), Erro
         .map_err(|_| Error::Unavailable)
     };
     let connection = tokio::select! { biased; _ = cancel.cancelled() => return Err(Error::Cancelled), result = connect => result? };
-    show_on(connection, file, cancel).await
+    if contents {
+        show_on_mode(connection, file, cancel, true).await
+    } else {
+        show_on(connection, file, cancel).await
+    }
 }
 async fn show_on(
     connection: Connection,
     file: Arc<File>,
     cancel: CancellationToken,
 ) -> Result<(), Error> {
+    show_on_mode(connection, file, cancel, false).await
+}
+async fn show_on_mode(
+    connection: Connection,
+    file: Arc<File>,
+    cancel: CancellationToken,
+    contents: bool,
+) -> Result<(), Error> {
     let mut pending: Option<(String, String)> = None;
     let result = tokio::select! { biased;
         _ = cancel.cancelled() => Err(Error::Cancelled),
-        result = interaction(&connection, &file, &mut pending) => result,
+        result = interaction(&connection, &file, &mut pending, contents) => result,
     };
     if let Some((owner, path)) = pending {
         // Close has no Response signal; do not wait for an unresponsive Close reply.
@@ -79,6 +112,7 @@ async fn interaction(
     connection: &Connection,
     file: &File,
     pending: &mut Option<(String, String)>,
+    contents: bool,
 ) -> Result<(), Error> {
     let owner_rule = MatchRule::builder()
         .msg_type(Type::Signal)
@@ -202,7 +236,11 @@ async fn interaction(
             Some(owner.as_str()),
             PATH,
             Some(INTERFACE),
-            "OpenDirectory",
+            if contents {
+                "OpenFile"
+            } else {
+                "OpenDirectory"
+            },
             &("", Fd::from(file.as_fd()), options),
         )
         .await

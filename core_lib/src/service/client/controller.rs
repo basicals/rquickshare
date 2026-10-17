@@ -45,6 +45,7 @@ pub struct PanelState {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ActionResult {
     File(super::files::ReceivedFile),
+    ReceivedResult(super::files::ReceivedResult),
     Text(super::text::TextRead),
     Settings(super::settings::SettingsView),
     Selection(Selection),
@@ -66,6 +67,7 @@ enum Action {
     JournalClear(String),
     JournalRefresh,
     AcquireFile(Transfer, u64, u32),
+    AcquireResult(Transfer, u64),
     ReadText(Transfer, u64),
     SettingsRestart,
     SettingsSave(super::settings::SettingsEdit),
@@ -110,6 +112,12 @@ impl PanelHandle {
         self.submit(Action::JournalClear(token))
     }
 
+    pub fn acquire_result(&self, transfer: Transfer, revision: u64) -> Result<Completion> {
+        if revision == 0 {
+            return Err(ClientError::InvalidInput.into());
+        }
+        self.submit(Action::AcquireResult(transfer, revision))
+    }
     pub fn acquire_file(
         &self,
         transfer: Transfer,
@@ -458,6 +466,11 @@ impl Worker {
                 self.client.clear_journal(&token).await?;
                 Ok(ActionResult::Completed)
             }
+            Action::AcquireResult(transfer, revision) => self
+                .client
+                .acquire_received_result(&transfer, revision)
+                .await
+                .map(ActionResult::ReceivedResult),
             Action::AcquireFile(transfer, revision, index) => self
                 .client
                 .acquire_received_file(&transfer, revision, index)

@@ -66,6 +66,19 @@ impl Ingress {
         }));
         receive
     }
+    pub fn start_directory_reveal(
+        &self,
+        runtime: &Handle,
+        file: Arc<std::fs::File>,
+        cancel: tokio_util::sync::CancellationToken,
+        permit: PreparationPermit,
+    ) -> tokio::sync::oneshot::Receiver<Result<(), crate::portal::Error>> {
+        self.reveal_job(
+            runtime,
+            permit,
+            crate::portal::show_directory_contents(file, cancel),
+        )
+    }
     pub fn start_image(
         &self,
         runtime: &Handle,

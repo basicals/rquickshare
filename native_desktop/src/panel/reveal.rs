@@ -1,4 +1,4 @@
-//! Explicit per-file reveal; stale GUI completions cannot launch external desktop work.
+//! Guarded file/whole-result presentation; stale completions cannot launch desktop work.
 use super::*;
 use rqs_lib::{
     service::client::{controller::ActionResult, Transfer},
@@ -10,7 +10,12 @@ pub(super) struct Key {
     epoch: u128,
     transfer: Transfer,
     revision: u64,
-    index: u32,
+    scope: Scope,
+}
+#[derive(Clone, Copy)]
+enum Scope {
+    File(u32),
+    Result,
 }
 struct Observation<'a> {
     epoch: u128,
@@ -48,7 +53,10 @@ fn current(key: &Key, state: &PanelState) -> bool {
                             key.epoch,
                             key.transfer.id(),
                             key.revision,
-                            key.index,
+                            match key.scope {
+                                Scope::File(index) => index,
+                                Scope::Result => 0,
+                            },
                             &Observation {
                                 epoch: view.epoch,
                                 id: row.transfer.id(),
@@ -59,6 +67,9 @@ fn current(key: &Key, state: &PanelState) -> bool {
                                 completed_count: row.completed_files.len(),
                             },
                         )
+                        && (matches!(key.scope, Scope::File(_))
+                            || (row.phase == Phase::Finished
+                                && row.completed_files.len() == row.details.files.len()))
                 })
         })
 }
@@ -155,7 +166,7 @@ impl Panel {
                             epoch,
                             transfer: target.clone(),
                             revision,
-                            index,
+                            scope: Scope::File(index),
                         },
                         false,
                     )
@@ -169,6 +180,12 @@ impl Panel {
         }))
     }
     pub(super) fn reveal_file(self: &Rc<Self>, target: Transfer, revision: u64, index: u32) {
+        self.reveal_target(target, revision, Scope::File(index));
+    }
+    pub(super) fn reveal_result(self: &Rc<Self>, target: Transfer, revision: u64) {
+        self.reveal_target(target, revision, Scope::Result);
+    }
+    fn reveal_target(self: &Rc<Self>, target: Transfer, revision: u64, scope: Scope) {
         let epoch = self
             .model
             .borrow()
@@ -180,7 +197,7 @@ impl Panel {
             epoch,
             transfer: target,
             revision,
-            index,
+            scope,
         };
         if !self.reveal_allowed(&key, false) {
             return;
@@ -191,7 +208,11 @@ impl Panel {
         let Some(permit) = self.ingress.gate.try_acquire() else {
             return;
         };
-        let completion = match handle.acquire_file(key.transfer.clone(), revision, index) {
+        let request = match scope {
+            Scope::File(index) => handle.acquire_file(key.transfer.clone(), revision, index),
+            Scope::Result => handle.acquire_result(key.transfer.clone(), revision),
+        };
+        let completion = match request {
             Ok(completion) => completion,
             Err(_) => {
                 self.notice(
@@ -220,14 +241,25 @@ impl Panel {
                 panel.close_reveal();
                 return;
             }
-            let read = match result {
+            let (file, contents) = match result {
                 Ok(ActionResult::File(read))
                     if read.epoch == key.epoch
                         && read.transfer == key.transfer
                         && read.revision == key.revision
-                        && read.index == key.index =>
+                        && matches!(key.scope, Scope::File(index) if index == read.index) =>
                 {
-                    read
+                    (read.file().try_clone(), false)
+                }
+                Ok(ActionResult::ReceivedResult(read))
+                    if matches!(key.scope, Scope::Result)
+                        && read.epoch == key.epoch
+                        && read.transfer == key.transfer
+                        && read.revision == key.revision =>
+                {
+                    (
+                        read.file().try_clone(),
+                        read.kind == rqs_lib::service::client::files::ResultKind::Contents,
+                    )
                 }
                 _ => {
                     panel.close_reveal();
@@ -238,7 +270,7 @@ impl Panel {
                     return;
                 }
             };
-            let file = match read.file().try_clone() {
+            let file = match file {
                 Ok(file) => Arc::new(file),
                 Err(_) => {
                     panel.close_reveal();
@@ -252,10 +284,18 @@ impl Panel {
                 panel.close_reveal();
                 return;
             }
-            let receive =
+            let receive = if contents {
+                panel.ingress.start_directory_reveal(
+                    &panel.runtime,
+                    file,
+                    operation.cancel.clone(),
+                    permit,
+                )
+            } else {
                 panel
                     .ingress
-                    .start_reveal(&panel.runtime, file, operation.cancel.clone(), permit);
+                    .start_reveal(&panel.runtime, file, operation.cancel.clone(), permit)
+            };
             drop(operation);
             drop(panel);
             let result = receive.await;

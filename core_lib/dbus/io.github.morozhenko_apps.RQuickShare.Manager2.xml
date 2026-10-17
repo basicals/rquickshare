@@ -269,6 +269,12 @@
       <arg name="next_offset" type="u" direction="out"/>
       <arg name="metadata" type="a(stu)" direction="out"/>
     </method>
+    <method name="AcquireResult">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="terminal_revision" type="t" direction="in"/>
+      <arg name="kind" type="y" direction="out"/>
+      <arg name="result" type="h" direction="out"/>
+    </method>
     <method name="AcquireFile">
       <arg name="transfer_id" type="s" direction="in"/>
       <arg name="terminal_revision" type="t" direction="in"/>

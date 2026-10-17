@@ -606,6 +606,7 @@ impl Panel {
                     continue;
                 }
                 if page == "nearby"
+                    && !self.results.borrow().visible(transfer.transfer.id())
                     && !card_transfer_visible(
                         transfer.direction,
                         transfer.phase,
@@ -618,7 +619,7 @@ impl Panel {
                 let root = self.cached_transfer(&mut rows, page, transfer, ready, incoming);
                 if page == "nearby" {
                     if let Some(status) = named(root.upcast_ref(), "row-status") {
-                        status.set_visible(false);
+                        status.set_visible(transfer.phase.is_terminal());
                     }
                     if let Some(button) =
                         named(root.upcast_ref(), "row-action").and_downcast::<gtk::Button>()

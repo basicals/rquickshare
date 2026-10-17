@@ -423,8 +423,10 @@ impl NativeClient {
         self.barrier(method, true).await;
         match result {
             Ok(reply) => {
-                let count =
-                    usize::from(interface == bus::files::INTERFACE && method == "AcquireFile");
+                let count = usize::from(
+                    interface == bus::files::INTERFACE
+                        && matches!(method, "AcquireFile" | "AcquireResult"),
+                );
                 reply_sender_fds(&reply, &self.owner, count)?;
                 Ok(reply)
             }

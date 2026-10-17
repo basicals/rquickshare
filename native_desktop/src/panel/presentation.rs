@@ -11,6 +11,7 @@ impl Panel {
     }
     pub(super) fn hide(self: &Rc<Self>) {
         self.pin_surface_bottom();
+        self.results.borrow_mut().dismiss();
         self.close_input();
         self.close_text_review();
         self.close_composer();

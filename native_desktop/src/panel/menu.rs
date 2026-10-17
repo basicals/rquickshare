@@ -320,6 +320,9 @@ impl Panel {
         self.pin_surface_bottom();
         self.model.borrow_mut().strip_target = None;
         self.model.borrow_mut().drawer = drawer;
+        if drawer == Drawer::Closed {
+            self.results.borrow_mut().hide_rows();
+        }
         self.actions
             .lookup_action("devices")
             .and_downcast::<gio::SimpleAction>()

@@ -37,6 +37,10 @@ async fn given_partial_receive_when_private_sdk_reads_and_reveals_then_original_
         let view = client.read_state().await.unwrap();
         let row = &view.transfers[0];
         assert_eq!(row.phase, Phase::Disconnected);
+        assert!(client
+            .acquire_received_result(&row.transfer, row.reveal_revision.unwrap())
+            .await
+            .is_err());
         assert_eq!(row.details.files.len(), 2);
         assert_eq!(row.completed_files.len(), 1);
         assert_eq!(row.completed_files[0].name, "nested/actual (1).txt");
@@ -99,6 +103,24 @@ async fn given_actual_files_api_when_acquired_twice_or_abused_then_only_verified
     let view = owner.read_state().await.unwrap();
     let row = &view.transfers[0];
     let revision = row.reveal_revision.unwrap();
+    let result = owner
+        .acquire_received_result(&row.transfer, revision)
+        .await
+        .unwrap();
+    assert_eq!(result.kind, ResultKind::Folder);
+    assert!(result.file().metadata().unwrap().is_dir());
+    assert!(owner
+        .acquire_received_result(&row.transfer, revision + 1)
+        .await
+        .is_err());
+    assert_eq!(
+        other
+            .acquire_received_result(&row.transfer, revision)
+            .await
+            .unwrap_err(),
+        ClientError::ForeignHandle
+    );
+
     assert!(row.content_revision.is_none());
     assert!(!format!("{view:?}").contains("actual (1)")); // Detail Debug redacts even relative names.
                                                           // Act / Assert: repeated acquisition is a read, never a desktop operation or send.
@@ -268,4 +290,33 @@ async fn given_delayed_actual_file_open_when_another_client_reads_or_controls_th
         assert_eq!(host.finish().await.1, Ok(()));
     })
     .await;
+}
+
+#[test]
+fn given_result_mode_and_descriptor_when_validated_then_only_exact_readonly_file_or_directory_types_are_accepted(
+) {
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("file");
+    std::fs::write(&path, b"received").unwrap();
+    let file = File::open(&path).unwrap();
+    let dir = File::open(directory.path()).unwrap();
+    for kind in [0, 1, 2, 3, 255] {
+        assert_eq!(result_kind(&file, kind).is_ok(), kind == 0);
+        assert_eq!(result_kind(&dir, kind).is_ok(), kind == 1 || kind == 2);
+    }
+    let writable = std::fs::OpenOptions::new().write(true).open(&path).unwrap();
+    assert_eq!(result_kind(&writable, 0), Err(ClientError::Protocol));
+    let path_only = File::from(
+        rustix::fs::open(&path, rustix::fs::OFlags::PATH, rustix::fs::Mode::empty()).unwrap(),
+    );
+    assert_eq!(result_kind(&path_only, 0), Err(ClientError::Protocol));
+    let path_dir = File::from(
+        rustix::fs::open(
+            directory.path(),
+            rustix::fs::OFlags::PATH,
+            rustix::fs::Mode::empty(),
+        )
+        .unwrap(),
+    );
+    assert_eq!(result_kind(&path_dir, 2), Err(ClientError::Protocol));
 }

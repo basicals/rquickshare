@@ -7,10 +7,11 @@ history row deduplication. Analysis/plan is in
 [native25 interaction polish](native25-interaction-polish-2026-10-17.md).
 User approved clipboard files > image > text and Completed until drawer/card
 hide. The additional pulse/strip/main-Send behavior is frozen in that plan;
-P3/P4 are implemented and checked in scoped commits. P5 awaits the typed
-whole-transfer result API choice described in that plan; current Files1 only
-provides individual regular files. Completed lifetime/automatic result handling,
-receiver diagnosis and package/install remain open. Installed native24 is unchanged.
+P3/P4/P5 are implemented and checked in scoped commits, including the approved
+typed whole-transfer result API, transient Completed and guarded automatic
+result presentation. Affected service310/0 and native50/0 passed, with strict
+core/native lint. Receiver diagnosis and package/install remain open. Installed
+native24 is unchanged.
 
 2026-10-17 installed checkpoint: native24 is installed and running. Release
 source d3cd9d3; exact package and installed receipts are in

@@ -82,7 +82,7 @@ pub struct SelectionBus {
     journal: Option<super::journal::Owner>,
     journal_captures: BTreeMap<ClientId, super::journal::View>,
     text: text::TextCache,
-    file_job: Option<JoinHandle<Result<File, Error>>>,
+    file_job: Option<JoinHandle<Result<(u8, File), Error>>>,
     file_request: Option<files::Request>,
     file_resolver: std::sync::Arc<files::Resolver>,
     notified: BTreeMap<ClientId, u64>,
@@ -507,28 +507,40 @@ impl SelectionBus {
     async fn complete_file(
         &mut self,
         coordinator: &Coordinator,
-        result: Result<File, Error>,
+        result: Result<(u8, File), Error>,
     ) -> Result<(), BusError> {
         self.file_job.take();
         let request = self.file_request.take().ok_or(BusError::Transport)?;
         let header = request.message.header();
         // History/client lifetime may have changed while the filesystem was busy.
-        let result = files::resource(
-            coordinator,
-            request.client,
-            request.target,
-            request.revision,
-            request.index,
-        )
-        .and(result);
+        let authority = if request.whole {
+            files::result_resource(
+                coordinator,
+                request.client,
+                request.target,
+                request.revision,
+            )
+        } else {
+            files::resource(
+                coordinator,
+                request.client,
+                request.target,
+                request.revision,
+                request.index,
+            )
+        };
+        let result = authority.and(result);
         match result {
-            Ok(file) => self
-                .connection
-                .as_ref()
-                .ok_or(BusError::Transport)?
-                .reply(&header, &Fd::from(file.as_fd()))
-                .await
-                .map_err(|_| BusError::Transport),
+            Ok((kind, file)) => {
+                let connection = self.connection.as_ref().ok_or(BusError::Transport)?;
+                let fd = Fd::from(file.as_fd());
+                let reply = if request.whole {
+                    connection.reply(&header, &(kind, fd)).await
+                } else {
+                    connection.reply(&header, &fd).await
+                };
+                reply.map_err(|_| BusError::Transport)
+            }
             Err(error) => self.domain_error(&header, error).await,
         }
     }
@@ -988,17 +1000,27 @@ impl SelectionBus {
                         Err(error) => self.domain_error(&header, error).await,
                     };
                 }
-                Some("AcquireFile") => {
-                    let result = message
-                        .body()
-                        .deserialize::<(&str, u64, u32)>()
-                        .map_err(|_| Error::InvalidInput)
-                        .and_then(|(id, revision, index)| {
+                Some("AcquireFile" | "AcquireResult") => {
+                    let whole = member == Some("AcquireResult");
+                    let body = message.body();
+                    let arguments = if whole {
+                        body.deserialize::<(&str, u64)>()
+                            .map(|(id, revision)| (id, revision, 0))
+                    } else {
+                        body.deserialize::<(&str, u64, u32)>()
+                    };
+                    let result = arguments.map_err(|_| Error::InvalidInput).and_then(
+                        |(id, revision, index)| {
                             let (epoch, sequence) = token_parts(id, coordinator.epoch)?;
                             let target = TransferId(epoch, sequence);
-                            files::resource(coordinator, client, target, revision, index)
-                                .map(|files| (files, target, revision, index))
-                        });
+                            let resource = if whole {
+                                files::result_resource(coordinator, client, target, revision)
+                            } else {
+                                files::resource(coordinator, client, target, revision, index)
+                            };
+                            resource.map(|files| (files, target, revision, index))
+                        },
+                    );
                     let (files, target, revision, index) = match result {
                         Ok(value) => value,
                         Err(error) => return self.domain_error(&header, error).await,
@@ -1013,9 +1035,15 @@ impl SelectionBus {
                         target,
                         revision,
                         index,
+                        whole,
                     });
-                    self.file_job =
-                        Some(tokio::task::spawn_blocking(move || resolve(files, index)));
+                    self.file_job = Some(tokio::task::spawn_blocking(move || {
+                        if whole {
+                            files.open_result().map_err(|_| Error::InvalidState)
+                        } else {
+                            resolve(files, index).map(|file| (0, file))
+                        }
+                    }));
                     return Ok(());
                 }
                 _ => {

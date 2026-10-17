@@ -90,7 +90,7 @@ valid independent timer regressions.
 - [x] P3: simplify history rows; move source controls and implement prepared curtain.
 - [x] P4: implement the endpoint-bound inline action strip and one-shot acquisition;
   preserve the daemon FIFO, immutable source snapshots and explicit receiver consent.
-- [ ] P5: stage-aware incoming rows and guarded once-only completion presentation.
+- [x] P5: stage-aware incoming rows and guarded once-only completion presentation.
 - [ ] P6: scoped receiver diagnosis/repair based on demonstrated evidence.
 - [ ] P7: run affected checks once, record actual results, atomic commits and a new
   verified native package/known-owner idle upgrade for physical acceptance.
@@ -267,3 +267,23 @@ result tracker initial/epoch baseline, success-only once, queue order, eviction,
 hide and no active-transfer cancellation; GTK staged summary/progress, Completed
 retention and explicit-only text Copy. Run affected scopes once and record actual
 failures/fixes; no full Mode B/ten-run expansion.
+
+P5 observed: additive typed whole-result API/SDK/controller and shared joined
+acquisition owner implemented. Receipt modes cover loose file, common directory
+and multiple roots; every member is revalidated through the pinned directory.
+SDK rejects unknown kind, regular/directory mismatch, writable and PATH FDs.
+Partial receipt cannot authorize whole-result acquisition; manual file reveal
+is unchanged. GTK tracks successful current-run completion once, retains Completed
+until hide, and serializes text/result presentation through existing guards.
+Only checked directories can reach portal OpenFile; regular files use containing
+folder selection. No automatic text copy, URL open or payload execution.
+
+Measured P5 checks: initial compile found a missing Phase import and a temporary
+borrowed message body; fixed both. Receipt scope5/0, SDK initial3/0 and bus5/0
+passed; after adding descriptor-type/security cases, affected full service310/0
+in8.25s and receipt5/0 passed. Strict core lint found one redundant borrow in the
+new pure descriptor validator; corrected without behavior change, final strict
+core lint passed15.57s. Native50/0 in0.66s, including new transition/replay/hide
+rules and private-portal directory-only cases; strict native lint passed4.17s.
+No real desktop/clipboard effects or installed update during these tests.
+P6 discovery diagnosis and P7 final package/physical acceptance remain open.
