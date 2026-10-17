@@ -296,6 +296,7 @@ GNU General Public License v3.0.",
         actions.append(&editor.save);
         content.append(&actions);
         window.set_child(Some(&content));
+        panel.watch_idle_widget(&window);
         panel.settings.replace(Some(window.clone()));
         panel.settings_owner.replace(Some(editor.clone()));
         if let Some(view) = panel.model.borrow().state.settings.clone() {

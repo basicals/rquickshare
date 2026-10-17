@@ -115,6 +115,7 @@ pub async fn serve_native_settings(
         else {
             return Ok(());
         };
+        bus.set_journal(directory.clone());
         let store = Store::new(directory.clone(), legacy.clone());
         // Join this owned operation even when stop arrives during disk IO.
         let loaded = tokio::task::spawn_blocking(move || {

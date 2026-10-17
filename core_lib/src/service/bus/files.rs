@@ -2,7 +2,10 @@
 use std::{fs::File, sync::Arc};
 
 use super::*;
-use crate::{received_files::ReceivedFiles, service::Direction};
+use crate::{
+    received_files::ReceivedFiles,
+    service::{Direction, Phase},
+};
 pub const INTERFACE: &str = "io.github.morozhenko_apps.RQuickShare.Files1";
 pub(crate) type Resolver = dyn Fn(Arc<ReceivedFiles>, u32) -> Result<File, Error> + Send + Sync;
 pub(super) struct Request {
@@ -11,9 +14,12 @@ pub(super) struct Request {
     pub target: TransferId,
     pub revision: u64,
     pub index: u32,
+    pub whole: bool,
 }
 /// Cancellation-safe polling: the bus retains the handle until completion or close.
-pub(super) async fn next(job: &mut Option<JoinHandle<Result<File, Error>>>) -> Result<File, Error> {
+pub(super) async fn next(
+    job: &mut Option<JoinHandle<Result<(u8, File), Error>>>,
+) -> Result<(u8, File), Error> {
     match job {
         Some(job) => job.await.unwrap_or(Err(Error::InvalidState)),
         None => std::future::pending().await,
@@ -41,6 +47,22 @@ pub(super) fn resource(
     let files = transfer.received_files.clone().ok_or(Error::InvalidState)?;
     if index as usize >= files.len() {
         return Err(Error::InvalidInput);
+    }
+    Ok(files)
+}
+pub(super) fn result_resource(
+    coordinator: &Coordinator,
+    client: ClientId,
+    target: TransferId,
+    revision: u64,
+) -> Result<Arc<ReceivedFiles>, Error> {
+    let files = resource(coordinator, client, target, revision, 0)?;
+    let transfer = &coordinator.transfers[&target];
+    if transfer.view.phase != Phase::Finished
+        || !files.valid_for(&transfer.view.details)
+        || transfer.view.details.transferred_bytes != transfer.view.details.total_bytes
+    {
+        return Err(Error::InvalidState);
     }
     Ok(files)
 }

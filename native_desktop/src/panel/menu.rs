@@ -44,11 +44,13 @@ impl Panel {
             "nearby",
             "incoming",
             "transfers",
+            "journal-refresh",
+            "journal-clear",
             "files",
             "folder",
             "send-text",
             "send-image",
-            "send-many",
+            "send-clipboard",
             "discard",
             "recover",
             "abort",
@@ -68,7 +70,25 @@ impl Panel {
                     return;
                 }
                 match name {
-                    "nearby" | "incoming" | "transfers" => {
+                    "transfers" => panel.show_transfers(),
+                    "journal-refresh" => {
+                        if let Some(handle) = &panel.handle {
+                            panel.submit(|| handle.refresh_journal());
+                        }
+                    }
+                    "journal-clear" => {
+                        let token = panel
+                            .model
+                            .borrow()
+                            .state
+                            .journal
+                            .as_ref()
+                            .map(|v| v.token.clone());
+                        if let (Some(token), Some(handle)) = (token, &panel.handle) {
+                            panel.submit(|| handle.clear_journal(token));
+                        }
+                    }
+                    "nearby" | "incoming" => {
                         panel.set_drawer(Drawer::Open);
                         panel.pages.set_visible_child_name("nearby");
                         panel.render();
@@ -95,7 +115,7 @@ impl Panel {
                             .unwrap_or_default();
                         if name != "nearby" {
                             for id in ids {
-                                panel.expand_transfer(&id);
+                                panel.focus_transfer(&id);
                             }
                         }
                     }
@@ -103,10 +123,8 @@ impl Panel {
                     "send" => panel.show_sending(),
                     "send-text" => panel.show_composer(),
                     "send-image" => panel.show_image(),
-                    "send-many" => panel.send_recipients(),
+                    "send-clipboard" => panel.capture_clipboard(None),
                     "files" | "folder" => {
-                        panel.set_drawer(Drawer::Open);
-                        panel.pages.set_visible_child_name("nearby");
                         panel.choose(name == "folder");
                     }
                     "discard" | "recover" | "abort" => panel.button(name).emit_clicked(),
@@ -155,8 +173,7 @@ impl Panel {
         for (name, title) in [
             ("receive", "Receive files"),
             ("send", "Send files…"),
-            ("incoming", "Incoming requests"),
-            ("transfers", "Active transfers"),
+            ("transfers", "Transfers"),
         ] {
             navigation.append(Some(title), Some(&format!("panel.{name}")));
         }
@@ -177,7 +194,7 @@ impl Panel {
             ("files", "Files…"),
             ("folder", "Folder…"),
             ("send-text", "Text or link…"),
-            ("send-image", "Clipboard image…"),
+            ("send-clipboard", "Clipboard"),
         ] {
             sending.append(Some(title), Some(&format!("panel.{name}")));
         }
@@ -226,7 +243,7 @@ impl Panel {
             self.set_drawer(Drawer::Open);
             self.pages.set_visible_child_name("nearby");
             self.render();
-            self.expand_transfer(&id);
+            self.focus_transfer(&id);
         } else {
             self.actions
                 .activate_action("visibility", Some(&"temporary".to_variant()));
@@ -237,14 +254,24 @@ impl Panel {
         }
     }
     pub(super) fn show_sending(self: &Rc<Self>) {
-        // Recipient first: Send opens discovery even without a prepared source.
-        // File/text selection is offered only after explicit peer selection.
-        self.sending.popdown();
-        self.set_drawer(Drawer::Open);
-        self.pages.set_visible_child_name("nearby");
+        // Choose content first; a later device-row Send is the sole admission action.
+        if self.sending.is_visible() {
+            self.sending.popdown();
+            return;
+        }
         self.render();
         if !self.window.is_visible() {
             self.present_surface();
+        }
+        if self
+            .model
+            .borrow()
+            .state
+            .view
+            .as_ref()
+            .is_some_and(|view| view.selections.is_empty())
+        {
+            self.sending.popup();
         }
     }
     pub(super) fn send_to(self: &Rc<Self>, endpoint: &str) {
@@ -253,6 +280,7 @@ impl Panel {
             if !controls_ready(
                 &model.state,
                 model.waiting
+                    || model.input_active
                     || model.closing
                     || model.ingress.busy
                     || model.dialog.is_some()
@@ -271,14 +299,17 @@ impl Panel {
         };
         if let Some(selection) = selection {
             if let Some(handle) = &self.handle {
-                self.submit(|| handle.send_many(selection, vec![endpoint.to_owned()]));
+                self.submit(|| handle.queue_recipient(selection, endpoint.to_owned()));
             }
         } else {
-            self.model.borrow_mut().recipients.clear();
-            self.choose_recipient(endpoint, true);
-            self.show_sending();
-            // The user selected an actual discovered endpoint: now choose content.
-            self.sending.popup();
+            let mut model = self.model.borrow_mut();
+            model.strip_target = if model.strip_target.as_deref() == Some(endpoint) {
+                None
+            } else {
+                Some(endpoint.to_owned())
+            };
+            drop(model);
+            self.render();
         }
     }
     pub fn set_drawer(self: &Rc<Self>, drawer: Drawer) {
@@ -287,7 +318,11 @@ impl Panel {
             return;
         }
         self.pin_surface_bottom();
+        self.model.borrow_mut().strip_target = None;
         self.model.borrow_mut().drawer = drawer;
+        if drawer == Drawer::Closed {
+            self.results.borrow_mut().hide_rows();
+        }
         self.actions
             .lookup_action("devices")
             .and_downcast::<gio::SimpleAction>()
@@ -336,6 +371,7 @@ impl Panel {
             .website_label("Project website")
             .build();
         about.set_hide_on_close(true);
+        self.watch_idle_widget(&about);
         self.about.replace(Some(about.clone()));
         about.present();
     }

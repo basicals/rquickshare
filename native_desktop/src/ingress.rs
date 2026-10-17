@@ -66,6 +66,19 @@ impl Ingress {
         }));
         receive
     }
+    pub fn start_directory_reveal(
+        &self,
+        runtime: &Handle,
+        file: Arc<std::fs::File>,
+        cancel: tokio_util::sync::CancellationToken,
+        permit: PreparationPermit,
+    ) -> tokio::sync::oneshot::Receiver<Result<(), crate::portal::Error>> {
+        self.reveal_job(
+            runtime,
+            permit,
+            crate::portal::show_directory_contents(file, cancel),
+        )
+    }
     pub fn start_image(
         &self,
         runtime: &Handle,
@@ -173,7 +186,8 @@ impl Ingress {
         controller: PanelHandle,
         permit: PreparationPermit,
         base: Option<rqs_lib::service::client::Selection>,
-    ) {
+    ) -> tokio::sync::oneshot::Receiver<Option<rqs_lib::service::client::Selection>> {
+        let (reply, receive) = tokio::sync::oneshot::channel();
         let mut task = self.task.lock().expect("ingress ownership");
         self.state.send_replace(IngressState {
             busy: true,
@@ -189,23 +203,30 @@ impl Ingress {
                 OpenedSelection::acquire(&paths, SelectionLimits::default())
             })
             .await;
-            let failed = match source {
+            let selection = match source {
                 Ok(Ok(source)) => match if let Some(base) = base {
                     controller.extend(base, source)
                 } else {
                     controller.choose(source)
                 } {
-                    Ok(completion) => completion.wait().await.is_err(),
-                    Err(_) => true,
+                    Ok(completion) => match completion.wait().await {
+                        Ok(rqs_lib::service::client::controller::ActionResult::Selection(
+                            selection,
+                        )) => Some(selection),
+                        _ => None,
+                    },
+                    Err(_) => None,
                 },
-                _ => true,
+                _ => None,
             };
             state.send_replace(IngressState {
                 busy: false,
-                failed,
+                failed: selection.is_none(),
             });
             drop(permit);
+            let _ = reply.send(selection);
         }));
+        receive
     }
     pub async fn close(&self) {
         self.gate.close();

@@ -33,7 +33,7 @@ async fn read_bounded(stream: &gio::InputStream) -> Result<Vec<u8>, ()> {
         Ok(body)
     }
 }
-async fn clipboard_png(clipboard: &gtk::gdk::Clipboard) -> Result<Vec<u8>, ()> {
+pub(super) async fn clipboard_png(clipboard: &gtk::gdk::Clipboard) -> Result<Vec<u8>, ()> {
     let (stream, mime) = clipboard
         .read_future(&["image/png"], glib::Priority::DEFAULT)
         .await
@@ -405,6 +405,7 @@ impl Panel {
                 runtime: self.runtime.clone(),
             },
         );
+        self.watch_idle_widget(&image.window);
         image.window.set_transient_for(Some(&self.window));
         self.mark_manual();
         image.window.present();

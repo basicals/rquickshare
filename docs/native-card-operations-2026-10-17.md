@@ -1,5 +1,12 @@
 # Native card layout, Send flow and device-operation grouping
 
+Current installed checkpoint (2026-10-17): the user separately authorized local
+installation after PR #6 source integration. Native22 now contains this card/
+endpoint-association work; package and passive installed checks passed. Physical
+KDE/peer acceptance remains pending. The dev-only/no-install boundaries in the
+dated implementation log below describe that earlier task, not the later explicit
+installation authorization. See [native22 record](native22-installation-2026-10-17.md).
+
 2026-10-17. MODE A (feature/refactor), followed by scoped MODE B (testing).
 The user selected **option B: group completed operations by device**, with
 unlinked operations displayed separately. This is an explicitly requested UX

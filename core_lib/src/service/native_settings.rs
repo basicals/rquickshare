@@ -4,10 +4,9 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::os::fd::AsRawFd;
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
-use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
-use rand::TryRngCore;
 use rustix::fs::{Mode, OFlags};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -526,41 +525,7 @@ impl<I: PersistenceIo> Store<I> {
         ))
     }
     fn open_directory(&self, create: bool) -> Result<Option<File>> {
-        if !self.directory.is_absolute() {
-            return Err(StoreError::UnsafeStorage);
-        }
-        if create {
-            if let Some(parent) = self.directory.parent() {
-                std::fs::create_dir_all(parent).map_err(|_| StoreError::Write)?;
-            }
-            match std::fs::DirBuilder::new()
-                .mode(0o700)
-                .create(&self.directory)
-            {
-                Ok(()) => (),
-                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => (),
-                Err(_) => return Err(StoreError::Write),
-            }
-        }
-        let fd = match rustix::fs::open(
-            &self.directory,
-            OFlags::RDONLY
-                | OFlags::DIRECTORY
-                | OFlags::NOFOLLOW
-                | OFlags::CLOEXEC
-                | OFlags::NONBLOCK,
-            Mode::empty(),
-        ) {
-            Ok(fd) => fd,
-            Err(rustix::io::Errno::NOENT) if !create => return Ok(None),
-            Err(_) => return Err(StoreError::UnsafeStorage),
-        };
-        let file = File::from(fd);
-        let metadata = file.metadata().map_err(|_| StoreError::Read)?;
-        if metadata.uid() != rustix::process::geteuid().as_raw() || metadata.mode() & 0o077 != 0 {
-            return Err(StoreError::UnsafeStorage);
-        }
-        Ok(Some(file))
+        super::private_file::directory(&self.directory, create)
     }
     fn backup(&self, directory: &File, bytes: &[u8]) -> Result<()> {
         let name = format!("backup-{}.json", hash(&[bytes]));
@@ -590,34 +555,7 @@ impl<I: PersistenceIo> Store<I> {
         self.replace(directory, &name, bytes)
     }
     fn replace(&self, directory: &File, destination: &str, bytes: &[u8]) -> Result<()> {
-        let mut nonce = [0; 16];
-        rand::rngs::OsRng
-            .try_fill_bytes(&mut nonce)
-            .map_err(|_| StoreError::Write)?;
-        let name = format!(".pending-{}", hex::encode(nonce));
-        let mut file = File::from(
-            rustix::fs::openat(
-                directory,
-                name.as_str(),
-                OFlags::WRONLY | OFlags::CREATE | OFlags::EXCL | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-                Mode::from_raw_mode(0o600),
-            )
-            .map_err(|_| StoreError::Write)?,
-        );
-        let result = (|| {
-            self.io
-                .write(&mut file, bytes)
-                .map_err(|_| StoreError::Write)?;
-            self.io.sync_file(&file).map_err(|_| StoreError::Write)?;
-            self.io
-                .rename(directory, &name, destination)
-                .map_err(|_| StoreError::Write)?;
-            self.io
-                .sync_directory(directory)
-                .map_err(|_| StoreError::Indeterminate)
-        })();
-        let _ = rustix::fs::unlinkat(directory, name.as_str(), rustix::fs::AtFlags::empty());
-        result
+        super::private_file::replace(directory, destination, bytes, &self.io)
     }
 }
 

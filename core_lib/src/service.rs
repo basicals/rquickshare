@@ -16,7 +16,9 @@ macro_rules! token {
     };
 }
 
+pub mod journal;
 pub mod notices;
+mod private_file;
 use notices::Notice;
 
 token!(ClientId);
@@ -629,6 +631,14 @@ impl Coordinator {
     pub fn next_send(&mut self) -> Result<Option<SendDispatch>, Error> {
         self.running()?;
         self.synchronized()?;
+        // A daemon-owned FIFO survives client closure and preserves click order.
+        if self.transfers.values().any(|entry| {
+            entry.view.direction == Direction::Outbound
+                && entry.view.phase != Phase::Queued
+                && (!entry.view.phase.is_terminal() || !entry.owner_closed || !entry.released)
+        }) {
+            return Ok(None);
+        }
         let Some(id) = self.queue.front().copied() else {
             return Ok(None);
         };

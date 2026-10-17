@@ -1,12 +1,108 @@
 # Current implementation and continuation state
 
+2026-10-17 native28 is installed and user-accepted as the current UI iteration.
+Binary source2c14d26; package SHA-256 and14-file/tray/API receipts are in
+[native28 evidence](evidence/native28-installation-2026-10-17.json). Live/history
+columns, footer controls, background movement and guarded15s free-card dismissal
+are implemented; the user's general acceptance is not an exhaustive case matrix.
+Current source promotion to the actual master default branch is explicitly
+approved and follows [integration plan](native28-mainline-integration-2026-10-17.md).
+No new signed/public release or Google parity claim. The installed package stays
+unchanged during integration. See [essential acceptance](native-essential-acceptance.md)
+for remaining peer/failure/lifecycle work; avoid relisting completed UI as missing.
+
+Historical native27 installed checkpoint:
+
+2026-10-17 installed checkpoint: native27 is installed and running. Binary source
+e523523; exact package and installed/passive receipts are in
+[native27 evidence](evidence/native27-installation-2026-10-17.json). Incoming
+requests now show guarded Decline/Accept immediately beside peer/type/code;
+there is no row Expander, Receive indirection or lower detail body. Accept remains
+explicit and revision-bound; bytes replace the code with progress. Manifest names
+remain plain tooltip/accessibility metadata. Flat history retains direct checked
+result/text/cancel actions; metadata-only historical entries gain no authority.
+
+Affected panel18/0 and strict native lint passed; the exact extracted package's
+420px incoming preview was visually inspected. All14 installed files, both units,
+one14-entry tray and passive Visibility2/Journal1/AcquireResult passed. Login start
+is off. The user screenshot resolved the extra confirmation report as incoming
+consent disclosure; no unrelated outbound editor change was made. Real incoming
+inline actions/progress/results and history still need physical acceptance on27.
+Fast Android discovery/successful sending were user-confirmed on25; BLE is unchanged.
+Native25/26 rollback packages are retained. No new master merge or signed/public
+release. See [active continuation ledger](native26-flat-transfers-2026-10-17.md).
+
+Historical native26 checkpoint: installed successfully with matching14-file/tray/
+API checks; [evidence](evidence/native26-installation-2026-10-17.json). Its history
+rows were flat, but the card still had Receive -> expanded consent. Native27
+supersedes that card behavior on the user's explicit screenshot request.
+
+Historical native25 checkpoint:
+
+2026-10-17 installed checkpoint: native25 is installed and running. Binary source
+4b6d98cdacb267335efa79fc32d3c2f8525acc02; exact package, installed14-file/tray/API
+receipts and scoped development checks are in
+[native25 evidence](evidence/native25-installation-2026-10-17.json). The user
+confirmed very fast Android discovery and successful sending after this upgrade;
+no numeric latency was measured. The receiver now publishes the coherent Nearby
+V2 BLE header after real GATT registration.
+
+New UI/result flows and all approved contracts are recorded in
+[native25 interaction polish](native25-interaction-polish-2026-10-17.md). The user
+now requests removing a remaining sender confirmation and flattening history rows
+with received-result action inline. The exact reported extra confirmation window
+needs identification before changing the input flow: current contextual file and
+clipboard completion already submit Send directly, prepared rows QueueRecipient
+directly, while text input requires editor submission. No follow-up code yet.
+Other native25 physical flows are not individually accepted. Login start remains
+off; native24 rollback is retained. No new master integration or signed/public
+release.
+
+Historical installed checkpoint before native25:
+
+2026-10-17 installed checkpoint: native24 is installed and running. Release
+source d3cd9d3; exact package and installed receipts are in
+[evidence](evidence/native24-installation-2026-10-17.json). All14 installed files,
+one14-entry tray, Visibility2/Journal1/Queue passed passive verification; login
+start remains disabled. The card has flat current device rows with progress;
+completed operations live in a separate daemon-backed Transfers window. Prepared
+sources stay available and each per-device Send joins one sequential daemon
+queue in click order; no recipient checkboxes or second sender confirmation.
+Metadata retention is30 days/1000 completed entries, without payloads/name-based
+trust. Receiver recovery timers no longer restart on unrelated events; phone
+discovery speed and physical UI/queue acceptance remain pending. The task-owned runtime
+trace override was removed; the current daemon retains privacy-safe stage
+tracing until its next normal restart for the pending phone reproduction. See [active plan and measured checks](native23-card-transfer-separation-2026-10-17.md).
+Native22 rollback and uninstalled native23 internal package are retained. No
+new master integration, signed release or cloud publication.
+
+Historical installed checkpoint before native24:
+
+
+2026-10-17 current installed checkpoint: native22 is installed and running for
+user testing. Binary/package source0f34808537a2b40a22dc8f56a227b5801dc74b61,
+6502732-byte package SHA-256
+a3fcdc0118782de16e50b276f2260b39cce9c8fd5d1cdd23704ea703f3803194.
+All14 installed files and one Active15-row tray passed, along with passive
+Visibility2 and the new Batch1 endpoint-association read. Login start stays off.
+The exact real Bubblewrap/Glycin PNG/JPEG fixture passed once on this host; the
+previous CI container failure remains a separate unresolved environment gate.
+The newer recipient-first Send, retained upward expansion and session-endpoint
+grouping are now installed, with physical user acceptance pending. Native21
+package/source rollback artifacts remain unchanged. See
+[installation record](native22-installation-2026-10-17.md) and
+[evidence](evidence/native22-installation-2026-10-17.json). No signed/public release.
+
+Historical source integration checkpoint before the native22 installation:
+
 2026-10-17 current source checkpoint: the additional card/endpoint-association
 work is merged into master by [PR #6](https://github.com/morozhenko-apps/rquickshare/pull/6),
 merge b93ac02d8d923f5cf5a4d83be41c2aff9510e217. Exact candidate fa28d183 passed
 all five Preflight jobs (39023412094); native GTK strict lint and 42 tests ten
 times passed at source-equivalent 29322530 (subsequent changes are docs only).
-Local master/dev are synchronized; work continues on dev. Source and installed
-versions differ: native21 remains installed, while the latest source adds
+At that checkpoint local master/dev were synchronized; subsequent native22
+packaging and install records continue on dev. Native21 was then installed,
+while the merged source added
 recipient-first Send, retained upward expansion and session-endpoint grouping.
 Full native package preview-sandbox validation, broader Mode B coverage and
 physical KDE/Android/Windows acceptance remain open. A docs-only receipt skips

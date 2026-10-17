@@ -14,6 +14,36 @@ pub(super) fn clamp_position(
         position.1.clamp(0, monitor.1 - size.1),
     ))
 }
+fn draggable(target: &gtk::Widget, root: &gtk::Widget) -> bool {
+    let mut current = Some(target.clone());
+    while let Some(widget) = current {
+        if widget.is::<gtk::Button>()
+            || widget.is::<gtk::MenuButton>()
+            || widget.is::<gtk::CheckButton>()
+            || widget.is::<gtk::Expander>()
+            || widget.is::<gtk::Entry>()
+            || widget.is::<gtk::TextView>()
+            || widget.is::<gtk::Range>()
+            || widget.is::<gtk::Scrollbar>()
+            || widget.is::<gtk::DropDown>()
+            || widget.is::<gtk::Popover>()
+            || widget
+                .downcast_ref::<gtk::Label>()
+                .is_some_and(|label| label.is_selectable())
+        {
+            return false;
+        }
+        if &widget == root {
+            return true;
+        }
+        current = widget.parent();
+    }
+    false
+}
+fn background_at(root: &gtk::Widget, x: f64, y: f64) -> bool {
+    root.pick(x, y, gtk::PickFlags::DEFAULT)
+        .is_some_and(|target| draggable(&target, root))
+}
 impl Panel {
     pub(super) fn restore_surface(&self) -> bool {
         if !self.layer || !self.model.borrow().position_pinned {
@@ -93,9 +123,20 @@ impl Panel {
     }
     pub(super) fn configure_movement(self: &Rc<Self>) {
         let handle = self.box_widget("root");
-        handle.set_cursor_from_name(Some("grab"));
+        let motion = gtk::EventControllerMotion::new();
+        motion.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(self);
+        motion.connect_motion(move |_, x, y| {
+            if let Some(panel) = weak.upgrade() {
+                let root = panel.box_widget("root");
+                let allowed = panel.layer && background_at(root.upcast_ref(), x, y);
+                root.set_cursor_from_name(Some(if allowed { "grab" } else { "default" }));
+            }
+        });
+        handle.add_controller(motion);
         let drag = gtk::GestureDrag::new();
         drag.set_button(1);
+        drag.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = Rc::downgrade(self);
         drag.connect_drag_begin(move |gesture, x, y| {
             if let Some(panel) = weak.upgrade() {
@@ -107,17 +148,9 @@ impl Panel {
                     gesture.set_state(gtk::EventSequenceState::Denied);
                     return;
                 }
-                let mut target = panel.box_widget("root").pick(x, y, gtk::PickFlags::DEFAULT);
-                while let Some(widget) = target {
-                    if widget.is::<gtk::Button>()
-                        || widget.is::<gtk::CheckButton>()
-                        || widget.is::<gtk::Expander>()
-                        || widget.is::<gtk::ScrolledWindow>()
-                    {
-                        gesture.set_state(gtk::EventSequenceState::Denied);
-                        return;
-                    }
-                    target = widget.parent();
+                if !background_at(panel.box_widget("root").upcast_ref(), x, y) {
+                    gesture.set_state(gtk::EventSequenceState::Denied);
+                    return;
                 }
                 panel.mark_manual();
                 gesture.set_state(gtk::EventSequenceState::Claimed);
@@ -185,6 +218,43 @@ fn bottom_margin(top: i32, height: i32, monitor_height: i32) -> Option<i32> {
         .checked_sub(top)
         .filter(|margin| *margin >= 0)
 }
+#[cfg(test)]
+pub(super) fn verify_targets() {
+    // Arrange: inert and interactive targets inside the same scroll content.
+    let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    let scroll = gtk::ScrolledWindow::new();
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    scroll.set_child(Some(&content));
+    root.append(&scroll);
+    let inert = gtk::Label::new(Some("Device"));
+    content.append(&inert);
+    // Act / Assert: scroll ancestry itself must not block movement.
+    assert!(draggable(inert.upcast_ref(), root.upcast_ref()));
+    assert!(draggable(scroll.upcast_ref(), root.upcast_ref()));
+    assert!(!draggable(
+        gtk::Label::new(None).upcast_ref(),
+        root.upcast_ref()
+    ));
+    for control in [
+        gtk::Button::with_label("Send").upcast::<gtk::Widget>(),
+        gtk::MenuButton::new().upcast(),
+        gtk::Entry::new().upcast(),
+        gtk::CheckButton::new().upcast(),
+        gtk::TextView::new().upcast(),
+        gtk::Scrollbar::new(gtk::Orientation::Vertical, None::<&gtk::Adjustment>).upcast(),
+    ] {
+        content.append(&control);
+        assert!(!draggable(&control, root.upcast_ref()));
+        if let Some(child) = control.first_child() {
+            assert!(!draggable(&child, root.upcast_ref()));
+        }
+    }
+    inert.set_selectable(true);
+    assert!(!draggable(inert.upcast_ref(), root.upcast_ref()));
+    inert.set_selectable(false);
+    assert!(draggable(inert.upcast_ref(), root.upcast_ref()));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

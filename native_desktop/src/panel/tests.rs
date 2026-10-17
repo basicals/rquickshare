@@ -87,6 +87,14 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     css.load_from_string(include_str!("../../ui/panel.css"));
     assert!(css_errors.borrow().is_empty(), "{:?}", css_errors.borrow());
     rows::verify_keyed_layout();
+    transfers::verify_columns();
+    movement::verify_targets();
+    let child = gtk::Button::with_label("Behind curtain");
+    let backdrop = backdrop::Backdrop::new(&child);
+    backdrop.set_blurred(true);
+    assert!(!child.is_sensitive());
+    backdrop.set_blurred(false);
+    assert!(child.is_sensitive());
     reveal::tests::verify_reveal_smoke();
     let runtime = tokio::runtime::Runtime::new().unwrap();
     let application = gtk::Application::new(
@@ -128,6 +136,18 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     panel.button("quick-devices").emit_clicked();
     assert_eq!(panel.model.borrow().drawer, Drawer::Open);
     assert!(panel.pages.get_visible());
+    assert_eq!(
+        panel.pages.next_sibling(),
+        Some(panel.box_widget("source").upcast())
+    );
+    assert_eq!(
+        panel.box_widget("source").next_sibling(),
+        Some(panel.box_widget("receive-indicator").upcast())
+    );
+    assert_eq!(
+        panel.curtain.action_name().as_deref(),
+        Some("panel.discard")
+    );
     assert!(!panel.box_widget("source").get_visible());
     for removed in ["header", "mode", "settings-button", "close", "send-entry"] {
         assert!(panel.builder.object::<gtk::Widget>(removed).is_none());
@@ -135,7 +155,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert!(panel.box_widget("compact").get_visible());
     assert_eq!(
         panel.box_widget("device-drawer").next_sibling(),
-        Some(panel.box_widget("compact").upcast())
+        panel.backdrop.parent()
     );
     let scroll = panel
         .builder
@@ -164,7 +184,7 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(panel.drawer(), Drawer::Open);
     assert!(
         !panel.sending.is_visible(),
-        "Send must select a device before content"
+        "Source choice must stay closed while preparation is busy and no service view exists"
     );
     drop(permit);
     assert!(!*panel.ingress.gate.subscribe().borrow());
@@ -316,6 +336,31 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
         .join(" ");
     assert!(reviewed.contains("Code: 4821") && reviewed.contains("Example.pdf"));
     assert!(!compact_text.contains("Example.pdf"));
+    // The actual card row has direct consent, no Receive indirection or lower body.
+    fn consent_controls(widget: &gtk::Widget, found: &mut Vec<String>) {
+        assert!(!widget.is::<gtk::Expander>());
+        assert_ne!(widget.widget_name(), "row-action");
+        if let Some(button) = widget.downcast_ref::<gtk::Button>() {
+            found.push(button.widget_name().to_string());
+            assert!(!button.is_sensitive(), "synthetic preview cannot accept");
+        }
+        if widget.widget_name() == "row-summary" {
+            assert_eq!(
+                widget.clone().downcast::<gtk::Label>().unwrap().text(),
+                "PDF · Code: 4821"
+            );
+            assert!(widget.tooltip_text().unwrap().contains("Example.pdf"));
+        }
+        let mut child = widget.first_child();
+        while let Some(current) = child {
+            consent_controls(&current, found);
+            child = current.next_sibling();
+        }
+    }
+    let mut direct = Vec::new();
+    consent_controls(panel.box_widget("nearby").upcast_ref(), &mut direct);
+    assert_eq!(direct, ["decline", "accept"]);
+
     panel.actions.activate_action("settings", None);
     let settings = panel.settings.borrow().as_ref().unwrap().clone();
     assert!(settings.is_visible());
@@ -360,7 +405,51 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     assert_eq!(*panel.settings.borrow().as_ref().unwrap(), settings);
     assert!(settings.is_visible());
     tray::verify_tray_projection(&panel);
-    recipients::tests::verify_ui(&panel);
+    assert!(panel.builder.object::<gtk::Widget>("recipients").is_none());
+    assert!(panel.builder.object::<gtk::Widget>("send-many").is_none());
+    // Arrange: a connected presentation with no prepared source, without a mutation handle.
+    panel.model.borrow_mut().state.view =
+        Some(Arc::new(rqs_lib::service::client::state::StateView {
+            sources: vec![],
+            epoch: 123,
+            revision: 1,
+            lifecycle: Lifecycle::Running,
+            synchronized: true,
+            resources: Default::default(),
+            endpoints: vec![rqs_lib::service::client::state::Endpoint {
+                id: "device".into(),
+                name: "Example device".into(),
+            }],
+            selections: vec![],
+            transfers: vec![],
+            warnings: vec![],
+            notices: vec![],
+        }));
+    panel.model.borrow_mut().preview = false;
+    panel.set_drawer(Drawer::Closed);
+    panel.show_sending();
+    assert_eq!(panel.drawer(), Drawer::Closed);
+    assert!(
+        panel.sending.is_visible(),
+        "content choice must precede recipient Send"
+    );
+    panel.sending.popdown();
+    panel.render();
+    fn assert_no_choices(widget: &gtk::Widget) {
+        assert!(!widget.is::<gtk::CheckButton>());
+        let mut child = widget.first_child();
+        while let Some(next) = child {
+            child = next.next_sibling();
+            assert_no_choices(&next);
+        }
+    }
+    assert_no_choices(panel.box_widget("nearby").upcast_ref());
+    outbound::verify(&panel);
+    panel.show_transfers();
+    assert!(panel.transfers.borrow().is_some());
+    assert_eq!(panel.pages.visible_child_name().as_deref(), Some("nearby"));
+    assert!(!panel.model.borrow().closing);
+
     image::tests::verify_image_smoke(&panel, &application);
     compose::tests::verify_composer_smoke(&panel, &application);
     text::tests::verify_review_smoke(&panel, &application);

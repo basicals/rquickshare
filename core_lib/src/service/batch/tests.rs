@@ -177,6 +177,10 @@ fn given_one_or_ten_recipients_when_dispatched_then_source_is_shared_once_and_in
                 core.transfers[id].associated_endpoint.as_deref(),
                 Some(job.endpoint.as_str())
             );
+            assert!(core.next_send().unwrap().is_none());
+            core.observe(*id, Phase::Finished).unwrap();
+            core.owner_closed(*id).unwrap();
+            core.source_released(*id).unwrap();
             jobs.push(job);
         }
         assert!(core.next_send().unwrap().is_none());
@@ -294,5 +298,52 @@ fn given_terminal_batch_members_when_receipt_is_unacknowledged_then_each_member_
     for id in ids {
         assert!(!core.operation_pins(id));
         assert_eq!(core.transfers[&id].view.phase, Phase::Cancelled);
+    }
+}
+
+#[test]
+fn given_retained_source_when_recipient_clicks_arrive_then_fifo_replays_and_client_closure_preserve_owned_work(
+) {
+    for terminal in [
+        Phase::Finished,
+        Phase::Rejected,
+        Phase::Cancelled,
+        Phase::Failed,
+        Phase::Disconnected,
+    ] {
+        // Arrange
+        let (mut core, client, selected, _file) = fixture(Limits::default());
+        let first = core
+            .ordered_queue_many(client, selected, vec![("peer1".into(), "First".into())], 1)
+            .unwrap()[0];
+        let second = core
+            .ordered_queue_many(client, selected, vec![("peer0".into(), "Second".into())], 2)
+            .unwrap()[0];
+        assert!(core.selections.contains_key(&selected));
+        assert_eq!(
+            core.ordered_queue_many(client, selected, vec![("peer0".into(), "Second".into())], 2)
+                .unwrap(),
+            vec![second]
+        );
+        assert_eq!(
+            core.ordered_queue_many(client, selected, vec![("peer1".into(), "Second".into())], 2),
+            Err(Error::ReplayConflict)
+        );
+        let first_job = core.next_send().unwrap().unwrap();
+        assert_eq!(first_job.transfer, first);
+        assert_eq!(first_job.endpoint, "peer1");
+        assert!(core.next_send().unwrap().is_none());
+        // Act / Assert: active ownership, not merely terminal display, gates the next recipient.
+        core.observe(first, terminal).unwrap();
+        assert!(core.next_send().unwrap().is_none());
+        core.owner_closed(first).unwrap();
+        assert!(core.next_send().unwrap().is_none());
+        core.source_released(first).unwrap();
+        core.disconnect(client).unwrap();
+        let second_job = core.next_send().unwrap().unwrap();
+        assert_eq!(second_job.transfer, second);
+        assert_eq!(second_job.endpoint, "peer0");
+        assert!(Arc::ptr_eq(&first_job.selection, &second_job.selection));
+        assert_eq!(second_job.selection.total_bytes(), 3);
     }
 }

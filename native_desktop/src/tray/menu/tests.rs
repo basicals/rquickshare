@@ -62,7 +62,7 @@ fn given_fixed_projection_when_layout_depth_properties_and_events_are_checked_th
         );
         assert_eq!(
             String::try_from(properties(5, current, &[]).remove("label").unwrap()).unwrap(),
-            "Active transfers (1)"
+            "Transfers (3)"
         );
     }
     for mode in [None, Some(0), Some(1), Some(2)] {
@@ -158,7 +158,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .unwrap();
     assert_eq!(revision, 1);
     assert_eq!(tree.0, 0);
-    assert_eq!(tree.2.len(), 15);
+    assert_eq!(tree.2.len(), 14);
     let rows: Vec<i32> = tree
         .2
         .into_iter()
@@ -174,7 +174,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
             String::try_from(label).unwrap(),
             match id {
                 4 => "Incoming requests (0)",
-                5 => "Active transfers (0)",
+                5 => "Transfers (0)",
                 _ => Action::from_id(id).unwrap().label(),
             }
         );
@@ -203,7 +203,7 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
         .await
         .unwrap();
     assert!(received.try_recv().is_err());
-    for action in [Action::Receive, Action::Incoming, Action::About] {
+    for action in [Action::Receive, Action::Transfers, Action::About] {
         proxy
             .call::<_, _, ()>(
                 "Event",
@@ -221,6 +221,8 @@ async fn given_real_menu_when_reads_clicks_groups_or_fd_abuse_arrive_then_order_
             .await
             .is_err());
     }
+    // Arrange the independent valid group after its disabled-action scenario.
+    state.send_modify(|state| state.projection.enabled |= Action::Transfers.bit());
     let bad: Vec<i32> = proxy
         .call(
             "EventGroup",

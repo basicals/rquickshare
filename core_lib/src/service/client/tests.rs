@@ -92,6 +92,7 @@ fn member(kind: OperationKind) -> &'static str {
         OperationKind::Abort => "AbortSelection",
         OperationKind::Send => "SendSelection",
         OperationKind::SendMany => "Send",
+        OperationKind::QueueMany => "Queue",
     }
 }
 

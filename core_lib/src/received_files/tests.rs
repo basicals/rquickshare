@@ -198,6 +198,7 @@ fn given_received_target_when_deleted_edited_replaced_or_symlinked_then_no_other
             _ => unreachable!(),
         }
         assert!(receipt.open(0).is_err(), "{change}");
+        assert!(receipt.open_result().is_err(), "{change}");
     }
 }
 #[test]
@@ -229,4 +230,65 @@ fn given_receipt_budget_when_snapshots_outlive_history_then_only_final_drop_rele
     assert_eq!(budget.0.load(Ordering::Acquire), 0);
     assert!(PendingFiles::new(root.clone(), vec![], budget.clone()).is_none());
     assert!(PendingFiles::new(root, vec![101; FILE_LIMIT + 1], budget).is_none());
+}
+
+#[test]
+fn given_completed_roots_when_result_is_opened_then_file_folder_or_contents_authority_is_exact_and_replacements_fail(
+) {
+    use std::os::unix::fs::MetadataExt;
+    for (names, kind) in [
+        (vec!["one.txt"], 0),
+        (vec!["folder/one.txt"], 1),
+        (vec!["folder/one.txt", "folder/nested/two.txt"], 1),
+        (vec!["one.txt", "two.txt"], 2),
+        (vec!["a/one.txt", "b/two.txt"], 2),
+    ] {
+        // Arrange
+        let directory = tempfile::tempdir().unwrap();
+        let root = ReceivePolicy::new(Some(directory.path().to_owned()))
+            .snapshot()
+            .pin()
+            .unwrap();
+        let mut pending = PendingFiles::new(
+            root.clone(),
+            (0..names.len() as i64).collect(),
+            ReceiptBudget::default(),
+        )
+        .unwrap();
+        for (index, name) in names.iter().enumerate() {
+            let path = directory.path().join(name);
+            let mut file = root.create_file(&path).unwrap();
+            file.write_all(b"x").unwrap();
+            pending.record(index as i64, &path, &file, 1).unwrap();
+        }
+        let receipt = pending.finish().unwrap();
+        // Act / Assert
+        let (actual, file) = receipt.open_result().unwrap();
+        assert_eq!(actual, kind);
+        let expected = if kind == 0 {
+            directory.path().join(names[0])
+        } else if kind == 1 {
+            directory.path().join("folder")
+        } else {
+            directory.path().to_owned()
+        };
+        assert_eq!(
+            file.metadata().unwrap().ino(),
+            expected.metadata().unwrap().ino()
+        );
+        assert_eq!(file.metadata().unwrap().is_dir(), kind != 0);
+        assert_eq!(
+            rustix::fs::fcntl_getfl(&file).unwrap() & rustix::fs::OFlags::ACCMODE,
+            rustix::fs::OFlags::RDONLY
+        );
+        std::fs::remove_file(directory.path().join(names[0])).unwrap();
+        std::fs::write(directory.path().join(names[0]), b"different").unwrap();
+        assert!(receipt.open_result().is_err());
+    }
+    // The original pinned root remains authoritative after its path is renamed.
+    let (directory, receipt, _) = fixture();
+    let renamed = directory.path().with_extension("result-renamed");
+    std::fs::rename(directory.path(), &renamed).unwrap();
+    assert_eq!(receipt.open_result().unwrap().0, 1);
+    std::fs::remove_dir_all(renamed).unwrap();
 }

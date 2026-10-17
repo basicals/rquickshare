@@ -240,6 +240,45 @@ impl ReceivedFiles {
         }
         Ok(file)
     }
+    /// The returned mode describes only verified filesystem authority, never a handler.
+    pub(crate) fn open_result(&self) -> io::Result<(u8, File)> {
+        use rustix::fs::{openat2, Mode, OFlags, ResolveFlags};
+        let first = self.records.first().ok_or(io::ErrorKind::InvalidInput)?;
+        if self.records.len() == 1 && !first.relative.contains('/') {
+            return self.open(0).map(|file| (0, file));
+        }
+        let common = first
+            .relative
+            .split_once('/')
+            .map(|(top, _)| top)
+            .filter(|top| {
+                self.records.iter().all(|r| {
+                    r.relative
+                        .strip_prefix(top)
+                        .is_some_and(|rest| rest.starts_with('/'))
+                })
+            });
+        let directory = self.root.open_received(common.unwrap_or("."))?;
+        if !directory.metadata()?.is_dir() {
+            return Err(io::ErrorKind::NotADirectory.into());
+        }
+        for record in &self.records {
+            let relative = common.map_or(record.relative.as_str(), |top| {
+                &record.relative[top.len() + 1..]
+            });
+            let file = File::from(openat2(
+                &directory,
+                relative,
+                OFlags::RDONLY | OFlags::NONBLOCK | OFlags::CLOEXEC,
+                Mode::empty(),
+                ResolveFlags::BENEATH | ResolveFlags::NO_SYMLINKS | ResolveFlags::NO_MAGICLINKS,
+            )?);
+            if Fingerprint::new(file.metadata()?)? != record.identity {
+                return Err(io::ErrorKind::NotFound.into());
+            }
+        }
+        Ok((if common.is_some() { 1 } else { 2 }, directory))
+    }
 }
 #[cfg(test)]
 pub(crate) mod tests;

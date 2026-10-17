@@ -146,6 +146,7 @@ pub struct ReceiverGattServer {
     adapter: Arc<Adapter>,
     advertisement: Vec<u8>,
     identity: Option<([u8; 4], crate::identity::IdentityConsumer)>,
+    header: Option<tokio::sync::watch::Sender<Option<super::receiver_header::Header>>>,
     sender: Sender<ChannelMessage>,
     tcp_port: u16,
     bwu_router: BwuRouter,
@@ -156,6 +157,13 @@ pub struct ReceiverGattServer {
 }
 
 impl ReceiverGattServer {
+    pub(crate) fn with_header(
+        mut self,
+        header: tokio::sync::watch::Sender<Option<super::receiver_header::Header>>,
+    ) -> Self {
+        self.header = Some(header);
+        self
+    }
     pub(crate) fn with_identity(
         mut self,
         endpoint: [u8; 4],
@@ -185,6 +193,7 @@ impl ReceiverGattServer {
             adapter: Arc::new(adapter),
             advertisement,
             identity: None,
+            header: None,
             sender,
             tcp_port,
             bwu_router,
@@ -214,6 +223,11 @@ impl ReceiverGattServer {
                 snapshot.name.as_str(),
             );
         }
+        let initial_header = self
+            .header
+            .as_ref()
+            .map(|_| super::receiver_header::new(&self.advertisement))
+            .transpose()?;
         let value = Arc::new(Mutex::new(slot::SlotValue::new(
             self.advertisement.clone(),
             identity.is_some(),
@@ -259,6 +273,11 @@ impl ReceiverGattServer {
                                 let mdns_refresh_sender = slot_mdns_refresh_sender.clone();
                                 Box::pin(async move {
                                     let offset = usize::from(request.offset);
+                                    if offset == 0 {
+                                        crate::receiver_trace::event(
+                                            crate::receiver_trace::Event::GattRead,
+                                        );
+                                    }
                                     let response = advertisement
                                         .lock()
                                         .await
@@ -391,6 +410,10 @@ impl ReceiverGattServer {
                 return Err(error.into());
             }
         };
+        if let (Some(publisher), Some(header)) = (&self.header, initial_header) {
+            publisher.send_replace(Some(header));
+            crate::receiver_trace::event(crate::receiver_trace::Event::GattHeaderReady);
+        }
         if let Some((_, consumer)) = identity.as_ref() {
             if let Err(error) = consumer.acknowledge(initial_revision) {
                 drop(handle);
@@ -413,12 +436,22 @@ impl ReceiverGattServer {
                     if let Err(error) = changed { break Err(error.into()); }
                     if let Some((endpoint, consumer)) = identity.as_mut() {
                         let snapshot = consumer.snapshot();
-                        value.lock().await.install(super::receiver_service_data(*endpoint, crate::utils::DeviceType::Laptop as u8, snapshot.name.as_str()));
+                        let bytes = super::receiver_service_data(*endpoint, crate::utils::DeviceType::Laptop as u8, snapshot.name.as_str());
+                        let header = match self.header.as_ref().map(|_| super::receiver_header::new(&bytes)).transpose() {
+                            Ok(header) => header,
+                            Err(error) => break Err(error.into()),
+                        };
+                        value.lock().await.install(bytes);
+                        if let (Some(publisher), Some(header)) = (&self.header, header) { publisher.send_replace(Some(header));
+            crate::receiver_trace::event(crate::receiver_trace::Event::GattHeaderReady); }
                         if let Err(error) = consumer.acknowledge(snapshot.revision) { break Err(error.into()); }
                     }
                 }
             }
         };
+        if let Some(publisher) = &self.header {
+            publisher.send_replace(None);
+        }
         drop(handle);
         tasks.stop().await?;
         info!("{INNER_NAME}: stopped");

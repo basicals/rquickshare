@@ -368,12 +368,10 @@ async fn given_queued_files_when_caller_disconnects_then_dispatch_is_fifo_once_a
     let observer = runtime.connect().unwrap();
     // Act
     runtime.step().await.unwrap();
-    runtime.step().await.unwrap();
     let first_job = fixture.receiver.recv().await.unwrap();
-    let second_job = fixture.receiver.recv().await.unwrap();
-    // Assert
     assert!(first_job.info.id.ends_with(&format!("{:016x}", first.1)));
-    assert!(second_job.info.id.ends_with(&format!("{:016x}", second.1)));
+    assert!(fixture.receiver.try_recv().is_err());
+    assert_eq!(view(runtime, observer, second).phase, Phase::Queued);
     assert_eq!(first_job.info.addr, "127.0.0.1:1234");
     assert!(fixture.receiver.try_recv().is_err());
     let weak = match &first_job.info.ob {
@@ -389,6 +387,9 @@ async fn given_queued_files_when_caller_disconnects_then_dispatch_is_fifo_once_a
         4
     );
     finish(first_job, State::Finished);
+    runtime.step().await.unwrap();
+    let second_job = fixture.receiver.recv().await.unwrap();
+    assert!(second_job.info.id.ends_with(&format!("{:016x}", second.1)));
     finish(second_job, State::Rejected);
     runtime.step().await.unwrap();
     assert_eq!(view(runtime, observer, first).phase, Phase::Finished);
@@ -404,6 +405,17 @@ async fn given_queued_files_when_caller_disconnects_then_dispatch_is_fifo_once_a
     );
 }
 
+fn fill_transport(runtime: &NativeRuntime) {
+    for index in 0..10 {
+        assert!(runtime.sender.fill_transport_for_test(SendInfo {
+            id: format!("external-fixture-{index}"),
+            name: String::new(),
+            addr: "127.0.0.1:1234".into(),
+            ob: OutboundPayload::Text(String::new()),
+        }));
+    }
+}
+
 #[tokio::test]
 async fn given_full_queue_when_pending_send_is_cancelled_then_no_duplicate_dispatch_or_file_leak_occurs(
 ) {
@@ -412,10 +424,7 @@ async fn given_full_queue_when_pending_send_is_cancelled_then_no_duplicate_dispa
     let runtime = &mut fixture.runtime;
     runtime.discovered(advertisement("peer")).unwrap();
     let client = runtime.connect().unwrap();
-    for index in 0..10 {
-        send(runtime, client, &index.to_string());
-        runtime.dispatch().unwrap();
-    }
+    fill_transport(runtime);
     let transfer = send(runtime, client, "pending");
     assert!(!runtime.dispatch().unwrap());
     let weak = match &runtime.pending.as_ref().unwrap().request.ob {
@@ -432,10 +441,9 @@ async fn given_full_queue_when_pending_send_is_cancelled_then_no_duplicate_dispa
     let mut count = 0;
     while let Ok(job) = fixture.receiver.try_recv() {
         count += 1;
-        finish(job, State::Finished);
+        job.release();
     }
     assert_eq!(count, 10);
-    runtime.step().await.unwrap();
     assert_eq!(
         runtime.snapshot(client).unwrap().resources.reserved_handles,
         0
@@ -449,22 +457,23 @@ async fn given_pending_backpressure_when_capacity_returns_then_same_payload_is_s
     let runtime = &mut fixture.runtime;
     runtime.discovered(advertisement("peer")).unwrap();
     let client = runtime.connect().unwrap();
-    for index in 0..10 {
-        send(runtime, client, &index.to_string());
-        runtime.dispatch().unwrap();
-    }
+    fill_transport(runtime);
     let transfer = send(runtime, client, "pending");
     runtime.dispatch().unwrap();
     let id = runtime.pending.as_ref().unwrap().request.id.clone();
     // Act
-    finish(fixture.receiver.recv().await.unwrap(), State::Finished);
+    fixture.receiver.recv().await.unwrap().release();
     runtime.step().await.unwrap();
     // Assert
     assert!(runtime.pending.is_none());
     let mut ids = Vec::new();
     while let Ok(job) = fixture.receiver.try_recv() {
         ids.push(job.info.id.clone());
-        finish(job, State::Finished);
+        if job.info.id == id {
+            finish(job, State::Finished);
+        } else {
+            job.release();
+        }
     }
     assert_eq!(ids.len(), 10);
     assert_eq!(ids.iter().filter(|entry| **entry == id).count(), 1);
@@ -482,10 +491,7 @@ async fn given_removed_endpoint_when_queued_or_pending_then_unsent_work_fails_an
         runtime.discovered(advertisement("peer")).unwrap();
         let client = runtime.connect().unwrap();
         if full {
-            for index in 0..10 {
-                send(runtime, client, &index.to_string());
-                runtime.dispatch().unwrap();
-            }
+            fill_transport(runtime);
         }
         let transfer = send(runtime, client, "removed");
         if full {
@@ -501,7 +507,7 @@ async fn given_removed_endpoint_when_queued_or_pending_then_unsent_work_fails_an
         let mut count = 0;
         while let Ok(job) = fixture.receiver.try_recv() {
             count += 1;
-            finish(job, State::Finished);
+            job.release();
         }
         assert_eq!(count, if full { 10 } else { 0 });
     }

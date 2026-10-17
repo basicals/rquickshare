@@ -43,6 +43,7 @@ async fn run() -> Result<(), rqs_lib::service::process::ProcessError> {
         println!("Settings checked; no service started.");
         return Ok(());
     }
+    rqs_lib::receiver_trace::event(rqs_lib::receiver_trace::Event::Start);
     let directory = runtime_directory()?;
     let _owner = LaunchGuard::acquire(&directory)?;
     let address = BusAddress::session(&directory)?;

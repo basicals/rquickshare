@@ -23,7 +23,14 @@
       <arg name="next" type="u" direction="out"/>
       <arg name="recipients" type="a(ss)" direction="out"/>
     </method>
-  </interface>
+
+<method name="Queue">
+      <arg name="selection" type="s" direction="in"/>
+      <arg name="recipients" type="as" direction="in"/>
+      <arg name="sequence" type="t" direction="in"/>
+      <arg name="transfers" type="as" direction="out"/>
+    </method>
+</interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Visibility2">
     <method name="Read">
       <arg name="visibility" type="(sbtbyt)" direction="out"/>
@@ -262,6 +269,12 @@
       <arg name="next_offset" type="u" direction="out"/>
       <arg name="metadata" type="a(stu)" direction="out"/>
     </method>
+    <method name="AcquireResult">
+      <arg name="transfer_id" type="s" direction="in"/>
+      <arg name="terminal_revision" type="t" direction="in"/>
+      <arg name="kind" type="y" direction="out"/>
+      <arg name="result" type="h" direction="out"/>
+    </method>
     <method name="AcquireFile">
       <arg name="transfer_id" type="s" direction="in"/>
       <arg name="terminal_revision" type="t" direction="in"/>
@@ -273,5 +286,12 @@
     <method name="Introspect">
       <arg name="xml_data" type="s" direction="out"/>
     </method>
+  </interface>
+  <interface name="io.github.morozhenko_apps.RQuickShare.Journal1">
+    <method name="Read"><arg direction="out" type="s" name="epoch"/><arg direction="out" type="s" name="token"/><arg direction="out" type="y" name="error"/><arg direction="out" type="u" name="total"/></method>
+    <method name="Retry"><arg direction="out" type="s" name="epoch"/><arg direction="out" type="s" name="token"/><arg direction="out" type="y" name="error"/><arg direction="out" type="u" name="total"/></method>
+    <method name="GetPage"><arg direction="in" type="s" name="token"/><arg direction="in" type="u" name="offset"/><arg direction="out" type="u" name="total"/><arg direction="out" type="a(ssbssutttt)" name="records"/></method>
+    <method name="Clear"><arg direction="in" type="s" name="token"/><arg direction="out" type="y" name="result"/></method>
+    <signal name="Changed"><arg type="s" name="epoch"/><arg type="t" name="revision"/></signal>
   </interface>
 </node>

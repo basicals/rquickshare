@@ -23,6 +23,17 @@ impl Portal {
     fn version(&self) -> u32 {
         self.version
     }
+    async fn open_file(
+        &self,
+        parent: &str,
+        fd: Fd<'_>,
+        options: HashMap<String, OwnedValue>,
+        #[zbus(header)] header: Header<'_>,
+        #[zbus(connection)] connection: &Connection,
+    ) -> fdo::Result<OwnedObjectPath> {
+        self.open_directory(parent, fd, options, header, connection)
+            .await
+    }
     async fn open_directory(
         &self,
         parent: &str,
@@ -54,11 +65,20 @@ impl Portal {
         {
             return Err(invalid());
         }
-        use std::os::unix::fs::FileExt;
-        let mut bytes = [0; 8];
-        file.read_exact_at(&mut bytes, 0).map_err(|_| invalid())?;
-        if &bytes != b"received" {
-            return Err(invalid());
+        if header
+            .member()
+            .is_some_and(|member| member.as_str() == "OpenFile")
+        {
+            if !file.metadata().map_err(|_| invalid())?.is_dir() {
+                return Err(invalid());
+            }
+        } else {
+            use std::os::unix::fs::FileExt;
+            let mut bytes = [0; 8];
+            file.read_exact_at(&mut bytes, 0).map_err(|_| invalid())?;
+            if &bytes != b"received" {
+                return Err(invalid());
+            }
         }
         connection
             .object_server()
@@ -226,4 +246,34 @@ fn given_portal_message_when_sender_or_descriptors_differ_then_reply_validation_
         .build(&Fd::from(file.as_fd()))
         .unwrap();
     assert_eq!(checked(&invalid, ":1.23"), Err(Error::Protocol));
+}
+
+#[tokio::test]
+async fn given_directory_contents_action_when_fd_is_regular_then_it_is_rejected_before_any_desktop_connection(
+) {
+    let (_source, file) = file();
+    assert_eq!(
+        show_directory_contents(file, CancellationToken::new()).await,
+        Err(Error::Protocol)
+    );
+}
+#[tokio::test]
+async fn given_checked_directory_when_contents_are_requested_then_portal_receives_directory_only_and_acknowledges_response(
+) {
+    let broker = Broker::new();
+    let (server, mut admitted, _) = server(&broker, 3, 0).await;
+    let directory = tempfile::tempdir().unwrap();
+    let file = Arc::new(File::open(directory.path()).unwrap());
+    assert_eq!(
+        show_on_mode(
+            broker.connection().await,
+            file,
+            CancellationToken::new(),
+            true
+        )
+        .await,
+        Ok(())
+    );
+    assert!(admitted.try_recv().is_ok());
+    server.close().await.unwrap();
 }

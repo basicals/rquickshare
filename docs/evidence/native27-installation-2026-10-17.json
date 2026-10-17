@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "source_commit": "e523523265557fbd6d8aaab1810ed6b1051605dd",
+  "package": {
+    "name": "rquickshare_0.11.5+native27_amd64.deb",
+    "bytes": 6653458,
+    "sha256": "f023a2ca0575d4166203e972d0e70040e0e507c6c67578e75dbd7ffc5f36dd6c",
+    "offline_verified": true
+  },
+  "installation": {
+    "observed_at": "2026-10-17T13:38:31.076289+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native26",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2738171"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2738175"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 1,
+      "owned_selections": 0,
+      "transfers": 1
+    },
+    "terminal_history_count": 1,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native27",
+    "normal_launch_restored": true,
+    "temporary_trace_override_absent": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2808363"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2808365"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "passive_installed_checks": {
+    "observed_at": "2026-10-17T13:38:46.740691+00:00",
+    "installed_version": "0.11.5+native27",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true,
+    "endpoint_association_read": {
+      "total": 0,
+      "rows": 0,
+      "passed": true
+    },
+    "visibility2_read": {
+      "running": true,
+      "mode": 2,
+      "valid": true
+    },
+    "journal_read": {
+      "error": 0,
+      "records": 6,
+      "valid": true
+    },
+    "queue_and_journal_retry_supported": true,
+    "whole_result_supported": true
+  },
+  "development_checks": {
+    "initial_panel": {
+      "passed": 17,
+      "failed": 1,
+      "seconds": 0.25,
+      "failure": "Preview typed iteration over ObserveChildren Object item type; fixed actual child traversal without weakening assertions."
+    },
+    "final_panel": {
+      "passed": 18,
+      "failed": 0,
+      "seconds": 0.51,
+      "unrelated_filtered": 32
+    },
+    "strict_native_clippy_seconds": 1.68,
+    "full_repository_or_mode_b_claim": false
+  },
+  "visual_check": {
+    "exact_extracted_package": true,
+    "synthetic_incoming": "420px one-row peer/type/code/Decline/Accept, no Expander or detail body",
+    "physical_acceptance": false
+  },
+  "behavior": {
+    "receiver_consent_explicit": true,
+    "consent_revision_validation_preserved": true,
+    "receive_focus_does_not_accept": true,
+    "whole_result_authority_unchanged": true,
+    "ble_unchanged_since_user_accepted_native25": true
+  },
+  "physical_acceptance_pending": [
+    "Incoming request immediate inline actions",
+    "Accept then progress and completed result",
+    "Flat history result button"
+  ],
+  "no_public_release": true
+}

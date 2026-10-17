@@ -15,24 +15,27 @@ use rqs_lib::service::client::{
 use rqs_lib::service::{Direction, Lifecycle, Phase};
 use std::{
     cell::{Cell, RefCell},
-    collections::BTreeMap,
     rc::Rc,
     sync::Arc,
 };
 use tokio::runtime::Handle;
 
+mod backdrop;
 mod compose;
 mod countdown;
+mod idle;
 mod image;
 mod incoming_preview;
 mod menu;
 mod movement;
+mod outbound;
 mod presentation;
-mod recipients;
+mod results;
 mod reveal;
 mod rows;
 mod settings;
 mod text;
+mod transfers;
 mod tray;
 
 #[derive(Default)]
@@ -44,6 +47,8 @@ struct Model {
     desktop: DesktopState,
     last_hint: Option<(i32, i32)>,
     waiting: bool,
+    input_active: bool,
+    strip_target: Option<String>,
     closing: bool,
     notice: Option<&'static str>,
     drawer: Drawer,
@@ -55,7 +60,6 @@ struct Model {
     manual_requested: bool,
     preview: bool,
     position_pinned: bool,
-    recipients: BTreeMap<String, String>,
 }
 pub struct Panel {
     pub window: gtk::Window,
@@ -75,12 +79,17 @@ pub struct Panel {
     about: RefCell<Option<gtk::AboutDialog>>,
     settings_owner: RefCell<Option<Rc<settings::Editor>>>,
     text_review: RefCell<Option<Rc<text::Review>>>,
+    transfers: RefCell<Option<Rc<transfers::Window>>>,
+    history_columns: transfers::Columns,
+    idle: RefCell<idle::Idle>,
     composer: RefCell<Option<Rc<compose::Composer>>>,
     image: RefCell<Option<Rc<image::Image>>>,
     preview_image: incoming_preview::Fixture,
     reveal: RefCell<Option<Rc<reveal::Pending>>>,
     text_generation: RefCell<Rc<()>>,
     rows: RefCell<rows::Rows>,
+    results: RefCell<results::Results>,
+    result_idle: RefCell<Option<glib::SourceId>>,
     dismissal: RefCell<Option<glib::JoinHandle<()>>>,
     reconnect: Cell<bool>,
     reconnect_button: gtk::Button,
@@ -89,6 +98,11 @@ pub struct Panel {
     login: RefCell<Option<crate::login::Handle>>,
     sending: gtk::PopoverMenu,
     visibility_tick: RefCell<Option<glib::SourceId>>,
+    backdrop: backdrop::Backdrop,
+    curtain: gtk::Button,
+    input_task: RefCell<Option<glib::JoinHandle<()>>>,
+    input_generation: RefCell<Rc<()>>,
+    input_cancel: RefCell<Option<tokio_util::sync::CancellationToken>>,
 }
 
 fn label(text: &str) -> gtk::Label {
@@ -136,9 +150,11 @@ fn details_card_mode_with_files(
                 sender.set_ellipsize(gtk::pango::EllipsizeMode::End);
                 sender.set_max_width_chars(38);
             }
+            sender.set_widget_name("detail-peer");
             row.append(&sender);
             if !details.pin.is_empty() {
                 let pin = label(&format!("Code: {}", details.pin));
+                pin.set_widget_name("detail-code");
                 pin.add_css_class("verification-code");
                 row.append(&pin);
                 row.append(&label(
@@ -146,7 +162,7 @@ fn details_card_mode_with_files(
                 ));
             }
             if details.kind != rqs_lib::sessions::details::PayloadKind::Files {
-                row.append(&label(&format!(
+                let summary = label(&format!(
                     "{} · {} bytes",
                     if details.kind == rqs_lib::sessions::details::PayloadKind::Url {
                         "Link"
@@ -154,10 +170,12 @@ fn details_card_mode_with_files(
                         "Text"
                     },
                     details.total_bytes
-                )));
+                ));
+                summary.set_widget_name("detail-summary");
+                row.append(&summary);
                 return row;
             }
-            row.append(&label(&format!(
+            let summary = label(&format!(
                 "{} {} · {} bytes",
                 details.files.len(),
                 if details.files.len() == 1 {
@@ -166,11 +184,14 @@ fn details_card_mode_with_files(
                     "files"
                 },
                 details.total_bytes
-            )));
+            ));
+            summary.set_widget_name("detail-summary");
+            row.append(&summary);
             if !full {
                 return row;
             }
             let expander = gtk::Expander::new(Some("Review all files"));
+            expander.set_widget_name("detail-manifest");
             let files = details.files.clone();
             // File widgets are materialized only while expanded, bounded by the manifest limit.
             expander.connect_expanded_notify(move |expander| {
@@ -248,9 +269,9 @@ fn source_summary(
 ) -> String {
     use rqs_lib::sessions::details::PayloadKind;
     match kind {
-        PayloadKind::Files => format!("{} files prepared · choose recipients", file_count),
+        PayloadKind::Files => format!("{} files prepared · choose a device", file_count),
         PayloadKind::Text | PayloadKind::Url => format!(
-            "{} prepared · {} bytes · choose recipients",
+            "{} prepared · {} bytes · choose a device",
             if kind == PayloadKind::Url {
                 "Link"
             } else {
@@ -297,7 +318,7 @@ fn error_message(error: Option<rqs_lib::service::client::ClientError>) -> &'stat
             "A recipient is no longer available. Review the selected devices; nothing was queued."
         }
         Some(Rejected(rqs_lib::service::Error::Capacity)) => {
-            "Sharing resources are busy. Nothing was queued. Try fewer recipients or wait."
+            "Sharing resources are busy. Nothing was queued. Wait for a queued transfer to finish."
         }
         Some(_) => "The operation was not accepted. Review the current state and try again.",
         None => "",
@@ -310,6 +331,9 @@ impl Panel {
         self.refresh_login();
     }
     pub fn refresh_login(&self) {
+        if self.window.is_visible() && self.results.borrow().has_visible() {
+            self.mark_manual();
+        }
         if let Some(editor) = self.settings_owner.borrow().as_ref() {
             editor.refresh_login();
         }
@@ -346,6 +370,24 @@ impl Panel {
             .object::<gtk::Box>("recovery")
             .unwrap()
             .append(&reconnect_button);
+        let compact = builder
+            .object::<gtk::Box>("compact")
+            .expect("bottom controls");
+        let root = builder.object::<gtk::Box>("root").expect("card root");
+        root.remove(&compact);
+        let overlay = gtk::Overlay::new();
+        overlay.set_widget_name("controls-overlay");
+        let backdrop = backdrop::Backdrop::new(&compact);
+        overlay.set_child(Some(&backdrop));
+        let curtain = gtk::Button::with_label("Choose target devices\nClear prepared files");
+        curtain.set_widget_name("selection-curtain");
+        curtain.set_action_name(Some("panel.discard"));
+        curtain.add_css_class("selection-curtain");
+        curtain.set_hexpand(true);
+        curtain.set_vexpand(true);
+        curtain.set_visible(false);
+        overlay.add_overlay(&curtain);
+        root.append(&overlay);
         let panel = Rc::new(Self {
             pages: builder.object("pages").expect("pages widget"),
             window,
@@ -372,12 +414,17 @@ impl Panel {
             about: RefCell::new(None),
             settings_owner: RefCell::new(None),
             text_review: RefCell::new(None),
+            transfers: RefCell::new(None),
+            history_columns: transfers::Columns::default(),
+            idle: RefCell::new(idle::Idle::default()),
             composer: RefCell::new(None),
             image: RefCell::new(None),
             preview_image: incoming_preview::Fixture::default(),
             reveal: RefCell::new(None),
             text_generation: RefCell::new(Rc::new(())),
             rows: RefCell::new(rows::Rows::default()),
+            results: RefCell::new(results::Results::default()),
+            result_idle: RefCell::new(None),
             dismissal: RefCell::new(None),
             reconnect: Cell::new(false),
             reconnect_button,
@@ -386,6 +433,11 @@ impl Panel {
             login: RefCell::new(None),
             sending: gtk::PopoverMenu::from_model(None::<&gio::MenuModel>),
             visibility_tick: RefCell::new(None),
+            backdrop,
+            curtain,
+            input_task: RefCell::new(None),
+            input_generation: RefCell::new(Rc::new(())),
+            input_cancel: RefCell::new(None),
         });
         let weak = Rc::downgrade(&panel);
         panel.window.connect_close_request(move |_| {
@@ -452,6 +504,7 @@ impl Panel {
             });
         }
         panel.configure_menu(application);
+        panel.configure_idle();
         let weak = Rc::downgrade(&panel);
         panel.pages.connect_visible_child_name_notify(move |pages| {
             if let Some(panel) = weak.upgrade() {
@@ -465,15 +518,6 @@ impl Panel {
                             .view
                             .as_ref()
                             .is_some_and(|view| !view.selections.is_empty()),
-                );
-                panel.box_widget("recipients").set_visible(
-                    nearby
-                        && (!model.recipients.is_empty()
-                            || model
-                                .state
-                                .view
-                                .as_ref()
-                                .is_some_and(|view| !view.selections.is_empty())),
                 );
             }
         });
@@ -508,6 +552,9 @@ impl Panel {
             .map(|view| view.epoch);
         let current_epoch = state.view.as_ref().map(|view| view.epoch);
         if state.disconnected || previous_epoch != current_epoch {
+            self.close_input();
+            self.rows.borrow_mut().clear();
+            self.results.replace(results::Results::default());
             self.close_text_review();
             self.close_composer();
             self.close_image();
@@ -515,17 +562,17 @@ impl Panel {
         }
         {
             let mut model = self.model.borrow_mut();
-            if state.disconnected || previous_epoch != current_epoch {
-                model.recipients.clear();
-            }
-            if let Some(view) = &state.view {
-                for endpoint in &view.endpoints {
-                    if let Some(name) = model.recipients.get_mut(&endpoint.id) {
-                        *name = endpoint.name.clone();
-                    }
+            model.state = state;
+            if !model.state.disconnected {
+                if let Some(view) = &model.state.view {
+                    self.results.borrow_mut().observe(
+                        view.epoch,
+                        view.transfers
+                            .iter()
+                            .map(|t| (t.transfer.id().to_owned(), t.direction, t.phase)),
+                    );
                 }
             }
-            model.state = state;
         }
         if let Some(editor) = self.settings_owner.borrow().as_ref() {
             editor.refresh();
@@ -630,6 +677,7 @@ impl Panel {
             .set_visible(!text.is_empty());
     }
     pub fn close(&self) {
+        self.stop_idle();
         if self.model.borrow().closing {
             return;
         }
@@ -637,6 +685,11 @@ impl Panel {
             tick.remove();
         }
         self.preview_image.cancel();
+        if let Some(idle) = self.result_idle.borrow_mut().take() {
+            idle.remove();
+        }
+        self.results.borrow_mut().dismiss();
+        self.close_input();
         self.close_text_review();
         self.close_composer();
         self.close_image();
@@ -656,11 +709,13 @@ impl Panel {
         if let Some(about) = self.about.borrow_mut().take() {
             about.destroy();
         }
+        if let Some(window) = self.transfers.borrow_mut().take() {
+            window.close();
+        }
         self.context.unparent();
         self.sending.unparent();
         let mut model = self.model.borrow_mut();
         model.closing = true;
-        model.recipients.clear();
         model.dialog_permit.take();
         if let Some(dialog) = model.dialog.take() {
             dialog.cancel();
@@ -676,6 +731,7 @@ impl Panel {
             let model = self.model.borrow();
             if self.handle.is_none()
                 || model.waiting
+                || model.input_active
                 || model.closing
                 || model.state.busy
                 || model.state.disconnected
@@ -704,9 +760,6 @@ impl Panel {
                 {
                     let mut model = panel.model.borrow_mut();
                     model.waiting = false;
-                    if recipients::confirmed(&result) {
-                        model.recipients.clear();
-                    }
                     model.notice = match &result {
                         Ok(rqs_lib::service::client::controller::ActionResult::Settings(view)) if view.error != 0 =>
                             Some("Visibility was saved but could not be fully applied. Review discovery status and Settings."),
@@ -727,12 +780,17 @@ impl Panel {
         self.completion.replace(Some(task));
     }
     fn choose(self: &Rc<Self>, folder: bool) {
+        self.choose_for(folder, None);
+    }
+    fn choose_for(self: &Rc<Self>, folder: bool, target: Option<outbound::Target>) {
+        self.sending.popdown();
         let base;
         {
             let mut model = self.model.borrow_mut();
             if !controls_ready(
                 &model.state,
                 model.waiting
+                    || model.input_active
                     || (model.safety_active && !model.safety.manual_allowed())
                     || model.ingress.busy
                     || model.dialog.is_some()
@@ -759,6 +817,10 @@ impl Panel {
                 .and_then(|view| view.selections.first())
                 .cloned();
         }
+        let Some(epoch) = self.model.borrow().state.view.as_ref().map(|v| v.epoch) else {
+            return;
+        };
+        let generation = self.input_generation.borrow().clone();
         self.render();
         let dialog = gtk::FileDialog::new();
         let cancellable = self.model.borrow().dialog.clone();
@@ -767,19 +829,27 @@ impl Panel {
             if let Some(panel) = weak.upgrade() {
                 panel.model.borrow_mut().dialog = None;
                 let permit = panel.model.borrow_mut().dialog_permit.take();
-                if panel.model.borrow().closing {
+                if panel.model.borrow().closing
+                    || !Rc::ptr_eq(&generation, &panel.input_generation.borrow())
+                {
                     return;
                 }
                 if let Ok(files) = files {
                     let paths: Option<Vec<_>> = files.iter().map(gio::File::path).collect();
                     match (paths, panel.handle.clone(), permit) {
                         (Some(paths), Some(handle), Some(permit)) if !paths.is_empty() => {
-                            panel.ingress.start(
+                            let receive = panel.ingress.start(
                                 &panel.runtime,
                                 paths,
                                 handle,
                                 permit,
                                 base.clone(),
+                            );
+                            panel.wait_selection(
+                                receive,
+                                epoch,
+                                target.clone(),
+                                generation.clone(),
                             );
                         }
                         _ => panel.notice("Only local files and folders can be selected."),
@@ -827,8 +897,12 @@ impl Panel {
         }
     }
     pub fn render(self: &Rc<Self>) {
+        self.schedule_results();
         // Publish after readiness/action updates using an immutable model projection.
         let model = self.model.borrow();
+        if let Some(window) = self.transfers.borrow().as_ref() {
+            window.render(&model);
+        }
         let preview = model.preview;
         let full = model.drawer == Drawer::Open;
         self.box_widget("source").set_visible(
@@ -852,6 +926,7 @@ impl Panel {
             && controls_ready(
                 &model.state,
                 model.waiting
+                    || model.input_active
                     || (model.safety_active && !model.safety.manual_allowed())
                     || model.ingress.busy
                     || model.dialog.is_some()
@@ -866,7 +941,7 @@ impl Panel {
         let mode = visibility.map(|view| view.mode);
         let receiving = temporary_receiving(&model);
         let receive = self.button("quick-receive");
-        if receiving {
+        if receiving && !full {
             receive.add_css_class("receive-active");
         } else {
             receive.remove_css_class("receive-active");
@@ -947,6 +1022,9 @@ impl Panel {
                 .set_enabled(enabled);
         }
         let selected = selection.is_some();
+        self.backdrop.set_blurred(selected);
+        self.curtain.set_visible(selected);
+        self.curtain.set_sensitive(ready);
         let can_add = !selected
             || model
                 .state
@@ -956,7 +1034,6 @@ impl Panel {
                 .is_some_and(|source| {
                     source.kind == rqs_lib::sessions::details::PayloadKind::Files
                 });
-        self.render_recipients(&model, selected);
         self.button("files").set_sensitive(ready && can_add);
         self.button("folder").set_sensitive(ready && can_add);
         self.button("discard").set_sensitive(ready && selected);
@@ -969,6 +1046,7 @@ impl Panel {
             ("folder", ready && can_add),
             ("send-text", ready && !selected),
             ("send-image", ready && !selected),
+            ("send-clipboard", ready && !selected),
             ("discard", ready && selected),
             ("nearby", !preview),
             ("incoming", !preview),
@@ -1009,6 +1087,7 @@ impl Panel {
             self.button(id).set_sensitive(
                 !preview
                     && !model.waiting
+                    && !model.input_active
                     && !model.state.busy
                     && (model.state.pending
                         || (id == "recover"
@@ -1090,7 +1169,7 @@ impl Panel {
                 Some(rqs_lib::service::ControlAction::Accept) => "Accepting request…",
                 Some(rqs_lib::service::ControlAction::Reject) => "Declining request…",
                 Some(rqs_lib::service::ControlAction::Cancel) => "Cancelling transfer…",
-                None => phase_text(transfer.phase),
+                None => "",
             }
         } else {
             error_message(None)
@@ -1101,6 +1180,7 @@ impl Panel {
             .unwrap()
             .set_visible(!status.is_empty());
         self.sync_countdown();
+        self.sync_idle();
         self.sync_tray_menu();
 
         let Some(view) = &model.state.view else {
@@ -1120,7 +1200,7 @@ impl Panel {
             }
             return;
         };
-        self.render_rows(view, selection, ready, current, &model.recipients);
+        self.render_rows(view, selection, ready, current);
         self.resize_to_content();
     }
     fn resize_to_content(&self) {
@@ -1381,9 +1461,37 @@ impl Panel {
     pub fn preview(self: &Rc<Self>, page: &str) {
         self.model.borrow_mut().preview_page = Some(page.into());
         self.render_preview(page);
+        if page == "transfers" {
+            self.model.borrow_mut().state.journal =
+                Some(Arc::new(rqs_lib::service::journal::View {
+                    token: "preview-only".into(),
+                    error: 0,
+                    records: vec![rqs_lib::service::journal::Record {
+                        id: format!("{:032x}-{:016x}", 7, 1),
+                        peer: "Example phone".into(),
+                        inbound: true,
+                        status: "finished".into(),
+                        kind: "files".into(),
+                        files: 2,
+                        total: 12345,
+                        transferred: 12345,
+                        started: 1_792_224_000,
+                        updated: 1_792_224_060,
+                    }],
+                }));
+            self.show_transfers();
+        }
         if page == "incoming" {
             incoming_preview::Fixture::start(self);
         }
+    }
+    pub fn preview_surface(&self, page: &str) -> gtk::Window {
+        if page == "transfers" {
+            if let Some(window) = self.transfers.borrow().as_ref() {
+                return window.surface();
+            }
+        }
+        self.window.clone()
     }
     pub fn preview_ready(&self) -> bool {
         self.model.borrow().preview_page.as_deref() != Some("incoming")
@@ -1413,16 +1521,7 @@ impl Panel {
                 },
             ],
         };
-        let choices = fixture
-            .endpoints
-            .iter()
-            .map(|peer| (peer.id.clone(), peer.name.clone()))
-            .collect();
-        self.render_rows(&fixture, None, false, None, &choices);
-        self.box_widget("recipients")
-            .set_visible(self.drawer() == Drawer::Open && page == "nearby");
-        self.text("recipient-summary", "2 selected · preview");
-        self.button("send-many").set_label("Send to 2");
+        self.render_rows(&fixture, None, false, None);
         let details = TransferDetails {
             status: DetailsStatus::Ready,
             sender: "Example phone".into(),
@@ -1452,21 +1551,31 @@ impl Panel {
         if page == "incoming" {
             let nearby = self.box_widget("nearby");
             clear(&nearby);
-            let review = details_card(&details);
-            let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-            for title in ["Decline", "Accept"] {
+            let review = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+            for (name, title) in [("decline", "Decline"), ("accept", "Accept")] {
                 let button = gtk::Button::with_label(title);
+                button.set_widget_name(name);
                 button.set_sensitive(false);
-                buttons.append(&button);
+                review.append(&button);
             }
-            review.append(&buttons);
-            nearby.append(&rows::transfer_row(
+            let row = rows::transfer_row(
                 "Example phone",
                 rqs_lib::service::client::state::DeviceKind::Phone,
                 Phase::AwaitingConsent,
                 &review,
-                true,
-            ));
+            );
+            if let Some(heading) = row.first_child().and_downcast::<gtk::Box>() {
+                let mut next = heading.first_child();
+                while let Some(child) = next {
+                    next = child.next_sibling();
+                    if child.widget_name() == "row-summary" {
+                        let summary = child.downcast::<gtk::Label>().unwrap();
+                        summary.set_text("PDF · Code: 4821");
+                        summary.set_tooltip_text(Some("Check this code on the sending device before accepting.\nExample.pdf · 12345 bytes"));
+                    }
+                }
+            }
+            nearby.append(&row);
         }
 
         let transfers = self.box_widget("transfers");

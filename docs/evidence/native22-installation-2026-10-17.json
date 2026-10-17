@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "local_date": "2026-10-17",
+  "source_commit": "0f34808537a2b40a22dc8f56a227b5801dc74b61",
+  "package": {
+    "name": "rquickshare_0.11.5+native22_amd64.deb",
+    "bytes": 6502732,
+    "sha256": "a3fcdc0118782de16e50b276f2260b39cce9c8fd5d1cdd23704ea703f3803194",
+    "offline_verified": true
+  },
+  "host_sandbox_fixture": {
+    "passed": 1,
+    "failed": 0,
+    "seconds": 0.04
+  },
+  "known_owner_global_idle_gate": true,
+  "idle_services_joined": true,
+  "installation": {
+    "observed_at": "2026-10-17T10:24:44.682211+00:00",
+    "system_changed": true,
+    "installed_before": "0.11.5+native21",
+    "units_before": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2201915"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2201916"
+      }
+    },
+    "desktop_already_closed_by_user": false,
+    "daemon_preflight": {
+      "lifecycle": "running",
+      "synchronized": true,
+      "source_reservations": 0,
+      "reserved_handles": 0,
+      "selected_bytes": 0,
+      "nearby_devices": 18,
+      "owned_selections": 0,
+      "transfers": 2
+    },
+    "terminal_history_count": 2,
+    "active_transfer_count": 0,
+    "idle_gate_passed": true,
+    "owned_idle_services_joined": true,
+    "apt_exit_code": 0,
+    "installed_after": "0.11.5+native22",
+    "normal_launch_restored": true,
+    "units_after": {
+      "rquickshare-daemon.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "static",
+        "MainPID": "2495491"
+      },
+      "rquickshare-desktop.service": {
+        "ActiveState": "active",
+        "SubState": "running",
+        "UnitFileState": "disabled",
+        "MainPID": "2495492"
+      }
+    },
+    "installed_regular_files_verified": 14,
+    "passed": true
+  },
+  "script": "/tmp/rqs-native22-upgrade.py",
+  "log": "/tmp/rqs-native22-install.log",
+  "post_install_verification": "passed",
+  "signed_or_published": false,
+  "tray_and_passive_api": {
+    "observed_at": "2026-10-17T10:44:19.786890+00:00",
+    "installed_version": "0.11.5+native22",
+    "own_tray_count": 1,
+    "menu_ids": [
+      1,
+      23,
+      2,
+      12,
+      4,
+      5,
+      13,
+      18,
+      19,
+      20,
+      14,
+      8,
+      22,
+      15,
+      11
+    ],
+    "icon_name": "rquickshare",
+    "status": "Active",
+    "passed": true,
+    "endpoint_association_read": {
+      "total": 1,
+      "rows": 1,
+      "passed": true
+    },
+    "visibility2_read": {
+      "running": true,
+      "mode": 1,
+      "valid": true
+    }
+  },
+  "physical_ui_acceptance": "pending user testing",
+  "physical_peer_compatibility": "not claimed"
+}

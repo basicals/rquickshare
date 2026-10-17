@@ -283,6 +283,15 @@ impl Panel {
                     .is_some_and(|panel| panel.copy_permitted(key))
             },
         );
+        let results = Rc::downgrade(self);
+        review.window.connect_visible_notify(move |window| {
+            if !window.is_visible() {
+                if let Some(panel) = results.upgrade() {
+                    panel.schedule_results();
+                }
+            }
+        });
+        self.watch_idle_widget(&review.window);
         review.window.set_transient_for(Some(&self.window));
         self.mark_manual();
         review.window.present();

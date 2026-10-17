@@ -15,6 +15,7 @@ pub(super) enum Call {
     Abort(UploadId),
     Send(SelectionId, String),
     SendMany(SelectionId, Vec<String>),
+    QueueMany(SelectionId, Vec<String>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -49,6 +50,7 @@ impl Call {
             Self::Abort(_) => "abort_selection",
             Self::Send(_, _) => "send_selection",
             Self::SendMany(_, _) => "send_many",
+            Self::QueueMany(_, _) => "queue_many",
         }
     }
 
@@ -124,6 +126,13 @@ impl Coordinator {
             Call::Send(id, endpoint) => {
                 OperationResult::Transfer(self.enqueue_selection(client, *id, endpoint, None)?)
             }
+            Call::QueueMany(id, endpoints) => OperationResult::Transfers(self.enqueue_many_owned(
+                client,
+                *id,
+                endpoints,
+                &names.ok_or(Error::InvalidInput)?,
+                true,
+            )?),
             Call::SendMany(id, endpoints) => OperationResult::Transfers(self.enqueue_many(
                 client,
                 *id,
@@ -232,6 +241,31 @@ impl Coordinator {
                 client,
                 sequence,
                 Call::SendMany(selection, endpoints),
+                Some(names),
+            )?
+            .result
+        {
+            OperationResult::Transfers(ids) => Ok(ids),
+            _ => Err(Error::InvalidState),
+        }
+    }
+    pub fn ordered_queue_many(
+        &mut self,
+        client: ClientId,
+        selection: SelectionId,
+        recipients: Vec<(String, String)>,
+        sequence: u64,
+    ) -> Result<Vec<TransferId>, Error> {
+        self.client(client)?;
+        if recipients.is_empty() || recipients.len() > super::batch::RECIPIENTS {
+            return Err(Error::InvalidInput);
+        }
+        let (endpoints, names) = recipients.into_iter().unzip();
+        match self
+            .operation_with_names(
+                client,
+                sequence,
+                Call::QueueMany(selection, endpoints),
                 Some(names),
             )?
             .result

@@ -125,6 +125,20 @@ impl WatchOwner {
         let mut visibility = MessageStream::for_match_rule(visibility_rule, connection, Some(8))
             .await
             .map_err(|_| ClientError::Transport)?;
+        let journal_rule = MatchRule::builder()
+            .msg_type(MessageType::Signal)
+            .sender(owner)
+            .map_err(|_| ClientError::Protocol)?
+            .path(PATH)
+            .map_err(|_| ClientError::Protocol)?
+            .interface(crate::service::journal::INTERFACE)
+            .map_err(|_| ClientError::Protocol)?
+            .member("Changed")
+            .map_err(|_| ClientError::Protocol)?
+            .build();
+        let mut journal = MessageStream::for_match_rule(journal_rule, connection, Some(8))
+            .await
+            .map_err(|_| ClientError::Transport)?;
         let mut owners = MessageStream::for_match_rule(owner_rule, connection, Some(8))
             .await
             .map_err(|_| ClientError::Transport)?;
@@ -143,6 +157,10 @@ impl WatchOwner {
                     },
                     message=states.next()=>match message {
                         Some(Ok(message))=>hint(&message,&owner).map(|(epoch,revision)|Some((Some(epoch),revision,None,false))),
+                        _=>Err(ClientError::Transport),
+                    },
+                    message=journal.next()=>match message {
+                        Some(Ok(message))=>invalidation_hint(&message,&owner,crate::service::journal::INTERFACE,"Changed").map(|epoch|Some((Some(epoch),0,None,true))),
                         _=>Err(ClientError::Transport),
                     },
                     message=visibility.next()=>match message {

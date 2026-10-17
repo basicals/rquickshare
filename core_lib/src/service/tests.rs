@@ -658,6 +658,12 @@ fn given_full_queue_when_dispatch_releases_slot_then_failed_send_can_retry() {
     let second = service
         .send_selection(client, second_selection, "private-endpoint", "second")
         .unwrap();
+    assert!(service.next_send().unwrap().is_none());
+    service.observe(first, Phase::Finished).unwrap();
+    assert!(service.next_send().unwrap().is_none());
+    service.owner_closed(first).unwrap();
+    assert!(service.next_send().unwrap().is_none());
+    service.source_released(first).unwrap();
     assert_eq!(service.next_send().unwrap().unwrap().transfer, second);
 }
 
@@ -698,6 +704,10 @@ fn given_multiple_queued_sends_when_dispatched_then_order_and_payload_are_preser
             "private-source-0.txt"
         );
         assert_eq!(view(&mut service, client, expected).phase, Phase::Active);
+        assert!(service.next_send().unwrap().is_none());
+        service.observe(expected, Phase::Finished).unwrap();
+        service.owner_closed(expected).unwrap();
+        service.source_released(expected).unwrap();
     }
     assert!(service.next_send().unwrap().is_none());
 }
