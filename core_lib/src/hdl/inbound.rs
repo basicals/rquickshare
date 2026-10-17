@@ -1367,8 +1367,13 @@ impl<S: AsyncRead + AsyncWrite + Unpin> InboundRequest<S> {
                         }
 
                         if is_final_chunk {
-                            let file_internal = self.state.transferred_files.get(&payload_id)
+                            #[cfg(target_os = "linux")]
+                            let file_internal = self
+                                .state
+                                .transferred_files
+                                .get(&payload_id)
                                 .ok_or_else(|| anyhow!("Missing final file metadata"))?;
+                            #[cfg(target_os = "linux")]
                             let file = file_internal.file.as_ref().ok_or_else(|| {
                                 anyhow!("File payload received before destination file was opened")
                             })?;
