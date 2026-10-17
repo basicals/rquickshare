@@ -283,6 +283,7 @@
   </interface>
   <interface name="io.github.morozhenko_apps.RQuickShare.Journal1">
     <method name="Read"><arg direction="out" type="s" name="epoch"/><arg direction="out" type="s" name="token"/><arg direction="out" type="y" name="error"/><arg direction="out" type="u" name="total"/></method>
+    <method name="Retry"><arg direction="out" type="s" name="epoch"/><arg direction="out" type="s" name="token"/><arg direction="out" type="y" name="error"/><arg direction="out" type="u" name="total"/></method>
     <method name="GetPage"><arg direction="in" type="s" name="token"/><arg direction="in" type="u" name="offset"/><arg direction="out" type="u" name="total"/><arg direction="out" type="a(ssbssutttt)" name="records"/></method>
     <method name="Clear"><arg direction="in" type="s" name="token"/><arg direction="out" type="y" name="result"/></method>
     <signal name="Changed"><arg type="s" name="epoch"/><arg type="t" name="revision"/></signal>

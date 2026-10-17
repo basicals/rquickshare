@@ -443,7 +443,17 @@ impl Worker {
         }
         self.refresh().await?;
         match action {
-            Action::JournalRefresh => Ok(ActionResult::Completed),
+            Action::JournalRefresh => {
+                let journal = self.client.retry_journal().await.unwrap_or_else(|_| {
+                    Arc::new(crate::service::journal::View {
+                        error: 4,
+                        ..Default::default()
+                    })
+                });
+                self.state
+                    .send_modify(|state| state.journal = Some(journal));
+                Ok(ActionResult::Completed)
+            }
             Action::JournalClear(token) => {
                 self.client.clear_journal(&token).await?;
                 Ok(ActionResult::Completed)

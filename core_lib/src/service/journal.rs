@@ -204,6 +204,12 @@ impl<I: PersistenceIo> Store<I> {
         });
         before != self.doc.records.len()
     }
+    fn refresh(&mut self, time: u64, retry: bool) -> View {
+        if self.prune(time) || (retry && self.error != 0) {
+            let _ = self.persist();
+        }
+        self.view()
+    }
     fn persist(&mut self) -> Result<(), StoreError> {
         let result = (|| {
             if self.blocked {
@@ -293,7 +299,7 @@ impl<I: PersistenceIo> Store<I> {
 
 enum Command {
     Observe(Vec<Record>),
-    Refresh(oneshot::Sender<View>),
+    Refresh(bool, oneshot::Sender<View>),
     Clear(String, oneshot::Sender<Result<View, StoreError>>),
 }
 pub(super) struct Owner {
@@ -332,12 +338,8 @@ impl Owner {
                     let time = clock();
                     match command {
                         Command::Observe(records) => store.observe(records, time),
-                        Command::Refresh(reply) => {
-                            let changed = store.prune(time);
-                            if changed || store.error != 0 {
-                                let _ = store.persist();
-                            }
-                            let _ = reply.send(store.view());
+                        Command::Refresh(retry, reply) => {
+                            let _ = reply.send(store.refresh(time, retry));
                         }
                         Command::Clear(token, reply) => {
                             let result = store.clear(&token, time).map(|()| store.view());
@@ -376,10 +378,10 @@ impl Owner {
             std::future::pending::<()>().await;
         }
     }
-    pub(super) async fn read(&self) -> Result<View, StoreError> {
+    pub(super) async fn read(&self, retry: bool) -> Result<View, StoreError> {
         let (tx, rx) = oneshot::channel();
         self.sender
-            .send(Command::Refresh(tx))
+            .send(Command::Refresh(retry, tx))
             .await
             .map_err(|_| StoreError::Read)?;
         rx.await.map_err(|_| StoreError::Read)

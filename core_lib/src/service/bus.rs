@@ -733,22 +733,24 @@ impl SelectionBus {
                 return self.domain_error(&header, Error::InvalidInput).await;
             }
             match member {
-                Some("Read") => {
+                Some("Read" | "Retry") => {
                     if message.body().deserialize::<()>().is_err() {
                         return self.domain_error(&header, Error::InvalidInput).await;
                     }
-                    let view = match &self.journal {
-                        Some(owner) => {
-                            owner.read().await.unwrap_or_else(|_| super::journal::View {
-                                error: 1,
+                    let view =
+                        match &self.journal {
+                            Some(owner) => owner
+                                .read(member == Some("Retry"))
+                                .await
+                                .unwrap_or_else(|_| super::journal::View {
+                                    error: 1,
+                                    ..Default::default()
+                                }),
+                            None => super::journal::View {
+                                error: 3,
                                 ..Default::default()
-                            })
-                        }
-                        None => super::journal::View {
-                            error: 3,
-                            ..Default::default()
-                        },
-                    };
+                            },
+                        };
                     let response = (
                         format!("{:032x}", coordinator.epoch),
                         view.token.clone(),

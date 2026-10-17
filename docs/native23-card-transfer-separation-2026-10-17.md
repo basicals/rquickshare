@@ -264,3 +264,12 @@ this changed artifact. Rollback is an independent correction commit.
 Final pre-correction checks observed: affected GTK widget1/0 in0.52s, daemon
 lifecycle integration4/0 in0.02s, native strict lint8.11s passed. Native23 package
 builder verified the package; no installed-state or Android acceptance implied.
+
+Explicit retry correction observed: compilation first rejected a non-static
+method parameter because the existing wire adapter accepts static method names;
+restricted the private helper to static strings. Affected journal tests and real
+private-bus SDK Retry passed; strict core all-feature/all-target lint passed
+18.77s. Failed writes are retained, passive reads do not retry them, and explicit
+Retry persists them without changing sharing authority. Native23 remains
+uninstalled:6578400 bytes, SHA-256
+9b76e356c4e05159227c200d68cc92106488a8c22580d8f84f257312ab7f7eec.

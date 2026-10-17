@@ -311,7 +311,7 @@ async fn given_saved_journal_when_read_and_cleared_then_metadata_pages_are_immut
         let (total, rows): (u32, Vec<Record>) = immutable.body().deserialize().unwrap();
         assert_eq!(total, 1);
         assert_eq!(rows, vec![row]);
-        let empty = client.read_journal(None).await.unwrap();
+        let empty = client.retry_journal().await.unwrap();
         assert_eq!(empty.error, 0);
         assert!(empty.records.is_empty());
         client.clear_journal(&saved.token).await.unwrap();

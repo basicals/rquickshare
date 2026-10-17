@@ -5,7 +5,17 @@ use super::*;
 use crate::service::journal::{Record, View, COMPLETED, CURRENT, INTERFACE};
 impl NativeClient {
     pub async fn read_journal(&mut self, previous: Option<&Arc<View>>) -> Result<Arc<View>> {
-        let reply = match self.wire(INTERFACE, "Read", &()).await {
+        self.journal_snapshot("Read", previous).await
+    }
+    pub async fn retry_journal(&mut self) -> Result<Arc<View>> {
+        self.journal_snapshot("Retry", None).await
+    }
+    async fn journal_snapshot(
+        &mut self,
+        method: &'static str,
+        previous: Option<&Arc<View>>,
+    ) -> Result<Arc<View>> {
+        let reply = match self.wire(INTERFACE, method, &()).await {
             Ok(reply) => reply,
             Err(ClientError::Incompatible) => {
                 return Ok(Arc::new(View {

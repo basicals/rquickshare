@@ -272,3 +272,31 @@ async fn given_queued_metadata_when_owner_closes_then_all_owned_io_is_joined_and
     assert_eq!(saved.error, 0);
     assert_eq!(saved.doc.records.len(), 10);
 }
+
+#[test]
+fn given_failed_write_when_passively_read_then_only_explicit_retry_persists_pending_metadata() {
+    // Arrange
+    let directory = tempfile::tempdir().unwrap();
+    fs::set_permissions(directory.path(), fs::Permissions::from_mode(0o700)).unwrap();
+    let mut store = Store::open(
+        directory.path().join("state"),
+        FaultIo(Cell::new(Some("write"))),
+        100,
+    );
+    store.observe(vec![record(1, "finished")], 100);
+    assert_eq!(store.error, 1);
+    store.io.0.set(None);
+    // Act / Assert: an implicit write would clear the error and create the file.
+    let passive = store.refresh(101, false);
+    assert_eq!(passive.error, 1);
+    assert_eq!(passive.records.len(), 1);
+    assert!(!directory.path().join(FILE).exists());
+    let retried = store.refresh(101, true);
+    assert_eq!(retried.error, 0);
+    assert_eq!(
+        Store::open(directory.path().join("state"), SystemIo, 101)
+            .view()
+            .records,
+        retried.records
+    );
+}
