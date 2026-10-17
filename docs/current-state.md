@@ -1,6 +1,35 @@
 # Current implementation and continuation state
 
 
+## Offline inbound storage fault matrix — 2026-10-17
+
+MODE B scoped native inbound receive hardening now checks six actual
+kernel/staged-file failures: ENOSPC (/dev/full), EBADF (read-only file
+descriptor) and changed staged inode length at final publication,
+each with no completed first member and with the first member already
+published. The real FILE handler and Linux O_TMPFILE owners reject
+failed writes/publish, preserve only fully published content, retain
+correct partial immutable manifest/byte counts, expose a read-only
+first-member receipt where applicable, and discard unfinished inodes
+after Disconnected. No production code, API, protocol, retry/overwrite
+semantics, UI or package was changed.
+
+Source `0bdf73bd`: 702/0 core Rust, 8/0 integration, 54/0
+Python contracts, Rust format/core strict Clippy/frontend success
+and GTK 52/0 success. Legacy Tauri Clippy was still running at
+the exact first final ledger checkpoint; overall Preflight must not
+be called 5/5 until that independent job finishes. See
+[inbound storage-fault audit](native-inbound-storage-faults-2026-10-17.md).
+One parameterized method covers six negative interactions; this does
+not close whole-repository MODE B/10-consecutive-runs/instrumented
+coverage or physical full-disk/mount policy tests.
+
+Installed native29 and the native30 source-only packaging/upgrade
+gate remain unchanged. No user filesystem, live peer, host service,
+master, signing or publication was touched.
+
+
+
 ## Offline outgoing TCP reset and source ownership — 2026-10-17
 
 MODE B scoped tests verified the native outbound FILE path under real
