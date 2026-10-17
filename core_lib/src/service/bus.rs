@@ -79,6 +79,8 @@ pub struct SelectionBus {
     closed: CancellationToken,
     clients: BTreeMap<String, ClientId>,
     state: state::StateCache,
+    journal: Option<super::journal::Owner>,
+    journal_captures: BTreeMap<ClientId, super::journal::View>,
     text: text::TextCache,
     file_job: Option<JoinHandle<Result<File, Error>>>,
     file_request: Option<files::Request>,
@@ -159,6 +161,8 @@ impl SelectionBus {
             closed,
             clients: BTreeMap::new(),
             state: state::StateCache::default(),
+            journal: None,
+            journal_captures: BTreeMap::new(),
             text: text::TextCache::default(),
             file_job: None,
             file_request: None,
@@ -226,6 +230,9 @@ impl SelectionBus {
         self.wakeup = Some(wakeup);
     }
 
+    pub(super) fn set_journal(&mut self, directory: std::path::PathBuf) {
+        self.journal = Some(super::journal::Owner::spawn(directory));
+    }
     pub(super) fn set_visibility_recovered(&mut self, value: bool) {
         self.visibility_recovered = value;
     }
@@ -267,6 +274,9 @@ impl SelectionBus {
     ) -> Result<(), BusError> {
         let outcome = self.run_inner(runtime, stop).await;
         let shutdown = runtime.shutdown().await.map_err(BusError::Runtime);
+        if let Some(journal) = self.journal.as_mut() {
+            journal.observe(runtime.selection_coordinator()).await;
+        }
         let disconnected = self.disconnect_clients(runtime.selection_coordinator());
         self.close_connection().await;
         outcome.and(shutdown).and(disconnected)
@@ -278,6 +288,9 @@ impl SelectionBus {
     ) -> Result<(), BusError> {
         let outcome = self.run_started(runtime, stop).await;
         let shutdown = runtime.shutdown().await.map_err(BusError::Runtime);
+        if let Some(journal) = self.journal.as_mut() {
+            journal.observe(runtime.selection_coordinator()).await;
+        }
         let disconnected = self.disconnect_clients(runtime.selection_coordinator());
         self.close_connection().await;
         outcome.and(shutdown).and(disconnected)
@@ -334,6 +347,16 @@ impl SelectionBus {
                         result = connection.emit_signal(None::<&str>, PATH, super::visibility_service::INTERFACE,
                             "Changed", &event) => result.map_err(|_| BusError::Transport)?,
                     }
+                }
+                _ = async {
+                    match &mut self.journal {
+                        Some(journal) => journal.changed().await,
+                        None => std::future::pending().await,
+                    }
+                } => {
+                    let connection = self.connection.as_ref().ok_or(BusError::Transport)?;
+                    connection.emit_signal(None::<&str>, PATH, super::journal::INTERFACE, "Changed",
+                        &(format!("{:032x}", runtime.selection_coordinator().epoch), 1u64)).await.map_err(|_|BusError::Transport)?;
                 }
                 request = async {
                     match &mut self.settings {
@@ -393,6 +416,9 @@ impl SelectionBus {
                     }
                 }
             }
+            if let Some(journal) = self.journal.as_mut() {
+                journal.observe(runtime.selection_coordinator()).await;
+            }
             if let Some(message) = self.pending_restart.take() {
                 let header = message.header();
                 let ready = self.settings.as_ref().is_some_and(|settings| {
@@ -425,6 +451,7 @@ impl SelectionBus {
     fn disconnect_clients(&mut self, coordinator: &mut Coordinator) -> Result<(), BusError> {
         let mut result = Ok(());
         self.state.clear();
+        self.journal_captures.clear();
         self.text = text::TextCache::default();
         self.notified.clear();
         for (_, client) in std::mem::take(&mut self.clients) {
@@ -437,6 +464,9 @@ impl SelectionBus {
 
     pub async fn close(&mut self, runtime: &mut NativeRuntime) -> Result<(), BusError> {
         let shutdown = runtime.shutdown().await.map_err(BusError::Runtime);
+        if let Some(journal) = self.journal.as_mut() {
+            journal.observe(runtime.selection_coordinator()).await;
+        }
         let result = self.disconnect_clients(runtime.selection_coordinator());
         self.close_connection().await;
         shutdown.and(result)
@@ -452,6 +482,9 @@ impl SelectionBus {
             let _ = job.await;
         }
         self.file_request.take();
+        if let Some(journal) = self.journal.take() {
+            journal.close().await;
+        }
         if let Some(settings) = self.settings.take() {
             settings.close().await;
         }
@@ -579,6 +612,7 @@ impl SelectionBus {
     ) -> Result<(), BusError> {
         if let Some(client) = self.clients.remove(sender) {
             self.state.disconnect(client);
+            self.journal_captures.remove(&client);
             self.text.disconnect(client);
             self.notified.remove(&client);
             coordinator
@@ -694,6 +728,81 @@ impl SelectionBus {
         }
         let interface = header.interface().map(|interface| interface.as_str());
         let member = header.member().map(|member| member.as_str());
+        if interface == Some(super::journal::INTERFACE) {
+            if !message.data().fds().is_empty() {
+                return self.domain_error(&header, Error::InvalidInput).await;
+            }
+            match member {
+                Some("Read") => {
+                    if message.body().deserialize::<()>().is_err() {
+                        return self.domain_error(&header, Error::InvalidInput).await;
+                    }
+                    let view = match &self.journal {
+                        Some(owner) => {
+                            owner.read().await.unwrap_or_else(|_| super::journal::View {
+                                error: 1,
+                                ..Default::default()
+                            })
+                        }
+                        None => super::journal::View {
+                            error: 3,
+                            ..Default::default()
+                        },
+                    };
+                    let response = (
+                        format!("{:032x}", coordinator.epoch),
+                        view.token.clone(),
+                        view.error,
+                        view.records.len() as u32,
+                    );
+                    self.journal_captures.insert(client, view);
+                    return self.state_reply(&header, &response).await;
+                }
+                Some("GetPage") => {
+                    let Ok((token, offset)) = message.body().deserialize::<(String, u32)>() else {
+                        return self.domain_error(&header, Error::InvalidInput).await;
+                    };
+                    let Some(view) = self
+                        .journal_captures
+                        .get(&client)
+                        .filter(|view| view.token == token)
+                    else {
+                        return self.domain_error(&header, Error::UnknownSnapshot).await;
+                    };
+                    let offset = offset as usize;
+                    if offset > view.records.len() {
+                        return self.domain_error(&header, Error::InvalidInput).await;
+                    }
+                    let rows = &view.records[offset..(offset + 16).min(view.records.len())];
+                    return self
+                        .state_reply(&header, &(view.records.len() as u32, rows))
+                        .await;
+                }
+                Some("Clear") => {
+                    let Ok(token) = message.body().deserialize::<String>() else {
+                        return self.domain_error(&header, Error::InvalidInput).await;
+                    };
+                    if token.len() != 64 {
+                        return self.domain_error(&header, Error::InvalidInput).await;
+                    }
+                    let result = match &self.journal {
+                        Some(owner) => owner.clear(token).await,
+                        None => Err(super::native_settings::StoreError::Read),
+                    };
+                    let code = match result {
+                        Ok(_) => 0u8,
+                        Err(super::native_settings::StoreError::Conflict) => 2,
+                        Err(_) => 1,
+                    };
+                    return self.state_reply(&header, &code).await;
+                }
+                _ => {
+                    return self
+                        .error(&header, "org.freedesktop.DBus.Error.UnknownMethod")
+                        .await
+                }
+            }
+        }
         if interface == Some(super::visibility_service::INTERFACE) {
             use super::visibility_service::{VisibilityIntent, VisibilityView};
             if !message.data().fds().is_empty() {

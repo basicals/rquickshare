@@ -29,6 +29,7 @@ type Result<T> = std::result::Result<T, ControllerError>;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct PanelState {
+    pub journal: Option<Arc<crate::service::journal::View>>,
     pub view: Option<Arc<StateView>>,
     pub busy: bool,
     pub pending: bool,
@@ -62,6 +63,8 @@ impl Completion {
 }
 
 enum Action {
+    JournalClear(String),
+    JournalRefresh,
     AcquireFile(Transfer, u64, u32),
     ReadText(Transfer, u64),
     SettingsRestart,
@@ -93,6 +96,17 @@ pub struct PanelHandle {
     state: watch::Receiver<PanelState>,
 }
 impl PanelHandle {
+    pub fn refresh_journal(&self) -> Result<Completion> {
+        self.submit(Action::JournalRefresh)
+    }
+
+    pub fn clear_journal(&self, token: String) -> Result<Completion> {
+        if token.len() != 64 {
+            return Err(ClientError::InvalidInput.into());
+        }
+        self.submit(Action::JournalClear(token))
+    }
+
     pub fn acquire_file(
         &self,
         transfer: Transfer,
@@ -300,7 +314,19 @@ impl Worker {
         let settings = self.client.read_settings().await?;
         let visibility_sampled_at = std::time::Instant::now();
         let visibility = self.client.read_visibility().await?;
+        let previous = self.state.borrow().journal.clone();
+        let journal = self
+            .client
+            .read_journal(previous.as_ref())
+            .await
+            .unwrap_or_else(|_| {
+                Arc::new(crate::service::journal::View {
+                    error: 4,
+                    ..Default::default()
+                })
+            });
         self.state.send_modify(|state| {
+            state.journal = Some(journal);
             state.view = Some(Arc::new(view));
             state.settings = Some(settings);
             state.visibility = Some(visibility);
@@ -414,6 +440,11 @@ impl Worker {
         }
         self.refresh().await?;
         match action {
+            Action::JournalRefresh => Ok(ActionResult::Completed),
+            Action::JournalClear(token) => {
+                self.client.clear_journal(&token).await?;
+                Ok(ActionResult::Completed)
+            }
             Action::AcquireFile(transfer, revision, index) => self
                 .client
                 .acquire_received_file(&transfer, revision, index)

@@ -16,7 +16,9 @@ macro_rules! token {
     };
 }
 
+pub mod journal;
 pub mod notices;
+mod private_file;
 use notices::Notice;
 
 token!(ClientId);

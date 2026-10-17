@@ -219,3 +219,72 @@ async fn given_invalid_batch_wire_or_foreign_source_when_requested_then_no_membe
         raw.close().await.unwrap();client.close().await.unwrap();let (core,result)=host.finish().await;assert_eq!(result,Ok(()));assert!(core.queue.is_empty());
     }).await;
 }
+
+#[tokio::test]
+async fn given_saved_journal_when_read_and_cleared_then_metadata_pages_are_immutable_and_sharing_stays_available(
+) {
+    scenario(async {
+        // Arrange
+        use std::os::unix::fs::PermissionsExt;
+
+        use crate::service::journal::{Record, INTERFACE};
+        let private = PrivateBus::new();
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::set_permissions(directory.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        let row = Record {
+            id: format!("{:032x}-{:016x}", 7, 1),
+            peer: "Untrusted peer".into(),
+            inbound: true,
+            status: "finished".into(),
+            kind: "text".into(),
+            files: 0,
+            total: 4,
+            transferred: 4,
+            started: 4_000_000_000,
+            updated: 4_000_000_000,
+        };
+        let file = directory.path().join("native-transfers.json");
+        std::fs::write(
+            &file,
+            serde_json::to_vec(
+                &serde_json::json!({"schema":1,"last_clear":"","records":[row.clone()]}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::set_permissions(file, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let mut bus = SelectionBus::connect(private.socket().await).await.unwrap();
+        bus.set_journal(directory.path().into());
+        let host =
+            Harness::with_coordinator(bus, Coordinator::new(123, Limits::default()).unwrap());
+        let mut client = NativeClient::connect(private.socket().await).await.unwrap();
+        client.read_state().await.unwrap();
+        // Act / Assert
+        let saved = client.read_journal(None).await.unwrap();
+        assert_eq!(saved.error, 0);
+        assert_eq!(saved.records, vec![row.clone()]);
+        client.clear_journal(&saved.token).await.unwrap();
+        let immutable = client
+            .wire(INTERFACE, "GetPage", &(saved.token.as_str(), 0u32))
+            .await
+            .unwrap();
+        let (total, rows): (u32, Vec<Record>) = immutable.body().deserialize().unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(rows, vec![row]);
+        let empty = client.read_journal(None).await.unwrap();
+        assert_eq!(empty.error, 0);
+        assert!(empty.records.is_empty());
+        client.clear_journal(&saved.token).await.unwrap();
+        assert_eq!(
+            client
+                .wire(INTERFACE, "GetPage", &(saved.token.as_str(), 0u32))
+                .await
+                .unwrap_err(),
+            ClientError::Rejected(crate::service::Error::UnknownSnapshot)
+        );
+        assert!(client.read_state().await.is_ok());
+        client.close().await.unwrap();
+        host.finish().await.1.unwrap();
+    })
+    .await;
+}
