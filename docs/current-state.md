@@ -1,6 +1,39 @@
 # Current implementation and continuation state
 
 
+## Native GTK exact instrumented coverage — 2026-10-17
+
+At workflow-only source `3bb41cb6`,
+[Native GTK instrumented coverage run 39071770811](https://github.com/morozhenko-apps/rquickshare/actions/runs/39071770811)
+passed the real GTK4 isolated 52/0 test target with
+`cargo llvm-cov` under the known-good Ubuntu 26.04 +
+Xvfb + D-Bus + preview helper harness. File/line coverage
+now measured for Native GTK itself: **67.00% lines
+(10,549 instrumented / 3,481 missed)**,
+**63.09% functions (875 / 323 missed)** and
+**65.35% regions (16,927 / 5,865 missed)**.
+Rust branch coverage not provided. Measured file-by-file
+source map and planned safety-first prioritization:
+[native-gtk-coverage-baseline-2026-10-17.md](native-gtk-coverage-baseline-2026-10-17.md).
+This is a one-shot measurement, not a new 10x run;
+the separately validated full Mode B still has GTK 10x.
+At the instrumented checkpoint, dominant Native GTK
+UI gaps include `panel/reveal.rs` 10.87%,
+`panel/outbound.rs` 47.42%, `panel/settings.rs`
+64.30%, and `main.rs` 13.07%. Low coverage
+by itself does not prove an application defect; fake
+received-file capabilities or synthetic peer success
+are not acceptable ways to improve it.
+
+Automated Stage 11 + four instrumented subsystem
+measurements now exist, but original full Stage 12
+(all business methods/branches/N1-N12/mutations) and
+physical Ubuntu/KDE/Wayland, Android/Windows, BlueZ
+and package acceptance still remain **OPEN**. No
+installed native29, `master`, signing or release changes.
+
+
+
 ## Verified complete ten-pass automated Mode B — 2026-10-17
 
 At exact source `f8e5d2d0`, strict
