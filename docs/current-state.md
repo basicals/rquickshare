@@ -1,6 +1,34 @@
 # Current implementation and continuation state
 
 
+## Offline outgoing TCP reset and source ownership — 2026-10-17
+
+MODE B scoped tests verified the native outbound FILE path under real
+Linux TCP abortive close. One new test resets the peer after introduction
+but before the empty-file terminal frame; a second receives a real
+512-KiB AES/HMAC FILE chunk of a 32-MiB source and resets the peer in
+mid-send. Both check a network I/O error, no Finished/early retirement,
+a single preserved manifest/progress, non-overridable Disconnected
+state, exact original source on disk and release of its owned Arc once
+the request drops. The sender performs **no automatic retry**.
+All production code remains unchanged in this slice. The test fixture
+initially failed compilation with E0716 (temporary consent frame
+lifetime inside `tokio::join!`); it was fixed with a named binding
+without weakening assertions.
+
+Exact source `ad2adf04`: 701/0 core library + 8/0 integration,
+54/0 Python contracts, Rust fmt/core strict Clippy/frontend and
+52/0 Native GTK tests passed. Legacy Tauri Clippy was still in
+progress at the documented checkpoint. See
+[outbound TCP reset and source ownership evidence](native-outbound-tcp-reset-2026-10-17.md).
+The repository's full ten-repeat `mode-b.yml`/coverage workflow was
+not triggered: scoped test success is not repository-wide Mode B
+completion or physical Google interoperability. Installed native29,
+unbuilt/uninstalled native30, master and real peer/package gates remain
+unchanged.
+
+
+
 ## Offline outbound empty-file EOF reliability — 2026-10-17
 
 Review of the accepted sender's FILE loop found that a selected zero-byte
