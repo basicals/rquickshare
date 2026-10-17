@@ -127,7 +127,7 @@ at least one exact-state or filesystem assertion. This is mutation
 
 1. [x] Repository scan, ownership and critical contracts verified; plan,
    branch map, matrix and six test cases documented before code.
-2. [ ] Implement all six tests in existing handler reliability fixture;
+2. [x] Implement all six tests in existing handler reliability fixture;
    no production changes or new dependencies. Preserve all assertions.
 3. [ ] Run exact-source CI including full Rust suite + 8 integration,
    format/core Clippy/Python/frontend and GTK; triage any red jobs.
@@ -144,4 +144,22 @@ installed service is changed.
 
 ## Results
 
-Not executed at plan checkpoint.
+Test commit `0bdf73bd` adds one real-handler table-driven regression to
+`core_lib/src/hdl/inbound/receive_reliability.rs`. It checks all six
+preregistered combinations. Exact kernel error codes are required
+(ENOSPC=28, EBADF=9); the size-mismatch path must return the bounded
+"Cannot finish received file safely" error before publishing. The two
+read-only/ENOSPC variants use independently owned real external
+descriptors, never user files. The received-root remains an isolated
+temporary directory. The truncated-inode variant uses the actual
+O_TMPFILE after valid data reception.
+
+Affected source is currently under exact-source CI:
+- Preflight: https://github.com/morozhenko-apps/rquickshare/actions/runs/39061071880
+- Native GTK: https://github.com/morozhenko-apps/rquickshare/actions/runs/39061071881
+
+Observed so far: Rust format, frontend and strict core Clippy succeeded.
+Full core execution, legacy Tauri Clippy and GTK remain in progress
+at this written checkpoint. No claim that the six new cases pass
+or that Mode B whole-repo gates are closed until actual job evidence.
+
