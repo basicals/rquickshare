@@ -181,3 +181,30 @@ security policy, wire schema, installed package, credentials,
   advertising, JNI/Windows/KDE receivers and cryptographic
   BWU [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8)
   remain unverified, and global Stage 12 is NO.
+
+## Red CI triage before test correction
+
+Exact-source [Preflight 39117187583](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117187583)
+at `38737fd7` reported success for rustfmt/frontend,
+but Core and Core Clippy both failed to **compile the
+new test module**. The complete job logs show five
+`E0433: cannot find type DeviceType in this scope`
+at the new wire-contract cases in
+`core_lib/src/hdl/blea.rs`. Candidate causes checked:
+(1) missing test-only import; (2) wrong duplicate enum from
+securegcm; (3) incorrect utility module reference;
+(4) disabled feature gate; (5) changed production
+type/trait API; (6) stale generation/toolchain mismatch.
+The compiler's exact locations and suggested
+`use crate::DeviceType` plus repository's public
+re-export support **(1)** as root cause. Add exactly
+that import **inside the test module**, not production.
+
+Additionally, remove the vacuous assertion that a
+`u8`-decoded length is <= 255; precise two-sided
+frame-length equality and UTF-8/name checks already
+enforce the real invariant. No assertion on the real
+on-wire length/content may be relaxed. No production
+refactor or wire-format change is authorized.
+Re-run format, Core, Clippy, GTK on the correction SHA;
+until then do not count any new method as PASS.
