@@ -189,3 +189,41 @@ Hardware BlueZ characteristic lifecycle and
 actual BLE-to-TCP upgrade remain separate OPEN
 P0 obligations. New tests will not be labeled
 green until exact-source CI verifies them.
+
+
+## Verification checkpoint / independent package-change CI blocker
+
+The test implementation `e7f88543` and test-only rustfmt
+repair `9030e6d9` are committed. Their Preflight
+[39081896620](https://github.com/morozhenko-apps/rquickshare/actions/runs/39081896620)
+and GTK
+[39081896702](https://github.com/morozhenko-apps/rquickshare/actions/runs/39081896702)
+were **cancelled** due concurrent pushes, not
+counted as five successful scenarios.
+
+Parallel `dev` commits `c918ebb0` and
+`78d00da1` changed native Debian/APT
+release identity and scripts, not GATT
+tests. On [Preflight 39081994995](https://github.com/morozhenko-apps/rquickshare/actions/runs/39081994995)
+formatting, frontend and Core strict Clippy are green;
+Python contract tests fail during APT fixture setup
+with `ValueError: Unexpected package path`.
+The earlier parallel packaging build had
+7 APT assertion failures / 2 missing old-package
+path errors (`0.11.5+native1` vs `1.0.0-1`).
+Those are genuine CI failures in a separate
+changing packaging contract, **not** GATT
+worker findings. No assertions are being
+weakened. We avoid modifying packaging
+owned by a concurrent workstream.
+
+Five added worker test methods must be
+verified individually `ok` and Core
+stable 1× / risk-sensitive 10× checked
+at the same HEAD before marking Stage 9
+execution. Entire Preflight and full MODE B
+remain NOT SUCCESS until Python APT
+contract parity is restored and rerun.
+Strict previously successful 10× was
+before these new worker tests. Global
+MODE B Stage 12 remains **NO**.
