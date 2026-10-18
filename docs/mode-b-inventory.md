@@ -15,7 +15,10 @@ Actual exact-SHA `86ebe678`
 Core log verified all 3 new methods independently `ok`,
 **731/731** stable Core tests, two **4/4** integrations,
 zero failed/ignored. Separate [Native GTK 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
-completed **SUCCESS**. This evidence does not exercise
+completed **SUCCESS, 52/52 GTK methods**.
+The same-source Preflight completed **5/5 SUCCESS**,
+including desktop Tauri unit tests **10/10**.
+This evidence does not exercise
 actual BlueZ GATT notifier, authenticated BWU, release-only
 full 10× or the still-incomplete global Stage 12.
 
