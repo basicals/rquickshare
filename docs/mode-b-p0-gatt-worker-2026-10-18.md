@@ -227,3 +227,38 @@ contract parity is restored and rerun.
 Strict previously successful 10× was
 before these new worker tests. Global
 MODE B Stage 12 remains **NO**.
+
+
+## Tactical isolated P0 core-test CI plan
+
+Because parallel native Debian/APT feature commits repeatedly cancel
+normal `dev` Preflight runs and fail independent Python package
+fixtures, this Mode B slice needs **one source-exact verification**
+that does not interfere with release work or waive failures.
+Use a separate, read-only `.github/workflows/p0-weave-worker.yml`
+with a **path-filtered self-trigger on dev for its own YAML**
+plus explicit `workflow_dispatch`, a distinct
+`concurrency.group` and `cancel-in-progress: false`.
+It will use exactly the existing Preflight Rust deps,
+real crate source, `--all-features --lib`, compiled
+`-- --list` inventory and an exact five-method
+existence check. Then run **all seven** methods in the
+real `hdl::gatt::managed_tests` module
+(five new + two old positive managed tests)
+**ten consecutive times**, checking each report
+contains `7 passed; 0 failed; 0 ignored`
+and aborting on any red attempt. It may also check
+Core Rust Clippy/format under the identical source,
+but must not fabricate global full-suite coverage.
+
+This is an **internal reversible CI tactic**, not a
+change to product architecture or user-visible
+behavior. No APT scripts, production code,
+installed Linux/Android/Windows or `master`
+changed. The dedicated P0 10× job certifies
+these seven methods on the exact workflow
+SHA even if the separate full Preflight
+remains red due unrelated packaging.
+**It cannot close strict full MODE B Stage 11
+or overall Stage 12.** Rollback deletes only
+this dedicated workflow.
