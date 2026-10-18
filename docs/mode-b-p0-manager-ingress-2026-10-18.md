@@ -121,8 +121,8 @@ coverage but no authentication guarantee. Global Stage 12 = NO.
    risks **before editing tests**.
 2. [x] Implement exactly three new deterministic integration test
    methods against actual classifier and router in `manager.rs`.
-3. [ ] Confirm formatter, Core test execution and CI exact SHA.
-4. [ ] Review assertion-sensitive mutations, report each real pass
+3. [x] Confirm formatter, Core test execution and CI exact SHA.
+4. [x] Review assertion-sensitive mutations, report each real pass
    and category mapping, update current-state and global inventory.
 5. [ ] Global complete suite 10x/physical devices remains OPEN
    unless independently verified on the final source.
@@ -152,3 +152,66 @@ Original Preflight format job reported two rustfmt-only diffs;
 test source formatting repaired by `811fd6ef` (assertions unchanged).
 **Do not report success until exact-code Core logs pass.** No
 production code changes. Mode B global Stage 12 remains NO.
+
+## Verified source and execution
+
+The repaired exact test SHA `811fd6ef5eaf49ee8a654c4842783a3526939d07`
+triggered [Preflight 39092368844](https://github.com/morozhenko-apps/rquickshare/actions/runs/39092368844),
+Core job `117571667714`: **SUCCESS**. Read the actual full
+Core job log; each of the three new method names independently
+appeared as `... ok` exactly once. Compiled stable suite:
+**725 passed / 0 failed / 0 ignored**, plus two integration
+binaries **4/4 + 4/4**. The separate 8 race-sensitive probes
+are excluded from the stable count by current CI scheduling.
+Rust format, Core Clippy and frontend jobs also completed
+SUCCESS; legacy desktop Clippy was still in progress at the
+first verified checkpoint, so do not claim the overall
+5/5 workflow yet.
+
+### D2 — actual scoped category assignment
+
+**3 new unique methods**, not 3× category totals. Each has
+one successful complete-method execution (with table-driven
+input subcases); category assignments overlap:
+
+| Category | New methods | Verified scope |
+|---|---:|---|
+| Positive | 3 | Valid full fragmented frame, preserved ordinary ingress, two accepted owners |
+| N1 malformed input | 2 | Prefix/body partials, corrupt protobuf |
+| N2 bounds | 2 | Splits + zero/over 8KiB classifier limit |
+| N3 network | 3 | Real separate loopback TCP sockets |
+| N4 replay/idempotency | 2 | Non-BWU does not consume live route, two independent one-shot routes |
+| N5 concurrency | 3 | In-flight classification and two simultaneous owners |
+| N6 corrupt protocol data | 1 | Malformed protobuf does not claim owner |
+| N7 ownership/security | 3 | No route for ordinary/bad data; exact owner priority |
+| N8 time/locale | 0 | N/A for scoped path: no locale/clock conversion |
+| N9 interruption | 1 | Incomplete packet before completion |
+| N10 privacy/cross-peer | 3 | Original bytes and socket addresses not mixed |
+| N11 monetization | 0 | N/A: no entitlements |
+| N12 storage | 0 | N/A: no filesystem |
+
+### Mutation review
+
+Observed full-wire and two-way ownership assertions would kill
+mutants that consume the prefix while inspecting it, return an
+incomplete introduction as routable, select prior alias over exact
+current owner, route invalid protobuf, drop ordinary frames, or
+consume unrelated pending registrations. This is a manually reviewed
+mutation sensitivity map; **no executed mutation engine** is claimed.
+
+### Open P0 and global gates
+
+[GitHub Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8)
+tracks the distinct **unauthenticated TCP route-consumption /
+availability** risk (spoofed current/last endpoint strings before
+a cryptographic channel binding). This observation **does not
+establish encrypted payload decryption or forgery**. It needs
+explicit MODE A security design approval; these tests do not
+claim to fix it.
+
+The product currently polls incomplete TCP peeks in a bounded
+750 ms interval. Hostile network stalls, real BlueZ/GATT notifier,
+authenticated BLE→TCP continuity, KDE/Android/Windows physical
+acceptance and complete 10× full repository Mode B all remain
+OPEN. **Stage 12 = NO**. No production code or installed package
+changed in this test-only batch.
