@@ -4507,11 +4507,7 @@ mod security_tests {
                 "incomplete length prefix at {prefix_len} bytes"
             );
         }
-        for announced in [
-            0_u32,
-            (SANE_FRAME_LENGTH as u32) + 1,
-            u32::MAX,
-        ] {
+        for announced in [0_u32, (SANE_FRAME_LENGTH as u32) + 1, u32::MAX] {
             assert_eq!(
                 peek_client_introduction(&announced.to_be_bytes()).unwrap(),
                 None,
@@ -4610,7 +4606,6 @@ mod security_tests {
         assert!(identity.matches_expected("peer-old"));
         assert!(!identity.matches_expected("peer-other"));
     }
-
 }
 
 #[cfg(all(test, feature = "experimental", target_os = "linux"))]
