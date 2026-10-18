@@ -155,7 +155,7 @@ claimed**; mutation survival not yet measured.
 3. [ ] Verify Core stable 1x / race-sensitive 10x
    via Preflight, and existing GTK; diagnose red
    results, never weaken domain assertions.
-4. [ ] Mark scoped branch/category outcomes,
+4. [x] Mark scoped branch/category outcomes,
    report actual counts and source/CI results.
 5. [ ] Reconcile `mode-b-inventory.md` and
    `current-state.md`; global Stage 12 remains NO.
@@ -298,3 +298,87 @@ P0 subgate green until that job
 concludes successfully with ten numbered
 attempts. Unrelated APT Preflight blockers
 and repo-wide MODE B Stage 12 remain OPEN.
+
+
+## Confirmed scoped execution — real worker 10/10
+
+Exact focused workflow source `a9f56aad9ffa105e761d82c5ff96362eaa1c20ed`.
+GitHub [P0 managed Weave contract run 39082536345](https://github.com/morozhenko-apps/rquickshare/actions/runs/39082536345),
+job `117542480630`: **SUCCESS**. Verified by reading
+the complete output, not just the Actions badge:
+
+- All seven fully-qualified `hdl::gatt::managed_tests`
+  Rust test names were validated against the compiled
+  test inventory before executing them.
+- Precisely **10** consecutive numbered attempts
+  1 through 10 are in the log.
+- Precisely **10** test summaries report
+  `7 passed; 0 failed; 0 ignored`
+  (the other 716 Core library methods are expected
+  to be filtered out by this targeted command).
+- Each of the **five new negative worker methods**
+  appears with `... ok` exactly ten times.
+  Both existing real encrypted BLE managed
+  consent positive/rejection methods also
+  passed ten times each.
+- Zero observed test failures, no ignored
+  or assertion-weakening workaround, no
+  skipped attempt, no domain mocks.
+  The first iteration of the uncorrected
+  workflow was red only from the
+  `filtered out = 0` **log gate bug**,
+  independently fixed and documented above.
+  That first run is not counted as a pass.
+
+### D2 — actual new worker method category totals
+
+Exactly **five new test methods**, containing **seven
+table-driven trigger variants**; all executed in every
+one of the ten passes. Overlapping category assignments,
+from the documented Stage 5 matrix and original Stage 7
+estimate, now have this **scoped** outcome:
+
+| Category | New methods assigned | Outcome |
+|---|---:|---|
+| Positive | 5 | PASS for scoped worker terminal contracts |
+| N1 input validation | 1 | PASS: invalid frame length |
+| N2 limits | 1 | PASS: untrusted `u32::MAX` prefix |
+| N3 network failure | 3 | PASS: native/legacy EOF, progressed EOF |
+| N4 retry/idempotence | 5 | PASS: no implicit re-admission/duplicate event |
+| N5 concurrency/cancellation | 1 | PASS: parent vs session cancellation cases |
+| N6 corrupt protocol data | 1 | PASS: oversized frame |
+| N7 authorization/state | 4 | PASS: no unadmitted authority or success |
+| N8 locale/time | 0 | N/A: no date/time calculation in worker |
+| N9 interruptions | 5 | PASS: EOF/cancellation/early release |
+| N10 privacy/PII | 5 | PASS: no received result or duplicate UI publication in these cases |
+| N11 monetization | 0 | N/A: no billing/entitlements in sharing worker |
+| N12 storage failure | 0 | N/A: no file staging in these test preconditions; disk failures covered in prior inbound tests |
+
+Counts above are **test method assignments**, not
+independent unique tests per category and absolutely
+not repository-global N1–N12 totals. Hardware
+GATT notifier/BlueZ/service registration, multi-packet
+fragmentation and BLE→TCP migration remain OPEN
+because these tests use an external byte-stream
+stand-in. Scope-specific mutation sensitivity was
+reviewed (status flip / swallowed error / duplicate
+event / early owner leak should fail), but no
+mutation tool execution is claimed.
+
+### Completion gate
+
+- **YES** — targeted managed worker cases
+  have ten consecutive clean runs at this source.
+- **NO** — exact-source ordinary Preflight
+  full green: concurrent APT packaging changes
+  introduced unrelated failing Python contracts;
+  other runs were cancelled due concurrent pushes.
+- **NO** — complete final full repository
+  MODE B Stage 12, all public branches and
+  physical Pixel/Windows/BlueZ/KDE acceptance.
+
+The targeted workflow has independent
+concurrency and does not certify the
+release/installer pipeline. No source
+runtime code changed in this scoped
+testing block.
