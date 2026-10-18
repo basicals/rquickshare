@@ -208,3 +208,18 @@ on-wire length/content may be relaxed. No production
 refactor or wire-format change is authorized.
 Re-run format, Core, Clippy, GTK on the correction SHA;
 until then do not count any new method as PASS.
+
+## Import fix and exact-source CI retry
+
+Test-only correction `6401c98a452fb0283ccfe3c4949e2c6524c010b4`
+imports the canonical `crate::DeviceType` **only inside the
+existing Rust test module**, and drops the vacuous assertion on
+a value already decoded as `u8`. Independent asserted
+connection/endpoint-info lengths and exact name bytes remain.
+No product source/runtime differences.
+
+[Retry Preflight 39117363576](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117363576)
+and [Native GTK 39117363572](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117363572)
+must be checked after completion; previous failed
+compilation is explicitly retained as evidence and is
+not counted as a passing test iteration.
