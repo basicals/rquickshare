@@ -13,10 +13,11 @@ Core **736/736**, separate integrations **4/4+4/4**
 and every new test independently `... ok`.
 [Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
 **SUCCESS**, actual GTK log **52/52**. Format, Core
-Clippy and frontend SUCCESS. The desktop Tauri
-job needs a separate completed verdict to claim
-quick 5/5. This is **one** fast CI pass, not the
-mandatory 10-run complete repository validation.
+Clippy and frontend SUCCESS. Desktop Tauri Clippy
+and unit tests **SUCCESS, 10/10**, completing the
+quick Preflight **5/5 SUCCESS**. This is **one**
+fast CI pass, not the mandatory 10-run complete
+repository validation.
 
 The binding
 [Stage 1–10 inventory, Positive/N1–N12 matrix, interaction
