@@ -1,5 +1,22 @@
 # Mode B inventory, branch map, and test matrix
 
+## 2026-10-18 P0 TCP CLIENT_INTRODUCTION parser negative cases
+
+The pure `core_lib/src/hdl/inbound.rs` BWU introduction scope now
+has three new exact-source tested methods: malformed/missing protobuf
+fields, the four-byte TCP prefix and complete-first-frame contract,
+and exact current/previous endpoint identity string comparisons.
+See [scoped Stage 1–10 plan, Positive/N1–N12 and file/function branch map](mode-b-p0-client-introduction-2026-10-18.md).
+Actual independent [CI 39085557977](https://github.com/morozhenko-apps/rquickshare/actions/runs/39085557977)
+completed **SUCCESS** at `216d0fac`: 3 test methods × 10 attempts =
+**30/30 passed**, no ignored or failed tests; test inventory and each
+method's ten successful results verified from complete job logs.
+Only the declared pure-parser branches are within this closure.
+Plaintext `last_endpoint_id` is NOT authenticated ownership,
+real encrypted BLE→TCP/mDNS/BlueZ handoff and all global Stage 12
+requirements remain **OPEN**. No total-coverage claim is made.
+
+
 
 ## 2026-10-18 P0 BWU actual TCP socket ownership test closure
 
