@@ -527,6 +527,157 @@ mod tests {
         drop(receiver);
     }
 
+    #[tokio::test]
+    async fn given_segmented_bwu_tcp_introduction_when_full_frame_arrives_then_original_stream_routes_without_byte_loss(
+    ) {
+        // Arrange: use real loopback TCP, the production classifier and router.
+        // Poll the in-flight classifier once against each incomplete prefix/body.
+        let framed = client_introduction("peer-1234");
+        for split in [1_usize, 2, 3, 4, 5, framed.len() / 2, framed.len() - 1] {
+            let router = BwuRouter::new();
+            let owner = router.register("peer-1234".into()).await.unwrap();
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let mut peer = TcpStream::connect(listener.local_addr().unwrap())
+                .await
+                .unwrap();
+            let (incoming, _) = listener.accept().await.unwrap();
+
+            peer.write_all(&framed[..split]).await.unwrap();
+            let mut classification = Box::pin(route_bandwidth_upgrade_if_pending(incoming, &router));
+
+            // Act: the first fragment is incomplete; no owner may receive it.
+            assert!(
+                futures::poll!(classification.as_mut()).is_pending(),
+                "classifier completed before the full introduction, split={split}"
+            );
+            peer.write_all(&framed[split..]).await.unwrap();
+            peer.flush().await.unwrap();
+            assert!(
+                classification.await.unwrap().is_none(),
+                "valid segmented BWU introduction was not routed, split={split}"
+            );
+
+            // Assert: the exact original TCP bytes, including the four-byte
+            // header, are still available to the correct owning BLE session.
+            let mut routed = owner.await.unwrap();
+            assert_eq!(routed.peer_addr().unwrap(), peer.local_addr().unwrap());
+            let mut received = vec![0_u8; framed.len()];
+            routed.read_exact(&mut received).await.unwrap();
+            assert_eq!(received, framed, "peek consumed bytes at split={split}");
+            assert!(!router.has_pending().await);
+        }
+    }
+
+    #[tokio::test]
+    async fn given_non_bwu_tcp_ingress_when_classifier_checks_it_then_socket_and_live_bwu_owner_remain_intact(
+    ) {
+        use crate::location_nearby_connections::v1_frame::FrameType;
+
+        // Arrange: each distinct invalid/non-BWU frame has a different branch.
+        let ordinary = OfflineFrame {
+            v1: Some(V1Frame {
+                r#type: Some(FrameType::ConnectionRequest.into()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+        .encode_to_vec();
+        let mut ordinary_framed = (ordinary.len() as u32).to_be_bytes().to_vec();
+        ordinary_framed.extend_from_slice(&ordinary);
+        let invalid_protobuf = vec![0_u8, 0, 0, 1, 0xff];
+        let too_large = ((BWU_PEEK_LIMIT - 3) as u32).to_be_bytes().to_vec();
+        let cases = [
+            ("ordinary-protocol", ordinary_framed),
+            ("corrupt-protobuf", invalid_protobuf),
+            ("empty-frame", 0_u32.to_be_bytes().to_vec()),
+            ("oversized-frame", too_large),
+        ];
+
+        for (case, bytes) in cases {
+            let router = BwuRouter::new();
+            let mut owner = router.register("reserved-peer".into()).await.unwrap();
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let mut peer = TcpStream::connect(listener.local_addr().unwrap())
+                .await
+                .unwrap();
+            let (incoming, _) = listener.accept().await.unwrap();
+            peer.write_all(&bytes).await.unwrap();
+
+            // Act: ordinary/invalid ingress is not a valid TCP BWU route.
+            let mut returned = route_bandwidth_upgrade_if_pending(incoming, &router)
+                .await
+                .unwrap()
+                .unwrap_or_else(|| panic!("classifier stole {case} from ordinary ingress"));
+
+            // Assert: preserve the entire unconsumed stream and the independent
+            // pending BWU registration, never delivering malformed input to it.
+            assert_eq!(returned.peer_addr().unwrap(), peer.local_addr().unwrap());
+            let mut observed = vec![0_u8; bytes.len()];
+            returned.read_exact(&mut observed).await.unwrap();
+            assert_eq!(observed, bytes, "classifier consumed {case}");
+            assert!(router.has_pending().await);
+            assert!(matches!(
+                owner.try_recv(),
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+            ));
+            router.cancel("reserved-peer").await;
+            assert!(!router.has_pending().await);
+        }
+    }
+
+    #[tokio::test]
+    async fn given_two_concurrent_bwu_tcp_peers_when_exact_and_previous_routes_compete_then_no_owner_or_bytes_mix(
+    ) {
+        // Arrange: two independently owned route registrations and real
+        // connections. A current ID also advertises the other owner's alias.
+        let router = BwuRouter::new();
+        let current_owner = router.register("current".into()).await.unwrap();
+        let previous_owner = router.register("previous".into()).await.unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut current_peer = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
+        let (current_socket, _) = listener.accept().await.unwrap();
+        let mut previous_peer = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
+        let (previous_socket, _) = listener.accept().await.unwrap();
+        let mut current_wire = client_introduction_with_last("current", Some("previous"));
+        current_wire.extend_from_slice(b"CURRENT");
+        let mut previous_wire = client_introduction("previous");
+        previous_wire.extend_from_slice(b"PREVIOUS");
+        current_peer.write_all(&current_wire).await.unwrap();
+        previous_peer.write_all(&previous_wire).await.unwrap();
+
+        // Act: both ingress classifiers compete for the same pending map.
+        let (current_result, previous_result) = tokio::join!(
+            route_bandwidth_upgrade_if_pending(current_socket, &router),
+            route_bandwidth_upgrade_if_pending(previous_socket, &router)
+        );
+        assert!(current_result.unwrap().is_none());
+        assert!(previous_result.unwrap().is_none());
+
+        // Assert: exact current ID has priority over its previous alias,
+        // and no bytes or TCP descriptors cross the peer boundary.
+        let mut routed_current = current_owner.await.unwrap();
+        let mut routed_previous = previous_owner.await.unwrap();
+        assert_eq!(
+            routed_current.peer_addr().unwrap(),
+            current_peer.local_addr().unwrap()
+        );
+        assert_eq!(
+            routed_previous.peer_addr().unwrap(),
+            previous_peer.local_addr().unwrap()
+        );
+        let mut current_received = vec![0_u8; current_wire.len()];
+        let mut previous_received = vec![0_u8; previous_wire.len()];
+        routed_current.read_exact(&mut current_received).await.unwrap();
+        routed_previous.read_exact(&mut previous_received).await.unwrap();
+        assert_eq!(current_received, current_wire);
+        assert_eq!(previous_received, previous_wire);
+        assert!(!router.has_pending().await);
+    }
+
     #[test]
     fn given_outbound_state_when_failure_is_reported_then_active_requests_finish_and_terminal_outcomes_survive(
     ) {
