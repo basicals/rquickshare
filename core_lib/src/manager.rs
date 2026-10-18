@@ -543,7 +543,8 @@ mod tests {
             let (incoming, _) = listener.accept().await.unwrap();
 
             peer.write_all(&framed[..split]).await.unwrap();
-            let mut classification = Box::pin(route_bandwidth_upgrade_if_pending(incoming, &router));
+            let mut classification =
+                Box::pin(route_bandwidth_upgrade_if_pending(incoming, &router));
 
             // Act: the first fragment is incomplete; no owner may receive it.
             assert!(
@@ -671,8 +672,14 @@ mod tests {
         );
         let mut current_received = vec![0_u8; current_wire.len()];
         let mut previous_received = vec![0_u8; previous_wire.len()];
-        routed_current.read_exact(&mut current_received).await.unwrap();
-        routed_previous.read_exact(&mut previous_received).await.unwrap();
+        routed_current
+            .read_exact(&mut current_received)
+            .await
+            .unwrap();
+        routed_previous
+            .read_exact(&mut previous_received)
+            .await
+            .unwrap();
         assert_eq!(current_received, current_wire);
         assert_eq!(previous_received, previous_wire);
         assert!(!router.has_pending().await);
