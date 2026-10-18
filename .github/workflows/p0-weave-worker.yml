@@ -1,0 +1,76 @@
+name: P0 Weave worker contract ten-run
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/p0-weave-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Separate from dev Preflight: unrelated release commits must not cancel the
+# exact-source P0 safety check while full CI is being reconciled.
+concurrency:
+  group: p0-weave-worker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  p0-weave-worker:
+    name: Real managed Weave worker 10x
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install identical Core Rust dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler dbus-daemon libdbus-1-dev
+
+      - name: Enforce exact compiled P0 worker test inventory
+        shell: bash
+        working-directory: core_lib
+        run: |
+          set -euo pipefail
+          cargo +stable test --all-features --lib -- --list > "$RUNNER_TEMP/p0-weave.list"
+          for name in \
+            given_unidentified_native_ble_peer_eof_when_worker_exits_then_no_false_disconnected_event_is_published \
+            given_legacy_ble_peer_eof_when_worker_exits_then_real_inbound_disconnected_event_is_sent \
+            given_progressed_native_ble_peer_eof_or_invalid_length_when_worker_exits_then_owned_state_is_disconnected \
+            given_progressed_native_worker_parent_or_session_cancellation_when_stopped_then_exactly_cancelled_state_survives \
+            given_unidentified_native_worker_is_cancelled_when_stopped_then_it_releases_without_spurious_ui_event \
+            given_managed_ble_stream_when_owned_consent_accepts_then_real_encrypted_transfer_finishes \
+            given_managed_ble_stream_when_owned_consent_rejects_then_rejection_survives_group_shutdown
+          do
+            target="hdl::gatt::managed_tests::${name}: test"
+            count="$(grep -Fxc -- "$target" "$RUNNER_TEMP/p0-weave.list" || true)"
+            if [[ "$count" != 1 ]]; then
+              echo "P0 managed Weave test missing or duplicated: $name (found $count)" >&2
+              exit 1
+            fi
+          done
+          count="$(grep -Ec '^hdl::gatt::managed_tests::.+: test$' "$RUNNER_TEMP/p0-weave.list" || true)"
+          if [[ "$count" != 7 ]]; then
+            echo "P0 managed Weave inventory drift: expected exactly 7 tests, found $count" >&2
+            exit 1
+          fi
+
+      - name: Run all real managed Weave tests ten consecutive times
+        working-directory: core_lib
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            echo "=== P0 managed Weave attempt $attempt/10 ==="
+            cargo +stable test --all-features --lib hdl::gatt::managed_tests:: -- --nocapture \
+              2>&1 | tee "$RUNNER_TEMP/p0-weave-attempt-${attempt}.log"
+            if ! grep -Fq 'test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;' \
+              "$RUNNER_TEMP/p0-weave-attempt-${attempt}.log"; then
+              echo "P0 managed Weave suite incomplete on attempt $attempt/10" >&2
+              exit 1
+            fi
+          done
+          echo "P0 managed Weave: all 7 exact methods passed 10 consecutive attempts."
