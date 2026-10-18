@@ -1,10 +1,7 @@
 name: Native GTK instrumented coverage
 
+# Coverage is explicit or part of validated release Mode B, never an automatic dev job.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - ".github/workflows/native-gtk-coverage.yml"
   workflow_dispatch:
 
 permissions:
