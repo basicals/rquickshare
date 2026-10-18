@@ -386,7 +386,7 @@ mod tests {
     fn given_remote_mdns_txt_prefix_and_device_bits_when_parsed_then_only_complete_endpoint_data_is_admitted(
     ) {
         // Arrange: a genuine compact TXT prefix with no length/name suffix.
-        let mut compact = vec![DeviceType::Laptop as u8 << 1];
+        let mut compact = vec![(DeviceType::Laptop as u8) << 1];
         compact.extend_from_slice(&[0_u8; 16]);
 
         // Act/Assert: every prefix shorter than 17 bytes is rejected,
@@ -445,7 +445,7 @@ mod tests {
         ];
 
         for name in names {
-            let mut txt = vec![DeviceType::Phone as u8 << 1];
+            let mut txt = vec![(DeviceType::Phone as u8) << 1];
             txt.extend_from_slice(&[0_u8; 16]);
             txt.push(name.len() as u8);
             txt.extend_from_slice(name.as_bytes());
@@ -472,7 +472,7 @@ mod tests {
             vec![0xc0, 0xaf],
             vec![0xed, 0xa0, 0x80],
         ] {
-            let mut txt = vec![DeviceType::Phone as u8 << 1];
+            let mut txt = vec![(DeviceType::Phone as u8) << 1];
             txt.extend_from_slice(&[0_u8; 16]);
             txt.push(bytes.len() as u8);
             txt.extend(bytes);
