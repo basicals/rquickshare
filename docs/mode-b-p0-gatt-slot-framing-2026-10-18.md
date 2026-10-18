@@ -191,7 +191,7 @@ a measured mutation score.
    runtime evidence. Do not launch a new expensive
    strict full 10× just for unchanged production
    unless Stage 11 revalidation after tests is needed.
-5. [ ] Reconcile global Completion Gate NO and
+5. [x] Reconcile global Completion Gate NO and
    next P0 deterministic/physical gaps.
 Rollback is the scoped test-only diff and this
 ledger; existing tests, prod, installed KDE,
@@ -330,3 +330,35 @@ remain globally UNTESTED for their
 OS/branch combinations. No full
 mutation runner was executed, and
 Stage 12 global remains **NO**.
+
+## Final ordinary-CI / scoped Stage 12 closure
+
+Exact test source `23b71de30eefddba46cc6ce4615923203ac65fba`:
+[Preflight 39080989423](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080989423)
+**5/5 SUCCESS**, including legacy Tauri Clippy/
+desktop Rust, strict Core Clippy, formatter,
+frontend, and actual Core Rust 710 stable +
+8 (4+4) integration + eight race-sensitive
+cases ×10. All eight new GATT test methods
+were reported individually `ok` in the
+same-source Core stdout.
+[Native GTK 39080989573](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080989573)
+**SUCCESS**. This evidence is not an
+executed mutation-engine experiment;
+the per-operator review above remains
+the Stage 10 qualitative check for
+**this** deterministic slice only.
+
+The overarching inventory was updated in
+[mode-b-inventory.md](mode-b-inventory.md),
+with exact C coverage for the tested pure
+slot/handshake/framing branches and
+explicit P/S status for real BlueZ
+subscriptions/reassembly/Weave workers.
+**Scoped eight-method result: YES (functional
+execution)**. **Global MODE B Stage 12: NO**.
+Do not infer N1–N12 exhaustive coverage
+for unrelated modules or actual Pixel/Windows
+reliability. Strict final MODE B 10×
+must be rerun after further test source
+changes and physical acceptance.
