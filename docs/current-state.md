@@ -1,5 +1,40 @@
 # Current implementation and continuation state
 
+## MODE B P0 receiver FEF3 discovery payload/recovery regressions — 2026-10-18
+
+Five new test-only Rust methods in `core_lib/src/hdl/blea.rs`
+protect direct BLE FEF3 service-data decoding with UTF-8/name
+boundary rules, 4-byte endpoint IDs, cross-medium mDNS/TXT
+type/name agreement, masked raw device types 0/1/2/3/7/8/255,
+deferred 2-second and periodic 5/30/120-second discovery
+refresh deadlines, stop/restart epoch ownership, and the actual
+legacy BlueZ packet descriptor including 17-byte payload,
+100/150 ms intervals and 31-byte budget. Existing hardware
+and encrypted transport were NOT mocked or modified.
+
+The documentation-first
+[scoped MODE B plan, branch and N1–N12 map, D2–D5 verification](mode-b-p0-receiver-discovery-advertisement-2026-10-18.md)
+records the initial rustfmt and missing test-only
+`DeviceType` import compile failures plus their exact fixes.
+At exact test source `385674f6`, [Preflight 39117637254](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637254)
+Core job `117646604296` is **SUCCESS**:
+**736/736 stable Core, 4+4 integrations**, all five new
+methods individually `ok`; formatter/frontend/Core Clippy
+also green. Independent [Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
+**SUCCESS, 52/52 native GTK methods**. Desktop Clippy/
+unit result must be checked separately before counting
+the complete quick Preflight 5/5.
+
+Live BlueZ register/notify and GATT notifier lifecycle
+cannot be authenticated by these pure-function tests;
+a minimal adapter seam would require an explicit MODE A
+decision. Physical Google Android/Windows/KDE/Wayland,
+[BWU identity security Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8),
+complete release-gated 10× and global all-production-branch
+Stage 12 remain **OPEN/NO**. No runtime, master, installed
+package or release was changed.
+
+
 ## MODE B P0 managed GATT partial-frame terminal/owner regressions — 2026-10-18
 
 Three new real-`run_inbound_worker` test methods now cover
