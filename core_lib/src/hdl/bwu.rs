@@ -83,9 +83,7 @@ mod tests {
 
     // Actual isolated TCP sockets, not a fake BwuRouter or byte channel.
     async fn bwu_tcp_pair() -> (TcpStream, TcpStream) {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-            .await
-            .unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let peer = TcpStream::connect(listener.local_addr().unwrap())
             .await
             .unwrap();
@@ -131,8 +129,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn given_two_live_bwu_owners_when_alias_conflicts_then_exact_and_previous_bytes_never_mix()
-    {
+    async fn given_two_live_bwu_owners_when_alias_conflicts_then_exact_and_previous_bytes_never_mix(
+    ) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         // Arrange: exact current owner and alternate old-id owner both wait.
@@ -174,7 +172,10 @@ mod tests {
             .unwrap();
         assert_eq!(&current_bytes, b"CUR");
         assert_eq!(&previous_bytes, b"OLD");
-        assert_eq!(owned_current.peer_addr().unwrap(), current_peer.local_addr().unwrap());
+        assert_eq!(
+            owned_current.peer_addr().unwrap(),
+            current_peer.local_addr().unwrap()
+        );
         assert_eq!(
             owned_previous.peer_addr().unwrap(),
             previous_peer.local_addr().unwrap()
@@ -183,8 +184,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn given_consumed_bwu_route_when_another_socket_arrives_then_one_shot_owner_cannot_replay()
-    {
+    async fn given_consumed_bwu_route_when_another_socket_arrives_then_one_shot_owner_cannot_replay(
+    ) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let router = BwuRouter::new();
@@ -236,8 +237,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn given_cancelled_bwu_generation_when_late_socket_arrives_then_new_owner_only_accepts_fresh_route()
-    {
+    async fn given_cancelled_bwu_generation_when_late_socket_arrives_then_new_owner_only_accepts_fresh_route(
+    ) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let router = BwuRouter::new();
@@ -274,7 +275,10 @@ mod tests {
         let mut fresh = [0_u8; 5];
         delivered.read_exact(&mut fresh).await.unwrap();
         assert_eq!(&fresh, b"FRESH");
-        assert_eq!(delivered.peer_addr().unwrap(), fresh_peer.local_addr().unwrap());
+        assert_eq!(
+            delivered.peer_addr().unwrap(),
+            fresh_peer.local_addr().unwrap()
+        );
         assert!(!router.has_pending().await);
     }
 
