@@ -17,11 +17,11 @@ explicitly assert:
 
 | P0 executed branch | New method intent | MODE B state |
 |---|---|---|
-| Native Initial EOF | Silence false UI error; drop unadmitted lease | **P — CI verdict pending** |
-| Legacy Initial EOF | Emit bounded inbound Disconnected event with correct id/type | **P — CI verdict pending** |
-| Native after-initial EOF / hostile 32-bit length | Emit Disconnected, update session, no receipt | **P — CI verdict pending** |
-| Native parent vs session-token cancel after protocol progress | Emit Cancelled exactly once, close session owner | **P — CI verdict pending** |
-| Native Initial cancellation | Quiet release, no fabricated UI state, no lease | **P — CI verdict pending** |
+| Native Initial EOF | Silence false UI error; drop unadmitted lease | **C — scoped 10× PASS** |
+| Legacy Initial EOF | Emit bounded inbound Disconnected event with correct id/type | **C — scoped 10× PASS** |
+| Native after-initial EOF / hostile 32-bit length | Emit Disconnected, update session, no receipt | **C — scoped 10× PASS** |
+| Native parent vs session-token cancel after protocol progress | Emit Cancelled exactly once, close session owner | **C — scoped 10× PASS** |
+| Native Initial cancellation | Quiet release, no fabricated UI state, no lease | **C — scoped 10× PASS** |
 
 Prior exact commits: `e7f88543`
 (test), `9030e6d9` (format only).
@@ -51,6 +51,21 @@ Full Stage 12 and all-negative-category
 closure remain **NO**.
 
 
+
+
+**Verification update:** all five new methods and two
+existing managed BLE positive cases were proved in
+[P0 CI run 39082536345](https://github.com/morozhenko-apps/rquickshare/actions/runs/39082536345),
+**10 numbered attempts, all 7/0 tests pass per
+attempt, 0 ignored**, on source `a9f56aad`.
+The older launch status paragraphs above
+refer to provisional checks before this
+independent workflow; superseded by this
+scoped verified result. Other `Preflight`
+APT contract failures remain unclosed and
+must not be called a pass. Full Stage 11
+suite 10× and global Stage 12 remain NO
+for the current final candidate.
 
 ## 2026-10-18 current P0 GATT/Weave negative-scenario reconciliation
 
