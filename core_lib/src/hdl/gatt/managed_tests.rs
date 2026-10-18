@@ -329,6 +329,175 @@ async fn given_unidentified_native_worker_is_cancelled_when_stopped_then_it_rele
 }
 
 #[tokio::test]
+async fn given_unidentified_native_malformed_ble_preface_when_worker_exits_then_no_ui_or_session_is_published(
+) {
+    use tokio::io::AsyncWriteExt;
+
+    // Arrange: bad wire data arrives while the BLE transport remains open.
+    // This verifies the native unadmitted-error gate, not just socket EOF.
+    let malformed = [
+        ("zero-length", 0_u32.to_be_bytes().to_vec()),
+        ("invalid-protobuf", [1_u32.to_be_bytes().as_slice(), &[0xff]].concat()),
+        (
+            "above-frame-limit",
+            ((crate::protocol::SANE_FRAME_LENGTH as u32) + 1)
+                .to_be_bytes()
+                .to_vec(),
+        ),
+        ("u32-max-length", u32::MAX.to_be_bytes().to_vec()),
+    ];
+
+    for (index, (case, bytes)) in malformed.into_iter().enumerate() {
+        let (request, control, hub, mut peer, sender, mut events) =
+            worker_fixture(State::Initial, 501 + index as u128);
+        let id = control.snapshot().event_id.clone();
+        peer.write_all(&bytes).await.unwrap();
+
+        // Act: production parser rejects malformed input without requiring EOF.
+        run_inbound_worker(
+            request,
+            sender,
+            BwuRouter::new(),
+            0,
+            CancellationToken::new(),
+            true,
+        )
+        .await;
+
+        // Assert: no unverified peer is exposed as a transfer or left active.
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.event_id, id, "unexpected identity for {case}");
+        assert_eq!(snapshot.state, State::Initial, "premature state for {case}");
+        assert!(snapshot.received_text.is_none(), "unexpected text for {case}");
+        assert!(snapshot.received_files.is_none(), "unexpected files for {case}");
+        assert!(events.try_recv().is_err(), "unsolicited event for {case}");
+        assert!(control.is_closed(), "session was not released for {case}");
+        assert!(hub.active().unwrap().is_empty(), "active session for {case}");
+    }
+}
+
+#[tokio::test]
+async fn given_progressed_native_partial_ble_header_or_body_when_peer_eof_then_one_disconnected_and_owner_release(
+) {
+    use tokio::io::AsyncWriteExt;
+
+    let valid_header = 3_u32.to_be_bytes();
+    let frames = [
+        ("one-prefix-byte", valid_header[..1].to_vec()),
+        ("two-prefix-bytes", valid_header[..2].to_vec()),
+        ("three-prefix-bytes", valid_header[..3].to_vec()),
+        ("one-body-byte", [valid_header.as_slice(), &[0x0a]].concat()),
+        ("two-body-bytes", [valid_header.as_slice(), &[0x0a, 0x01]].concat()),
+    ];
+
+    for (index, (case, bytes)) in frames.into_iter().enumerate() {
+        // Arrange: the native session has advanced, so transport EOF is visible.
+        let (request, control, hub, mut peer, sender, mut events) =
+            worker_fixture(State::ReceivedConnectionRequest, 511 + index as u128);
+        let id = control.snapshot().event_id.clone();
+        peer.write_all(&bytes).await.unwrap();
+        peer.shutdown().await.unwrap();
+        drop(peer);
+
+        // Act: the real partial-frame read encounters a definite EOF.
+        run_inbound_worker(
+            request,
+            sender,
+            BwuRouter::new(),
+            0,
+            CancellationToken::new(),
+            true,
+        )
+        .await;
+
+        // Assert: exactly one bounded transport failure, never success/consent.
+        let message = events.try_recv().expect("missing disconnected event");
+        assert_eq!(message.id, id, "wrong owner in {case}");
+        assert_eq!(message.direction, ChannelDirection::LibToFront);
+        assert_eq!(message.rtype, Some(TransferType::Inbound));
+        assert_eq!(message.state, Some(State::Disconnected), "{case}");
+        assert!(
+            message
+                .error
+                .as_ref()
+                .is_some_and(|reason| !reason.is_empty() && reason.len() <= 512),
+            "missing bounded failure reason for {case}"
+        );
+        assert!(message.meta.is_none(), "unexpected payload metadata for {case}");
+        assert!(events.try_recv().is_err(), "duplicate terminal event for {case}");
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.state, State::Disconnected, "{case}");
+        assert!(snapshot.received_text.is_none(), "{case}");
+        assert!(snapshot.received_files.is_none(), "{case}");
+        assert!(control.is_closed(), "open session after EOF in {case}");
+        assert!(hub.active().unwrap().is_empty(), "leaked owner in {case}");
+    }
+}
+
+#[tokio::test]
+async fn given_progressed_native_partial_ble_frame_when_parent_or_request_cancels_then_one_cancelled_and_no_replay(
+) {
+    use tokio::io::AsyncWriteExt;
+
+    for (index, (cancel_request, partial_body)) in
+        [(false, false), (false, true), (true, false), (true, true)]
+            .into_iter()
+            .enumerate()
+    {
+        // Arrange: keep the external byte transport alive after an incomplete
+        // frame. The next worker poll must be blocked on real socket I/O.
+        let (request, control, hub, mut peer, sender, mut events) =
+            worker_fixture(State::ReceivedConnectionRequest, 521 + index as u128);
+        let id = control.snapshot().event_id.clone();
+        let bytes = if partial_body {
+            [3_u32.to_be_bytes().as_slice(), &[0x0a]].concat()
+        } else {
+            vec![0_u8, 0_u8]
+        };
+        peer.write_all(&bytes).await.unwrap();
+        let lifetime = CancellationToken::new();
+        let mut worker = Box::pin(run_inbound_worker(
+            request,
+            sender,
+            BwuRouter::new(),
+            0,
+            lifetime.clone(),
+            true,
+        ));
+
+        // Act: establish the in-flight, incomplete read before cancelling.
+        assert!(
+            futures::poll!(worker.as_mut()).is_pending(),
+            "partial BLE worker completed before cancellation; case {index}"
+        );
+        if cancel_request {
+            control.cancel();
+        } else {
+            lifetime.cancel();
+        }
+        worker.await;
+
+        // Assert: cancellation wins without publishing a late transport
+        // failure or forged success, and the owned session is fully released.
+        let message = events.try_recv().expect("missing cancellation event");
+        assert_eq!(message.id, id, "unexpected owner in case {index}");
+        assert_eq!(message.direction, ChannelDirection::LibToFront);
+        assert_eq!(message.rtype, Some(TransferType::Inbound));
+        assert_eq!(message.state, Some(State::Cancelled), "case {index}");
+        assert!(message.error.is_none(), "spurious transport error in case {index}");
+        assert!(message.meta.is_none(), "spurious result in case {index}");
+        assert!(events.try_recv().is_err(), "duplicate terminal for case {index}");
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.state, State::Cancelled, "case {index}");
+        assert!(snapshot.received_text.is_none(), "case {index}");
+        assert!(snapshot.received_files.is_none(), "case {index}");
+        assert!(control.is_closed(), "leaked control in case {index}");
+        assert!(hub.active().unwrap().is_empty(), "leaked session in case {index}");
+        drop(peer);
+    }
+}
+
+#[tokio::test]
 async fn given_managed_ble_stream_when_owned_consent_accepts_then_real_encrypted_transfer_finishes()
 {
     tokio::time::timeout(std::time::Duration::from_secs(5), consent(true))
