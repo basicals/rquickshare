@@ -19,8 +19,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: security-audit
-  cancel-in-progress: true
+  group: security-audit-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
   javascript:
