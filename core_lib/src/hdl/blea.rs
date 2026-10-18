@@ -203,18 +203,12 @@ mod tests {
     }
 
     #[test]
-    fn given_same_receiver_identity_when_encoded_for_ble_and_mdns_then_endpoint_and_name_agree(
-    ) {
+    fn given_same_receiver_identity_when_encoded_for_ble_and_mdns_then_endpoint_and_name_agree() {
         use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
         // Arrange: compare two independent real production encoders and the
         // mDNS decoder for names accepted by the identity contract.
-        let endpoints = [
-            [0_u8; 4],
-            *b"TEST",
-            [0x01, 0x80, 0x3f, 0xfe],
-            [u8::MAX; 4],
-        ];
+        let endpoints = [[0_u8; 4], *b"TEST", [0x01, 0x80, 0x3f, 0xfe], [u8::MAX; 4]];
         let names = [
             String::new(),
             "A".into(),
@@ -256,8 +250,7 @@ mod tests {
 
                     // Assert: the endpoint never changes across the BLE/mDNS
                     // boundary, nor does an allowed name or device class.
-                    let connection_len =
-                        u32::from_be_bytes(ble[4..8].try_into().unwrap()) as usize;
+                    let connection_len = u32::from_be_bytes(ble[4..8].try_into().unwrap()) as usize;
                     let connection = &ble[8..8 + connection_len];
                     assert_eq!(connection[0], 0x23);
                     assert_eq!(&connection[1..4], &QS_SVC_HASH);
@@ -646,8 +639,7 @@ mod schedule_tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn given_advertising_stop_and_restart_when_scheduled_then_old_deadlines_never_reappear(
-    ) {
+    async fn given_advertising_stop_and_restart_when_scheduled_then_old_deadlines_never_reappear() {
         use std::time::Duration;
 
         let mut schedule = ReceiverSchedule::default();
@@ -692,10 +684,7 @@ mod schedule_tests {
             );
             assert!(schedule.deferred.is_none());
             schedule.defer(restarted);
-            assert_eq!(
-                schedule.deferred,
-                Some(restarted + Duration::from_secs(2))
-            );
+            assert_eq!(schedule.deferred, Some(restarted + Duration::from_secs(2)));
             assert!(schedule.deferred.unwrap() > previous_deferred);
             assert!(schedule.periodic.unwrap() > previous_periodic);
             schedule.stopped();
@@ -755,8 +744,14 @@ mod receiver_packet_tests {
             assert_eq!(packet.service_data.len(), 1);
             assert_eq!(packet.service_data[&service], header.to_vec());
             assert_eq!(packet.discoverable, Some(true));
-            assert_eq!(packet.min_interval, Some(std::time::Duration::from_millis(100)));
-            assert_eq!(packet.max_interval, Some(std::time::Duration::from_millis(150)));
+            assert_eq!(
+                packet.min_interval,
+                Some(std::time::Duration::from_millis(100))
+            );
+            assert_eq!(
+                packet.max_interval,
+                Some(std::time::Duration::from_millis(150))
+            );
             assert!(packet.secondary_channel.is_none());
             assert!(3 + 4 + 4 + packet.service_data[&service].len() <= 31);
         }
