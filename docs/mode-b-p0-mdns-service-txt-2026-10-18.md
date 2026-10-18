@@ -203,3 +203,26 @@ runtime services.
   documents three MODE A architecture choices for live
   `MDnsDiscovery::run` event/reachability coverage. The seam
   itself was NOT implemented, nor is it authorized in MODE B.
+
+## Exact-source first Core CI red diagnosis (before correction)
+
+On source SHA `d5d30499`, [Preflight 39118666917](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118666917)
+Core job `117649636459` failed to compile newly added
+test fixtures, with **three explicit Rust parser errors**
+at `utils.rs:389,448,475`:
+`expected type, found 1` from
+`vec![DeviceType::Laptop as u8 << 1]`
+and two `Phone` variants. This is an ambiguous
+`as` cast + shift expression inside the `vec!`
+macro expansion. The production TXT encoder is
+not implicated and the assertions never executed.
+Format/frontend had passed on the same source.
+
+Fix only the three fixture constructors by parenthesizing
+the enum cast: `vec![(DeviceType::Laptop as u8) << 1]`,
+`vec![(DeviceType::Phone as u8) << 1]`.
+This retains the intended first TXT header byte,
+test scenario and exact expected data; no production
+behavior, test assertion, source branch or
+security boundary changes. Re-run exact-source CI;
+the cancelled/failed run is not evidence of a pass.
