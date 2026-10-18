@@ -211,7 +211,7 @@ def validate_tree(root, now=None, signed=False, check_time=True):
         require(entry["Architecture"] == arch and not entry["Version"].endswith(".debug"), "Wrong native release architecture/profile")
         require(version in {None, entry["Version"]}, "Mixed channel versions")
         version = entry["Version"]
-        name = f"pool/main/r/rquickshare-native/rquickshare_{version}_{arch}.deb"
+        name = f"pool/main/r/rquickshare-native/rquickshare-native_{version}_{arch}.deb"
         require(entry.get("Filename") == name, "Unexpected package path")
         package = root / name
         regular(package.with_suffix(".deb.sha256"), 256)
