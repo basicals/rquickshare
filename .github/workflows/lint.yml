@@ -100,8 +100,7 @@ jobs:
       - name: Run stable Core Rust tests once
         run: bash scripts/ci-core-test-groups.sh stable
 
-      - name: Verify race-sensitive Core Rust tests ten consecutive times
-        run: bash scripts/ci-core-test-groups.sh stress
+      # Race-sensitive 10x verification is reserved for the validated release-tag Mode B gate.
 
   clippy:
     name: Clippy (${{ matrix.directory }})
