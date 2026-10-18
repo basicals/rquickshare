@@ -1,0 +1,70 @@
+name: P0 BWU introduction parser ten-run
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/p0-client-introduction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-client-introduction-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bwu-introduction:
+    name: Real BWU TCP introduction parser 3 cases x10
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install matching Core dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler dbus-daemon libdbus-1-dev
+
+      - name: Verify the exact compiled high-risk test inventory
+        shell: bash
+        working-directory: core_lib
+        run: |
+          set -euo pipefail
+          cargo +stable test --all-features --lib -- --list > "$RUNNER_TEMP/p0-client-intro.list"
+          for name in \
+            given_invalid_bwu_introduction_fields_when_validated_then_no_identity_is_admitted \
+            given_partial_or_malformed_bwu_tcp_prefix_when_peeked_then_only_complete_valid_identity_is_returned \
+            given_bwu_current_and_last_ids_when_compared_then_only_exact_expected_id_matches
+          do
+            expected="hdl::inbound::security_tests::${name}: test"
+            found="$(grep -Fxc -- "$expected" "$RUNNER_TEMP/p0-client-intro.list" || true)"
+            if [[ "$found" != 1 ]]; then
+              echo "P0 BWU TCP introduction method missing/duplicated: $name (found $found)" >&2
+              exit 1
+            fi
+          done
+
+      - name: Repeat all three real validator methods ten times
+        shell: bash
+        working-directory: core_lib
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            echo "=== P0 BWU TCP introduction attempt $attempt/10 ==="
+            for name in \
+              given_invalid_bwu_introduction_fields_when_validated_then_no_identity_is_admitted \
+              given_partial_or_malformed_bwu_tcp_prefix_when_peeked_then_only_complete_valid_identity_is_returned \
+              given_bwu_current_and_last_ids_when_compared_then_only_exact_expected_id_matches
+            do
+              full="hdl::inbound::security_tests::${name}"
+              log="$RUNNER_TEMP/p0-client-intro-${attempt}-${name}.log"
+              cargo +stable test --all-features --lib "$full" -- --exact --nocapture 2>&1 | tee "$log"
+              if ! grep -Eq 'test result: ok\. 1 passed; 0 failed; 0 ignored; 0 measured; [0-9]+ filtered out;' "$log"; then
+                echo "Incomplete P0 BWU TCP introduction test: $name attempt $attempt/10" >&2
+                exit 1
+              fi
+            done
+          done
+          echo "P0 BWU TCP introduction: all 3 exact tests passed ten consecutive times."
