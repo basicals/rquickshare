@@ -1,0 +1,68 @@
+name: Native download Worker verification
+
+# Credential-free source gate; Cloudflare Git Builds remains a separate deploy owner.
+on:
+  push:
+    branches: ["dev", "master"]
+    paths:
+      - "infra/native-download/**"
+      - ".github/workflows/native-download-check.yml"
+      - "docs/native-download-git-build-2026-10-18.md"
+  pull_request:
+    paths:
+      - "infra/native-download/**"
+      - ".github/workflows/native-download-check.yml"
+      - "docs/native-download-git-build-2026-10-18.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-download-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native_download:
+    name: Local Worker contract and APT 10x
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: infra/native-download/package-lock.json
+
+      - name: Install isolated APT test prerequisites
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dpkg-dev gnupg gpgv python3
+
+      - name: Install locked Worker dependencies
+        working-directory: infra/native-download
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify generated bindings and TypeScript contracts
+        working-directory: infra/native-download
+        run: |
+          set -eu
+          npm run types
+          git diff --exit-code -- worker-configuration.d.ts
+          npm run check
+
+      - name: Verify all Worker unit and real workerd/R2/APT contracts ten times
+        working-directory: infra/native-download
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            echo "=== Native download Worker attempt ${attempt}/10 ==="
+            npm test
+          done
+
+      - name: Verify Wrangler production bundle without publishing
+        working-directory: infra/native-download
+        run: npm run dry-run
