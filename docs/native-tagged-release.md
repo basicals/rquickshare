@@ -30,10 +30,13 @@ secret, bucket object or tag is created by this source task.
 1. A tag push starts the native release workflow. Validate **exact tag
    syntax**, match native product version, and require tag commit equals the
    current protected `master` HEAD; fail closed for dev/untrusted refs.
-2. Build and run offline verification **without secrets** on declared
-   Ubuntu 26.04 ABI. Require successful strict 10x Mode B evidence from
-   the exact release source commit and stage package/unsigned APT bytes
-   as GitHub artifacts; do not invoke arbitrary workflow code from PRs.
+2. Validate the exact tag and protected master HEAD **before spending build time**.
+   Invoke the existing strict complete Mode B 10x as a reusable workflow on
+   **that tagged source**, requiring its successful job result as an actual
+   dependency, not a historical/API-provided success badge. Then build and
+   verify the Ubuntu 26.04 ABI without secrets and stage immutable package/
+   unsigned APT bytes as GitHub artifacts. Do not invoke arbitrary workflow
+   code from PRs.
 3. The isolated `apt-release` GitHub Environment holds only the
    *signing subkey* exported without the certifying/primary secret, its
    passphrase, pinned public keyring and bucket-scoped R2 credentials.
