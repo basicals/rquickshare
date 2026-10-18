@@ -1,6 +1,66 @@
 # Current implementation and continuation state
 
 
+## P0 Mode B BLE→TCP BWU routing owner integrity — 2026-10-18
+
+Four added `core_lib/src/hdl/bwu.rs`
+tests protect real localhost TCP
+socket ownership from wrong/untrusted
+alias IDs, exact-versus-previous
+owner confusion, replay after
+one-shot route consumption, and
+late connections after cancellation
+and explicit new registration.
+Full scoped test/mutation review
+and N1–N12 table:
+[mode-b-p0-bwu-route-2026-10-18.md](mode-b-p0-bwu-route-2026-10-18.md).
+
+Independent read-only
+[P0 BWU 39084212567](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084212567)
+on source SHA `7a08e57c`
+was **SUCCESS**: compiled 15 real
+router methods (11 old + 4 new);
+ten distinct attempts 1–10,
+each 15 passed/0 failed/0 ignored
+(150/150 total); all four
+new tests individually `ok` 10×.
+A same-source Core Rust job in
+[Preflight 39084212522](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084212522)
+was also SUCCESS: 719 stable/0,
+4+4 integration and 80/80
+race-sensitive single probes,
+with all four new test names
+present. Rust formatter, frontend
+and Core Clippy passed.
+
+**Whole Preflight remains RED**:
+the format/Python compound job
+failed an unrelated protected
+APT signing-key fixture:
+`ValueError: Unexpected private key
+inventory`. No assertion is
+weakened; the parallel packaging
+workstream owns the correction.
+This focused P0 10× does not
+replace full MODE B Stage 11 or
+repository-wide Stage 12.
+
+Still-critical OPEN: upstream
+identity authentication for
+`last_endpoint_id`, actual
+BLE/BlueZ characteristic notifier,
+real encrypted BLE→TCP handoff,
+mDNS reachability, Linux GTK
+physical install and Google
+Android/Windows peer acceptance.
+No production runtime, installed
+native29, master or published
+release changed by these tests.
+Overall Mode B Completion Gate
+remains **NO**.
+
+
+
 ## Confirmed P0 native Weave worker 10× — 2026-10-18
 
 The focused real worker
