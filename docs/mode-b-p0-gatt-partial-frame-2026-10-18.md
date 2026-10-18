@@ -151,7 +151,7 @@ Manual review only; no mutation engine execution is claimed.
 
 1. [x] Stage 1–8 source inspection, inventory, branch/N matrices,
    interaction matrix and counts in repository before code.
-2. [ ] Stage 9 implement all three original test methods, no runtime changes.
+2. [x] Stage 9 implement all three original test methods, no runtime changes.
 3. [ ] Stage 10 mutation review and CI on exact source, do not soften
    assertions if actual production behavior violates an invariant.
 4. [ ] Update this ledger, global MODE B inventory and Current State
@@ -162,3 +162,21 @@ Manual review only; no mutation engine execution is claimed.
 Rollback only the test-only commit and this ledger plus
 corresponding documentation edits. No production behavior,
 protocol, security, installation or release changes.
+
+## Stage 9 implementation checkpoint, execution pending
+
+- Documentation-first baseline: `5685b41b`.
+- Three original test-only methods committed in `2afd1112`; no
+  production source or protocol branch modified.
+- First automatic Rust format job in
+  [Preflight 39116008314](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116008314)
+  reported only wrapping differences in new assertion/table syntax.
+- Formatting-only test correction: `86ebe678` with assertions
+  unchanged. Its exact-source
+  [Preflight 39116064673](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064673)
+  and [Native GTK 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
+  must complete before any final PASS claim.
+- Existing quick Preflight may cancel older runs when newer
+  `dev` commits appear; cancelled cases never count as green.
+- Stage 12 remains NO; observed BlueZ notifier and crypto gaps
+  are not resolved by these duplex tests.
