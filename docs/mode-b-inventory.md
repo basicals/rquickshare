@@ -1,5 +1,35 @@
 # Mode B inventory, branch map, and test matrix
 
+## 2026-10-18 P0 receiver BLE FEF3 advertising and recovery contract
+
+Five new original `core_lib/src/hdl/blea.rs` test methods
+cover 17 direct service-data boundary/mask subcases, 80
+cross-medium endpoint/device/identity combinations,
+three periodic/deferred scheduling intervals, three
+stop/restart epochs and three raw legacy-header
+packet variants. Exact code SHA `385674f6` verified
+[Preflight 39117637254](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637254)
+Core **736/736**, separate integrations **4/4+4/4**
+and every new test independently `... ok`.
+[Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
+**SUCCESS**, actual GTK log **52/52**. Format, Core
+Clippy and frontend SUCCESS. The desktop Tauri
+job needs a separate completed verdict to claim
+quick 5/5. This is **one** fast CI pass, not the
+mandatory 10-run complete repository validation.
+
+The binding
+[Stage 1–10 inventory, Positive/N1–N12 matrix, interaction
+and production function coverage map](mode-b-p0-receiver-discovery-advertisement-2026-10-18.md)
+was committed before tests. The note includes the
+red rustfmt and missing test-only import diagnosis.
+This slice explicitly does NOT prove actual
+`ReceiverAdvertiser::run` BlueZ/D-Bus lifetime,
+notification stop/retry, Pixel/Windows compatibility,
+authenticated BWU [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8),
+or global Stage 12. All remain **OPEN**.
+
+
 ## 2026-10-18 P0 managed GATT partial-frame failure and cancellation
 
 Three new original test-only `run_inbound_worker` methods in
