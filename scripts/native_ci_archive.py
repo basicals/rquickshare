@@ -72,15 +72,50 @@ def restore(store, output, keyring, fingerprint):
         apt.verify(folder, keyring, fingerprint, check_time=False)
     return True
 
+def current_tag(store):
+    """Identify the last version from active generation's immutable pool inventory.
+    The selection is advisory until restore() validates its signed snapshot.
+    """
+    current = store.inspect(r2.ACTIVE, 32768, retain=True)
+    if current is None:
+        return None
+    prefix = f"snapshots/{current.sha256}/pool/main/r/rquickshare-native/"
+    try:
+        listing = store.client.list_objects_v2(Bucket=r2.BUCKET, Prefix=prefix, MaxKeys=9)
+    except Exception:
+        raise r2.Unavailable("Current release inventory unavailable") from None
+    apt.require(not listing.get("IsTruncated", False), "Unexpected current release inventory")
+    versions = []
+    pattern = re.compile(r"rquickshare-native_((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))-[1-9][0-9]{0,9}_(?:amd64|arm64)\.deb")
+    for entry in listing.get("Contents", []):
+        key = entry["Key"]
+        apt.require(isinstance(key, str) and key.startswith(prefix), "Unexpected release inventory key")
+        match = pattern.fullmatch(key[len(prefix):])
+        if match:
+            versions.append(match[1])
+        else:
+            apt.require(key.endswith(".deb.sha256") and admitted(key[len(f"snapshots/{current.sha256}/"):]),
+                        "Unexpected release inventory object")
+    apt.require(1 <= len(versions) <= 2 and len(set(versions)) == 1, "Ambiguous current release")
+    return "v" + versions[0]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--account-id", required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--keyring", type=Path, required=True)
-    parser.add_argument("--fingerprint", required=True)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--keyring", type=Path)
+    parser.add_argument("--fingerprint")
+    parser.add_argument("--select-tag", action="store_true")
     args = parser.parse_args()
     store = None
     try:
+        if args.select_tag:
+            apt.require(args.output is None and args.keyring is None and args.fingerprint is None, "Select-tag must not take restore inputs")
+            store = r2.connect(args.account_id)
+            print(current_tag(store) or "")
+            return 0
+        apt.require(args.output is not None and args.keyring is not None and args.fingerprint is not None, "Restore requires output and authority")
         apt.require(not args.output.exists(), "Existing snapshot output is forbidden")
         apt.public_key(args.keyring, args.fingerprint)
         store = r2.connect(args.account_id)
