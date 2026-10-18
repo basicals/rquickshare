@@ -169,7 +169,7 @@ mutation engine not claimed.
 
 1. [x] Source scan, risk, exhaustive scoped artifact inventory,
    branch map, category matrix and expected methods BEFORE code.
-2. [ ] Add all four scoped methods, no production code or SDK seam.
+2. [x] Add all four scoped methods, no production code or SDK seam.
 3. [ ] Confirm formatter, complete Core and Clippy,
    GTK and exact-source method results; record any red
    states and reconcile before changing assertions.
@@ -182,3 +182,24 @@ mutation engine not claimed.
 Rollback only test/documentation changes. Never alter
 published wire, security, installation, artifacts or
 runtime services.
+
+## Implementation checkpoint (CI pending)
+
+- Documentation-first scoped plan: `b1925b3e`.
+- Two real parser table-driven negative suites: `d8363e1e`
+  in `core_lib/src/utils.rs`.
+- Two real mDNS `ServiceInfo` cross-product/rename
+  test methods: `d2a1449c` and `fe4b3816` in
+  `core_lib/src/hdl/mdns.rs`.
+- First `rustfmt` check identified only new source layout
+  differences, corrected without weakening any invariant in
+  test-only commit `d5d30499`. The matrix now includes
+  an actual Unicode name (Café) in each relevant service case.
+- Exact-source quick [Preflight 39118666917](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118666917)
+  and [Native GTK 39118666907](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118666907)
+  are the validation runs to check. Pending status cannot be
+  counted green. No release 10x or hardware execution inferred.
+- [P0 mDNS event injection testability Issue #9](https://github.com/morozhenko-apps/rquickshare/issues/9)
+  documents three MODE A architecture choices for live
+  `MDnsDiscovery::run` event/reachability coverage. The seam
+  itself was NOT implemented, nor is it authorized in MODE B.
