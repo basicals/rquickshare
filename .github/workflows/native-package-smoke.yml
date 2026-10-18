@@ -1,6 +1,10 @@
 name: Native Linux package smoke
 
 on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/native-package-smoke.yml"
   workflow_dispatch:
 
 permissions:
