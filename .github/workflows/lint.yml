@@ -35,6 +35,9 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce fast development and protected release workflow cadence
+        run: bash scripts/ci-check-workflow-policy.sh
+
       - name: Validate stable/race-sensitive CI group inventory script
         run: |
           bash -n scripts/ci-core-test-groups.sh
