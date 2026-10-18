@@ -201,10 +201,9 @@ actual complete GitHub job log:
   Thus **13 variant assertions groups** are executed inside
   the 3 successful methods. The log reports three test
   methods, not thirteen independent Rust test processes.
-- Rust format, Core Clippy and frontend Preflight jobs
-  **SUCCESS** on that source; desktop Tauri Clippy/unit
-  status must be verified separately for the global
-  five-job quick Preflight conclusion.
+- All **5/5 quick Preflight jobs SUCCESS** on exact source:
+  format/Python, frontend, Core tests, Core Clippy,
+  desktop Tauri Clippy/unit tests (**10/10**).
 - [Native GTK job 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
   completed **SUCCESS**. This is a distinct native GTK
   smoke subgate, not a BlueZ device test.
@@ -253,3 +252,16 @@ This test-only work makes no change to that API.
 Global Stage 11 full ten-consecutive-suite execution on
 the final SHA is **NOT** claimed. Global Stage 12 still
 **NO** due unmapped branches and P0 hardware/alias auth.
+
+## Final quick CI closure (not full MODE B)
+
+At SHA `86ebe6780693bcac08eb3db363cc919a73cc95dc`,
+[Preflight 39116064673](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064673)
+**completed SUCCESS, 5/5 jobs**; actual desktop Rust log
+contains `10 passed; 0 failed; 0 ignored`.
+[Native GTK 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
+**completed SUCCESS with 52/52 tests**, verified from its
+actual log. The independent native GTK run does not
+exercise actual BLE hardware. These are single quick
+CI runs and **do not** satisfy mandatory full 10×
+release-gated MODE B or repository-wide Stage 12.
