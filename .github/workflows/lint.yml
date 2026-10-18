@@ -3,6 +3,23 @@ name: Preflight
 on:
   push:
     branches: [ "dev", "master" ]
+    paths-ignore:
+      - 'docs/**'
+      - 'doc/**'
+      - '**/docs/**'
+      - '**/doc/**'
+      - 'README.md'
+      - '**/README.md'
+      - 'AGENT.md'
+      - '**/AGENT.md'
+      - 'AGENTS.md'
+      - '**/AGENTS.md'
+      - 'CHANGELOG.md'
+      - '**/CHANGELOG.md'
+      - 'CONTRIBUTING.md'
+      - '**/CONTRIBUTING.md'
+      - '.github/agents/**'
+      - '.codex.md'
   pull_request:
 
 concurrency:
