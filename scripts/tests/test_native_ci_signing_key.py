@@ -4,11 +4,10 @@ import sys
 import tempfile
 import unittest
 
-import test_native_apt as fixtures
-import native_apt as apt
-
 sys.path.insert(0, str(Path(__file__).parents[1]))
 import native_ci_signing_key as ci
+import native_apt as apt
+import test_native_apt as fixtures
 
 PRIMARY = "6D8854762CF0C86881138A56695A0888D09FA616"
 SUBKEY = ci.EXPECTED_SUBKEY
