@@ -1,0 +1,92 @@
+# Native download Worker: Git build verification
+
+2026-10-18. MODE B: testing/verification only. Scope is `infra/native-download` in
+`morozhenko-apps/rquickshare`. This is a deployment-pipeline audit, not a new
+package publication, production Worker behavior change or signing decision.
+Read [native-download-route.md](native-download-route.md) and
+[infra/native-download/README.md](../infra/native-download/README.md) first.
+
+## Initial repository scan and invariant review
+
+- `dev` is the development branch; `master` is the actual default/release
+  branch. No `main` exists at the initial checkpoint.
+- `wrangler.jsonc` names `rquickshare-download`, with a single case-sensitive
+  `https://download.morozhenko.com/dist/rQuickShare/*` route, private
+  `ARCHIVE` R2 bucket, no workers.dev/preview URLs and redacted query logs.
+- `src/policy.ts` implements the public-key allowlist, byte ranges and ETags;
+  `src/worker.ts` implements read-only HTTP serving with no write or fallback.
+- `test/policy.test.mjs` has four tests, `test/worker.test.mjs` five, and
+  `test/runtime.test.mjs` one real local workerd/R2 plus isolated signed APT
+  integration. Existing Node engine/toolchain target is Node 24.
+- `native-package-smoke.yml` validates this Worker only on manual dispatch;
+  normal `dev` pushes run Preflight but do not execute this Worker test suite.
+  `native-tag-publish.yml` also calls `wrangler deploy` when the release
+  pipeline is authorized. This is a separate possible deployment writer and must
+  be retained until its release ownership is explicitly reviewed.
+
+## Test inventory, branch coverage and N1–N12 review
+
+| Production artifact | Risk / level | Existing test scenarios and required branch assertions |
+| --- | --- | --- |
+| `policy.ts::objectPolicy` | High, unit | Accepted immutable/mutable keys, versions/architecture/sidecars; wrong host, scheme, prefix, queries, credentials, path escape, encoding, size, unknown/private objects |
+| `policy.ts::byteRange` | High, unit | Open/suffix/bounded ranges and minimum/maximum; invalid, reversed, multirange, overflow, unsatisfiable sizes |
+| `policy.ts::matchesEtag` | Medium, unit | Matching/nonmatching strong and weak validators, wildcard, list, null and excessively long input |
+| `worker.ts::serve`, `failure`, `valid`, `headers`, default fetch adapter | High, HTTP/contract | GET/HEAD/405/404; mutable freshness; ETag/304; range/206/416; invalid R2 lengths, missing/changed/throwing storage, fixed no-PII error and streaming |
+| `wrangler.jsonc`, generated `Env` | Critical, build/contract | Strict types, generated-binding file stable, bounded route/name/R2 settings reviewed; bundle dry-run |
+| workerd+R2+HTTP+APT bridge | Critical, integration | Local actual Worker and R2, approved public keys, signed test-only APT download, by-hash, wrong signing-key refusal, isolated filesystem and cleanup |
+
+The positive/negative matrix for these existing scenarios maps N1 (bad input), N2
+(bounds), N3 (read failures), N4 (ETag/re-read consistency), N5 (changed object
+between `head`/`get`), N6 (invalid metadata), N7 (unauthorized methods/paths),
+N9 (interrupted/read errors), N10 (path/secret redaction) and N12 (missing/corrupt
+storage) to existing tests. N8 (locale/time) and N11 (monetization) are not
+applicable to this stateless read-only projection. All identified branches must
+remain under the existing tests; the CI change adds no new production branch.
+
+Key interaction matrix: mutable/immutable × GET/HEAD × Range/If-Range/If-None-Match;
+missing/changed/corrupt object × metadata/body; valid/invalid host/path × method.
+Test inventory is 10 existing top-level test scenarios with table-driven subcases,
+not 10 newly written tests. Per-file coverage map: `policy.ts` three exported
+functions, `worker.ts` one exported serving function plus its three internal
+helpers/default adapter, `wrangler.jsonc` one deployment contract. Exact numeric
+branch coverage has not been measured; do not describe this as 100% coverage.
+Mutation targets include changing an allowlist predicate, object maximum, range
+bound, conditional validator, storage metadata check or cache policy.
+
+## Plan and acceptance (documentation before implementation)
+
+1. [x] Review source, current deployment evidence and branch ancestry.
+2. [ ] Add a credential-free, path-filtered GitHub Actions Worker verification on
+   `dev`/`master` and PRs. Pin Node 24, install only local APT/GPG test
+   prerequisites and locked Worker dependencies. Run type generation/diff,
+   TypeScript check, all 10 existing tests ten consecutive times and Wrangler
+   dry-run. No remote Worker deploy or release package build.
+3. [ ] Observe exact-source CI result; record successes/failures and revise this
+   document. Do not claim CI green based on historical runs.
+4. [ ] Check `master...dev` again, require fast-forward ancestry and green
+   verification before moving `master`, without force or merge commit. Observe
+   subsequent CI and Cloudflare build where access permits.
+
+Cloudflare Workers Builds configuration is **outside Git**. Operator must
+independently confirm in Worker Settings > Build: repository
+`morozhenko-apps/rquickshare`, production branch `master`, root directory
+`infra/native-download`, Worker name `rquickshare-download` matching
+`wrangler.jsonc`, and suitable build/deploy commands. Suggested minimum
+build validation is `npm ci --ignore-scripts --no-audit --no-fund && npm run check`;
+deploy command `npm run deploy` from that root. A GitHub status check alone
+does **not** gate a simultaneous Cloudflare production build. For production
+safety, configure any desired checks in Cloudflare's build command and branch
+protection before treating them as deployment gates.
+
+Cloudflare Build trigger settings, token scopes, live version and routes cannot
+be verified from a GitHub checkout. The historical 2026-10-14 deployment
+evidence is not proof of a 2026-10-18 Git-connected deployment. Public live
+HTTP probes are inconclusive in this environment (DNS resolution is blocked).
+Neither a clean GitHub check nor a successful Worker dry-run proves production
+deployment. Do not create an APT signer, new route or alternative public bucket
+as part of this verification.
+
+Rollback: revert the isolated workflow/doc commits; neither changes production
+HTTP semantics. If a later Cloudflare deployment fails, inspect the Cloudflare
+build history and restore only a known-good Worker version, preserving R2,
+signing keys, sibling routes and Picturix.
