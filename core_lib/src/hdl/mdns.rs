@@ -343,6 +343,54 @@ mod tests {
     }
 
     #[test]
+    fn given_receiver_mdns_services_when_built_then_encoded_endpoint_port_and_txt_identity_agree(
+    ) {
+        // Arrange: exercise production ServiceInfo with bounded public names.
+        let endpoints = [[0_u8; 4], *b"TEST", [u8::MAX; 4]];
+        let ports = [1_u16, 2345, u16::MAX];
+        let names = [
+            String::new(),
+            "A".to_owned(),
+            "Cafe".to_owned(),
+            "x".repeat(crate::identity::MAX_NAME_BYTES),
+        ];
+        let kinds = [
+            DeviceType::Unknown,
+            DeviceType::Phone,
+            DeviceType::Tablet,
+            DeviceType::Laptop,
+        ];
+
+        for endpoint in endpoints {
+            let fullname = format!(
+                "{}._FC9F5ED42C8A._tcp.local.",
+                crate::utils::gen_mdns_name(endpoint)
+            );
+            for port in ports {
+                for kind in &kinds {
+                    for name in &names {
+                        // Act: call the real mDNS service builder.
+                        let service = MDnsServer::named_service(
+                            endpoint, port, kind.clone(), "machine.local.", name,
+                        )
+                        .unwrap();
+
+                        // Assert: no mismatched DNS endpoint, port or TXT owner.
+                        assert_eq!(service.get_fullname(), fullname);
+                        assert_eq!(service.get_hostname(), "machine.local.");
+                        assert_eq!(service.get_port(), port);
+                        let txt = service.get_properties().get("n").unwrap().val_str();
+                        let (found_kind, found_name) =
+                            crate::utils::parse_mdns_endpoint_info(txt).unwrap();
+                        assert_eq!(found_kind, *kind);
+                        assert_eq!(found_name, *name);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn receiver_refresh_ok_and_lagged_request_resend() {
         assert_eq!(
             receiver_refresh_action(Ok(())),
