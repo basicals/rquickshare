@@ -1,0 +1,70 @@
+name: P0 BWU routing contract ten-run
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/p0-bwu-router.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-bwu-router-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  p0-bwu-routing:
+    name: Real BWU router 15 cases x10
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install matching Core dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler dbus-daemon libdbus-1-dev
+
+      - name: Assert the real compiled BWU inventory
+        shell: bash
+        working-directory: core_lib
+        run: |
+          set -euo pipefail
+          cargo +stable test --all-features --lib -- --list > "$RUNNER_TEMP/p0-bwu.list"
+          for name in \
+            given_untrusted_bwu_alias_when_routing_then_socket_and_other_owners_remain_intact \
+            given_two_live_bwu_owners_when_alias_conflicts_then_exact_and_previous_bytes_never_mix \
+            given_consumed_bwu_route_when_another_socket_arrives_then_one_shot_owner_cannot_replay \
+            given_cancelled_bwu_generation_when_late_socket_arrives_then_new_owner_only_accepts_fresh_route
+          do
+            expected="hdl::bwu::tests::${name}: test"
+            found="$(grep -Fxc -- "$expected" "$RUNNER_TEMP/p0-bwu.list" || true)"
+            if [[ "$found" != 1 ]]; then
+              echo "Critical BWU test missing/duplicated: $name (found $found)" >&2
+              exit 1
+            fi
+          done
+          count="$(grep -Ec '^hdl::bwu::tests::.+: test$' "$RUNNER_TEMP/p0-bwu.list" || true)"
+          if [[ "$count" != 15 ]]; then
+            echo "Expected 15 real BWU methods, found $count" >&2
+            exit 1
+          fi
+
+      - name: Repeat all production BWU router tests ten times
+        shell: bash
+        working-directory: core_lib
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 10); do
+            echo "=== P0 BWU attempt $attempt/10 ==="
+            cargo +stable test --all-features --lib hdl::bwu::tests:: -- --nocapture \
+              2>&1 | tee "$RUNNER_TEMP/p0-bwu-attempt-${attempt}.log"
+            if ! grep -Eq 'test result: ok\. 15 passed; 0 failed; 0 ignored; 0 measured; [0-9]+ filtered out;' \
+              "$RUNNER_TEMP/p0-bwu-attempt-${attempt}.log"; then
+              echo "Incomplete BWU suite on attempt $attempt/10" >&2
+              exit 1
+            fi
+          done
+          echo "BWU P0: all 15 real router methods passed 10 complete attempts."
