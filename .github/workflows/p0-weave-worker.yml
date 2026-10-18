@@ -67,7 +67,7 @@ jobs:
             echo "=== P0 managed Weave attempt $attempt/10 ==="
             cargo +stable test --all-features --lib hdl::gatt::managed_tests:: -- --nocapture \
               2>&1 | tee "$RUNNER_TEMP/p0-weave-attempt-${attempt}.log"
-            if ! grep -Fq 'test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;' \
+            if ! grep -Eq 'test result: ok\. 7 passed; 0 failed; 0 ignored; 0 measured; [0-9]+ filtered out;' \
               "$RUNNER_TEMP/p0-weave-attempt-${attempt}.log"; then
               echo "P0 managed Weave suite incomplete on attempt $attempt/10" >&2
               exit 1
