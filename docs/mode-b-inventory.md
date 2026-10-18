@@ -12,7 +12,10 @@ is included in the scoped ledger. Verified
 [Preflight 39094606972](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606972)
 Core **728 passed / 0 failed / 0 ignored**, integration **4+4**,
 and each new method separately reported `ok` at
-exact test SHA `c8753010`. Earlier test-only
+exact test SHA `c8753010`. The full ordinary Preflight
+finished **5/5 SUCCESS** (including Tauri 10/10), and
+[Native GTK UI 39094606916](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606916)
+finished **SUCCESS with 52/52 tests**. Earlier test-only
 red states and Linux RST behavior are documented,
 not silently excluded from evidence.
 Full repo Stage 11 ten-pass after all tests,
