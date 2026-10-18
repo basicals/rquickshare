@@ -56,12 +56,12 @@ bound, conditional validator, storage metadata check or cache policy.
 ## Plan and acceptance (documentation before implementation)
 
 1. [x] Review source, current deployment evidence and branch ancestry.
-2. [ ] Add a credential-free, path-filtered GitHub Actions Worker verification on
+2. [x] Add a credential-free, path-filtered GitHub Actions Worker verification on
    `dev`/`master` and PRs. Pin Node 24, install only local APT/GPG test
    prerequisites and locked Worker dependencies. Run type generation/diff,
    TypeScript check, all 10 existing tests ten consecutive times and Wrangler
    dry-run. No remote Worker deploy or release package build.
-3. [ ] Observe exact-source CI result; record successes/failures and revise this
+3. [x] Observe exact-source CI result; record successes/failures and revise this
    document. Do not claim CI green based on historical runs.
 4. [ ] Check `master...dev` again, require fast-forward ancestry and green
    verification before moving `master`, without force or merge commit. Observe
@@ -90,3 +90,19 @@ Rollback: revert the isolated workflow/doc commits; neither changes production
 HTTP semantics. If a later Cloudflare deployment fails, inspect the Cloudflare
 build history and restore only a known-good Worker version, preserving R2,
 signing keys, sibling routes and Picturix.
+
+## Verification receipts and follow-up
+
+First Worker workflow: [run 39121334435](https://github.com/morozhenko-apps/rquickshare/actions/runs/39121334435)
+on source `26ecc1650533dd3e37bad050d7d0030847d55b36`: **SUCCESS**.
+Node 24 and locked install, generated bindings/diff, TypeScript check, ten
+complete executions of the existing 10-scenario suite (including real local
+workerd/R2/signed test-only APT) and Wrangler dry-run all passed. That is a
+scoped 10x Worker verification, not proof of 100% branch coverage or the global
+MODE B completion gate. Preflight status for the source is tracked separately.
+
+The follow-up README-only Worker-root change intentionally makes Git build watch
+path configurations that include `infra/native-download/*` eligible to trigger
+when later fast-forwarded into production. Its exact-source GitHub Actions
+verification must be observed before promotion. Cloudflare build settings,
+actual deployment and public HTTP acceptance remain independently unverified.
