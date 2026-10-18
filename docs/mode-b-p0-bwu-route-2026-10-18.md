@@ -238,3 +238,32 @@ their logs verify the assertions; red
 Python APT packaging tests in earlier
 workflows were a separate concurrent
 source issue, not bypassed here.
+
+## Focused exact-source CI provision
+
+Formatting-only test diff `4f35fc35` corrects
+rustfmt wrapping in four original test
+methods without touching assertions.
+A dedicated read-only,
+non-cancelling path-scoped
+[P0 BWU routing workflow](https://github.com/morozhenko-apps/rquickshare/actions/workflows/p0-bwu-router.yml)
+at commit `7a08e57c` isolates
+the critical router tests from the
+parallel APT/signing release work.
+It compiles the genuine Core crate,
+checks all **four new names exactly
+once**, verifies exactly **15 BWU
+test methods** (11 existing + four
+new) and runs **all 15 ×10**
+consecutively with a strict
+`15 passed / 0 failed / 0 ignored`
+output gate. Different from global
+Stage 11: no other Core, GTK,
+frontend/Python suites are implied.
+
+Initial workflow
+[39084212567](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084212567)
+was running at this checkpoint.
+This dedicated job must complete
+successfully before marking the
+new four methods as verified.
