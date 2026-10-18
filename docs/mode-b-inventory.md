@@ -1,5 +1,25 @@
 # Mode B inventory, branch map, and test matrix
 
+## 2026-10-18 P0 managed GATT partial-frame failure and cancellation
+
+Three new original test-only `run_inbound_worker` methods in
+`core_lib/src/hdl/gatt/managed_tests.rs` cover 13 table-driven
+variants: Initial native malformed packets, progressed EOF
+inside the frame prefix/body, and parent/session cancellation
+during an in-flight incomplete read. The scoped
+[Stage 1–10 inventory, positive/N1–N12 matrix, interaction
+and per-production-function branch map](mode-b-p0-gatt-partial-frame-2026-10-18.md)
+was recorded before implementation.
+Actual exact-SHA `86ebe678`
+[Preflight 39116064673](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064673)
+Core log verified all 3 new methods independently `ok`,
+**731/731** stable Core tests, two **4/4** integrations,
+zero failed/ignored. Separate [Native GTK 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
+completed **SUCCESS**. This evidence does not exercise
+actual BlueZ GATT notifier, authenticated BWU, release-only
+full 10× or the still-incomplete global Stage 12.
+
+
 ## 2026-10-18 P0 partial TCP preface timeout, early EOF and cancellation
 
 Three new original `core_lib/src/manager.rs` real TCP methods
