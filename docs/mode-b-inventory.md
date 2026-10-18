@@ -1,6 +1,57 @@
 # Mode B inventory, branch map, and test matrix
 
 
+## 2026-10-18 P0 inbound Weave worker terminal error test inventory
+
+Source-only
+[worker lifecycle Stage 3–10 plan and P0 test matrix](mode-b-p0-gatt-worker-2026-10-18.md)
+registers **five additional real inbound-worker
+integration methods** (with two table-driven
+two-variant methods; seven scenario executions)
+in `core_lib/src/hdl/gatt/managed_tests.rs`.
+Tests use real `run_inbound_worker` and
+`SessionHub` ownership, with only the
+outside BlueZ byte boundary replaced by
+a real in-memory duplex socket. They
+explicitly assert:
+
+| P0 executed branch | New method intent | MODE B state |
+|---|---|---|
+| Native Initial EOF | Silence false UI error; drop unadmitted lease | **P — CI verdict pending** |
+| Legacy Initial EOF | Emit bounded inbound Disconnected event with correct id/type | **P — CI verdict pending** |
+| Native after-initial EOF / hostile 32-bit length | Emit Disconnected, update session, no receipt | **P — CI verdict pending** |
+| Native parent vs session-token cancel after protocol progress | Emit Cancelled exactly once, close session owner | **P — CI verdict pending** |
+| Native Initial cancellation | Quiet release, no fabricated UI state, no lease | **P — CI verdict pending** |
+
+Prior exact commits: `e7f88543`
+(test), `9030e6d9` (format only).
+CI on source was repeatedly cancelled
+due **concurrent release/packaging
+feature commits**. Latest
+[Preflight 39082223808](https://github.com/morozhenko-apps/rquickshare/actions/runs/39082223808)
+had a separate red Python APT contract step
+(`Unexpected package path`) after
+parallel version/package-path changes.
+**Do not conflate CI failure with
+worker test correctness**; Core Rust
+job and five exact methods require
+completed logs to move from P to C.
+
+GATT `CharacteristicNotifier` error,
+send/notify queue saturation,
+service-hash rejection, real multi-packet
+reassembly, counter wrap, BLE↔TCP
+upgrade and adapter disappearance
+remain **OPEN / hardware or contract
+seam tests**. A substantial
+injectable-adapter redesign would be
+MODE A and cannot be silently
+introduced as part of Mode B tests.
+Full Stage 12 and all-negative-category
+closure remain **NO**.
+
+
+
 ## 2026-10-18 current P0 GATT/Weave negative-scenario reconciliation
 
 The original October 12 tables and C/P cells below are historical
