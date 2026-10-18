@@ -267,9 +267,10 @@ Core Rust job `117646604296`, full job log inspected:
   once with `... ok`, including the strengthened
   device-mask matrix (7 extra raw type inputs).
 - Format, frontend and Core Clippy jobs **SUCCESS**.
-  Desktop Tauri Clippy/unit job must be independently
-  confirmed before marking the full quick Preflight
-  5/5 green.
+  Desktop Tauri Clippy/unit job was independently
+  verified **SUCCESS**; its actual Rust log reports
+  **10/10 passed, 0 failed/ignored**. The complete
+  quick Preflight finished **SUCCESS, 5/5 jobs**.
 - Independent [Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
   **SUCCESS**, and the actual GTK job `117646561562`
   reports **52/52 passed, 0 failed/ignored**.
@@ -339,3 +340,16 @@ Repository-wide Stage 11 for this final source and
 Stage 12 (all public methods/branches/N1–N12)
 both remain **NO**. Issue #8 authenticated BWU
 alias ownership is independent and OPEN.
+
+## Final exact-source quick CI closure
+
+[Preflight 39117637254](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637254)
+and [Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
+**both completed SUCCESS** at the same source SHA
+`385674f6b1267af3f0b117af773c4c8348f37826`.
+Preflight jobs: **5/5 SUCCESS**; stable Core
+**736/736**, integration bins **4+4**, desktop
+Tauri **10/10**; independent GTK **52/52**.
+Each of five new Rust methods was verified by exact
+`... ok` entries in the Core job log. The full
+10× Mode B and global Stage 12 remain **NO**.
