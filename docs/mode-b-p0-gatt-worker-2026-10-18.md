@@ -149,7 +149,7 @@ claimed**; mutation survival not yet measured.
 
 1. [x] Scan actual worker, callbacks and session controls;
    document exhaustive bounded inventory/matrix first.
-2. [ ] Add all five integration test methods to
+2. [x] Add all five integration test methods to
    `gatt/managed_tests.rs`, preserving the real
    production worker, sender, session and protocol.
 3. [ ] Verify Core stable 1x / race-sensitive 10x
@@ -163,3 +163,29 @@ claimed**; mutation survival not yet measured.
 Rollback: revert only the new test additions
 and scoped docs. No production logic changes
 are permitted under this Mode B slice.
+
+## Implemented exact real-worker cases — awaiting CI
+
+Test-only `core_lib/src/hdl/gatt/managed_tests.rs`
+commit `e7f88543` added five P0 integration methods
+plus a small actual managed-session + in-memory duplex
+fixture. No product API, GATT notifier dependency,
+auth rule or transport code changed. The methods
+exercise: native silent initial EOF, legacy explicit
+error, native post-initial EOF or 0xffffffff
+frame-length attack, parent/session cancellation
+of active native transfer, and silent initial
+cancellation. Each assertion checks real
+session-lease release, actual broadcast event
+state/type/id/error, no false success/result,
+no duplicate events. Existing real encrypted
+consent tests remain untouched.
+
+The native after-initial precondition is set in
+`InboundRequest.state.state`, deliberately
+scoping the worker's conditional error path,
+not claiming to re-run full UKEY2/BlueZ setup.
+Hardware BlueZ characteristic lifecycle and
+actual BLE-to-TCP upgrade remain separate OPEN
+P0 obligations. New tests will not be labeled
+green until exact-source CI verifies them.
