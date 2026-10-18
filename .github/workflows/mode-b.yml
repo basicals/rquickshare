@@ -1,13 +1,7 @@
 name: Mode B validation
 
+# Only the validated master-HEAD release-tag workflow may call the 10x gate.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - ".github/workflows/mode-b.yml"
-    tags:
-      - "mode-b-*"
-  workflow_dispatch:
   workflow_call:
 
 permissions:
