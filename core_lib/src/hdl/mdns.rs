@@ -391,6 +391,58 @@ mod tests {
     }
 
     #[test]
+    fn given_receiver_mdns_renames_when_rebuilt_then_network_owner_is_stable_and_previous_txt_untouched(
+    ) {
+        // Arrange: keep a baseline SDK service for each unique endpoint.
+        let names = [
+            String::new(),
+            "Office PC".to_owned(),
+            "Cafe".to_owned(),
+            "x".repeat(crate::identity::MAX_NAME_BYTES),
+        ];
+        for endpoint in [*b"TEST", [u8::MAX; 4]] {
+            let original = MDnsServer::named_service(
+                endpoint, 2345, DeviceType::Laptop, "machine.local.", "Original",
+            )
+            .unwrap();
+            let original_fullname = original.get_fullname().to_owned();
+            let original_txt = original
+                .get_properties()
+                .get("n")
+                .unwrap()
+                .val_str()
+                .to_owned();
+
+            for name in &names {
+                // Act: rename using the production SDK record builder.
+                let renamed = MDnsServer::renamed_service(&original, endpoint, name).unwrap();
+
+                // Assert: TXT changes, but the network owner and original
+                // record cannot be silently replaced or mutated.
+                assert_eq!(renamed.get_fullname(), original_fullname);
+                assert_eq!(renamed.get_hostname(), original.get_hostname());
+                assert_eq!(renamed.get_port(), original.get_port());
+                assert_eq!(
+                    original.get_properties().get("n").unwrap().val_str(),
+                    original_txt
+                );
+                let txt = renamed.get_properties().get("n").unwrap().val_str();
+                let (found_kind, found_name) =
+                    crate::utils::parse_mdns_endpoint_info(txt).unwrap();
+                assert_eq!(found_kind, DeviceType::Laptop);
+                assert_eq!(found_name, *name);
+                assert_eq!(
+                    renamed.get_fullname(),
+                    format!(
+                        "{}._FC9F5ED42C8A._tcp.local.",
+                        crate::utils::gen_mdns_name(endpoint)
+                    )
+                );
+            }
+        }
+    }
+
+    #[test]
     fn receiver_refresh_ok_and_lagged_request_resend() {
         assert_eq!(
             receiver_refresh_action(Ok(())),
