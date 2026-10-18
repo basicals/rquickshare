@@ -250,10 +250,11 @@ Native GTK separate [run 39118831372](https://github.com/morozhenko-apps/rquicks
 **SUCCESS**, confirmed from job log
 `117650068139`: **52 passed, 0 failed/ignored**.
 Rust format, Core Clippy and frontend jobs also
-reported SUCCESS; desktop Tauri job was still
-running at the first evidence checkpoint, so
-the complete five-job quick Preflight is not
-marked green without its final outcome.
+reported SUCCESS. The desktop Tauri Clippy and
+unit test job completed SUCCESS (desktop Rust
+**10/10**, verified from job log `117650068429`).
+The exact-source quick Preflight **completed
+SUCCESS, 5/5 jobs**.
 
 Overlapping new-method category assignments
 (one method can protect several categories;
@@ -310,3 +311,27 @@ consecutive clean runs, and no physical
 Android/Windows/KDE/BlueZ evidence. Global
 Stage 11 final-source full 10x and all Stage 12
 requirements remain **OPEN/NO**.
+
+## Final CI closure on exact test SHA
+
+[Preflight 39118831405](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831405)
+and [Native GTK 39118831372](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831372)
+both completed **SUCCESS** at
+`bd8c6b617a6c4969029e94969ec91a23dbab387f`:
+five Preflight jobs **5/5 success**, stable Core
+**740/740**, Core integrations **4+4**,
+desktop Tauri **10/10**, native GTK
+**52/52**. All four newly authored test methods
+were present and `ok` in the complete Core job log.
+No skipped or ignored tests in reported groups.
+
+No tests, implementations, protocol, installed
+services or release workflows were changed after
+this exact source (only explanatory documentation
+commits). The eight existing race-sensitive Core
+methods remain in their separate policy group and
+were not part of this quick stable run. No
+automated mutation campaign was run. The final
+full-source ten-pass suite and real physical
+peer tests remain **UNVERIFIED**; global
+Stage 12 = **NO**.
