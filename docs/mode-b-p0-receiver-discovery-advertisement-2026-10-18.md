@@ -223,3 +223,31 @@ and [Native GTK 39117363572](https://github.com/morozhenko-apps/rquickshare/acti
 must be checked after completion; previous failed
 compilation is explicitly retained as evidence and is
 not counted as a passing test iteration.
+
+## Verified first green source and mutation-tightening
+
+At test source `6401c98a`,
+[Preflight 39117363576](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117363576)
+**completed SUCCESS**. Inspected actual Core job `117645757985`:
+**736 stable Core tests passed, 0 failed, 0 ignored**;
+two integration bins **4/4 + 4/4**; each of the five new
+method names occurs exactly once as `... ok`.
+The same Preflight also completed its Core Clippy,
+Rust format, frontend and desktop Tauri jobs successfully.
+Independent [Native GTK 39117363572](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117363572)
+completed **SUCCESS**. This was one complete *quick*
+source validation, not the strict 10-pass release gate.
+
+Stage 10 review identified one missing mutation killer:
+the original direct service-data matrix used only the legal
+Laptop type, so replacing the three-bit `& 7` mask
+might not fail any new assertion. Added seven explicit
+raw-device-type boundary cases `{0,1,2,3,7,8,255}`
+to the **existing first method** (not a sixth method);
+test-only commits `9b746c51`, `385674f6`.
+The strengthened source must be verified by
+[Preflight 39117611694](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117611694)
+or a newer exact-SHA run if superseded,
+rather than reusing the previous green receipt.
+The added mask assertions check the actual single-byte
+BLE endpoint-information field. No runtime code change.
