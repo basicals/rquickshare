@@ -157,7 +157,7 @@ claimed**; mutation survival not yet measured.
    results, never weaken domain assertions.
 4. [x] Mark scoped branch/category outcomes,
    report actual counts and source/CI results.
-5. [ ] Reconcile `mode-b-inventory.md` and
+5. [x] Reconcile `mode-b-inventory.md` and
    `current-state.md`; global Stage 12 remains NO.
 
 Rollback: revert only the new test additions
