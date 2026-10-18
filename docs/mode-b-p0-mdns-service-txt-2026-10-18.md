@@ -170,10 +170,10 @@ mutation engine not claimed.
 1. [x] Source scan, risk, exhaustive scoped artifact inventory,
    branch map, category matrix and expected methods BEFORE code.
 2. [x] Add all four scoped methods, no production code or SDK seam.
-3. [ ] Confirm formatter, complete Core and Clippy,
+3. [x] Confirm formatter, complete Core and Clippy,
    GTK and exact-source method results; record any red
    states and reconcile before changing assertions.
-4. [ ] Mutation review, D1–D5 actual outcomes, update
+4. [x] Mutation review, D1–D5 actual outcomes, update
    current-state + global inventory.
 5. [ ] Global Stage 11 full suite 10 consecutive
    final-source passes, and Stage 12 all public
@@ -226,3 +226,87 @@ test scenario and exact expected data; no production
 behavior, test assertion, source branch or
 security boundary changes. Re-run exact-source CI;
 the cancelled/failed run is not evidence of a pass.
+
+## D1–D5 verified focused execution and coverage handoff
+
+**D1 — scan and test command.** Standard fast Core CI uses
+`bash scripts/ci-core-test-groups.sh stable`; local
+`cd core_lib && cargo test --all-features` exercises the
+complete Rust source when the Linux native dependencies
+are installed. Exact-source [Preflight 39118831405](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831405)
+Core job `117650068307` at
+`bd8c6b617a6c4969029e94969ec91a23dbab387f`
+has been checked from the full GitHub job log, not
+merely workflow configuration.
+
+**D2 — actual executed tests.** **Four** new original
+test methods independently appear as `... ok`
+**exactly once each**. Complete stable Core:
+**740 passed / 0 failed / 0 ignored**, with
+eight race-sensitive tests intentionally excluded
+from this quick profile. Two existing Core
+integration binaries **4/4 + 4/4** passed.
+Native GTK separate [run 39118831372](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831372)
+**SUCCESS**, confirmed from job log
+`117650068139`: **52 passed, 0 failed/ignored**.
+Rust format, Core Clippy and frontend jobs also
+reported SUCCESS; desktop Tauri job was still
+running at the first evidence checkpoint, so
+the complete five-job quick Preflight is not
+marked green without its final outcome.
+
+Overlapping new-method category assignments
+(one method can protect several categories;
+these totals are **not** unique category processes):
+
+| Category | New methods | Scoped evidence |
+|---|---:|---|
+| Positive | 4 | PASS: complete TXT and service/rename contract |
+| N1 malformed inputs | 4 | PASS: short/invalid TXT and legal service/rename names |
+| N2 lengths/bounds | 4 | PASS: 0–19/254/255/port/endpoint/name max |
+| N3 network failure | 0 | N/A: no live network or SDK event injection |
+| N4 repeat/idempotency | 4 | PASS: repeated decode/build/rename under independent cases |
+| N5 concurrency | 0 | N/A: pure records, no shared state |
+| N6 corrupted/stale | 3 | PASS: malformed binary/name and retained old service |
+| N7 ownership/security | 4 | PASS: no partial remote identity and stable endpoint/TXT association |
+| N8 UTF-8/locale | 3 | PASS: Unicode names/invalid encoding, no time/DST state |
+| N9 interruption | 1 | PASS: rename/rebuild without mutating prior record; live shutdown OPEN |
+| N10 privacy/cross-peer | 4 | PASS: full-length name and independent TXT/endpoint field ownership |
+| N11 monetization | 0 | N/A: no subscriptions |
+| N12 storage | 0 | N/A: no filesystem |
+
+**D3 — committed implementation.** Tests only in
+`core_lib/src/utils.rs` and `core_lib/src/hdl/mdns.rs`;
+plan and evidence in this documentation file. No SDK
+mock, fake production method, dependency, production
+source or user-visible behavior modification.
+The initial CI at `d5d30499` was RED only
+because three new `vec![Enum as u8 << 1]`
+fixture expressions lacked parenthesized casts.
+This was diagnosed from exact Rust errors and
+corrected at `bd8c6b61`; all assertions
+and protocol bytes were retained.
+
+**D4 — testability.** No refactor needed for pure
+TXT parsing and SDK ServiceInfo construction.
+Live `MDnsDiscovery::run` event/cache/TCP
+admission cannot be deterministically injected
+without a production seam; three options and
+acceptance conditions recorded under
+[Issue #9](https://github.com/morozhenko-apps/rquickshare/issues/9).
+No seam was implemented or authorized in MODE B.
+
+**D5 — acceptance/mutation review.** The new
+assertions would reject missing short-prefix guards,
+non-exact declared name lengths, invalid UTF-8
+admission, wrong device-bit normalization,
+altered stable endpoint/fullname/port/hostname,
+wrong TXT type/name after reconstruction, or
+mutation of an already built ServiceInfo during
+rename. This is **manual mutation sensitivity**,
+not an executed mutation tool. There is
+**one** clean Core fast execution, not ten
+consecutive clean runs, and no physical
+Android/Windows/KDE/BlueZ evidence. Global
+Stage 11 final-source full 10x and all Stage 12
+requirements remain **OPEN/NO**.
