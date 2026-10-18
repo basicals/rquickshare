@@ -1,10 +1,7 @@
 name: Native Linux package smoke
 
+# Package acceptance is manual or validated release-only, not dev preflight.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - ".github/workflows/native-package-smoke.yml"
   workflow_dispatch:
 
 permissions:
