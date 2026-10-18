@@ -1,5 +1,22 @@
 # Mode B inventory, branch map, and test matrix
 
+## 2026-10-18 P0 segmented TCP ingress and simultaneous BWU owner routing
+
+`core_lib/src/manager.rs::route_bandwidth_upgrade_if_pending`
+now has three additional test-only, real-localhost methods with
+seven fragmentation positions, invalid/ordinary wire input cases,
+and simultaneous exact-vs-previous endpoint owners. The exact
+[scoped Stage 1–10 plan, branch/interaction/N1–N12 map and D2 counts](mode-b-p0-manager-ingress-2026-10-18.md)
+was documented before implementation. Exact-source
+[Preflight 39092368844](https://github.com/morozhenko-apps/rquickshare/actions/runs/39092368844)
+Core job reports each new test method `ok` and
+stable Core **725 passed / 0 failed / 0 ignored**
+plus existing 4+4 integration. The complete ten-run and full
+per-production-file Stage 12 remain unclosed. [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8)
+separately tracks the authenticated BWU TCP admission/ownership
+boundary; parser correctness does **not** prove that boundary.
+
+
 ## 2026-10-18 P0 TCP CLIENT_INTRODUCTION parser negative cases
 
 The pure `core_lib/src/hdl/inbound.rs` BWU introduction scope now
