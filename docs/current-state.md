@@ -1,5 +1,35 @@
 # Current implementation and continuation state
 
+## MODE B P0 managed GATT partial-frame terminal/owner regressions — 2026-10-18
+
+Three new real-`run_inbound_worker` test methods now cover
+13 negative table variants: malformed native Initial frames
+(4), progressed-session EOF inside a BLE prefix/body (5),
+and parent or managed-request cancellation during an
+in-flight incomplete frame (4). Only the external BlueZ
+byte source is replaced with bounded Tokio duplex;
+real parser, worker state projection and SessionHub
+ownership are exercised. No production code was changed.
+
+Documentation-first
+[plan, Positive/N1–N12, per-file branch map and verified D2](mode-b-p0-gatt-partial-frame-2026-10-18.md).
+Test SHA `86ebe678` verified from
+[Preflight 39116064673](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064673)
+Core job `117642032398`: **731/731 stable Core, 4+4
+integrations, all three new methods independently `ok`**.
+Format, frontend, Core Clippy and independent
+[Native GTK 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
+passed. Desktop Preflight completion must be confirmed before
+reporting 5/5. The earlier test-only rustfmt failure is
+documented, not treated as product breakage.
+
+Remaining **OPEN**: hardware BlueZ `CharacteristicNotifier`,
+GATT notification stop/queue/reassembly boundaries, true
+BLE→TCP encrypted/key continuity, [BWU identity security issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8),
+Google Android/Windows physical compatibility and complete
+MODE B 10× final-source Stage 11/Stage 12. **Global Stage 12 NO.**
+
+
 ## MODE B P0 TCP classifier timeout, EOF and cancellation — 2026-10-18
 
 Three new real-loopback integration tests for
