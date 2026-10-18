@@ -268,6 +268,16 @@ jobs:
           (cd "$RUNNER_TEMP/isolated-apt/download" && \
              apt-get "${apt_flags[@]}" download "rquickshare-native=${VERSION}-${REVISION}")
           cmp "$RUNNER_TEMP/isolated-apt/download/$name" "$RUNNER_TEMP/native-package/$name"
+      - name: Stage public APT enrollment assets from the verified signed snapshot
+        uses: actions/upload-artifact@v6
+        with:
+          name: apt-enrollment
+          path: |
+            ${{ runner.temp }}/apt-bootstrap/rquickshare-native-archive-keyring.gpg
+            ${{ runner.temp }}/apt-bootstrap/rquickshare-native.sources
+            ${{ runner.temp }}/apt-bootstrap/FINGERPRINT
+          if-no-files-found: error
+          retention-days: 30
       - name: Clean runner-local signing material
         if: always()
         shell: bash
@@ -288,6 +298,10 @@ jobs:
         with:
           name: native-package
           path: ${{ runner.temp }}/native-package
+      - uses: actions/download-artifact@v6
+        with:
+          name: apt-enrollment
+          path: ${{ runner.temp }}/apt-enrollment
       - name: Publish GitHub Release only after signed R2 and APT succeed
         env:
           GH_TOKEN: ${{ github.token }}
@@ -296,8 +310,12 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          assets=("$RUNNER_TEMP"/native-package/*.deb "$RUNNER_TEMP"/native-package/*.deb.sha256)
-          [[ "${#assets[@]}" -eq 2 ]] || exit 1
+          assets=("$RUNNER_TEMP"/native-package/*.deb "$RUNNER_TEMP"/native-package/*.deb.sha256
+                  "$RUNNER_TEMP"/apt-enrollment/rquickshare-native-archive-keyring.gpg
+                  "$RUNNER_TEMP"/apt-enrollment/rquickshare-native.sources
+                  "$RUNNER_TEMP"/apt-enrollment/FINGERPRINT)
+          [[ "${#assets[@]}" -eq 5 ]] || exit 1
+          for asset in "${assets[@]}"; do [[ -s "$asset" ]] || exit 1; done
           gh release create "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" \
             --verify-tag --title "rQuickShare ${TAG#v}" \
             --notes "Independent fork of Martichou/rquickshare (GPLv3). This package targets Ubuntu 26.04 amd64. Windows and macOS ports are planned but not yet shipped. Direct .deb and signed APT refer to identical package bytes."
