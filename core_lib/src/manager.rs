@@ -771,7 +771,11 @@ mod tests {
             returned.read_exact(&mut received).await.unwrap();
             assert_eq!(received, prefix, "EOF corrupted preface: {case}");
             let mut one = [0_u8; 1];
-            assert_eq!(returned.read(&mut one).await.unwrap(), 0, "EOF lost: {case}");
+            assert_eq!(
+                returned.read(&mut one).await.unwrap(),
+                0,
+                "EOF lost: {case}"
+            );
             assert!(router.has_pending().await);
             assert!(matches!(
                 owner.try_recv(),
@@ -815,12 +819,10 @@ mod tests {
         let (fresh_socket, _) = listener.accept().await.unwrap();
         let wire = client_introduction("peer-retry");
         fresh_peer.write_all(&wire).await.unwrap();
-        assert!(
-            route_bandwidth_upgrade_if_pending(fresh_socket, &router)
-                .await
-                .unwrap()
-                .is_none()
-        );
+        assert!(route_bandwidth_upgrade_if_pending(fresh_socket, &router)
+            .await
+            .unwrap()
+            .is_none());
         let mut owned_socket = owner.await.unwrap();
         assert_eq!(
             owned_socket.peer_addr().unwrap(),
