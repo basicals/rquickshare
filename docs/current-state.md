@@ -1,5 +1,36 @@
 # Current implementation and continuation state
 
+## MODE B P0 TCP classifier timeout, EOF and cancellation — 2026-10-18
+
+Three new real-loopback integration tests for
+`core_lib/src/manager.rs::route_bandwidth_upgrade_if_pending`
+now cover six partial/slow TCP prefaces, three early EOF points
+and cancelling the classifier followed by a correctly
+authenticated-*by-ID-only* subsequent socket route.
+The tests use a Tokio **paused clock** to advance the
+actual 750 ms classifier deadline without sleeps.
+Exact-source [Preflight 39094606972](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606972)
+Core job `117578366939` at `c8753010`: **SUCCESS**,
+**728/728 stable Core**, **4+4 integration**,
+each three new methods `ok`. Format, frontend
+and Core Clippy SUCCESS; legacy desktop Clippy
+was still in progress at this evidence checkpoint.
+Focused source/branch inventory, N1–N12,
+D2 counts, corrective TCP RST triage and mutation
+review: [mode-b-p0-classifier-timeout-cancellation-2026-10-18.md](mode-b-p0-classifier-timeout-cancellation-2026-10-18.md).
+
+Earlier test iterations failed from a missing
+`SocketAddr` unwrap and from the false assumption
+that closing a socket with unread input always
+produces graceful EOF. The latter actually
+reported Linux `ECONNRESET`; the corrected test
+strictly requires either EOF or that exact reset,
+plus complete surviving BWU owner and new-connection
+byte assertions. No production code was edited.
+Complete final 10×/Stage 12 and physical BLE-to-TCP
+authentication/Google interoperability **OPEN**.
+
+
 ## MODE B P0 concurrent/segmented TCP ingress verified — 2026-10-18
 
 Three **test-only** methods now exercise the actual
