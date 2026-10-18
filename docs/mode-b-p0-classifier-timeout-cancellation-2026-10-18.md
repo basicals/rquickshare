@@ -44,7 +44,7 @@ and requires a separately approved MODE A design.
 
 | Artifact | Risk / level | Planned new test methods |
 |---|---|---|
-| `route_bandwidth_upgrade_if_pending`: no bytes or prefix/body incomplete through the outer timeout, return original socket without byte consumption or BWU admission | P0 real TCP integration with fake Tokio clock | 1 table-driven method, 5 incomplete prefix/body boundaries |
+| `route_bandwidth_upgrade_if_pending`: no bytes or prefix/body incomplete through the outer timeout, return original socket without byte consumption or BWU admission | P0 real TCP integration with fake Tokio clock | 1 table-driven method, 6 incomplete prefix/body boundaries |
 | `route_bandwidth_upgrade_if_pending`: empty/short/partial inbound preface then peer half-close before completing BWU | P0 network EOF integration | 1 table-driven method, 3 early-EOF branches |
 | `route_bandwidth_upgrade_if_pending`: cancelled/dropped in-flight classifier, peer disconnect, unrelated route survives, fresh socket accepted | P0 cancellation and ownership integration | 1 method |
 | `BwuRouter::register/has_pending/cancel/route_with_alias` | P0 already scoped in previous BWU tests | Reuse actual router, no production code edits |
@@ -139,7 +139,7 @@ No executable mutant engine run is claimed.
 
 1. [x] Source scan, risks, full scoped inventory, branch
    map, N1–N12 matrix, interactions and estimates **before code**.
-2. [ ] Add all 3 planned test-only methods, with no new
+2. [x] Add all 3 planned test-only methods, with no new
    production seam and no sleep.
 3. [ ] Confirm rustfmt, real compiled tests, Core CI and
    actual per-case names/results on exact source SHA.
@@ -150,3 +150,23 @@ No executable mutant engine run is claimed.
    final-source verification and physical acceptance.
 
 Rollback: revert only test source and documentation.
+
+## Stage 9 code checkpoint (awaiting CI)
+
+Test-only source commit `bccbab68d0d02026ffa79b964a359f8728e09123`
+adds three new test methods in `core_lib/src/manager.rs`.
+Exactly **six** still-incomplete prefix/body byte counts,
+**three** peer EOF positions and **one** in-flight classifier
+cancellation followed by genuine admission of a fresh new TCP
+connection are asserted. The timeout tests use deterministic
+`#[tokio::test(start_paused = true)]`, `futures::poll!`, and
+`tokio::time::advance` with no external clocks or sleeps.
+Production implementation is unchanged.
+
+Automatic exact-code checks:
+[Preflight 39094220209](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094220209)
+and [Native GTK 39094220199](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094220199).
+**Neither can be counted green until its completed status and actual
+per-method logs are checked**. If a new test uncovers a product defect,
+keep invariant/assertion intact, record the failing outcome and STOP
+for a MODE A decision rather than weakening the test.
