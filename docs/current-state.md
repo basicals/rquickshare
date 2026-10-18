@@ -22,12 +22,12 @@ commit `bd8c6b61`. Real
 [Preflight 39118831405](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831405)
 Core job `117650068307` at that test SHA:
 **740/740 stable Core, 4+4 integrations, all four
-new methods independently `ok`**. Format,
-frontend and Core Clippy SUCCESS. Independent
-[Native GTK 39118831372](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831372)
-**SUCCESS, 52/52 native GTK methods**. Desktop
-Tauri unit completion remains to be checked
-before declaring the entire quick Preflight 5/5.
+new methods independently `ok`**. Format, frontend and Core Clippy SUCCESS.
+Desktop Tauri Clippy/unit **SUCCESS, 10/10**
+verified by its job log. The exact-source
+quick Preflight completed **5/5 SUCCESS**;
+independent [Native GTK 39118831372](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831372)
+**SUCCESS, 52/52 native GTK methods**.
 
 Live `MDnsDiscovery::run` event/cache/TCP admission
 and browse/SDK shutdown need an approved
