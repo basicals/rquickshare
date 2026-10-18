@@ -19,6 +19,13 @@ LISTING = "\n".join([STUB, f"fpr:::::::::{PRIMARY}:", SUB, f"fpr:::::::::{SUBKEY
 class CISecretSubkeyTests(unittest.TestCase):
     def test_given_subkey_only_export_when_validated_then_exact_pinned_identity_is_accepted(self):
         ci.validate_listing(LISTING, PRIMARY)
+        # GPG --with-colons emits optional keygrips and user IDs.
+        listing = "\\n".join([
+            STUB, f"fpr:::::::::{PRIMARY}:", "grp:::::::::PRIMARY_KEYGRIP:",
+            "uid:::::::::CI TEST <fixture@invalid.example>:", SUB,
+            f"fpr:::::::::{SUBKEY}:", "grp:::::::::SUBKEY_KEYGRIP:",
+        ])
+        ci.validate_listing(listing, PRIMARY)
 
     def test_given_usable_primary_or_wrong_signing_key_when_validated_then_fail_closed(self):
         for corrupted in [
@@ -30,6 +37,8 @@ class CISecretSubkeyTests(unittest.TestCase):
             LISTING + "\n" + SUB,
             LISTING.replace("ssb:", "sec:"),
             LISTING.replace("fpr:::::::::", "sig:::::::::", 1),
+            LISTING + "\\n" + "grp:::::::::unexpected-keygrip:",
+            LISTING.replace("ssb:", "uid:", 1),
             "",
         ]:
             with self.subTest(value=corrupted[-90:]), self.assertRaises(ValueError):
