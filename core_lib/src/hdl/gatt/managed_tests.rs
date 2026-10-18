@@ -337,7 +337,10 @@ async fn given_unidentified_native_malformed_ble_preface_when_worker_exits_then_
     // This verifies the native unadmitted-error gate, not just socket EOF.
     let malformed = [
         ("zero-length", 0_u32.to_be_bytes().to_vec()),
-        ("invalid-protobuf", [1_u32.to_be_bytes().as_slice(), &[0xff]].concat()),
+        (
+            "invalid-protobuf",
+            [1_u32.to_be_bytes().as_slice(), &[0xff]].concat(),
+        ),
         (
             "above-frame-limit",
             ((crate::protocol::SANE_FRAME_LENGTH as u32) + 1)
@@ -368,11 +371,20 @@ async fn given_unidentified_native_malformed_ble_preface_when_worker_exits_then_
         let snapshot = control.snapshot();
         assert_eq!(snapshot.event_id, id, "unexpected identity for {case}");
         assert_eq!(snapshot.state, State::Initial, "premature state for {case}");
-        assert!(snapshot.received_text.is_none(), "unexpected text for {case}");
-        assert!(snapshot.received_files.is_none(), "unexpected files for {case}");
+        assert!(
+            snapshot.received_text.is_none(),
+            "unexpected text for {case}"
+        );
+        assert!(
+            snapshot.received_files.is_none(),
+            "unexpected files for {case}"
+        );
         assert!(events.try_recv().is_err(), "unsolicited event for {case}");
         assert!(control.is_closed(), "session was not released for {case}");
-        assert!(hub.active().unwrap().is_empty(), "active session for {case}");
+        assert!(
+            hub.active().unwrap().is_empty(),
+            "active session for {case}"
+        );
     }
 }
 
@@ -387,7 +399,10 @@ async fn given_progressed_native_partial_ble_header_or_body_when_peer_eof_then_o
         ("two-prefix-bytes", valid_header[..2].to_vec()),
         ("three-prefix-bytes", valid_header[..3].to_vec()),
         ("one-body-byte", [valid_header.as_slice(), &[0x0a]].concat()),
-        ("two-body-bytes", [valid_header.as_slice(), &[0x0a, 0x01]].concat()),
+        (
+            "two-body-bytes",
+            [valid_header.as_slice(), &[0x0a, 0x01]].concat(),
+        ),
     ];
 
     for (index, (case, bytes)) in frames.into_iter().enumerate() {
@@ -423,8 +438,14 @@ async fn given_progressed_native_partial_ble_header_or_body_when_peer_eof_then_o
                 .is_some_and(|reason| !reason.is_empty() && reason.len() <= 512),
             "missing bounded failure reason for {case}"
         );
-        assert!(message.meta.is_none(), "unexpected payload metadata for {case}");
-        assert!(events.try_recv().is_err(), "duplicate terminal event for {case}");
+        assert!(
+            message.meta.is_none(),
+            "unexpected payload metadata for {case}"
+        );
+        assert!(
+            events.try_recv().is_err(),
+            "duplicate terminal event for {case}"
+        );
         let snapshot = control.snapshot();
         assert_eq!(snapshot.state, State::Disconnected, "{case}");
         assert!(snapshot.received_text.is_none(), "{case}");
@@ -484,15 +505,24 @@ async fn given_progressed_native_partial_ble_frame_when_parent_or_request_cancel
         assert_eq!(message.direction, ChannelDirection::LibToFront);
         assert_eq!(message.rtype, Some(TransferType::Inbound));
         assert_eq!(message.state, Some(State::Cancelled), "case {index}");
-        assert!(message.error.is_none(), "spurious transport error in case {index}");
+        assert!(
+            message.error.is_none(),
+            "spurious transport error in case {index}"
+        );
         assert!(message.meta.is_none(), "spurious result in case {index}");
-        assert!(events.try_recv().is_err(), "duplicate terminal for case {index}");
+        assert!(
+            events.try_recv().is_err(),
+            "duplicate terminal for case {index}"
+        );
         let snapshot = control.snapshot();
         assert_eq!(snapshot.state, State::Cancelled, "case {index}");
         assert!(snapshot.received_text.is_none(), "case {index}");
         assert!(snapshot.received_files.is_none(), "case {index}");
         assert!(control.is_closed(), "leaked control in case {index}");
-        assert!(hub.active().unwrap().is_empty(), "leaked session in case {index}");
+        assert!(
+            hub.active().unwrap().is_empty(),
+            "leaked session in case {index}"
+        );
         drop(peer);
     }
 }
