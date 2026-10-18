@@ -1,5 +1,41 @@
 # Current implementation and continuation state
 
+
+## MODE B P0 GATT/Weave negative slice — 2026-10-18
+
+Eight additional deterministic security/lifecycle
+tests now exist in the real `dev` Rust unit
+suite: four GATT slot-0 snapshot/peer cache
+tests and four Weave handshake/length
+tests. The exact-source
+[Preflight 39080989423](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080989423)
+Core job passed **710/0 stable tests**,
+8/0 additional integrations, then
+eight asynchronous race probes ×10
+(**80/0**). Every one of the eight
+new P0 test methods was independently
+reported `ok`; Native GTK passed.
+Separate formatting/Clippy/frontend
+jobs are recorded in the scoped
+[stage 3–10 test ledger](mode-b-p0-gatt-slot-framing-2026-10-18.md).
+Full Legacy Tauri conclusion was
+still pending at the scoped CI checkpoint.
+
+This closes **only** the enumerated pure
+slot/handshake/framing negative-branch
+slice, not the BLE notifier, BlueZ
+registration, monitor life-cycle or full
+Weave fragmentation/migration paths.
+These need a separate testability design
+and physical Google Android/Windows
+acceptance. Overall Stage 12 stays
+**NO**, and the prior full 10× run
+does not yet include these eight
+new tests. The user prioritizes
+unverified P0 behavior over arbitrary
+percentage gains.
+
+
 ## Approved product identity and release direction — 2026-10-18
 
 Product name **rQuickShare**, maintained independently from
