@@ -1,5 +1,61 @@
 # Mode B inventory, branch map, and test matrix
 
+
+## 2026-10-18 current P0 GATT/Weave negative-scenario reconciliation
+
+The original October 12 tables and C/P cells below are historical
+scope records. They must not be treated as a complete current
+`core_lib` + `native_desktop` + frontend inventory.
+Current global Stage 12 remains **NO**; see
+[formal completion audit](mode-b-completion-audit-2026-10-18.md)
+and scoped
+[GATT source branch and N1–N12 ledger](mode-b-p0-gatt-slot-framing-2026-10-18.md).
+
+The latest source-only
+[Preflight 39080989423](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080989423)
+is **5/5 SUCCESS**. Core unit inventory now reports
+**718 methods**, split as 710 stable 1× + 8
+risk-sensitive 10× (80 exact passes). Eight separate
+integration cases remain 4+4. All eight new
+critical negative/boundary test methods in
+`core_lib/src/hdl/gatt.rs` and
+`core_lib/src/hdl/gatt/slot.rs` independently passed.
+[Native GTK 39080989573](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080989573)
+also completed successfully. The CI formatter originally
+identified whitespace/line-wrap drift, fixed without
+changing assertions. No product source changed.
+
+| P0 scoped production artifact | Status | New direct coverage | Remaining obligation |
+|---|---|---|---|
+| GATT `SlotValue::read` legacy and coherent states | **C for planned pure branches** | unknown peer, offset 0/1/len/len+1/MAX, empty revision, peer 0-slot refresh, other-peer isolation, 31/32/33 slots and bounded eviction | Live BlueZ read/notify lifecycle and races across app restarts |
+| `parse_connection_request` | **C for planned pure branches** | truncated lengths 0–6, 15 unknown control commands, missing control, unsupported/inverted versions, version-1 range cross products, all size min/max ±1 bounds | malformed/control interactions after subscription and notify worker admission |
+| `complete_framed_message_len` | **C for planned pure branches** | incomplete length prefixes, zero, 1, max, max+1, u32MAX; payload short/exact/trailing and adjacent message boundaries | Real Weave multi-packet reassembly, invalid service hash, notification failures and payload forwarding |
+| `ReceiverGattServer::{new,run}` | **S/OPEN** | pure slot policy is tested but **not** real adapter registration or GATT handler concurrency | BlueZ setup/errors, bounded writes, callback cancellation and header publication |
+| `weave_session` / `run_inbound_worker` | **P/S OPEN** | 2 existing managed duplex acceptance cases and pure framing helpers | Full 24-branch Weave session matrix, disconnection/counter-wrap, BLE→TCP secure migration and system failure variants |
+
+At source `23b71de3` the ordinary Preflight and GTK are
+both green; the previously successful strict full 10×
+`mode-b.yml` run `39078162262` covered an **earlier**
+source and cannot certify the newly added eight methods.
+Rerun full Stage 11 on the final accepted candidate
+after filling the remaining P0 scenarios.
+
+N1 input validation, N2 limit boundary, N4 replay,
+N5 peer concurrency, N6 stale/corrupted revision,
+N7 untrusted peer/control, N9 partial interruption
+and N10 no peer-data leakage are now **better covered
+within these scoped pure helpers**, but this does
+not turn those global categories into YES. The actual
+GATT notifier type `bluer::gatt::local::CharacteristicNotifier`
+remains concrete and the GATT runner establishes real
+`bluer::Session`. An architectural transport seam,
+if chosen, must be separately approved under MODE A;
+a fake adapter cannot be treated as evidence of
+real BLE interoperability. The physical Pixel/Windows
+tests and broader per-production-method Stage 3–10
+completion work remain OPEN.
+
+
 _Last updated: 2026-10-12_
 
 This document is subordinate to `docs/mode-b-test-plan.md` and records Stages 3-8 for the current maintenance/Pixel receiver scope.
