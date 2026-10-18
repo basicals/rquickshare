@@ -123,6 +123,207 @@ async fn consent(accept: bool) {
     assert!(!parent.is_cancelled());
 }
 
+// These fixtures exercise the real production GATT inbound worker and
+// managed SessionHub ownership. The duplex replaces only external BlueZ bytes.
+fn worker_fixture(
+    state: State,
+    epoch: u128,
+) -> (
+    InboundRequest<MigratableStream>,
+    crate::sessions::SessionControl,
+    SessionHub,
+    tokio::io::DuplexStream,
+    Sender<ChannelMessage>,
+    tokio::sync::broadcast::Receiver<ChannelMessage>,
+) {
+    let hub = SessionHub::new(epoch).unwrap();
+    let session = hub
+        .open(TransferType::Inbound, None, CancellationToken::new())
+        .unwrap();
+    let control = session.control();
+    let (sender, events) = tokio::sync::broadcast::channel(16);
+    let (socket, peer) = tokio::io::duplex(128);
+    let mut request =
+        InboundRequest::new(MigratableStream::Ble(socket), "pre-session".into(), sender.clone())
+            .attach_session(session);
+    // This is the worker's incoming protocol-state precondition. The actual
+    // worker handles the socket error/cancellation and applies the transition.
+    request.state.state = state;
+    (request, control, hub, peer, sender, events)
+}
+
+#[tokio::test]
+async fn given_unidentified_native_ble_peer_eof_when_worker_exits_then_no_false_disconnected_event_is_published(
+) {
+    // Arrange: a managed initial state, before the peer is authenticated.
+    let (request, control, hub, peer, sender, mut events) =
+        worker_fixture(State::Initial, 401);
+    let transfer_id = control.snapshot().event_id;
+    drop(peer);
+
+    // Act: the production worker receives a genuine duplex EOF.
+    run_inbound_worker(
+        request,
+        sender,
+        BwuRouter::new(),
+        0,
+        CancellationToken::new(),
+        true,
+    )
+    .await;
+
+    // Assert: unadmitted peer failures are silent, with no stale lease.
+    assert_eq!(control.snapshot().event_id, transfer_id);
+    assert_eq!(control.snapshot().state, State::Initial);
+    assert!(control.snapshot().received_files.is_none());
+    assert!(control.snapshot().received_text.is_none());
+    assert!(events.try_recv().is_err());
+    assert!(control.is_closed());
+    assert!(hub.active().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn given_legacy_ble_peer_eof_when_worker_exits_then_real_inbound_disconnected_event_is_sent(
+) {
+    // Arrange: a legacy (unmanaged) inbound worker over an actual duplex.
+    let (socket, peer) = tokio::io::duplex(128);
+    let (sender, mut events) = tokio::sync::broadcast::channel(16);
+    let request = InboundRequest::new(
+        MigratableStream::Ble(socket),
+        "legacy-eof".into(),
+        sender.clone(),
+    );
+    drop(peer);
+
+    // Act: the production worker must not hide the legacy socket failure.
+    run_inbound_worker(
+        request,
+        sender,
+        BwuRouter::new(),
+        0,
+        CancellationToken::new(),
+        false,
+    )
+    .await;
+
+    // Assert: the legacy UI receives the bounded error, never a false success.
+    let message = events.try_recv().unwrap();
+    assert_eq!(message.id, "legacy-eof");
+    assert_eq!(message.direction, ChannelDirection::LibToFront);
+    assert_eq!(message.rtype, Some(TransferType::Inbound));
+    assert_eq!(message.state, Some(State::Disconnected));
+    assert!(message.error.as_ref().is_some_and(|s| !s.is_empty() && s.len() <= 512));
+    assert!(message.meta.is_none());
+    assert!(events.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn given_progressed_native_ble_peer_eof_or_invalid_length_when_worker_exits_then_owned_state_is_disconnected(
+) {
+    use tokio::io::AsyncWriteExt;
+
+    for (invalid_length, epoch) in [(false, 402_u128), (true, 403_u128)] {
+        // Arrange: the GATT worker has already moved past the initial state.
+        let (request, control, hub, mut peer, sender, mut events) =
+            worker_fixture(State::ReceivedConnectionRequest, epoch);
+        if invalid_length {
+            // The production frame-size gate rejects this hostile prefix.
+            peer.write_all(&u32::MAX.to_be_bytes()).await.unwrap();
+        }
+        drop(peer);
+
+        // Act: genuine EOF or over-limit frame enters the actual worker.
+        run_inbound_worker(
+            request,
+            sender,
+            BwuRouter::new(),
+            0,
+            CancellationToken::new(),
+            true,
+        )
+        .await;
+
+        // Assert: a known native session is FAILED, not silently or falsely done.
+        let message = events.try_recv().unwrap();
+        assert_eq!(message.id, control.snapshot().event_id);
+        assert_eq!(message.direction, ChannelDirection::LibToFront);
+        assert_eq!(message.rtype, Some(TransferType::Inbound));
+        assert_eq!(message.state, Some(State::Disconnected));
+        assert!(
+            message
+                .error
+                .as_ref()
+                .is_some_and(|error| !error.is_empty() && error.len() <= 512),
+            "every transport failure must carry a bounded reason"
+        );
+        assert!(message.meta.is_none());
+        assert!(events.try_recv().is_err());
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.state, State::Disconnected);
+        assert!(snapshot.received_text.is_none());
+        assert!(snapshot.received_files.is_none());
+        assert!(control.is_closed());
+        assert!(hub.active().unwrap().is_empty());
+    }
+}
+
+#[tokio::test]
+async fn given_progressed_native_worker_parent_or_session_cancellation_when_stopped_then_exactly_cancelled_state_survives(
+) {
+    for (cancel_session, epoch) in [(false, 404_u128), (true, 405_u128)] {
+        // Arrange: a live managed receiver, with actual duplex still connected.
+        let (request, control, hub, peer, sender, mut events) =
+            worker_fixture(State::ReceivedConnectionRequest, epoch);
+        let lifetime = CancellationToken::new();
+        if cancel_session {
+            control.cancel();
+        } else {
+            lifetime.cancel();
+        }
+
+        // Act: the worker's real cancellation select must beat blocked I/O.
+        run_inbound_worker(request, sender, BwuRouter::new(), 0, lifetime, true).await;
+
+        // Assert: only a terminal Cancelled is observable. No retry or success.
+        let message = events.try_recv().unwrap();
+        assert_eq!(message.id, control.snapshot().event_id);
+        assert_eq!(message.direction, ChannelDirection::LibToFront);
+        assert_eq!(message.rtype, Some(TransferType::Inbound));
+        assert_eq!(message.state, Some(State::Cancelled));
+        assert!(message.error.is_none());
+        assert!(events.try_recv().is_err());
+        let snapshot = control.snapshot();
+        assert_eq!(snapshot.state, State::Cancelled);
+        assert!(snapshot.received_text.is_none());
+        assert!(snapshot.received_files.is_none());
+        assert!(control.is_closed());
+        assert!(hub.active().unwrap().is_empty());
+        drop(peer);
+    }
+}
+
+#[tokio::test]
+async fn given_unidentified_native_worker_is_cancelled_when_stopped_then_it_releases_without_spurious_ui_event(
+) {
+    // Arrange: native receiver has not yet established a protocol identity.
+    let (request, control, hub, peer, sender, mut events) =
+        worker_fixture(State::Initial, 406);
+    let lifetime = CancellationToken::new();
+    lifetime.cancel();
+
+    // Act: a stopped parent must release a blocked initial read immediately.
+    run_inbound_worker(request, sender, BwuRouter::new(), 0, lifetime, true).await;
+
+    // Assert: there is no user-visible false cancel or finished result.
+    assert_eq!(control.snapshot().state, State::Cancelled);
+    assert!(control.snapshot().received_text.is_none());
+    assert!(control.snapshot().received_files.is_none());
+    assert!(events.try_recv().is_err());
+    assert!(control.is_closed());
+    assert!(hub.active().unwrap().is_empty());
+    drop(peer);
+}
+
 #[tokio::test]
 async fn given_managed_ble_stream_when_owned_consent_accepts_then_real_encrypted_transfer_finishes()
 {
