@@ -815,7 +815,9 @@ mod tests {
 
         // A fresh connection with a complete introduction is still admitted
         // to the original registered owner. No old or foreign bytes leak in.
-        let mut fresh_peer = TcpStream::connect(listener.local_addr()).await.unwrap();
+        let mut fresh_peer = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
         let (fresh_socket, _) = listener.accept().await.unwrap();
         let wire = client_introduction("peer-retry");
         fresh_peer.write_all(&wire).await.unwrap();
