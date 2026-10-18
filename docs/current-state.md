@@ -12,9 +12,13 @@ actual 750 ms classifier deadline without sleeps.
 Exact-source [Preflight 39094606972](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606972)
 Core job `117578366939` at `c8753010`: **SUCCESS**,
 **728/728 stable Core**, **4+4 integration**,
-each three new methods `ok`. Format, frontend
-and Core Clippy SUCCESS; legacy desktop Clippy
-was still in progress at this evidence checkpoint.
+each three new methods `ok`. **Full quick Preflight 5/5 SUCCESS**: Core Rust
+728/0, integration 4+4, desktop Tauri 10/0,
+Core and desktop Clippy, formatter and frontend.
+Independent [Native GTK 39094606916](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606916)
+**SUCCESS: 52/52 tests**. These are the confirmed
+same-source quick CI and GTK, not the complete
+10× MODE B release gate.
 Focused source/branch inventory, N1–N12,
 D2 counts, corrective TCP RST triage and mutation
 review: [mode-b-p0-classifier-timeout-cancellation-2026-10-18.md](mode-b-p0-classifier-timeout-cancellation-2026-10-18.md).
