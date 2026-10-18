@@ -184,10 +184,10 @@ a measured mutation score.
 2. [x] Implement eight new table-driven, deterministic
    tests only; never edit runtime/authorization
    and never relax existing assertions.
-3. [ ] Verify exact-source Preflight Core, separate
+3. [x] Verify exact-source Preflight Core, separate
    GTK only if triggered, analyze each failure
    (test fixture error vs product defect).
-4. [ ] Update per-category actual counts and
+4. [x] Update per-category actual counts and
    runtime evidence. Do not launch a new expensive
    strict full 10× just for unchanged production
    unless Stage 11 revalidation after tests is needed.
@@ -284,3 +284,49 @@ until approved architecture/security choice
 and maintain real hardware smoke gate.
 
 **Global Stage 12 remains NO.**
+
+## Verified P0 execution result (same-source CI)
+
+Final test-source `23b71de30eefddba46cc6ce4615923203ac65fba`
+ran ordinary
+[Preflight 39080989423](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080989423)
+and
+[Native GTK 39080989573](https://github.com/morozhenko-apps/rquickshare/actions/runs/39080989573).
+
+GitHub Core Rust job `117537738242`: **SUCCESS**. Its
+full log explicitly shows **all eight new exact-named
+GATT methods `ok`**, 710/0 stable library cases,
+4+4/0 integration tests, and 10 numbered
+race-sensitive attempts totalling 80/0
+single-case passes. The format and Python
+contract job, frontend and strict Core Clippy
+are also SUCCESS, and native GTK 52-case
+verification is SUCCESS. Legacy Tauri Clippy
+was still executing when the first evidence
+was recorded; full 5/5 Preflight verdict
+must be checked independently.
+
+First test-source `6222c70d` failed
+`cargo fmt --check` due only to new
+test line wrapping. Commits `f613db4e`
+(slot) and `23b71de3` (Weave)
+conformed to the exact rustfmt diff.
+This is formatting-only test code,
+not a protocol assertion being weakened.
+The superseded initial CI was
+cancelled after the new source arrived
+and is not counted as successful.
+
+Per-file scoped Stage 8 outcome:
+`gatt/slot.rs::new/install/read`: all
+planned deterministic branch cases
+now have exercised tests. `gatt.rs`
+handshake/length guard: all new
+targeted negative/limit scenarios
+are exercised. Real notifier
+`weave_session`, `run_inbound_worker`,
+BlueZ DeviceFound/register paths
+remain globally UNTESTED for their
+OS/branch combinations. No full
+mutation runner was executed, and
+Stage 12 global remains **NO**.
