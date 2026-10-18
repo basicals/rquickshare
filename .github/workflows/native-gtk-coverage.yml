@@ -19,6 +19,8 @@ jobs:
     name: Native GTK isolated test and llvm-cov
     runs-on: ubuntu-24.04
     container: ubuntu:26.04
+    env:
+      HOME: /root
     steps:
       - name: Install native GTK instrumentation prerequisites
         run: |
