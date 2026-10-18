@@ -1,5 +1,27 @@
 # Current implementation and continuation state
 
+## MODE B P0 TCP BWU introduction framing and identity — 2026-10-18
+
+Three new **test-only** Rust methods exercise actual protobuf decoding,
+non-consuming plaintext TCP-frame peeking and exact current/last endpoint
+ID comparisons (including missing nested fields, malformed data,
+truncation, zero/oversized length and case/substring lookalikes).
+The scoped plan, complete Positive/N1–N12 table, per-function branch
+map, mutation review and D2 category counts are documented in
+[mode-b-p0-client-introduction-2026-10-18.md](mode-b-p0-client-introduction-2026-10-18.md).
+
+Dedicated independent exact-source [CI 39085557977](https://github.com/morozhenko-apps/rquickshare/actions/runs/39085557977)
+at `216d0fac` is **SUCCESS**: compiled three required tests,
+10 numbered repetitions of EACH method, **30/30 pass, 0 fail, 0 ignored**,
+verified in the job log. This is a **focused test subgate**, not
+full-source 10× or global Stage 12. Previous full-suite 10× evidence
+refers to an older SHA. The untrusted alias is still only a plaintext
+lookup hint, **not authenticated peer identity**. Encrypted handoff,
+BlueZ/Pixel/Windows/KDE hardware and global all-public-branch/N1–N12
+completeness remain **OPEN**. No product behavior, installed package,
+`master` or external releases were changed by this test slice.
+
+
 
 ## P0 Mode B BLE→TCP BWU routing owner integrity — 2026-10-18
 
