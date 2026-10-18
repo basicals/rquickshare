@@ -173,7 +173,7 @@ run is claimed.
 
 1. [x] Analyze P0 BWU routing, document
    inventory, branch map, matrices first.
-2. [ ] Add 4 test-only methods to `bwu.rs`,
+2. [x] Add 4 test-only methods to `bwu.rs`,
    checking real byte routes and owner closure.
 3. [ ] Verify on same-source Core CI.
    If generic Preflight is cancelled due
@@ -187,3 +187,54 @@ run is claimed.
 
 Rollback reverts only tests / optional
 separate CI workflow / documentation.
+
+## Stage 9 source-only implementation checkpoint
+
+Test-only commit `a086a142` adds exactly
+four original P0 BWU owner/alias/late
+route methods to `core_lib/src/hdl/bwu.rs`,
+plus an isolated `TcpListener` connection
+fixture. Uses real `BwuRouter` shared
+pending map, actual localhost TCP streams,
+real `oneshot` cancellation/delivery,
+exact owner IDs and peer-originated
+bytes; does not mock routing or caller
+security policy. No runtime source code
+changed.
+
+- Invalid exact/alias identity returns
+  **same original usable TCP socket**
+  and preserves two unrelated waiters.
+- Exact route with simultaneous live
+  alias delivers two independent real
+  sockets and exact content to each
+  registered owner in sequence.
+- Attempted same-ID replay after first
+  route is rejected with usable late
+  TCP socket; a new explicit registration
+  admits only a separately connected
+  fresh TCP stream.
+- Cancellation closes the old receiver,
+  refuses the late connection without
+  losing its bytes, then a new owner
+  accepts only a new generation's socket.
+
+All four methods assert that pending
+registration count is zero after explicit
+cleanup or complete consumption. There
+are no sleeps or external LAN discovery
+requests. These contracts establish
+the lower-level router owner boundary,
+not authenticated device credentials
+or end-to-end physical BLE/TCP handoff.
+
+Exact-source CI invoked automatically:
+[Preflight 39084068799](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084068799)
+and
+[Native GTK 39084068790](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084068790).
+**Both were running at the checkpoint**.
+Do not count test methods as passing until
+their logs verify the assertions; red
+Python APT packaging tests in earlier
+workflows were a separate concurrent
+source issue, not bypassed here.
