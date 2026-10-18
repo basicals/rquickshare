@@ -1,10 +1,8 @@
 name: P0 Weave worker contract ten-run
 
+# The validated release-tag Mode B suite covers these tests automatically.
+# Manual standalone stress diagnostics are allowed only on main-HEAD version tags.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - ".github/workflows/p0-weave-worker.yml"
   workflow_dispatch:
 
 permissions:
@@ -14,14 +12,25 @@ permissions:
 # exact-source P0 safety check while full CI is being reconciled.
 concurrency:
   group: p0-weave-worker-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   p0-weave-worker:
     name: Real managed Weave worker 10x
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Admit only annotated version tag on current master
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+          test "$(git cat-file -t "refs/tags/$GITHUB_REF_NAME")" = tag
+          git fetch --no-tags origin master
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/master^{commit})"
 
       - uses: dtolnay/rust-toolchain@stable
 
