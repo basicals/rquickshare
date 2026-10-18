@@ -262,3 +262,39 @@ remains red due unrelated packaging.
 **It cannot close strict full MODE B Stage 11
 or overall Stage 12.** Rollback deletes only
 this dedicated workflow.
+
+
+## Independent P0 CI initial proof and assertion fix
+
+First separate [run 39082481687](https://github.com/morozhenko-apps/rquickshare/actions/runs/39082481687)
+checked that all **7** compiled managed Weave
+test methods exist exactly once; its real
+Rust output shows **7 passed, 0 failed,
+0 ignored**, including every one of the
+five new negative lifecycle methods
+and both existing encrypted consent
+integration cases. However the auxiliary
+YAML log gate had erroneously hardcoded
+`0 filtered out`; Rust legitimately
+reported **716 filtered unrelated
+library tests**, and this exact first
+run exited red after attempt 1/10.
+This is a **CI assertion error**, not
+a domain failure or flaky product test.
+
+Workflow-only `a9f56aad` fixes the
+log gate to require exact seven passes,
+zero failures/ignored, while accepting
+any nonnegative unrelated filtered
+count. It retains the fail-closed compiled
+seven-test inventory, ten consecutive
+full selected-method attempts, distinct
+noncancelling CI group, and no product
+changes. Corrected
+[run 39082536345](https://github.com/morozhenko-apps/rquickshare/actions/runs/39082536345)
+was in progress when this checkpoint
+was written. Do not call the ten-pass
+P0 subgate green until that job
+concludes successfully with ten numbered
+attempts. Unrelated APT Preflight blockers
+and repo-wide MODE B Stage 12 remain OPEN.
