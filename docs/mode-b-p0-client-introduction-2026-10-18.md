@@ -124,9 +124,9 @@ must fail assertions. Executed mutation engine is NOT claimed.
 
 1. [x] Scan source, risks and existing tests; record Stages 1–8 **before** code.
 2. [x] Add all three scoped table-driven methods (no production edits).
-3. [ ] Validate CI on exact source; debug failing **tests**, never soften
+3. [x] Validate focused CI on exact source; debug failing **tests**, never soften
    a correct security assertion to accommodate a defect.
-4. [ ] Update this ledger, `docs/current-state.md`, global MODE B gaps
+4. [x] Update this ledger, `docs/current-state.md`, global MODE B gaps
    and confirmed results; maintain global Stage 12 = NO.
 Rollback: revert only test and documentation commits.
 
@@ -139,8 +139,54 @@ Rollback: revert only test and documentation commits.
 - Independent exact-name non-cancelling 10-run workflow:
   `.github/workflows/p0-client-introduction.yml`, commit `216d0fac`.
   [Run 39085557977](https://github.com/morozhenko-apps/rquickshare/actions/runs/39085557977).
-  **Not yet verified here:** compiled inventory, ten attempts, overall result.
+  **VERIFIED SUCCESS:** compiled inventory, ten complete attempts, overall result.
 - Other simultaneous `dev` commits may cancel ordinary Preflight; do not
   treat a cancellation as a test failure or count it as a passing attempt.
 
 Rollback remains documentation + test-only source + isolated CI workflow.
+
+## Confirmed exact-source execution (focused P0, not repository-wide)
+
+GitHub workflow [39085557977](https://github.com/morozhenko-apps/rquickshare/actions/runs/39085557977), job `117551231491`, source commit `216d0face81ce1f1bb1eeae1779a75ea456efda1`: **SUCCESS**.
+
+Downloaded the actual job log, rather than inferring passes from configuration:
+- Compiled library inventory validated all three full Rust test names exactly once.
+- Precisely attempts 1/10 through 10/10 are present.
+- **30 test result summaries** say `1 passed; 0 failed; 0 ignored`.
+- EACH newly added method reports `... ok` **exactly 10 times**.
+- No failed cases, missing attempts, ignored cases or weakened assertions.
+- Source change is **test-only**, except for the separate CI/doc files.
+
+### D2 — scoped actual test-method assignment by category
+
+Three new methods, 30 executions (three unique methods times ten),
+with category overlap (not new independent methods per category):
+
+| Category | Methods assigned | Verified scope |
+|---|---:|---|
+| Positive | 2 | PASS: valid framed first identity and current/last exact match |
+| N1 invalid input | 3 | PASS: malformed protobuf and wrong/empty ID/prefix |
+| N2 boundaries | 2 | PASS: TCP prefix 0–3, zero/oversize/truncated header/body |
+| N3 network interruption | 1 | PASS: incomplete TCP frame produces no identity |
+| N4 retry | 0 | N/A: pure helpers do not retry |
+| N5 concurrency | 0 | N/A: pure helpers have no shared state |
+| N6 corrupt/outdated data | 3 | PASS: missing protobuf nodes, malformed bytes, empty old ID |
+| N7 security boundary | 3 | PASS: invalid identity rejected and exact string comparison |
+| N8 time/locale | 0 | N/A: neither clock nor locale is read |
+| N9 interruption | 1 | PASS: partial TCP prefix/body not admitted |
+| N10 privacy/ownership | 3 | PASS: no route identity on malformed input, no substring/case match |
+| N11 monetization | 0 | N/A: no entitlements |
+| N12 storage | 0 | N/A: no filesystem |
+
+### Mutation review and remaining risks
+
+Assertions would reject deletion of required-field checks, truncation
+admission, broad/non-exact ID comparison, accepting a zero-length or
+oversized announced frame, or a parser that ignores complete first
+frames with trailing socket bytes. This is a **manual mutation review**;
+no automated mutant run is claimed. No production refactor is required
+for these helpers. Upstream authenticated alias ownership, actual
+BlueZ/GATT notifier, cryptographic BLE→TCP continuity, full repository
+MODE B Stage 11 at this source, all N1–N12, complete per-production-file
+branch inventory and Pixel/Windows/KDE physical gates are **OPEN**.
+**Global Stage 12 remains NO.**
