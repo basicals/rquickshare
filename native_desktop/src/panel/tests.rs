@@ -402,6 +402,11 @@ fn given_actual_builder_and_untrusted_details_when_rendered_then_preview_is_iner
     let about = panel.about.borrow().as_ref().unwrap().clone();
     assert!(about.is_visible());
     assert_eq!(about.program_name().as_deref(), Some("rQuickShare"));
+    assert_eq!(about.version().as_deref(), Some("1.0.0"));
+    assert_eq!(
+        about.comments().as_deref(),
+        Some("Independent fork of Martichou/rquickshare. Send and receive nearby files and text")
+    );
     assert_eq!(
         about.logo_icon_name().as_deref(),
         Some(crate::tray::ICON_NAME)

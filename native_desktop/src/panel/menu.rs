@@ -364,7 +364,7 @@ impl Panel {
             .application(&self.window.application().unwrap())
             .program_name("rQuickShare")
             .version(env!("CARGO_PKG_VERSION"))
-            .comments("Send and receive nearby files and text")
+            .comments("Independent fork of Martichou/rquickshare. Send and receive nearby files and text")
             .logo_icon_name(crate::tray::ICON_NAME)
             .license_type(gtk::License::Gpl30Only)
             .website("https://github.com/morozhenko-apps/rquickshare")
