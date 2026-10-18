@@ -175,13 +175,13 @@ run is claimed.
    inventory, branch map, matrices first.
 2. [x] Add 4 test-only methods to `bwu.rs`,
    checking real byte routes and owner closure.
-3. [ ] Verify on same-source Core CI.
+3. [x] Verify on same-source Core CI.
    If generic Preflight is cancelled due
    unrelated parallel packaging, run
    separate dedicated exact-inventory P0
    BWU job with independent concurrency
    (not a replacement for full MODE B).
-4. [ ] Document actual outcomes, update
+4. [x] Document actual outcomes, update
    global inventory/Current State,
    retain Stage 12 NO and hardware gaps.
 
@@ -267,3 +267,85 @@ was running at this checkpoint.
 This dedicated job must complete
 successfully before marking the
 new four methods as verified.
+
+
+## Stage 9 exact-source verification — confirmed
+
+Workflow SHA `7a08e57cb95d3f4854df69c84cf3a2d85019ed22`
+includes all four original P0 BWU regression
+methods, rustfmt-only source fix `4f35fc35`,
+and independent
+[GitHub run 39084212567](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084212567),
+job `117547278250`: **SUCCESS**.
+
+The verified job log contains all ten
+numbered attempts `1/10` through `10/10`,
+ten complete `test result: ok.
+15 passed; 0 failed; 0 ignored` reports,
+and **exactly ten `... ok` lines for EACH of
+the four new methods**. The other 11
+pre-existing BWU tests also executed 10×.
+Thus: **15 methods ×10 = 150/150 pass,
+0 failed, 0 ignored**, no missing
+method, skipped attempt, implicit retry,
+or softened expectation. Tests were
+run with real `TcpStream` pairs and
+real `BwuRouter`, on the exact
+source SHA.
+
+This is a **focused Stage 9/11
+BWU subgate**, NOT complete Mode B
+full-repository Stage 11; other
+product/UI/APT suites were not part
+of this targeted job.
+
+### D2 scoped actual category mapping
+
+Exactly **4 new test methods**; overlap
+across applicable negative categories,
+not a unique-per-category tally or
+global D2 count:
+
+| Category | New methods assigned | Scope outcome |
+|---|---:|---|
+| Positive | 4 | PASS: legitimate subsequent routing after correct owner |
+| N1 invalid identity | 3 | PASS: forged/used/cancelled identifier |
+| N2 size/limits | 0 | N/A: router has no numeric payload limit |
+| N3 transport | 4 | PASS: real returned/delivered connected socket |
+| N4 replay/idempotency | 4 | PASS: one-shot/current/late/new registration |
+| N5 concurrency | 4 | PASS: independent live owners and epochs |
+| N6 corrupt data | 0 | N/A: no parser/deserializer |
+| N7 ownership/permissions | 4 | PASS: exact owner and stale owner restrictions |
+| N8 locale/clock | 0 | N/A: no locale or clock |
+| N9 user interruption | 1 | PASS: cancellation and new explicit registration |
+| N10 privacy | 4 | PASS: no cross-peer or stolen socket bytes |
+| N11 entitlements | 0 | N/A: no billing |
+| N12 storage failure | 0 | N/A: no persisted files |
+
+Mutation *review*, not mutation-engine
+measurement: removing one-shot owner
+consumption would fail the second-socket
+assertions; falling back to alias before
+exact would fail both owner identities
+and byte checks; ignoring `cancel`
+would leave old receiver open/allow
+stale delivery; returning an unrelated
+socket or dropping the original would
+fail actual two-way TCP byte assertions.
+
+### Remaining P0 and Stage 12 risks
+
+`BwuRouter` enforces registered
+one-shot ownership but **does not
+authenticate a peer or derive
+alias authorization**. The untrusted
+`last_endpoint_id` must be validated
+by its upstream protocol boundary.
+Real BLE/BlueZ (GATT notifier),
+actual encrypted BWU role negotiation,
+TCP discovery through mDNS and actual
+Pixel/Windows dual-device handoff
+remain **OPEN**, plus every applicable
+global N1–N12 outside this bounded
+router slice. No production code changed.
+Full MODE B Stage 12: **NO**.
