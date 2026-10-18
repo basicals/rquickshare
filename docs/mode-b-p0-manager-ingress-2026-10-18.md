@@ -80,7 +80,7 @@ OPEN = different real implementation/hardware boundary still pending.
 
 | Artifact | Positive | N1 | N2 | N3 | N4 | N5 | N6 | N7 | N8 | N9 | N10 | N11 | N12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Fragmented TCP ingress | C+P | P(partial prefix) | P(1..3 and body splits) | P(segmentation) | X(no retry) | P(in-flight read) | X(valid frame) | P(right owner only) | X(no clock math) | P(fragmented arrival) | P(no byte spill) | X(no billing) | X(no disk |
+| Fragmented TCP ingress | C+P | P(partial prefix) | P(1..3 and body splits) | P(segmentation) | X(no retry) | P(in-flight read) | X(valid frame) | P(right owner only) | X(no clock math) | P(fragmented arrival) | P(no byte spill) | X(no billing) | X(no disk) |
 | Ordinary or invalid traffic | C+P | P(bad protobuf) | P(0/>8192 header) | P(real socket preserved) | P(no consume) | P(pending another) | P(corrupt bytes) | P(no false route) | X | X(no UI) | P(no foreign admission) | X | X |
 | Simultaneous exact + previous | C+P | X(valid IDs) | X(no numeric limit) | P(two actual sockets) | P(one-shot) | P(two peers) | X | P(exact priority) | X | X | P(no cross-peer) | X | X |
 | Authenticated cross-transport handoff | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | X | OPEN | OPEN | X | OPEN |
@@ -119,7 +119,7 @@ coverage but no authentication guarantee. Global Stage 12 = NO.
 1. [x] Document source scan, scoped inventory, per-branch map,
    complete applicability matrix, interactions, expected counts and
    risks **before editing tests**.
-2. [ ] Implement exactly three new deterministic integration test
+2. [x] Implement exactly three new deterministic integration test
    methods against actual classifier and router in `manager.rs`.
 3. [ ] Confirm formatter, Core test execution and CI exact SHA.
 4. [ ] Review assertion-sensitive mutations, report each real pass
@@ -136,3 +136,19 @@ mutation engine is claimed.
 Rollback is isolated `test:` commit plus this documentary ledger.
 No production behavior, ABI, public security contract, release or
 installed package change.
+
+## Stage 9 implementation checkpoint (CI pending)
+
+Test-only source `core_lib/src/manager.rs` updated at `5d48f850`
+with three original scoped methods. Genuine localhost `TcpListener`/
+`TcpStream`, real `BwuRouter` and generated protobuf are exercised.
+Segmented payload method uses `futures::poll!` and condition-based
+completion, no new test sleeps; competing two owners are classified
+concurrently with `tokio::join!` and compared using actual peer
+addresses and full original byte streams. All cases check final
+pending state and byte ownership.
+
+Original Preflight format job reported two rustfmt-only diffs;
+test source formatting repaired by `811fd6ef` (assertions unchanged).
+**Do not report success until exact-code Core logs pass.** No
+production code changes. Mode B global Stage 12 remains NO.
