@@ -170,3 +170,39 @@ and [Native GTK 39094220199](https://github.com/morozhenko-apps/rquickshare/acti
 per-method logs are checked**. If a new test uncovers a product defect,
 keep invariant/assertion intact, record the failing outcome and STOP
 for a MODE A decision rather than weakening the test.
+
+## Red CI triage before changing the test
+
+Initial formatted test source `9cbb4291` failed to compile due to
+one test fixture passing `Result<SocketAddr>` where the actual
+`SocketAddr` was required. The test-only `.unwrap()` correction was
+committed as `c20af686`; production code and assertions were intact.
+
+On [Preflight 39094391990](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094391990),
+the Core job compiled and executed **728** stable methods:
+**727 passed, 1 failed**. The two fake-clock timeout/EOF methods
+passed. The cancelled-socket test failed at
+`abandoned_peer.read(...).await.unwrap()` with Linux
+`Os { code: 104, kind: ConnectionReset }`. The actual
+error comes from the peer observing a closed TCP descriptor with
+two unread bytes on the opposite side, which may be reported
+as an abortive RST rather than a graceful FIN. Other candidate
+causes considered: wrong peer address, unconsumed registered
+route, invalid introduction frame, early normal closure,
+lost classifier cancellation, or unexpected socket write errors.
+The observed `ECONNRESET` on the *abandoned* TCP read is
+consistent with valid cancellation, not evidence of a wrong
+BWU owner or a production regression.
+
+**Reconciled test contract (before edit):** the peer of an
+aborted classifier must observe a closed TCP connection:
+either `Ok(0)` for graceful EOF or precisely
+`ConnectionReset` for a socket closed with unread data.
+Any successful nonempty read or other I/O error still fails.
+The later fresh legitimate connection MUST route to the original
+live owner and preserve the full protobuf bytes, with no
+pending registration left. Record the actual read result in the
+test's diagnostic assertion log. This corrects an incorrect
+test-level assumption about TCP teardown; it is not an approved
+production logic change or generalized weakening of the security
+invariant. Run exact-source CI again after this correction.
