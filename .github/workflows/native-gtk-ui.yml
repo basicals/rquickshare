@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: native-gtk-dev
+  group: native-gtk-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
