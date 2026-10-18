@@ -349,3 +349,34 @@ remain **OPEN**, plus every applicable
 global N1–N12 outside this bounded
 router slice. No production code changed.
 Full MODE B Stage 12: **NO**.
+
+
+## Ordinary Preflight same-code corroboration
+
+The automatic
+[Preflight 39084212522](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084212522)
+at exact workflow/test SHA `7a08e57c`
+also completed its Core Rust job **SUCCESS**:
+full Core registry **727 unit methods**,
+**719 stable/0** once, **8**
+race-sensitive methods 10× = **80/0**,
+and 4+4 integration tests all pass.
+Each newly added BWU method appears
+as independently `... ok` in the
+stable test log. Strict Core Clippy
+and frontend also passed, and
+cargo fmt itself passed.
+
+**Whole ordinary Preflight still red:**
+the combined Rust-format/Python job
+had an unrelated packaging/release
+Python fixture error from
+`test_native_ci_signing_key`:
+`ValueError: Unexpected private key inventory`.
+This is a real failure and not
+suppressed, and the legacy Tauri
+job was still executing at the
+first checkpoint. Do not claim
+a 5/5 Preflight or full
+MODE B 10× release gate based
+on the dedicated BWU job.
