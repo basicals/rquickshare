@@ -1,0 +1,306 @@
+name: Publish rQuickShare
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rquickshare-signed-apt
+  cancel-in-progress: false
+
+jobs:
+  admission:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      revision: ${{ steps.version.outputs.revision }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm stable tag equals current master and native version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+          git fetch --no-tags origin master
+          [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/master^{commit})" ]] || exit 1
+          version="${GITHUB_REF_NAME#v}"
+          actual="$(python3 -c 'import tomllib; print(tomllib.load(open("native_desktop/Cargo.toml", "rb"))["package"]["version"])')"
+          revision="$(python3 -c 'import tomllib; print(tomllib.load(open("native_desktop/packaging/release.toml", "rb"))["revision"])')"
+          [[ "$version" == "$actual" && "$revision" =~ ^[1-9][0-9]{0,9}$ ]] || exit 1
+          (( revision <= 2147483647 )) || exit 1
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+      - name: Require exact-source completed 10x Mode B
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          runs="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/mode-b.yml/runs" -f head_sha="$sha" -f per_page=100)"
+          jq -e --arg sha "$sha" '[.workflow_runs[] | select(.head_sha == $sha and .conclusion == "success")] | length > 0' <<< "$runs" >/dev/null
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: infra/native-download/package-lock.json
+      - name: Validate public download Worker
+        working-directory: infra/native-download
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run types
+          npm run check
+          npm test
+          npm run dry-run
+
+  package:
+    needs: admission
+    runs-on: ubuntu-24.04
+    container: ubuntu:26.04
+    timeout-minutes: 120
+    steps:
+      - name: Install Ubuntu 26.04 native ABI dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git curl build-essential pkg-config dpkg-dev python3 python3-venv \
+            protobuf-compiler libdbus-1-dev libudev-dev libgtk-4-dev libgtk4-layer-shell-dev \
+            libfontconfig-dev libseccomp-dev bubblewrap glycin-loaders \
+            dbus-daemon dbus-x11 xvfb xauth desktop-file-utils gnupg gpgv
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2.9.0
+        with:
+          workspaces: |
+            core_lib -> target
+            native_desktop -> target
+          shared-key: native-ubuntu-26.04
+      - name: Run signed-package contract tests and Rust checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/native-python"
+          "$RUNNER_TEMP/native-python/bin/python" -m pip install -r scripts/requirements-r2.txt
+          "$RUNNER_TEMP/native-python/bin/python" -m unittest discover -s scripts/tests -p 'test_native_*.py' -v
+          cargo +stable test --locked --manifest-path core_lib/Cargo.toml
+          cargo +stable clippy --locked --manifest-path core_lib/Cargo.toml --all-targets -- -D warnings
+          cargo +stable test --locked --manifest-path native_desktop/Cargo.toml
+          cargo +stable clippy --locked --manifest-path native_desktop/Cargo.toml --all-targets --no-deps -- -D warnings
+          desktop-file-validate native_desktop/packaging/share/applications/io.github.morozhenko_apps.RQuickShare.desktop
+      - name: Build native package and unsigned APT
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/native_deb.py build --output "$RUNNER_TEMP/native-packages"
+          python3 scripts/native_apt.py prepare --package "$RUNNER_TEMP/native-packages/"*.deb \
+            --output "$RUNNER_TEMP/native-apt-unsigned"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: native-package
+          path: |
+            ${{ runner.temp }}/native-packages/*.deb
+            ${{ runner.temp }}/native-packages/*.deb.sha256
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v6
+        with:
+          name: unsigned-apt
+          path: ${{ runner.temp }}/native-apt-unsigned/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: [admission, package]
+    environment: apt-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VERSION: ${{ needs.admission.outputs.version }}
+      REVISION: ${{ needs.admission.outputs.revision }}
+      SIGNING_FINGERPRINT: 6D8854762CF0C86881138A56695A0888D09FA616
+      RQS_R2_ACCOUNT_ID: ${{ vars.RQS_R2_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v6
+        with:
+          name: native-package
+          path: ${{ runner.temp }}/native-package
+      - uses: actions/download-artifact@v6
+        with:
+          name: unsigned-apt
+          path: ${{ runner.temp }}/unsigned-apt
+      - name: Check exact artifact identity and public account configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RQS_R2_ACCOUNT_ID" =~ ^[a-f0-9]{32}$ ]] || exit 1
+          test -s "$RUNNER_TEMP/native-package/rquickshare-native_${VERSION}-${REVISION}_amd64.deb"
+          test -s "$RUNNER_TEMP/native-package/rquickshare-native_${VERSION}-${REVISION}_amd64.deb.sha256"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: infra/native-download/package-lock.json
+      - name: Deploy only the dedicated read-only R2 Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.RQS_CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        working-directory: infra/native-download
+        run: |
+          set -euo pipefail
+          [[ -n "$CLOUDFLARE_API_TOKEN" ]] || exit 1
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx wrangler deploy
+      - name: Prepare isolated S3 SDK before importing any key
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/release-python"
+          "$RUNNER_TEMP/release-python/bin/python" -m pip install -r scripts/requirements-r2.txt
+      - name: Import encrypted signing subkey, forbid primary secret
+        env:
+          KEYRING_B64: ${{ secrets.RQS_APT_PUBLIC_KEYRING_BASE64 }}
+          SUBKEY_B64: ${{ secrets.RQS_APT_SECRET_SUBKEY_BASE64 }}
+          SUBKEY_PASSPHRASE: ${{ secrets.RQS_APT_SUBKEY_PASSPHRASE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$KEYRING_B64" && -n "$SUBKEY_B64" && -n "$SUBKEY_PASSPHRASE" ]] || exit 1
+          umask 077
+          private="$RUNNER_TEMP/rqs-release-private"
+          mkdir -m 700 "$private" "$private/gnupg"
+          printf '%s' "$KEYRING_B64" | base64 --decode > "$private/keyring.gpg"
+          printf '%s' "$SUBKEY_B64" | base64 --decode > "$private/import.gpg"
+          printf '%s' "$SUBKEY_PASSPHRASE" > "$private/passphrase"
+          gpg --no-options --homedir "$private/gnupg" --batch --import "$private/import.gpg" >/dev/null 2>&1
+          rm -f "$private/import.gpg"
+          python3 -c 'import sys; sys.path.insert(0, "scripts"); import native_apt as apt; apt.public_key(sys.argv[1], sys.argv[2])' \
+            "$private/keyring.gpg" "$SIGNING_FINGERPRINT"
+          gpg --no-options --homedir "$private/gnupg" --batch --with-colons --list-secret-keys \
+            "$SIGNING_FINGERPRINT" > "$private/keys.txt"
+          python3 scripts/native_ci_signing_key.py --listing "$private/keys.txt" --fingerprint "$SIGNING_FINGERPRINT"
+          rm -f "$private/keys.txt"
+      - name: Restore authenticated previous archive from private R2
+        env:
+          RQS_R2_ACCESS_KEY_ID: ${{ secrets.RQS_R2_ACCESS_KEY_ID }}
+          RQS_R2_SECRET_ACCESS_KEY: ${{ secrets.RQS_R2_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$RQS_R2_ACCESS_KEY_ID" && -n "$RQS_R2_SECRET_ACCESS_KEY" ]] || exit 1
+          baseline="$("$RUNNER_TEMP/release-python/bin/python" scripts/native_ci_archive.py \
+            --account-id "$RQS_R2_ACCOUNT_ID" \
+            --keyring "$RUNNER_TEMP/rqs-release-private/keyring.gpg" \
+            --fingerprint "$SIGNING_FINGERPRINT" --output "$RUNNER_TEMP/previous-signed")"
+          [[ "$baseline" == "first" || "$baseline" == "previous" ]] || exit 1
+          echo "$baseline" > "$RUNNER_TEMP/apt-baseline"
+      - name: Sign and verify the immutable Debian release
+        shell: bash
+        run: |
+          set -euo pipefail
+          private="$RUNNER_TEMP/rqs-release-private"
+          baseline=(--first-release)
+          previous=()
+          if [[ "$(cat "$RUNNER_TEMP/apt-baseline")" == "previous" ]]; then
+            baseline=(--previous "$RUNNER_TEMP/previous-signed")
+            previous=(--previous "$RUNNER_TEMP/previous-signed")
+          fi
+          python3 scripts/native_apt.py sign --repository "$RUNNER_TEMP/unsigned-apt" \
+            --output "$RUNNER_TEMP/signed-apt" \
+            --keyring "$private/keyring.gpg" --fingerprint "$SIGNING_FINGERPRINT" \
+            --gnupghome "$private/gnupg" --passphrase-file "$private/passphrase" "${baseline[@]}"
+          python3 scripts/native_apt.py verify --repository "$RUNNER_TEMP/signed-apt" \
+            --keyring "$private/keyring.gpg" --fingerprint "$SIGNING_FINGERPRINT" "${previous[@]}"
+      - name: Publish immutable R2 pool and by-hash, then conditional InRelease
+        env:
+          RQS_R2_ACCESS_KEY_ID: ${{ secrets.RQS_R2_ACCESS_KEY_ID }}
+          RQS_R2_SECRET_ACCESS_KEY: ${{ secrets.RQS_R2_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$RQS_R2_ACCESS_KEY_ID" && -n "$RQS_R2_SECRET_ACCESS_KEY" ]] || exit 1
+          baseline=(--first-release)
+          if [[ "$(cat "$RUNNER_TEMP/apt-baseline")" == "previous" ]]; then
+            baseline=(--previous "$RUNNER_TEMP/previous-signed")
+          fi
+          "$RUNNER_TEMP/release-python/bin/python" scripts/native_r2.py publish \
+            --repository "$RUNNER_TEMP/signed-apt" \
+            --keyring "$RUNNER_TEMP/rqs-release-private/keyring.gpg" \
+            --fingerprint "$SIGNING_FINGERPRINT" --account-id "$RQS_R2_ACCOUNT_ID" "${baseline[@]}"
+      - name: Verify public HTTPS archive and actual isolated APT package acquisition
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://download.morozhenko.com/dist/rQuickShare"
+          curl -fsS "$base/dists/rquickshare-native-ubuntu26.04/InRelease" -o "$RUNNER_TEMP/public-InRelease"
+          cmp "$RUNNER_TEMP/public-InRelease" "$RUNNER_TEMP/signed-apt/dists/rquickshare-native-ubuntu26.04/InRelease"
+          name="rquickshare-native_${VERSION}-${REVISION}_amd64.deb"
+          curl -fsS "$base/pool/main/r/rquickshare-native/$name" -o "$RUNNER_TEMP/public.deb"
+          cmp "$RUNNER_TEMP/public.deb" "$RUNNER_TEMP/native-package/$name"
+          private="$RUNNER_TEMP/rqs-release-private"
+          python3 scripts/native_apt.py bootstrap --repository "$RUNNER_TEMP/signed-apt" \
+            --keyring "$private/keyring.gpg" --fingerprint "$SIGNING_FINGERPRINT" \
+            --output "$RUNNER_TEMP/apt-bootstrap"
+          mkdir -p "$RUNNER_TEMP/isolated-apt/lists/partial" "$RUNNER_TEMP/isolated-apt/download"
+          : > "$RUNNER_TEMP/isolated-apt/status"
+          sed "s|/etc/apt/keyrings/rquickshare-native-archive-keyring.gpg|$private/keyring.gpg|" \
+            "$RUNNER_TEMP/apt-bootstrap/rquickshare-native.sources" > "$RUNNER_TEMP/isolated-apt/source.sources"
+          apt_flags=(
+            -o "Dir::Etc::sourcelist=$RUNNER_TEMP/isolated-apt/source.sources"
+            -o "Dir::Etc::sourceparts=-"
+            -o "Dir::Etc::trusted=/dev/null"
+            -o "Dir::Etc::trustedparts=-"
+            -o "Dir::State::lists=$RUNNER_TEMP/isolated-apt/lists"
+            -o "Dir::State::status=$RUNNER_TEMP/isolated-apt/status"
+          )
+          apt-get "${apt_flags[@]}" update -qq
+          (cd "$RUNNER_TEMP/isolated-apt/download" && \
+             apt-get "${apt_flags[@]}" download "rquickshare-native=${VERSION}-${REVISION}")
+          cmp "$RUNNER_TEMP/isolated-apt/download/$name" "$RUNNER_TEMP/native-package/$name"
+      - name: Clean runner-local signing material
+        if: always()
+        shell: bash
+        run: |
+          if [[ -d "$RUNNER_TEMP/rqs-release-private/gnupg" ]]; then
+            gpgconf --homedir "$RUNNER_TEMP/rqs-release-private/gnupg" --kill gpg-agent || true
+          fi
+          rm -rf "$RUNNER_TEMP/rqs-release-private" "$RUNNER_TEMP/previous-signed" \
+                 "$RUNNER_TEMP/signed-apt" "$RUNNER_TEMP/unsigned-apt"
+
+  github-release:
+    needs: [admission, package, publish]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: native-package
+          path: ${{ runner.temp }}/native-package
+      - name: Publish GitHub Release only after signed R2 and APT succeed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          assets=("$RUNNER_TEMP"/native-package/*.deb "$RUNNER_TEMP"/native-package/*.deb.sha256)
+          [[ "${#assets[@]}" -eq 2 ]] || exit 1
+          gh release create "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "rQuickShare ${TAG#v}" \
+            --notes "Independent fork of Martichou/rquickshare (GPLv3). This package targets Ubuntu 26.04 amd64. Windows and macOS ports are planned but not yet shipped. Direct .deb and signed APT refer to identical package bytes."
