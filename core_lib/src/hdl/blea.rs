@@ -154,6 +154,126 @@ mod tests {
     }
 
     #[test]
+    fn given_receiver_service_data_name_boundaries_when_encoded_then_all_lengths_and_codepoints_remain_valid(
+    ) {
+        // Arrange: the public identity budget is 237 UTF-8 bytes; direct
+        // callers may still submit longer strings, which the BLE encoder
+        // must truncate without splitting a Unicode scalar.
+        let cases = [
+            ("empty", String::new()),
+            ("one", "x".into()),
+            ("below-maximum", "x".repeat(236)),
+            ("maximum", "x".repeat(237)),
+            ("one-above-maximum", "x".repeat(238)),
+            ("byte-255", "x".repeat(255)),
+            ("byte-256", "x".repeat(256)),
+            ("large", "x".repeat(512)),
+            ("two-byte-utf8-boundary", "é".repeat(120)),
+            ("four-byte-utf8-boundary", "🧩".repeat(60)),
+        ];
+
+        for (case, name) in cases {
+            // Act: test the real on-wire service data, not a copied encoder.
+            let encoded = receiver_service_data(*b"TEST", DeviceType::Laptop as u8, &name);
+            let announced = u32::from_be_bytes(encoded[4..8].try_into().unwrap()) as usize;
+            assert_eq!(encoded.len(), 8 + announced + 2, "{case}");
+            assert_eq!(&encoded[..4], &[0x48, 0xfc, 0x9f, 0x5e], "{case}");
+
+            let connection = &encoded[8..8 + announced];
+            assert_eq!(connection[0], 0x23, "{case}");
+            assert_eq!(&connection[1..4], &QS_SVC_HASH, "{case}");
+            assert_eq!(&connection[4..8], b"TEST", "{case}");
+
+            let info_len = usize::from(connection[8]);
+            assert_eq!(connection.len(), 9 + info_len + 8, "{case}");
+            assert_eq!(info_len <= u8::MAX as usize, true, "{case}");
+            let info = &connection[9..9 + info_len];
+            assert_eq!(info[0], (1 << 5) | (3 << 1), "{case}");
+            assert_eq!(info.len(), 18 + usize::from(info[17]), "{case}");
+
+            let mut expected_len = name.len().min(crate::identity::MAX_NAME_BYTES);
+            while !name.is_char_boundary(expected_len) {
+                expected_len -= 1;
+            }
+            assert_eq!(usize::from(info[17]), expected_len, "{case}");
+            assert_eq!(&info[18..], &name.as_bytes()[..expected_len], "{case}");
+            assert!(std::str::from_utf8(&info[18..]).is_ok(), "{case}");
+            assert_eq!(&connection[9 + info_len..], &[0_u8; 8], "{case}");
+        }
+    }
+
+    #[test]
+    fn given_same_receiver_identity_when_encoded_for_ble_and_mdns_then_endpoint_and_name_agree(
+    ) {
+        use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+
+        // Arrange: compare two independent real production encoders and the
+        // mDNS decoder for names accepted by the identity contract.
+        let endpoints = [
+            [0_u8; 4],
+            *b"TEST",
+            [0x01, 0x80, 0x3f, 0xfe],
+            [u8::MAX; 4],
+        ];
+        let names = [
+            String::new(),
+            "A".into(),
+            "Alcotester".into(),
+            "é".repeat(118),
+            "x".repeat(crate::identity::MAX_NAME_BYTES),
+        ];
+        let devices = [
+            (0_u8, DeviceType::Unknown),
+            (1, DeviceType::Phone),
+            (2, DeviceType::Tablet),
+            (3, DeviceType::Laptop),
+        ];
+
+        for endpoint in endpoints {
+            let service_name = crate::utils::gen_mdns_name(endpoint);
+            let decoded = URL_SAFE_NO_PAD.decode(service_name).unwrap();
+            let expected_service_name = [
+                0x23,
+                endpoint[0],
+                endpoint[1],
+                endpoint[2],
+                endpoint[3],
+                0xfc,
+                0x9f,
+                0x5e,
+                0x00,
+                0x00,
+            ];
+            assert_eq!(decoded.as_slice(), expected_service_name);
+
+            for (kind, expected_device) in &devices {
+                for name in &names {
+                    // Act: generate the published data through both media.
+                    let ble = receiver_service_data(endpoint, *kind, name);
+                    let txt = crate::utils::gen_mdns_endpoint_info(*kind, name);
+                    let (type_from_mdns, name_from_mdns) =
+                        crate::utils::parse_mdns_endpoint_info(&txt).unwrap();
+
+                    // Assert: the endpoint never changes across the BLE/mDNS
+                    // boundary, nor does an allowed name or device class.
+                    let connection_len =
+                        u32::from_be_bytes(ble[4..8].try_into().unwrap()) as usize;
+                    let connection = &ble[8..8 + connection_len];
+                    assert_eq!(connection[0], 0x23);
+                    assert_eq!(&connection[1..4], &QS_SVC_HASH);
+                    assert_eq!(&connection[4..8], &endpoint);
+                    let info = &connection[9..9 + usize::from(connection[8])];
+                    assert_eq!(info[0], (1 << 5) | (kind << 1));
+                    assert_eq!(usize::from(info[17]), name.len());
+                    assert_eq!(&info[18..], name.as_bytes());
+                    assert_eq!(type_from_mdns, expected_device.clone());
+                    assert_eq!(name_from_mdns, *name);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn receiver_refresh_modes_remain_distinct() {
         assert_ne!(
             ReceiverAdvertisingRefresh::Immediate,
@@ -616,6 +736,32 @@ mod schedule_tests {
 #[cfg(test)]
 mod receiver_packet_tests {
     use super::*;
+    #[test]
+    fn given_legacy_receiver_headers_when_advertisement_is_built_then_bluez_contract_and_budget_are_preserved(
+    ) {
+        let patterned = std::array::from_fn(|index| (index as u8).wrapping_mul(17));
+        let headers = [[0_u8; 17], patterned, [0xff_u8; 17]];
+
+        for header in headers {
+            // Arrange/Act: this is the real outgoing BlueZ advertisement
+            // descriptor, with the 17-byte GATT header kept opaque.
+            let packet = ReceiverAdvertiser::packet(header);
+            let service = Uuid::from_u16(QS_SERVICE_UUID);
+
+            // Assert: packet bounds/flags must be identical for any header
+            // content and must stay within the legacy 31-byte budget.
+            assert_eq!(packet.advertisement_type, bluer::adv::Type::Peripheral);
+            assert_eq!(packet.service_uuids, [service].into());
+            assert_eq!(packet.service_data.len(), 1);
+            assert_eq!(packet.service_data[&service], header.to_vec());
+            assert_eq!(packet.discoverable, Some(true));
+            assert_eq!(packet.min_interval, Some(std::time::Duration::from_millis(100)));
+            assert_eq!(packet.max_interval, Some(std::time::Duration::from_millis(150)));
+            assert!(packet.secondary_channel.is_none());
+            assert!(3 + 4 + 4 + packet.service_data[&service].len() <= 31);
+        }
+    }
+
     #[test]
     fn given_current_gatt_header_when_packet_is_built_then_exact_service_data_uses_the_connectable_legacy_budget(
     ) {
