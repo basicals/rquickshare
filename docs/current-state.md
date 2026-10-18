@@ -1,6 +1,60 @@
 # Current implementation and continuation state
 
 
+## P0 MODE B real Weave worker negative lifecycle — 2026-10-18
+
+MODE B Stage 3–10 scoped plan and test source:
+[worker terminal and cancellation ledger](mode-b-p0-gatt-worker-2026-10-18.md).
+Five additional real-worker managed integration
+methods target: native Initial peer EOF
+(no false UI event), legacy Initial EOF
+(Disconnected event), progressed native
+EOF/malformed length (Disconnected and
+closed SessionHub), parent/session cancellation
+(Cancelled and no stale lease), and
+native Initial cancellation (quiet release).
+These test `run_inbound_worker` and
+actual SessionHub+channel with the
+external BlueZ bytes replaced by an
+in-memory duplex stream. Product
+source/UI/protocol contracts unchanged.
+First test commit `e7f88543`;
+rustfmt-only repair `9030e6d9`.
+
+Parallel APT/packaging commits caused
+many automatic Preflight cancellations
+and red Python contract cases
+(`Unexpected package path`). Therefore
+**no successful full Preflight or complete
+full MODE B Stage 11 is claimed for the
+new five cases yet**. To independently
+verify their real logic, a read-only
+separate
+[P0 managed worker ten-run workflow](https://github.com/morozhenko-apps/rquickshare/actions/workflows/p0-weave-worker.yml)
+was created at `7086d48d` with its own
+non-cancelling concurrency group, and
+fixed to accept genuine unrelated Rust
+test filtering at `a9f56aad`.
+It checks exactly seven compiled managed
+GATT test methods (two existing positive
+plus five new) and exercises each one
+10×. The first attempt's status must
+be read rather than presumed from launch.
+This focused job cannot replace full
+suite 10× or global Stage 12 requirements.
+
+Real `CharacteristicNotifier` subscription/
+queue errors, BlueZ adapter disappearance,
+mDNS/FE2C discovery and BLE→TCP
+credential continuity remain P0 OPEN.
+The project’s binding user priority is
+actual critical and all negative scenarios
+before secondary percentage coverage.
+No installed native29, `master` or
+hardware was modified by these tests.
+
+
+
 ## MODE B P0 GATT/Weave negative slice — 2026-10-18
 
 Eight additional deterministic security/lifecycle
