@@ -685,6 +685,153 @@ mod tests {
         assert!(!router.has_pending().await);
     }
 
+    #[tokio::test(start_paused = true)]
+    async fn given_incomplete_bwu_tcp_prefaces_when_classifier_deadline_passes_then_socket_and_owner_remain_intact(
+    ) {
+        // Arrange: a new localhost TCP connection and its real pending BWU owner.
+        // Every split is a genuinely incomplete introduction, not a malformed
+        // complete frame. The fake clock avoids a wall-time timeout/sleep.
+        let frame = client_introduction("peer-slow");
+        for available in [0_usize, 1, 2, 3, 4, frame.len() - 1] {
+            let router = BwuRouter::new();
+            let mut owner = router.register("peer-slow".into()).await.unwrap();
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let mut peer = TcpStream::connect(listener.local_addr().unwrap())
+                .await
+                .unwrap();
+            let (incoming, _) = listener.accept().await.unwrap();
+            peer.write_all(&frame[..available]).await.unwrap();
+
+            // Act: classification starts before the remaining bytes arrive.
+            let mut classify = Box::pin(route_bandwidth_upgrade_if_pending(incoming, &router));
+            assert!(
+                futures::poll!(classify.as_mut()).is_pending(),
+                "partial BWU introduction unexpectedly admitted at {available} bytes"
+            );
+            tokio::time::advance(Duration::from_millis(751)).await;
+            let mut returned = classify
+                .await
+                .unwrap()
+                .unwrap_or_else(|| panic!("partial BWU introduction stole owner at {available}"));
+
+            // Assert: the timeout did not read, discard, or divert even one byte.
+            assert!(router.has_pending().await);
+            assert!(matches!(
+                owner.try_recv(),
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+            ));
+            assert_eq!(returned.peer_addr().unwrap(), peer.local_addr().unwrap());
+            peer.write_all(&frame[available..]).await.unwrap();
+            let mut received = vec![0_u8; frame.len()];
+            returned.read_exact(&mut received).await.unwrap();
+            assert_eq!(received, frame, "timeout consumed bytes at {available}");
+            router.cancel("peer-slow").await;
+            assert!(!router.has_pending().await);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn given_tcp_peer_eof_before_complete_bwu_introduction_when_classified_then_no_owner_is_consumed(
+    ) {
+        // Arrange: EOF is distinct from a merely slow peer. The client closes
+        // only its write half, so the server can still inspect any buffered data.
+        let frame = client_introduction("peer-closing");
+        for (case, prefix) in [
+            ("before-header", vec![]),
+            ("inside-header", frame[..2].to_vec()),
+            ("inside-body", frame[..frame.len() - 1].to_vec()),
+        ] {
+            let router = BwuRouter::new();
+            let mut owner = router.register("peer-closing".into()).await.unwrap();
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let mut peer = TcpStream::connect(listener.local_addr().unwrap())
+                .await
+                .unwrap();
+            let (incoming, _) = listener.accept().await.unwrap();
+            peer.write_all(&prefix).await.unwrap();
+            peer.shutdown().await.unwrap();
+
+            // Act: an immediate empty EOF or a bounded wait for a partial
+            // preface must both return the original unconsumed connection.
+            let mut classify = Box::pin(route_bandwidth_upgrade_if_pending(incoming, &router));
+            let outcome = match futures::poll!(classify.as_mut()) {
+                std::task::Poll::Ready(outcome) => outcome,
+                std::task::Poll::Pending => {
+                    tokio::time::advance(Duration::from_millis(751)).await;
+                    classify.await
+                }
+            };
+            let mut returned = outcome
+                .unwrap()
+                .unwrap_or_else(|| panic!("EOF falsely routed a BWU owner: {case}"));
+
+            // Assert: the original prefix is readable once and EOF remains EOF.
+            assert_eq!(returned.peer_addr().unwrap(), peer.local_addr().unwrap());
+            let mut received = vec![0_u8; prefix.len()];
+            returned.read_exact(&mut received).await.unwrap();
+            assert_eq!(received, prefix, "EOF corrupted preface: {case}");
+            let mut one = [0_u8; 1];
+            assert_eq!(returned.read(&mut one).await.unwrap(), 0, "EOF lost: {case}");
+            assert!(router.has_pending().await);
+            assert!(matches!(
+                owner.try_recv(),
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+            ));
+            router.cancel("peer-closing").await;
+            assert!(!router.has_pending().await);
+        }
+    }
+
+    #[tokio::test]
+    async fn given_bwu_classifier_is_cancelled_mid_header_when_new_connection_arrives_then_existing_owner_still_routes(
+    ) {
+        // Arrange: the in-progress ingress owns its TCP socket, not its
+        // unrelated registered BLE session's admission right.
+        let router = BwuRouter::new();
+        let owner = router.register("peer-retry".into()).await.unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut abandoned_peer = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
+        let (abandoned_socket, _) = listener.accept().await.unwrap();
+        abandoned_peer.write_all(&[0_u8, 0]).await.unwrap();
+
+        // Act: abort the classifier future before any complete prefix exists.
+        let mut classifier = Box::pin(route_bandwidth_upgrade_if_pending(
+            abandoned_socket,
+            &router,
+        ));
+        assert!(futures::poll!(classifier.as_mut()).is_pending());
+        drop(classifier);
+
+        // Assert: only the abandoned TCP socket was released.
+        let mut eof = [0_u8; 1];
+        assert_eq!(abandoned_peer.read(&mut eof).await.unwrap(), 0);
+        assert!(router.has_pending().await);
+
+        // A fresh connection with a complete introduction is still admitted
+        // to the original registered owner. No old or foreign bytes leak in.
+        let mut fresh_peer = TcpStream::connect(listener.local_addr()).await.unwrap();
+        let (fresh_socket, _) = listener.accept().await.unwrap();
+        let wire = client_introduction("peer-retry");
+        fresh_peer.write_all(&wire).await.unwrap();
+        assert!(
+            route_bandwidth_upgrade_if_pending(fresh_socket, &router)
+                .await
+                .unwrap()
+                .is_none()
+        );
+        let mut owned_socket = owner.await.unwrap();
+        assert_eq!(
+            owned_socket.peer_addr().unwrap(),
+            fresh_peer.local_addr().unwrap()
+        );
+        let mut received = vec![0_u8; wire.len()];
+        owned_socket.read_exact(&mut received).await.unwrap();
+        assert_eq!(received, wire);
+        assert!(!router.has_pending().await);
+    }
+
     #[test]
     fn given_outbound_state_when_failure_is_reported_then_active_requests_finish_and_terminal_outcomes_survive(
     ) {
