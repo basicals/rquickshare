@@ -10,7 +10,7 @@ import native_apt as apt
 import native_r2 as r2
 
 MAX_SNAPSHOT_OBJECTS = 64
-PACKAGE = re.compile(r"pool/main/r/rquickshare-native/rquickshare-native_(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)-[1-9][0-9]{0,9}_(?:amd64|arm64)\\.deb(?:\\.sha256)?")
+PACKAGE = re.compile(r"pool/main/r/rquickshare-native/rquickshare-native_(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)-[1-9][0-9]{0,9}_(?:amd64|arm64)\.deb(?:\.sha256)?")
 
 def admitted(key):
     prefix = f"dists/{apt.SUITE}/"
@@ -21,24 +21,24 @@ def admitted(key):
     item = key[len(prefix):]
     if item in {"Release", "Release.gpg", "InRelease"}:
         return True
-    return re.fullmatch(r"main/binary-(?:amd64|arm64)/(?:Packages(?:\\.gz)?|by-hash/SHA256/[a-f0-9]{64})", item) is not None
+    return re.fullmatch(r"main/binary-(?:amd64|arm64)/(?:Packages(?:\.gz)?|by-hash/SHA256/[a-f0-9]{64})", item) is not None
 
-def read_object(client, key, maximum):
+def copy_object(client, key, target, maximum):
     try:
         response = client.get_object(Bucket=r2.BUCKET, Key=key)
-    except Exception as error:
+    except Exception:
         raise r2.Unavailable("Archived object read unavailable") from None
     body = response["Body"]
     try:
         size = response["ContentLength"]
         apt.require(type(size) is int and 0 <= size <= maximum, "Archived object exceeds accepted bound")
-        pieces, received = [], 0
-        for chunk in body.iter_chunks(chunk_size=65536):
-            received += len(chunk)
-            apt.require(received <= size, "Archived object exceeds declared length")
-            pieces.append(chunk)
+        received = 0
+        with target.open("xb") as output:
+            for chunk in body.iter_chunks(chunk_size=65536):
+                received += len(chunk)
+                apt.require(received <= size, "Archived object exceeds declared length")
+                output.write(chunk)
         apt.require(received == size, "Truncated archived object")
-        return b"".join(pieces)
     finally:
         body.close()
 
@@ -64,10 +64,9 @@ def restore(store, output, keyring, fingerprint):
         for name in names:
             relative = name[len(prefix):]
             maximum = apt.MAX_PACKAGE if relative.endswith(".deb") else apt.MAX_INDEX
-            data = read_object(store.client, name, maximum)
             target = folder / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
+            copy_object(store.client, name, target, maximum)
         apt.require((folder / r2.ACTIVE).read_bytes() == current.data,
                     "Snapshot does not match active repository generation")
         apt.verify(folder, keyring, fingerprint, check_time=False)
