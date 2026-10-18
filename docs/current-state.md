@@ -20,10 +20,11 @@ At exact test source `385674f6`, [Preflight 39117637254](https://github.com/moro
 Core job `117646604296` is **SUCCESS**:
 **736/736 stable Core, 4+4 integrations**, all five new
 methods individually `ok`; formatter/frontend/Core Clippy
-also green. Independent [Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
-**SUCCESS, 52/52 native GTK methods**. Desktop Clippy/
-unit result must be checked separately before counting
-the complete quick Preflight 5/5.
+also green. The complete quick Preflight is
+**SUCCESS, 5/5 jobs**, including desktop Tauri
+Clippy and **10/10 desktop Rust methods**. Independent
+[Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
+**SUCCESS, 52/52 native GTK methods**.
 
 Live BlueZ register/notify and GATT notifier lifecycle
 cannot be authenticated by these pure-function tests;
