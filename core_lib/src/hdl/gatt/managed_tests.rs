@@ -143,9 +143,12 @@ fn worker_fixture(
     let control = session.control();
     let (sender, events) = tokio::sync::broadcast::channel(16);
     let (socket, peer) = tokio::io::duplex(128);
-    let mut request =
-        InboundRequest::new(MigratableStream::Ble(socket), "pre-session".into(), sender.clone())
-            .attach_session(session);
+    let mut request = InboundRequest::new(
+        MigratableStream::Ble(socket),
+        "pre-session".into(),
+        sender.clone(),
+    )
+    .attach_session(session);
     // This is the worker's incoming protocol-state precondition. The actual
     // worker handles the socket error/cancellation and applies the transition.
     request.state.state = state;
@@ -156,8 +159,7 @@ fn worker_fixture(
 async fn given_unidentified_native_ble_peer_eof_when_worker_exits_then_no_false_disconnected_event_is_published(
 ) {
     // Arrange: a managed initial state, before the peer is authenticated.
-    let (request, control, hub, peer, sender, mut events) =
-        worker_fixture(State::Initial, 401);
+    let (request, control, hub, peer, sender, mut events) = worker_fixture(State::Initial, 401);
     let transfer_id = control.snapshot().event_id;
     drop(peer);
 
@@ -183,8 +185,8 @@ async fn given_unidentified_native_ble_peer_eof_when_worker_exits_then_no_false_
 }
 
 #[tokio::test]
-async fn given_legacy_ble_peer_eof_when_worker_exits_then_real_inbound_disconnected_event_is_sent(
-) {
+async fn given_legacy_ble_peer_eof_when_worker_exits_then_real_inbound_disconnected_event_is_sent()
+{
     // Arrange: a legacy (unmanaged) inbound worker over an actual duplex.
     let (socket, peer) = tokio::io::duplex(128);
     let (sender, mut events) = tokio::sync::broadcast::channel(16);
@@ -212,7 +214,10 @@ async fn given_legacy_ble_peer_eof_when_worker_exits_then_real_inbound_disconnec
     assert_eq!(message.direction, ChannelDirection::LibToFront);
     assert_eq!(message.rtype, Some(TransferType::Inbound));
     assert_eq!(message.state, Some(State::Disconnected));
-    assert!(message.error.as_ref().is_some_and(|s| !s.is_empty() && s.len() <= 512));
+    assert!(message
+        .error
+        .as_ref()
+        .is_some_and(|s| !s.is_empty() && s.len() <= 512));
     assert!(message.meta.is_none());
     assert!(events.try_recv().is_err());
 }
@@ -306,8 +311,7 @@ async fn given_progressed_native_worker_parent_or_session_cancellation_when_stop
 async fn given_unidentified_native_worker_is_cancelled_when_stopped_then_it_releases_without_spurious_ui_event(
 ) {
     // Arrange: native receiver has not yet established a protocol identity.
-    let (request, control, hub, peer, sender, mut events) =
-        worker_fixture(State::Initial, 406);
+    let (request, control, hub, peer, sender, mut events) = worker_fixture(State::Initial, 406);
     let lifetime = CancellationToken::new();
     lifetime.cancel();
 
