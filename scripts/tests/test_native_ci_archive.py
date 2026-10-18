@@ -80,6 +80,21 @@ class NativeCIArchiveTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(package.read_bytes()).hexdigest(),
                              hashlib.sha256(self.package.read_bytes()).hexdigest())
 
+    def test_given_last_authenticated_generation_when_selected_then_only_its_version_tag_is_proposed(self):
+        client, active = self.channel()
+        self.assertEqual(archive.current_tag(r2.S3Store(client)), "v1.0.0")
+        prefix = f"snapshots/{active.sha256}/pool/main/r/rquickshare-native/"
+        client.objects[prefix + "rquickshare-native_2.0.0-1_arm64.deb"] = b"untrusted"
+        with self.assertRaises(ValueError):
+            archive.current_tag(r2.S3Store(client))
+        del client.objects[prefix + "rquickshare-native_2.0.0-1_arm64.deb"]
+        client.objects[prefix + "private"] = b"unexpected"
+        with self.assertRaises(ValueError):
+            archive.current_tag(r2.S3Store(client))
+        del client.objects[prefix + "private"]
+        del client.objects[active.key]
+        self.assertIsNone(archive.current_tag(r2.S3Store(client)))
+
     def test_given_missing_active_authority_when_checked_then_only_confirmed_absence_means_first_release(self):
         client, active = self.channel()
         del client.objects[active.key]
