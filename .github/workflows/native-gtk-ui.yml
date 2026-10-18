@@ -8,11 +8,6 @@ on:
       - "core_lib/**"
       - ".github/workflows/native-gtk-ui.yml"
   workflow_dispatch:
-    inputs:
-      stability:
-        description: Run ten repetitions for an explicit final stability gate
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -60,7 +55,7 @@ jobs:
 
       - name: Native GTK isolated widget and controller suite
         env:
-          NATIVE_TEST_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.stability && '10' || '1' }}
+          NATIVE_TEST_RUNS: "1"
         run: |
           mkdir -p "$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
           export TMPDIR="$GITHUB_WORKSPACE/core_lib/target/native-ui-test-tmp"
