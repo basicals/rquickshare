@@ -150,9 +150,9 @@ review is not an executed mutation engine.
 
 1. [x] Stage 1–8 scanned and documented BEFORE test changes.
 2. [x] Implement all five planned test methods only.
-3. [ ] Verify rustfmt, Core Rust, Clippy and native GTK
+3. [x] Verify rustfmt, Core Rust, Clippy and native GTK
    at the exact code SHA; record failures honestly.
-4. [ ] Update this ledger, `docs/mode-b-inventory.md`,
+4. [x] Update this ledger, `docs/mode-b-inventory.md`,
    `docs/current-state.md` and category D2.
 5. [ ] Final full 10× Stage 11, all-production-branch Stage 12,
    actual BlueZ/Google Android/Windows/KDE acceptance **OPEN**.
@@ -251,3 +251,91 @@ or a newer exact-SHA run if superseded,
 rather than reusing the previous green receipt.
 The added mask assertions check the actual single-byte
 BLE endpoint-information field. No runtime code change.
+
+## Verified final strengthened test source and scoped D1–D5
+
+At exact code SHA `385674f6b1267af3f0b117af773c4c8348f37826`,
+[Preflight 39117637254](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637254),
+Core Rust job `117646604296`, full job log inspected:
+
+- **736 stable Core methods passed / 0 failed / 0 ignored**;
+  eight separately scheduled race-sensitive methods
+  were filtered by the existing quick CI policy.
+- The other Core integration binaries each report
+  **4/4 passed**.
+- Exactly **five** new test method names each appear
+  once with `... ok`, including the strengthened
+  device-mask matrix (7 extra raw type inputs).
+- Format, frontend and Core Clippy jobs **SUCCESS**.
+  Desktop Tauri Clippy/unit job must be independently
+  confirmed before marking the full quick Preflight
+  5/5 green.
+- Independent [Native GTK 39117637258](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117637258)
+  **SUCCESS**, and the actual GTK job `117646561562`
+  reports **52/52 passed, 0 failed/ignored**.
+
+### D2 category assignment (method counts, overlapping)
+
+Five new original methods, executed once each under the
+same-source quick Core job. Counts below describe **methods
+mapped to categories**, not unique mutually exclusive
+tests or automatic Rust branch coverage.
+
+| Category | New methods | Actual scoped evidence |
+|---|---:|---|
+| Positive | 5 | PASS: correct FEF3, mDNS, schedule, BlueZ packet descriptor |
+| N1 validation | 3 | PASS: overlong and UTF-8 input, allowed names, arbitrary headers |
+| N2 boundaries | 5 | PASS: names 0/1/236/237/238/255/256+, raw types 0/1/2/3/7/8/255, 2/5/30/120 s, 31-byte budget |
+| N3 network failure | 0 | X pure helpers; live BlueZ and mDNS discovery remain OPEN |
+| N4 repeated events | 4 | PASS: first deferred deadline, explicit restart, deterministic wire rebuild |
+| N5 races | 2 | PASS: overdue/repeated scheduler triggers and stop/restart epochs (not real BlueZ races) |
+| N6 corrupt/outdated data | 2 | PASS: oversized UTF-8 normalized; opaque header preserved |
+| N7 security/ownership | 3 | PASS: exact endpoint ID, masked device type and bounded wire |
+| N8 locale/time | 3 | PASS: multi-byte UTF-8 and monotonic fake-clock deadlines; DST not applicable |
+| N9 interruption | 2 | PASS: stopped/restarted schedule, repeated refresh burst |
+| N10 data disclosure | 3 | PASS: bounded endpoint-name fields, exact name and opaque bytes |
+| N11 entitlements | 0 | X no billing/subscription |
+| N12 storage | 0 | X no filesystem |
+
+### D3 implementation and mutation sensitivity
+
+Files changed: only `core_lib/src/hdl/blea.rs` **test
+modules**, this scoped ledger and the two global
+documentation indexes. No runtime code, build flags,
+mock production domain, or additional SDK dependencies.
+The 17 direct wire-boundary subcases, 80 cross-media
+identity/type/name combinations, three interval/epoch
+cases each and three opaque headers form the planned
+5 distinct method groups. The assertions are
+independent of the values of secure random bytes.
+
+Manual mutation review: truncating a name at a non-UTF-8
+boundary, dropping reserved bytes, modifying the 4-byte
+endpoint, changing the advertised/announced length,
+unmasking/reducing the raw type field, extending the
+first deferred deadline after a repeat, replaying
+deadlines after stop, or mutating the packet
+service/intervals/headers would fail specific
+assertions. No automated mutation engine run is
+claimed.
+
+### D4/D5 boundaries and acceptance
+
+No refactor was necessary for the above pure production
+functions. A BlueZ `AdvertisementHandle`/
+`CharacteristicNotifier` contract seam is still
+needed to automate the actual D-Bus registration,
+subscribe/stop/error/reassembly path, but it changes
+injection architecture; approval under MODE A is
+required. Google Android, Windows Quick Share and
+KDE/Wayland hardware interoperability are unverified.
+
+The five new methods are proven passing in one
+exact-source quick Core run. **Do not claim
+0 flakes from ten consecutive runs**: full strict
+10x is currently release-tag-gated, and no new
+version tag or publication is authorized.
+Repository-wide Stage 11 for this final source and
+Stage 12 (all public methods/branches/N1–N12)
+both remain **NO**. Issue #8 authenticated BWU
+alias ownership is independent and OPEN.
