@@ -19,8 +19,8 @@ FILES = {
     "usr/bin/rquickshare": (None, 0o755),
     "usr/libexec/rquickshare-daemon": (None, 0o755),
     "usr/libexec/rquickshare-preview-helper": (None, 0o755),
-    "usr/share/doc/rquickshare/LICENSE": (ROOT / "LICENSE", 0o644),
-    "usr/share/doc/rquickshare/README.md": (ASSETS / "README.md", 0o644),
+    "usr/share/doc/rquickshare-native/LICENSE": (ROOT / "LICENSE", 0o644),
+    "usr/share/doc/rquickshare-native/README.md": (ASSETS / "README.md", 0o644),
 }
 for relative in [
     "lib/systemd/user/rquickshare-daemon.service",
@@ -54,12 +54,13 @@ def native_revision(value):
 
 def native_version(version, revision, debug=False):
     require(re.fullmatch(r"\d+\.\d+\.\d+", version) is not None, "Invalid source version")
-    return version + "+native" + str(native_revision(revision)) + (".debug" if debug else "")
+    return version + "-" + str(native_revision(revision)) + (".debug" if debug else "")
 
 
 def validate_metadata(fields):
-    require(fields.get("Package") == "rquickshare", "Unexpected package identity")
-    version = re.fullmatch(r"\d+\.\d+\.\d+\+native([1-9][0-9]{0,9})(?:\.debug)?", fields.get("Version", ""))
+    require(fields.get("Package") == "rquickshare-native", "Unexpected package identity")
+    require(fields.get("Conflicts") == "rquickshare" and fields.get("Replaces") == "rquickshare", "Missing legacy package conflict/replacement")
+    version = re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)-([1-9][0-9]{0,9})(?:\.debug)?", fields.get("Version", ""))
     require(version is not None, "Invalid native version")
     native_revision(int(version[1]))
     require(fields.get("Architecture") in {"amd64", "arm64"}, "Unsupported architecture")
@@ -123,7 +124,7 @@ def checksum(package):
 def verify(package, smoke=True):
     package = package.resolve(strict=True)
     require(package.with_suffix(package.suffix + ".sha256").read_text() == checksum(package), "Checksum mismatch")
-    fields = {name: run("dpkg-deb", "--field", str(package), name) for name in ["Package", "Version", "Architecture", "Depends"]}
+    fields = {name: run("dpkg-deb", "--field", str(package), name) for name in ["Package", "Version", "Architecture", "Depends", "Conflicts", "Replaces"]}
     validate_metadata(fields)
     validate_assets()
     allowed_dirs = {"", "."} | {str(parent) for name in FILES for parent in Path(name).parents}
@@ -183,20 +184,20 @@ def verify(package, smoke=True):
 def build(args):
     validate_assets()
     versions = [tomllib.loads((ROOT / crate / "Cargo.toml").read_text())["package"]["version"] for crate in ["core_lib", "native_desktop"]]
-    require(versions[0] == versions[1] and re.fullmatch(r"\d+\.\d+\.\d+", versions[0]), "Crate version mismatch")
+    require(re.fullmatch(r"\d+\.\d+\.\d+", versions[1]) is not None, "Invalid desktop SemVer")
     architecture = run("dpkg", "--print-architecture")
     require(architecture in {"amd64", "arm64"}, "Unsupported native architecture")
     require(not os.environ.get("CARGO_BUILD_TARGET") and not os.environ.get("CARGO_TARGET_DIR"), "Use native default cargo target directories")
     revision = tomllib.loads((ASSETS / "release.toml").read_text())["revision"]
-    version = native_version(versions[0], revision, args.profile == "dev")
+    version = native_version(versions[1], revision, args.profile == "dev")
     for crate, binary in [("core_lib", "rquickshare-daemon"), ("native_desktop", "rquickshare"), ("native_desktop", "rquickshare-preview-helper")]:
         subprocess.run(["cargo", "+stable", "build", "--locked", "--manifest-path", str(ROOT / crate / "Cargo.toml"), "--bin", binary, "--profile", args.profile], check=True)
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    package = output / f"rquickshare_{version}_{architecture}.deb"
+    package = output / f"rquickshare-native_{version}_{architecture}.deb"
     with tempfile.TemporaryDirectory(prefix="rqs-deb-build-") as temporary:
         work = Path(temporary)
-        stage = work / "debian/rquickshare"
+        stage = work / "debian/rquickshare-native"
         for destination, (source, mode) in FILES.items():
             if source is None:
                 crate = "core_lib" if destination.endswith("/rquickshare-daemon") else "native_desktop"
@@ -206,7 +207,7 @@ def build(args):
             shutil.copyfile(source, target)
             target.chmod(mode)
         (work / "debian").mkdir(exist_ok=True)
-        (work / "debian/control").write_text("Source: rquickshare\n\nPackage: rquickshare\nArchitecture: any\nDescription: Native nearby sharing\n")
+        (work / "debian/control").write_text("Source: rquickshare-native\n\nPackage: rquickshare-native\nArchitecture: any\nDescription: Native nearby sharing\n")
         control = stage / "DEBIAN"
         control.mkdir()
         command = ["dpkg-shlibdeps", "-O", "-e" + str(stage / "usr/bin/rquickshare"), "-e" + str(stage / "usr/libexec/rquickshare-daemon"), "-e" + str(stage / "usr/libexec/rquickshare-preview-helper")]
@@ -217,8 +218,8 @@ def build(args):
         dependencies = run(*command, cwd=work)
         require(dependencies.startswith("shlibs:Depends="), "Missing generated ELF dependencies")
         depends = dependencies.removeprefix("shlibs:Depends=") + ", libgtk-4-1 (>= 4.12), systemd, libpam-systemd, dbus-user-session, bluez, xdg-desktop-portal, bubblewrap, glycin-loaders (>= 2.1)"
-        validate_metadata({"Package": "rquickshare", "Version": version, "Architecture": architecture, "Depends": depends})
-        (control / "control").write_text(f"Package: rquickshare\nVersion: {version}\nArchitecture: {architecture}\nMaintainer: rQuickShare contributors <noreply@github.com>\nSection: net\nPriority: optional\nDepends: {depends}\nRecommends: xdg-desktop-portal-kde\nDescription: Native nearby file and text sharing\n GTK4 tray client and independently owned transfer daemon.\n")
+        validate_metadata({"Package": "rquickshare-native", "Version": version, "Architecture": architecture, "Depends": depends, "Conflicts": "rquickshare", "Replaces": "rquickshare"})
+        (control / "control").write_text(f"Package: rquickshare-native\nVersion: {version}\nArchitecture: {architecture}\nConflicts: rquickshare\nReplaces: rquickshare\nMaintainer: rQuickShare contributors <noreply@github.com>\nSection: net\nPriority: optional\nDepends: {depends}\nRecommends: xdg-desktop-portal-kde\nDescription: Native nearby file and text sharing\n GTK4 tray client and independently owned transfer daemon.\n")
         (control / "control").chmod(0o644)
         for directory in [stage, *[path for path in stage.rglob("*") if path.is_dir()]]:
             directory.chmod(0o755)

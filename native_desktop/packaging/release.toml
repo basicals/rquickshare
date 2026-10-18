@@ -1,2 +1,2 @@
-# Increment for every changed native package at the same Rust version.
-revision = 30
+# Revision of the Debian package for the current product SemVer, starting at 1.
+revision = 1

@@ -9,7 +9,7 @@ libraries/tools installed:
 
 ```sh
 python3 scripts/native_deb.py build
-python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare_0.11.5+native8_amd64.deb
+python3 scripts/native_deb.py verify native_desktop/target/packages/rquickshare-native_1.0.0-1_amd64.deb
 ```
 
 Default artifacts contain locked release binaries. `build --profile dev` explicitly
@@ -31,10 +31,12 @@ checks exact allowed paths, owner/mode, assets, dependencies and native identity
 then runs extracted GUI/daemon --help and a private fixture --settings PATH --check.
 It does not connect to the user bus, show UI or read user configuration.
 
-The `rquickshare` package owns `/usr/bin/rquickshare`, `/usr/libexec/rquickshare-daemon`,
+The intended `rquickshare-native` package owns `/usr/bin/rquickshare`, `/usr/libexec/rquickshare-daemon`,
 both daemon and desktop user units and fixed application/D-Bus/Dolphin
-assets. It replaces the same-name legacy package on explicit installation; never
-install two different packages owning `/usr/bin/rquickshare`. The legacy source
+assets. It declares `Conflicts: rquickshare` and `Replaces: rquickshare` for a reviewed
+migration from the original/earlier native package. Never install two packages
+owning `/usr/bin/rquickshare`; confirm the package-manager removal plan, preserve
+user settings and test rollback before distributing this new identity. The legacy source
 and release workflows remain migration baseline until native acceptance.
 
 Normal application/Dolphin/daemon-wake launch delegates to the fixed desktop user
