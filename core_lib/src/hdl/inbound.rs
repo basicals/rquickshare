@@ -4346,6 +4346,271 @@ mod security_tests {
             .endpoint_id = Some(String::new());
         assert!(validate_client_introduction(&empty_id.encode_to_vec()).is_err());
     }
+
+    #[cfg(all(feature = "experimental", target_os = "linux"))]
+    fn valid_bwu_client_intro_fixture() -> OfflineFrame {
+        use location_nearby_connections::bandwidth_upgrade_negotiation_frame::{
+            ClientIntroduction, EventType,
+        };
+        use location_nearby_connections::{
+            offline_frame, v1_frame, BandwidthUpgradeNegotiationFrame, V1Frame,
+        };
+
+        OfflineFrame {
+            version: Some(offline_frame::Version::V1.into()),
+            v1: Some(V1Frame {
+                r#type: Some(v1_frame::FrameType::BandwidthUpgradeNegotiation.into()),
+                bandwidth_upgrade_negotiation: Some(BandwidthUpgradeNegotiationFrame {
+                    event_type: Some(EventType::ClientIntroduction.into()),
+                    client_introduction: Some(ClientIntroduction {
+                        endpoint_id: Some("peer-1234".into()),
+                        last_endpoint_id: None,
+                        supports_disabling_encryption: Some(false),
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+        }
+    }
+
+    #[cfg(all(feature = "experimental", target_os = "linux"))]
+    #[test]
+    fn given_invalid_bwu_introduction_fields_when_validated_then_no_identity_is_admitted() {
+        use location_nearby_connections::bandwidth_upgrade_negotiation_frame::EventType;
+        use location_nearby_connections::v1_frame::FrameType;
+
+        // Arrange: genuine encoded protobuf variants, each missing an independent
+        // required introduction field or identifying the wrong protocol event.
+        let valid = valid_bwu_client_intro_fixture();
+        let mut cases: Vec<(&str, OfflineFrame)> = Vec::new();
+
+        let mut no_v1 = valid.clone();
+        no_v1.v1 = None;
+        cases.push(("missing-v1", no_v1));
+
+        let mut wrong_type = valid.clone();
+        wrong_type.v1.as_mut().unwrap().r#type = Some(FrameType::ConnectionRequest.into());
+        cases.push(("wrong-frame-type", wrong_type));
+
+        let mut no_negotiation = valid.clone();
+        no_negotiation
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation = None;
+        cases.push(("missing-negotiation", no_negotiation));
+
+        let mut wrong_event = valid.clone();
+        wrong_event
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation
+            .as_mut()
+            .unwrap()
+            .event_type = Some(EventType::SafeToClosePriorChannel.into());
+        cases.push(("wrong-event", wrong_event));
+
+        let mut missing_event = valid.clone();
+        missing_event
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation
+            .as_mut()
+            .unwrap()
+            .event_type = None;
+        cases.push(("missing-event", missing_event));
+
+        let mut no_intro = valid.clone();
+        no_intro
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation
+            .as_mut()
+            .unwrap()
+            .client_introduction = None;
+        cases.push(("missing-introduction", no_intro));
+
+        let mut no_endpoint = valid.clone();
+        no_endpoint
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation
+            .as_mut()
+            .unwrap()
+            .client_introduction
+            .as_mut()
+            .unwrap()
+            .endpoint_id = None;
+        cases.push(("missing-current-id", no_endpoint));
+
+        let mut empty_endpoint = valid;
+        empty_endpoint
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation
+            .as_mut()
+            .unwrap()
+            .client_introduction
+            .as_mut()
+            .unwrap()
+            .endpoint_id = Some(String::new());
+        cases.push(("empty-current-id", empty_endpoint));
+
+        // Act / Assert: no corrupted or wrong-kind introduction may create
+        // a route identity. A valid protobuf shape alone is not sufficient.
+        for (name, frame) in cases {
+            let bytes = frame.encode_to_vec();
+            assert!(
+                validate_client_introduction(&bytes).is_err(),
+                "unexpected BWU identity from {name}"
+            );
+        }
+        for (name, bytes) in [
+            ("empty-payload", vec![]),
+            ("invalid-wire-type", vec![0xff]),
+            ("truncated-length-varint", vec![0x0a, 0x80]),
+        ] {
+            assert!(
+                validate_client_introduction(&bytes).is_err(),
+                "unexpected BWU identity from {name}"
+            );
+        }
+    }
+
+    #[cfg(all(feature = "experimental", target_os = "linux"))]
+    #[test]
+    fn given_partial_or_malformed_bwu_tcp_prefix_when_peeked_then_only_complete_valid_identity_is_returned(
+    ) {
+        use location_nearby_connections::v1_frame::FrameType;
+
+        let valid = valid_bwu_client_intro_fixture();
+        let payload = valid.encode_to_vec();
+        let mut frame = (payload.len() as u32).to_be_bytes().to_vec();
+        frame.extend_from_slice(&payload);
+        let expected = Some(BwuClientIntroductionIdentity {
+            endpoint_id: "peer-1234".into(),
+            last_endpoint_id: None,
+        });
+
+        // Incomplete TCP framing cannot be mistaken for admission, even
+        // when a complete protobuf would follow the remaining bytes.
+        for prefix_len in 0..4 {
+            assert_eq!(
+                peek_client_introduction(&frame[..prefix_len]).unwrap(),
+                None,
+                "incomplete length prefix at {prefix_len} bytes"
+            );
+        }
+        for announced in [
+            0_u32,
+            (SANE_FRAME_LENGTH as u32) + 1,
+            u32::MAX,
+        ] {
+            assert_eq!(
+                peek_client_introduction(&announced.to_be_bytes()).unwrap(),
+                None,
+                "invalid announced length {announced}"
+            );
+        }
+        for available in [4, frame.len() - 1] {
+            assert_eq!(
+                peek_client_introduction(&frame[..available]).unwrap(),
+                None,
+                "incomplete body with {available} bytes"
+            );
+        }
+        let mut too_long_header = ((payload.len() as u32) + 1).to_be_bytes().to_vec();
+        too_long_header.extend_from_slice(&payload);
+        assert_eq!(peek_client_introduction(&too_long_header).unwrap(), None);
+
+        let malformed_body = [0xff_u8];
+        let mut malformed = (malformed_body.len() as u32).to_be_bytes().to_vec();
+        malformed.extend_from_slice(&malformed_body);
+        assert_eq!(peek_client_introduction(&malformed).unwrap(), None);
+
+        let mut wrong_kind = valid;
+        wrong_kind.v1.as_mut().unwrap().r#type = Some(FrameType::ConnectionRequest.into());
+        let wrong_payload = wrong_kind.encode_to_vec();
+        let mut wrong_frame = (wrong_payload.len() as u32).to_be_bytes().to_vec();
+        wrong_frame.extend_from_slice(&wrong_payload);
+        assert_eq!(peek_client_introduction(&wrong_frame).unwrap(), None);
+
+        // A complete first frame must be recognized even when the stream
+        // already contains data from a following frame; the peek consumes none.
+        assert_eq!(peek_client_introduction(&frame).unwrap(), expected);
+        let mut with_trailing = frame.clone();
+        with_trailing.extend_from_slice(&[0xff, 0x00, 0x12, 0x34]);
+        assert_eq!(peek_client_introduction(&with_trailing).unwrap(), expected);
+        assert_eq!(frame, with_trailing[..frame.len()]);
+    }
+
+    #[cfg(all(feature = "experimental", target_os = "linux"))]
+    #[test]
+    fn given_bwu_current_and_last_ids_when_compared_then_only_exact_expected_id_matches() {
+        // A matching string is a router lookup predicate, NOT authenticated
+        // peer identity. Cryptographic alias authorization remains open.
+        for (current, previous, expected, matches) in [
+            ("peer-1234", None, "peer-1234", true),
+            ("peer-1234", Some("peer-old"), "peer-old", true),
+            ("peer-1234", Some("peer-old"), "peer-1234", true),
+            ("peer-1234", None, "peer-old", false),
+            ("peer-1234", Some("peer-old"), "peer-other", false),
+            ("peer-1234", Some("peer-old"), "peer", false),
+            ("peer-1234", Some("peer-old"), "PEER-OLD", false),
+            ("peer-1234", Some("peer-old"), "", false),
+        ] {
+            let identity = BwuClientIntroductionIdentity {
+                endpoint_id: current.into(),
+                last_endpoint_id: previous.map(str::to_owned),
+            };
+            assert_eq!(
+                identity.matches_expected(expected),
+                matches,
+                "unexpected lookup for current={current} previous={previous:?} expected={expected}"
+            );
+        }
+
+        let mut frame = valid_bwu_client_intro_fixture();
+        let intro = frame
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation
+            .as_mut()
+            .unwrap()
+            .client_introduction
+            .as_mut()
+            .unwrap();
+        intro.last_endpoint_id = Some(String::new());
+        assert_eq!(
+            validate_client_introduction(&frame.encode_to_vec()).unwrap(),
+            BwuClientIntroductionIdentity {
+                endpoint_id: "peer-1234".into(),
+                last_endpoint_id: None,
+            }
+        );
+        frame
+            .v1
+            .as_mut()
+            .unwrap()
+            .bandwidth_upgrade_negotiation
+            .as_mut()
+            .unwrap()
+            .client_introduction
+            .as_mut()
+            .unwrap()
+            .last_endpoint_id = Some("peer-old".into());
+        let identity = validate_client_introduction(&frame.encode_to_vec()).unwrap();
+        assert!(identity.matches_expected("peer-old"));
+        assert!(!identity.matches_expected("peer-other"));
+    }
+
 }
 
 #[cfg(all(test, feature = "experimental", target_os = "linux"))]
