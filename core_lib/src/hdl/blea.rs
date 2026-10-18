@@ -104,6 +104,7 @@ impl BleAdvertiser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DeviceType;
 
     #[test]
     fn advertises_only_when_discoverable() {
@@ -186,7 +187,6 @@ mod tests {
 
             let info_len = usize::from(connection[8]);
             assert_eq!(connection.len(), 9 + info_len + 8, "{case}");
-            assert_eq!(info_len <= u8::MAX as usize, true, "{case}");
             let info = &connection[9..9 + info_len];
             assert_eq!(info[0], (1 << 5) | (3 << 1), "{case}");
             assert_eq!(info.len(), 18 + usize::from(info[17]), "{case}");
