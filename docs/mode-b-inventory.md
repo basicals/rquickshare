@@ -1,5 +1,25 @@
 # Mode B inventory, branch map, and test matrix
 
+## 2026-10-18 P0 partial TCP preface timeout, early EOF and cancellation
+
+Three new original `core_lib/src/manager.rs` real TCP methods
+cover six prefix/body splits against the 750 ms fake-clock
+deadline, three peer half-close EOF variants, and cancelled
+classifier followed by a fresh accepted socket to the same
+pending owner. Their source-defined
+[Stages 1–10, positive/N1–N12, per-function branch and D2 map](mode-b-p0-classifier-timeout-cancellation-2026-10-18.md)
+is included in the scoped ledger. Verified
+[Preflight 39094606972](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606972)
+Core **728 passed / 0 failed / 0 ignored**, integration **4+4**,
+and each new method separately reported `ok` at
+exact test SHA `c8753010`. Earlier test-only
+red states and Linux RST behavior are documented,
+not silently excluded from evidence.
+Full repo Stage 11 ten-pass after all tests,
+true BlueZ and authenticated BWU [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8)
+and global Stage 12 **remain OPEN**.
+
+
 ## 2026-10-18 P0 segmented TCP ingress and simultaneous BWU owner routing
 
 `core_lib/src/manager.rs::route_bandwidth_upgrade_if_pending`
