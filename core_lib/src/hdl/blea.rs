@@ -486,6 +486,102 @@ impl ReceiverAdvertiser {
 #[cfg(test)]
 mod schedule_tests {
     use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn given_repeated_gatt_refreshes_when_scheduled_then_first_deferred_and_periodic_deadlines_stay_fixed(
+    ) {
+        use std::time::Duration;
+
+        // Arrange: all valid refresh intervals are checked with an isolated
+        // fake Tokio clock; no BLE adapter or elapsed wall time is involved.
+        for seconds in [5_u64, RX_PERIODIC_REFRESH_DEFAULT_SECS, 120] {
+            let start = tokio::time::Instant::now();
+            let mut schedule = ReceiverSchedule::default();
+            schedule.started(start, seconds);
+            let periodic = start + Duration::from_secs(seconds);
+            assert_eq!(schedule.periodic, Some(periodic));
+            assert!(schedule.deferred.is_none());
+
+            // Act: the first slot-0 request starts the 2-second deadline.
+            schedule.defer(start);
+            let first_deferred = start + Duration::from_secs(2);
+            assert_eq!(schedule.deferred, Some(first_deferred));
+
+            tokio::time::advance(Duration::from_millis(1_999)).await;
+            assert!(tokio::time::Instant::now() < first_deferred);
+            schedule.defer(tokio::time::Instant::now());
+            assert_eq!(schedule.deferred, Some(first_deferred));
+
+            tokio::time::advance(Duration::from_millis(1)).await;
+            assert!(tokio::time::Instant::now() >= first_deferred);
+            for seconds_later in [1_u64, 2, 30, 120] {
+                tokio::time::advance(Duration::from_secs(seconds_later)).await;
+                schedule.defer(tokio::time::Instant::now());
+                // Assert: neither repeated discovery traffic nor an overdue
+                // timer may postpone the first deferred recovery or safety.
+                assert_eq!(schedule.deferred, Some(first_deferred));
+                assert_eq!(schedule.periodic, Some(periodic));
+            }
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn given_advertising_stop_and_restart_when_scheduled_then_old_deadlines_never_reappear(
+    ) {
+        use std::time::Duration;
+
+        let mut schedule = ReceiverSchedule::default();
+
+        // Arrange: stopping an inactive advertisement is an idempotent no-op.
+        for _ in 0..2 {
+            schedule.stopped();
+            assert!(schedule.periodic.is_none());
+            assert!(schedule.deferred.is_none());
+        }
+
+        // Act/Assert: across multiple independent advertising epochs, a
+        // previous slot-0 deferred deadline must never reach the next epoch.
+        for period_seconds in [5_u64, 30, 120] {
+            let start = tokio::time::Instant::now();
+            schedule.started(start, period_seconds);
+            schedule.defer(start);
+            let previous_periodic = schedule.periodic.unwrap();
+            let previous_deferred = schedule.deferred.unwrap();
+            assert_eq!(
+                previous_periodic,
+                start + Duration::from_secs(period_seconds)
+            );
+            assert_eq!(previous_deferred, start + Duration::from_secs(2));
+
+            tokio::time::advance(Duration::from_millis(500)).await;
+            schedule.stopped();
+            assert!(schedule.periodic.is_none());
+            assert!(schedule.deferred.is_none());
+
+            tokio::time::advance(Duration::from_secs(period_seconds + 1)).await;
+            assert!(schedule.periodic.is_none());
+            assert!(schedule.deferred.is_none());
+
+            // A fresh advertisement resets its periodic deadline and does
+            // not inherit any deferred work until an actual new slot-0 read.
+            let restarted = tokio::time::Instant::now();
+            schedule.started(restarted, period_seconds);
+            assert_eq!(
+                schedule.periodic,
+                Some(restarted + Duration::from_secs(period_seconds))
+            );
+            assert!(schedule.deferred.is_none());
+            schedule.defer(restarted);
+            assert_eq!(
+                schedule.deferred,
+                Some(restarted + Duration::from_secs(2))
+            );
+            assert!(schedule.deferred.unwrap() > previous_deferred);
+            assert!(schedule.periodic.unwrap() > previous_periodic);
+            schedule.stopped();
+        }
+    }
+
     #[tokio::test(start_paused = true)]
     async fn given_continuous_refresh_events_when_scheduled_then_periodic_and_first_deferred_deadlines_never_slide(
     ) {
