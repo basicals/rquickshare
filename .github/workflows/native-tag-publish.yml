@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      actions: read
     outputs:
       version: ${{ steps.version.outputs.version }}
       revision: ${{ steps.version.outputs.revision }}
@@ -40,15 +39,6 @@ jobs:
           (( revision <= 2147483647 )) || exit 1
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
-      - name: Require exact-source completed 10x Mode B
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          sha="$(git rev-parse HEAD)"
-          runs="$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/mode-b.yml/runs" -f head_sha="$sha" -f per_page=100)"
-          jq -e --arg sha "$sha" '[.workflow_runs[] | select(.head_sha == $sha and .conclusion == "success")] | length > 0' <<< "$runs" >/dev/null
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -63,8 +53,15 @@ jobs:
           npm test
           npm run dry-run
 
-  package:
+  mode-b:
+    name: Full Mode B (10x) on release tag
     needs: admission
+    uses: ./.github/workflows/mode-b.yml
+    permissions:
+      contents: read
+
+  package:
+    needs: [admission, mode-b]
     runs-on: ubuntu-24.04
     container: ubuntu:26.04
     timeout-minutes: 120
