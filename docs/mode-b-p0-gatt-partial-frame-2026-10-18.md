@@ -152,9 +152,9 @@ Manual review only; no mutation engine execution is claimed.
 1. [x] Stage 1–8 source inspection, inventory, branch/N matrices,
    interaction matrix and counts in repository before code.
 2. [x] Stage 9 implement all three original test methods, no runtime changes.
-3. [ ] Stage 10 mutation review and CI on exact source, do not soften
+3. [x] Stage 10 mutation review and CI on exact source, do not soften
    assertions if actual production behavior violates an invariant.
-4. [ ] Update this ledger, global MODE B inventory and Current State
+4. [x] Update this ledger, global MODE B inventory and Current State
    with actual verified job/commit receipts and D1–D5.
 5. [ ] Global full 10× final suite, physical Linux/Google Android/
    Windows/BlueZ evidence and all-public-branch Stage 12 remain OPEN.
@@ -180,3 +180,76 @@ protocol, security, installation or release changes.
   `dev` commits appear; cancelled cases never count as green.
 - Stage 12 remains NO; observed BlueZ notifier and crypto gaps
   are not resolved by these duplex tests.
+
+## Stage 9–11 verified execution
+
+Exact test+format source SHA
+`86ebe6780693bcac08eb3db363cc919a73cc95dc`.
+[GitHub Preflight 39116064673](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064673),
+Core Rust job `117642032398`: **SUCCESS**. Inspected the
+actual complete GitHub job log:
+
+- **731 stable Core unit tests passed / 0 failed / 0 ignored**.
+  Eight separately scheduled race-sensitive methods were
+  intentionally filtered from this quick stable group.
+- Both existing Core integration binaries **4/4 + 4/4** passed.
+- All **three newly added methods** appeared **exactly once**
+  with explicit `... ok` result.
+- Each method iterates every planned table variant:
+  four Initial malformed payloads; five advanced EOF
+  lengths; four partial-header/body × parent/session cancel.
+  Thus **13 variant assertions groups** are executed inside
+  the 3 successful methods. The log reports three test
+  methods, not thirteen independent Rust test processes.
+- Rust format, Core Clippy and frontend Preflight jobs
+  **SUCCESS** on that source; desktop Tauri Clippy/unit
+  status must be verified separately for the global
+  five-job quick Preflight conclusion.
+- [Native GTK job 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
+  completed **SUCCESS**. This is a distinct native GTK
+  smoke subgate, not a BlueZ device test.
+
+### D2: overlapping scoped actual category counts
+
+Three new methods, one successful execution of each
+(13 internal table variants). Counts describe unique
+*methods assigned* to each applicable category, not
+independent category-specific tests.
+
+| Category | New methods | Outcome |
+|---|---:|---|
+| Positive | 3 | PASS scoped expected terminal/quiet release |
+| N1 bad input | 3 | PASS malformed/truncated frames |
+| N2 boundary | 3 | PASS 0/max+1/u32 max/prefix 1–3/body 1–2 |
+| N3 external I/O loss | 3 | PASS malicious live peer, actual duplex EOF, interrupt pending I/O |
+| N4 idempotency | 3 | PASS one terminal or silent release, no replay |
+| N5 concurrency | 1 | PASS parent-vs-request cancellation while pending |
+| N6 corrupted data | 3 | PASS malformed protobuf / incomplete frame |
+| N7 ownership/security | 3 | PASS no premature native event, exact owned event |
+| N8 locale/time | 0 | N/A: no clock/locale in this managed worker slice |
+| N9 interruption | 3 | PASS EOF/early parse failure/local stop |
+| N10 privacy | 3 | PASS no phantom payload/consent or duplicate UI |
+| N11 monetization | 0 | N/A: sharing worker has no entitlements |
+| N12 storage | 0 | N/A: no file staging in these test preconditions |
+
+### Stage 10 mutation sensitivity and limitations
+
+Removing the native Initial-state UI suppression would
+fail the first method, swallowing EOF errors in the
+progressed state would fail the second, and suppressing
+either parent or request cancellation / generating a
+late Disconnected instead of Cancelled would fail the
+third. Changing owner ID, terminal event duplication,
+retaining lease, or inventing received resources fails
+direct assertions. **No mutation engine was executed.**
+Hardware GATT notification lifecycle remains unverified;
+its production API currently consumes a concrete BlueZ
+`CharacteristicNotifier`, and a reliable contract-level
+notifier test would require a separately approved
+transport seam (MODE A; compatibility and security
+review), plus physical Google/BlueZ acceptance.
+This test-only work makes no change to that API.
+
+Global Stage 11 full ten-consecutive-suite execution on
+the final SHA is **NOT** claimed. Global Stage 12 still
+**NO** due unmapped branches and P0 hardware/alias auth.
