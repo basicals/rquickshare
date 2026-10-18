@@ -1,13 +1,7 @@
 name: Release workflow contract check
 
+# Validate release workflow syntax explicitly, without a heavy dev build.
 on:
-  push:
-    branches: [dev]
-    paths:
-      - ".github/workflows/native-release-check.yml"
-      - ".github/workflows/native-tag-publish.yml"
-      - ".github/workflows/native-apt-refresh.yml"
-      - ".github/workflows/mode-b.yml"
   workflow_dispatch:
 
 permissions:
