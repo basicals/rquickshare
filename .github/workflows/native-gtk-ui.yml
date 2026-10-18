@@ -21,6 +21,8 @@ jobs:
     name: Native GTK widget tests and strict lint
     runs-on: ubuntu-24.04
     container: ubuntu:26.04
+    env:
+      HOME: /root
     steps:
       - name: Install native test prerequisites
         run: |
