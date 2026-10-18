@@ -64,6 +64,8 @@ jobs:
     needs: [admission, mode-b]
     runs-on: ubuntu-24.04
     container: ubuntu:26.04
+    env:
+      HOME: /root
     timeout-minutes: 120
     steps:
       - name: Install Ubuntu 26.04 native ABI dependencies
@@ -78,6 +80,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - uses: Swatinem/rust-cache@v2.9.0
         with:
           workspaces: |
