@@ -1,5 +1,44 @@
 # Current implementation and continuation state
 
+## MODE B P0 mDNS TXT admission and stable service owner — 2026-10-18
+
+Four new **test-only** Rust methods in
+`core_lib/src/utils.rs` and `core_lib/src/hdl/mdns.rs`
+exercise actual `parse_mdns_endpoint_info`,
+`MDnsServer::named_service` and `renamed_service`.
+They cover all decoded 0..16 invalid TXT prefix
+lengths, compact 17-byte and standard 18+ byte
+records, device type normalization, valid name
+length boundaries 0/1/254/255, truncated declared
+length, malformed UTF-8, ServiceInfo DNS fullname,
+hostname, endpoint/port/TXT consistency, and
+non-mutating device renames across legal names.
+
+The documentation-first
+[scoped plan, N1–N12, branch/interaction map, D1–D5](mode-b-p0-mdns-service-txt-2026-10-18.md)
+records the red test-only Rust `as` cast
+precedence error and exact correction in
+commit `bd8c6b61`. Real
+[Preflight 39118831405](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831405)
+Core job `117650068307` at that test SHA:
+**740/740 stable Core, 4+4 integrations, all four
+new methods independently `ok`**. Format,
+frontend and Core Clippy SUCCESS. Independent
+[Native GTK 39118831372](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831372)
+**SUCCESS, 52/52 native GTK methods**. Desktop
+Tauri unit completion remains to be checked
+before declaring the entire quick Preflight 5/5.
+
+Live `MDnsDiscovery::run` event/cache/TCP admission
+and browse/SDK shutdown need an approved
+[MODE A testability decision in Issue #9](https://github.com/morozhenko-apps/rquickshare/issues/9).
+No seam or runtime/network behavior was modified.
+Physical Android/Windows/BlueZ interoperability,
+authenticated BWU [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8),
+final-source strict ten-pass MODE B and all-public-branch
+Stage 12 remain **OPEN/NO**; `master`/packages untouched.
+
+
 ## MODE B P0 receiver FEF3 discovery payload/recovery regressions — 2026-10-18
 
 Five new test-only Rust methods in `core_lib/src/hdl/blea.rs`
