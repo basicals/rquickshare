@@ -1,6 +1,56 @@
 # Current implementation and continuation state
 
 
+## Confirmed P0 native Weave worker 10× — 2026-10-18
+
+The focused real worker
+[P0 CI 39082536345](https://github.com/morozhenko-apps/rquickshare/actions/runs/39082536345)
+on test/workflow SHA `a9f56aad`
+completed **SUCCESS**. Complete logs show
+ten numbered attempts and ten summaries
+of **7 passed, 0 failed, 0 ignored**.
+Every one of the five newly added EOF,
+malformed frame, session cancellation and
+parent cancellation P0 methods passed
+all ten runs; the two preexisting
+managed BLE encrypted consent cases also
+passed ten runs.
+
+The first source-exact candidate
+`7086d48d` compiled/executed all
+7/0 methods in attempt one but failed
+a **workflow-only matcher mistake**
+expecting zero unrelated filtered
+library cases. This was corrected by
+`a9f56aad` to accept any filter count
+while still requiring exactly 7/0
+real executed test results; the first
+false-red run is documented, not
+counted as success. Detailed D2
+category assignment and negative
+branch map:
+[mode-b-p0-gatt-worker-2026-10-18.md](mode-b-p0-gatt-worker-2026-10-18.md).
+
+**Important:** this is a dedicated P0
+seven-method test-group 10×, **NOT**
+a substitute for full repository
+MODE B Stage 11 or 12. Concurrent
+native Debian/APT changes broke
+Python contract Preflight in the
+same repository and interrupted
+ordinary Core run evidence, so
+the complete newest-source release
+CI gate remains OPEN. The source
+only GATT worker scope passed;
+actual BlueZ characteristic
+notifier, multi-packet corruption,
+BLE→TCP handoff and physical
+Android/Windows remain P0 OPEN.
+No GATT runtime/product modifications
+or installed native29 changes.
+
+
+
 ## P0 MODE B real Weave worker negative lifecycle — 2026-10-18
 
 MODE B Stage 3–10 scoped plan and test source:
