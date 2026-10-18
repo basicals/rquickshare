@@ -81,6 +81,203 @@ impl BwuRouter {
 mod tests {
     use super::*;
 
+    // Actual isolated TCP sockets, not a fake BwuRouter or byte channel.
+    async fn bwu_tcp_pair() -> (TcpStream, TcpStream) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .unwrap();
+        let peer = TcpStream::connect(listener.local_addr().unwrap())
+            .await
+            .unwrap();
+        let (inbound, _) = listener.accept().await.unwrap();
+        (peer, inbound)
+    }
+
+    #[tokio::test]
+    async fn given_untrusted_bwu_alias_when_routing_then_socket_and_other_owners_remain_intact() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        // Arrange: two unrelated live peer registrations and a third party.
+        let router = BwuRouter::new();
+        let mut alice = router.register("alice".into()).await.unwrap();
+        let mut bob = router.register("bob".into()).await.unwrap();
+        let (mut outside, incoming) = bwu_tcp_pair().await;
+
+        // Act: neither the current id nor claimed prior id belongs to a waiter.
+        let mut returned = router
+            .route_with_alias("untrusted", Some("forged"), incoming)
+            .await
+            .unwrap_err();
+
+        // Assert: a rejected route retains the exact usable socket and owners.
+        outside.write_all(b"SAFE").await.unwrap();
+        let mut original = [0_u8; 4];
+        returned.read_exact(&mut original).await.unwrap();
+        assert_eq!(&original, b"SAFE");
+        assert_eq!(returned.peer_addr().unwrap(), outside.local_addr().unwrap());
+        assert!(matches!(
+            alice.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        assert!(matches!(
+            bob.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        assert!(router.has_pending().await);
+        assert_eq!(router.pending.lock().await.len(), 2);
+        router.cancel("alice").await;
+        router.cancel("bob").await;
+        assert!(!router.has_pending().await);
+    }
+
+    #[tokio::test]
+    async fn given_two_live_bwu_owners_when_alias_conflicts_then_exact_and_previous_bytes_never_mix()
+    {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        // Arrange: exact current owner and alternate old-id owner both wait.
+        let router = BwuRouter::new();
+        let previous = router.register("previous".into()).await.unwrap();
+        let current = router.register("current".into()).await.unwrap();
+        let (mut current_peer, current_socket) = bwu_tcp_pair().await;
+        let (mut previous_peer, previous_socket) = bwu_tcp_pair().await;
+
+        // Act: exact id must win, without consuming the alias owner.
+        assert_eq!(
+            router
+                .route_with_alias("current", Some("previous"), current_socket)
+                .await
+                .unwrap(),
+            "current"
+        );
+        assert_eq!(router.pending.lock().await.len(), 1);
+        assert!(router.pending.lock().await.contains_key("previous"));
+
+        // The second peer can still route only to its original owner.
+        assert_eq!(
+            router
+                .route_with_alias("previous", None, previous_socket)
+                .await
+                .unwrap(),
+            "previous"
+        );
+        let mut owned_current = current.await.unwrap();
+        let mut owned_previous = previous.await.unwrap();
+        current_peer.write_all(b"CUR").await.unwrap();
+        previous_peer.write_all(b"OLD").await.unwrap();
+        let mut current_bytes = [0_u8; 3];
+        let mut previous_bytes = [0_u8; 3];
+        owned_current.read_exact(&mut current_bytes).await.unwrap();
+        owned_previous
+            .read_exact(&mut previous_bytes)
+            .await
+            .unwrap();
+        assert_eq!(&current_bytes, b"CUR");
+        assert_eq!(&previous_bytes, b"OLD");
+        assert_eq!(owned_current.peer_addr().unwrap(), current_peer.local_addr().unwrap());
+        assert_eq!(
+            owned_previous.peer_addr().unwrap(),
+            previous_peer.local_addr().unwrap()
+        );
+        assert!(!router.has_pending().await);
+    }
+
+    #[tokio::test]
+    async fn given_consumed_bwu_route_when_another_socket_arrives_then_one_shot_owner_cannot_replay()
+    {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let router = BwuRouter::new();
+        let initial_owner = router.register("session".into()).await.unwrap();
+        let (mut first_peer, first_socket) = bwu_tcp_pair().await;
+        assert_eq!(
+            router
+                .route_with_alias("session", None, first_socket)
+                .await
+                .unwrap(),
+            "session"
+        );
+
+        // Act: the session's ownership token was already consumed.
+        let (mut late_peer, late_socket) = bwu_tcp_pair().await;
+        let mut returned_late = router
+            .route_with_alias("session", None, late_socket)
+            .await
+            .unwrap_err();
+        late_peer.write_all(b"LATE").await.unwrap();
+        let mut late_bytes = [0_u8; 4];
+        returned_late.read_exact(&mut late_bytes).await.unwrap();
+        assert_eq!(&late_bytes, b"LATE");
+        assert!(!router.has_pending().await);
+
+        // Assert: only the original accepted TCP socket reaches that owner.
+        let mut owned_first = initial_owner.await.unwrap();
+        first_peer.write_all(b"FIRST").await.unwrap();
+        let mut original = [0_u8; 5];
+        owned_first.read_exact(&mut original).await.unwrap();
+        assert_eq!(&original, b"FIRST");
+
+        // A subsequent generation requires a fresh explicit registration.
+        let next_owner = router.register("session".into()).await.unwrap();
+        let (mut fresh_peer, fresh_socket) = bwu_tcp_pair().await;
+        assert_eq!(
+            router
+                .route_with_alias("session", None, fresh_socket)
+                .await
+                .unwrap(),
+            "session"
+        );
+        let mut fresh = next_owner.await.unwrap();
+        fresh_peer.write_all(b"NEXT").await.unwrap();
+        let mut next = [0_u8; 4];
+        fresh.read_exact(&mut next).await.unwrap();
+        assert_eq!(&next, b"NEXT");
+        assert!(!router.has_pending().await);
+    }
+
+    #[tokio::test]
+    async fn given_cancelled_bwu_generation_when_late_socket_arrives_then_new_owner_only_accepts_fresh_route()
+    {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let router = BwuRouter::new();
+        let old_receiver = router.register("reused".into()).await.unwrap();
+
+        // Act: user/worker closes this specific admission generation.
+        router.cancel("reused").await;
+        assert!(old_receiver.await.is_err());
+        assert!(!router.has_pending().await);
+
+        // A late TCP socket remains usable by caller but cannot be admitted.
+        let (mut late_peer, late_socket) = bwu_tcp_pair().await;
+        let mut returned = router
+            .route_with_alias("reused", None, late_socket)
+            .await
+            .unwrap_err();
+        late_peer.write_all(b"STALE").await.unwrap();
+        let mut stale = [0_u8; 5];
+        returned.read_exact(&mut stale).await.unwrap();
+        assert_eq!(&stale, b"STALE");
+
+        // A new session explicitly registers and receives ONLY its new socket.
+        let fresh_owner = router.register("reused".into()).await.unwrap();
+        let (mut fresh_peer, fresh_socket) = bwu_tcp_pair().await;
+        assert_eq!(
+            router
+                .route_with_alias("reused", None, fresh_socket)
+                .await
+                .unwrap(),
+            "reused"
+        );
+        let mut delivered = fresh_owner.await.unwrap();
+        fresh_peer.write_all(b"FRESH").await.unwrap();
+        let mut fresh = [0_u8; 5];
+        delivered.read_exact(&mut fresh).await.unwrap();
+        assert_eq!(&fresh, b"FRESH");
+        assert_eq!(delivered.peer_addr().unwrap(), fresh_peer.local_addr().unwrap());
+        assert!(!router.has_pending().await);
+    }
+
     #[tokio::test]
     async fn route_delivers_the_registered_socket() {
         let router = BwuRouter::new();
