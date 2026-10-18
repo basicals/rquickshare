@@ -1,0 +1,155 @@
+name: Refresh signed rQuickShare APT metadata
+
+on:
+  schedule:
+    - cron: "17 8 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rquickshare-signed-apt
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: Identify the published immutable source tag
+    runs-on: ubuntu-24.04
+    environment: apt-release
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Install pinned private archive client without signing material
+        run: |
+          python3 -m venv "$RUNNER_TEMP/rqs-readonly-python"
+          "$RUNNER_TEMP/rqs-readonly-python/bin/python" -m pip install -r scripts/requirements-r2.txt
+      - name: Select prior release from its R2 generation
+        id: tag
+        env:
+          RQS_R2_ACCOUNT_ID: ${{ vars.RQS_R2_ACCOUNT_ID }}
+          RQS_R2_ACCESS_KEY_ID: ${{ secrets.RQS_R2_ACCESS_KEY_ID }}
+          RQS_R2_SECRET_ACCESS_KEY: ${{ secrets.RQS_R2_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RQS_R2_ACCOUNT_ID" =~ ^[a-f0-9]{32}$ ]] || exit 1
+          [[ -n "$RQS_R2_ACCESS_KEY_ID" && -n "$RQS_R2_SECRET_ACCESS_KEY" ]] || exit 1
+          tag="$("$RUNNER_TEMP/rqs-readonly-python/bin/python" scripts/native_ci_archive.py \
+            --account-id "$RQS_R2_ACCOUNT_ID" --select-tag)"
+          [[ -z "$tag" || "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [[ -z "$tag" ]]; then echo "No published APT authority; refresh skipped"; fi
+
+  refresh:
+    name: Sign and conditionally renew the existing APT snapshot
+    needs: discover
+    if: needs.discover.outputs.tag != ''
+    runs-on: ubuntu-24.04
+    environment: apt-release
+    timeout-minutes: 45
+    env:
+      TAG: ${{ needs.discover.outputs.tag }}
+      SIGNING_FINGERPRINT: 6D8854762CF0C86881138A56695A0888D09FA616
+      RQS_R2_ACCOUNT_ID: ${{ vars.RQS_R2_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pin the exact historical released source before touching signing keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+          git fetch origin master "refs/tags/$TAG:refs/tags/$TAG"
+          git merge-base --is-ancestor "refs/tags/$TAG^{commit}" "origin/master^{commit}"
+          git checkout --detach "refs/tags/$TAG^{commit}"
+          source_version="$(python3 -c 'import tomllib; print(tomllib.load(open("native_desktop/Cargo.toml", "rb"))["package"]["version"])')"
+          [[ "v$source_version" == "$TAG" ]] || exit 1
+      - name: Install pinned SDK before importing keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/rqs-refresh-python"
+          "$RUNNER_TEMP/rqs-refresh-python/bin/python" -m pip install -r scripts/requirements-r2.txt
+      - name: Import protected release signing subkey only
+        env:
+          KEYRING_B64: ${{ secrets.RQS_APT_PUBLIC_KEYRING_BASE64 }}
+          SUBKEY_B64: ${{ secrets.RQS_APT_SECRET_SUBKEY_BASE64 }}
+          SUBKEY_PASSPHRASE: ${{ secrets.RQS_APT_SUBKEY_PASSPHRASE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$KEYRING_B64" && -n "$SUBKEY_B64" && -n "$SUBKEY_PASSPHRASE" ]] || exit 1
+          umask 077
+          private="$RUNNER_TEMP/rqs-refresh-private"
+          mkdir -m 700 "$private" "$private/gnupg"
+          printf '%s' "$KEYRING_B64" | base64 --decode > "$private/keyring.gpg"
+          printf '%s' "$SUBKEY_B64" | base64 --decode > "$private/import.gpg"
+          printf '%s' "$SUBKEY_PASSPHRASE" > "$private/passphrase"
+          gpg --no-options --homedir "$private/gnupg" --batch --import "$private/import.gpg" >/dev/null 2>&1
+          rm -f "$private/import.gpg"
+          python3 -c 'import sys; sys.path.insert(0, "scripts"); import native_apt as apt; apt.public_key(sys.argv[1], sys.argv[2])' \
+            "$private/keyring.gpg" "$SIGNING_FINGERPRINT"
+          gpg --no-options --homedir "$private/gnupg" --batch --with-colons --list-secret-keys \
+            "$SIGNING_FINGERPRINT" > "$private/keys.txt"
+          python3 scripts/native_ci_signing_key.py --listing "$private/keys.txt" --fingerprint "$SIGNING_FINGERPRINT"
+          rm -f "$private/keys.txt"
+      - name: Authenticate current R2 and regenerate the same package metadata
+        env:
+          RQS_R2_ACCESS_KEY_ID: ${{ secrets.RQS_R2_ACCESS_KEY_ID }}
+          RQS_R2_SECRET_ACCESS_KEY: ${{ secrets.RQS_R2_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ -n "$RQS_R2_ACCESS_KEY_ID" && -n "$RQS_R2_SECRET_ACCESS_KEY" ]] || exit 1
+          py="$RUNNER_TEMP/rqs-refresh-python/bin/python"
+          "$py" scripts/native_ci_archive.py --account-id "$RQS_R2_ACCOUNT_ID" \
+            --keyring "$RUNNER_TEMP/rqs-refresh-private/keyring.gpg" \
+            --fingerprint "$SIGNING_FINGERPRINT" --output "$RUNNER_TEMP/rqs-previous" \
+            > "$RUNNER_TEMP/rqs-refresh-baseline"
+          [[ "$(cat "$RUNNER_TEMP/rqs-refresh-baseline")" == "previous" ]] || exit 1
+          shopt -s nullglob
+          packages=("$RUNNER_TEMP"/rqs-previous/pool/main/r/rquickshare-native/*.deb)
+          [[ "${#packages[@]}" -ge 1 && "${#packages[@]}" -le 2 ]] || exit 1
+          args=()
+          for package in "${packages[@]}"; do args+=(--package "$package"); done
+          python3 scripts/native_apt.py prepare "${args[@]}" --output "$RUNNER_TEMP/rqs-renew-unsigned"
+          private="$RUNNER_TEMP/rqs-refresh-private"
+          python3 scripts/native_apt.py sign --repository "$RUNNER_TEMP/rqs-renew-unsigned" \
+            --output "$RUNNER_TEMP/rqs-renew-signed" \
+            --keyring "$private/keyring.gpg" --fingerprint "$SIGNING_FINGERPRINT" \
+            --gnupghome "$private/gnupg" --passphrase-file "$private/passphrase" \
+            --previous "$RUNNER_TEMP/rqs-previous"
+          python3 scripts/native_apt.py verify --repository "$RUNNER_TEMP/rqs-renew-signed" \
+            --keyring "$private/keyring.gpg" --fingerprint "$SIGNING_FINGERPRINT" \
+            --previous "$RUNNER_TEMP/rqs-previous"
+      - name: Publish a fresh signed InRelease using conditional R2 CAS
+        env:
+          RQS_R2_ACCESS_KEY_ID: ${{ secrets.RQS_R2_ACCESS_KEY_ID }}
+          RQS_R2_SECRET_ACCESS_KEY: ${{ secrets.RQS_R2_SECRET_ACCESS_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/rqs-refresh-python/bin/python" scripts/native_r2.py publish \
+            --repository "$RUNNER_TEMP/rqs-renew-signed" \
+            --keyring "$RUNNER_TEMP/rqs-refresh-private/keyring.gpg" \
+            --fingerprint "$SIGNING_FINGERPRINT" --account-id "$RQS_R2_ACCOUNT_ID" \
+            --previous "$RUNNER_TEMP/rqs-previous"
+          curl -fsS "https://download.morozhenko.com/dist/rQuickShare/dists/rquickshare-native-ubuntu26.04/InRelease" \
+            -o "$RUNNER_TEMP/rqs-renew-public-InRelease"
+          cmp "$RUNNER_TEMP/rqs-renew-public-InRelease" \
+              "$RUNNER_TEMP/rqs-renew-signed/dists/rquickshare-native-ubuntu26.04/InRelease"
+      - name: Cleanup runner-local protected signing material
+        if: always()
+        shell: bash
+        run: |
+          if [[ -d "$RUNNER_TEMP/rqs-refresh-private/gnupg" ]]; then
+            gpgconf --homedir "$RUNNER_TEMP/rqs-refresh-private/gnupg" --kill gpg-agent || true
+          fi
+          rm -rf "$RUNNER_TEMP/rqs-refresh-private" "$RUNNER_TEMP/rqs-previous" \
+                 "$RUNNER_TEMP/rqs-renew-unsigned" "$RUNNER_TEMP/rqs-renew-signed"
