@@ -343,15 +343,14 @@ mod tests {
     }
 
     #[test]
-    fn given_receiver_mdns_services_when_built_then_encoded_endpoint_port_and_txt_identity_agree(
-    ) {
+    fn given_receiver_mdns_services_when_built_then_encoded_endpoint_port_and_txt_identity_agree() {
         // Arrange: exercise production ServiceInfo with bounded public names.
         let endpoints = [[0_u8; 4], *b"TEST", [u8::MAX; 4]];
         let ports = [1_u16, 2345, u16::MAX];
         let names = [
             String::new(),
             "A".to_owned(),
-            "Cafe".to_owned(),
+            "Café".to_owned(),
             "x".repeat(crate::identity::MAX_NAME_BYTES),
         ];
         let kinds = [
@@ -371,7 +370,11 @@ mod tests {
                     for name in &names {
                         // Act: call the real mDNS service builder.
                         let service = MDnsServer::named_service(
-                            endpoint, port, kind.clone(), "machine.local.", name,
+                            endpoint,
+                            port,
+                            kind.clone(),
+                            "machine.local.",
+                            name,
                         )
                         .unwrap();
 
@@ -397,12 +400,16 @@ mod tests {
         let names = [
             String::new(),
             "Office PC".to_owned(),
-            "Cafe".to_owned(),
+            "Café".to_owned(),
             "x".repeat(crate::identity::MAX_NAME_BYTES),
         ];
         for endpoint in [*b"TEST", [u8::MAX; 4]] {
             let original = MDnsServer::named_service(
-                endpoint, 2345, DeviceType::Laptop, "machine.local.", "Original",
+                endpoint,
+                2345,
+                DeviceType::Laptop,
+                "machine.local.",
+                "Original",
             )
             .unwrap();
             let original_fullname = original.get_fullname().to_owned();
@@ -427,8 +434,7 @@ mod tests {
                     original_txt
                 );
                 let txt = renamed.get_properties().get("n").unwrap().val_str();
-                let (found_kind, found_name) =
-                    crate::utils::parse_mdns_endpoint_info(txt).unwrap();
+                let (found_kind, found_name) = crate::utils::parse_mdns_endpoint_info(txt).unwrap();
                 assert_eq!(found_kind, DeviceType::Laptop);
                 assert_eq!(found_name, *name);
                 assert_eq!(
