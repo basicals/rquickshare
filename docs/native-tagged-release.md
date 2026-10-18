@@ -69,6 +69,21 @@ registration, access-scoped environment rules, subkey-only export and
 end-to-end R2 acceptance require the repository operator. Do not
 print or ask the user to paste secrets in chat.
 
+## Public download and APT enrollment contract
+
+GitHub Releases publishes one immutable verified `.deb` and its `.sha256`
+alongside the **public**, non-secret `rquickshare-native-archive-keyring.gpg`,
+`rquickshare-native.sources` and `FINGERPRINT` from the exact signed
+snapshot's verified `native_apt.py bootstrap` output. The separate
+`rquickshare-native.sources` references
+`/etc/apt/keyrings/rquickshare-native-archive-keyring.gpg`, the pinned
+primary fingerprint, only the selected suite, and By-Hash: force.
+A direct .deb install does not enroll APT. Users explicitly install the
+keyring and .sources before `apt update`/`apt install rquickshare-native`.
+These public assets are not a substitute for independently validating the
+signed archive, never include a secret key, and must not be published before
+the R2 signed archive and isolated client acquisition both succeed.
+
 ## Stages and rollback
 
 | Stage | Planned change | Gate / rollback |
