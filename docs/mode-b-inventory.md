@@ -1,5 +1,41 @@
 # Mode B inventory, branch map, and test matrix
 
+
+## 2026-10-18 P0 mDNS TXT parser and service identity contracts
+
+Four new original tests in `core_lib/src/utils.rs`
+and `core_lib/src/hdl/mdns.rs` cover malformed,
+truncated and exact-length remote `n=` TXT;
+compact/normal record formats, unknown device
+normalization, valid UTF-8 and invalid encodings,
+SDK ServiceInfo endpoint ID/fullname/port/name/type
+cross-product and rename immutability.
+
+The [scoped MODE B plan, Positive/N1–N12 matrix,
+per-production-method branch map, mutation review
+and D1–D5](mode-b-p0-mdns-service-txt-2026-10-18.md)
+was recorded before code. Exact source `bd8c6b61`,
+[Preflight 39118831405](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831405):
+**740/740** stable Core passed, other
+integrations **4/4 + 4/4**, all 4 new methods
+separately `... ok`; formatter, frontend and Core
+Clippy SUCCESS. [Native GTK 39118831372](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831372)
+**SUCCESS 52/52**. Desktop Tauri outcome requires
+its final job result for quick Preflight 5/5
+confirmation. An earlier test fixture failed to
+compile due to Rust cast/shift precedence; corrected
+without changing test intentions or production code.
+
+Actual `MDnsDiscovery::run` event handling,
+cache, TCP reachability and physical interoperability
+remain **UNTESTED** without a significant SDK seam.
+[Issue #9](https://github.com/morozhenko-apps/rquickshare/issues/9)
+holds the MODE A options. [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8)
+holds authenticated TCP BWU route ownership. Strict
+final-source ten-run release gate and complete
+all-branch Stage 12 stay **NO**.
+
+
 ## 2026-10-18 P0 receiver BLE FEF3 advertising and recovery contract
 
 Five new original `core_lib/src/hdl/blea.rs` test methods
