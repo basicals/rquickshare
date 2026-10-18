@@ -63,7 +63,7 @@ bound, conditional validator, storage metadata check or cache policy.
    dry-run. No remote Worker deploy or release package build.
 3. [x] Observe exact-source CI result; record successes/failures and revise this
    document. Do not claim CI green based on historical runs.
-4. [ ] Check `master...dev` again, require fast-forward ancestry and green
+4. [x] Check `master...dev` again, require fast-forward ancestry and green
    verification before moving `master`, without force or merge commit. Observe
    subsequent CI and Cloudflare build where access permits.
 
@@ -106,3 +106,37 @@ path configurations that include `infra/native-download/*` eligible to trigger
 when later fast-forwarded into production. Its exact-source GitHub Actions
 verification must be observed before promotion. Cloudflare build settings,
 actual deployment and public HTTP acceptance remain independently unverified.
+
+## Production Git build result (2026-10-18)
+
+Before promotion, the exact-source Worker run
+[39121547650](https://github.com/morozhenko-apps/rquickshare/actions/runs/39121547650)
+and five-job Preflight
+[39121547768](https://github.com/morozhenko-apps/rquickshare/actions/runs/39121547768)
+both passed on `a6c0935f1cfed21c20b621d38857cb441a5b441e`.
+GitHub compare proved `dev` was 44 commits ahead of `master`, 0 behind.
+`master` was fast-forwarded with no force and both branch heads were independently
+read back equal at that SHA.
+
+Cloudflare's GitHub check
+[`Workers Builds: rquickshare-download`](https://github.com/morozhenko-apps/rquickshare/runs/117659138240)
+reported **SUCCESS** for that exact SHA on 2026-10-18 11:07:06 UTC.
+Its detail URL is the
+[production build](https://dash.cloudflare.com/e5501830b73f9b3b7c730555e879856a/workers/services/view/rquickshare-download/production/builds/fd9e5ca2-6763-4f39-abcd-3e03620cab75);
+Build ID `fd9e5ca2-6763-4f39-abcd-3e03620cab75`, deployed Worker
+version `5969d799-f1d2-4524-b96d-d01b7fc2d586`.
+This is a distinct version from the former manually deployed
+`3d3a4542-b0c8-4717-a615-bf85efd6fd77`.
+A second Worker gate on `master`
+[39121920238](https://github.com/morozhenko-apps/rquickshare/actions/runs/39121920238)
+also passed. Master Preflight
+[39121920293](https://github.com/morozhenko-apps/rquickshare/actions/runs/39121920293)
+was still running its desktop Rust job at this record's cutoff; source-identical
+five-job Preflight already passed on `dev`.
+
+This final documentation-only commit intentionally carries `[skip ci]`, so it
+does not request another production deployment merely to record its receipt.
+The deployed Worker source and configuration are unchanged by this note.
+Remote runtime HTTP/DNS/sibling-route verification remains unobserved from this
+tool environment and is not represented as passed. The release-tag workflow's
+separate Wrangler deployment writer remains an operational ownership review.
