@@ -1,6 +1,50 @@
 # Mode B inventory, branch map, and test matrix
 
 
+## 2026-10-18 P0 BWU actual TCP socket ownership test closure
+
+See the binding scoped
+[BWU owner, alias, replay and cancellation
+negative matrix](mode-b-p0-bwu-route-2026-10-18.md).
+Test code `core_lib/src/hdl/bwu.rs`
+was expanded by four original source-only
+methods; exact CI
+[P0 BWU 39084212567](https://github.com/morozhenko-apps/rquickshare/actions/runs/39084212567)
+completed **SUCCESS**. Compiled method
+registry has exactly 15 router tests
+(11 preexisting plus four new), and
+logs show ten numbered consecutive
+`15 passed / 0 failed / 0 ignored`
+runs, totaling **150/150** real tests.
+Each new method independently appears
+`ok` ten times.
+
+| Production branch/interaction | Evidence | Status |
+|---|---|---|
+| Unknown/untrusted `endpoint_id` and unregistered alias | Real returned usable TCP socket; two other owners not consumed | **C — scoped 10×** |
+| Both exact + alias live and conflicting | Exact wins; old alias remains routable; real peer bytes never cross | **C — scoped 10×** |
+| Replayed/late second route for consumed registration | Original TCP returned and still readable; only first accepted | **C — scoped 10×** |
+| Cancel old session then reuse same logical endpoint | Old receiver closes; late socket rejected; newly registered owner gets only new socket | **C — scoped 10×** |
+| Upstream `last_endpoint_id` authenticity | Router does NOT validate credential/identity; contract must be established at caller | **OPEN** |
+| GATT characteristic subscribe/notify error, multi-packet corruption | Requires actual BlueZ adapter or approved contract seam | **OPEN** |
+| Full encrypted BLE→TCP migration, Google Android/Windows interoperability | Requires final protocol+hardware evidence | **OPEN** |
+
+Coverage category assignments:
+Positive + N1/N3/N4/N5/N7/N9/N10 are
+verified **within this source-scoped
+set**; N2/N6/N8/N11/N12 were correctly
+classified N/A *for the router-only
+pure ownership boundary*, not for
+other product components. Complete
+per-production-public-method
+Stage 4 branch maps, mutation engine,
+all global applicable N1–N12 counts,
+hardware gates, and full newest-source
+Mode B Stage 11 remain **OPEN**;
+overall Stage 12 **NO**.
+
+
+
 ## 2026-10-18 P0 inbound Weave worker terminal error test inventory
 
 Source-only
