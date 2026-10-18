@@ -84,6 +84,78 @@ These public assets are not a substitute for independently validating the
 signed archive, never include a secret key, and must not be published before
 the R2 signed archive and isolated client acquisition both succeed.
 
+## Operator setup for unattended tag publication
+
+These steps are deliberately **not** run by repository CI and must be
+performed with an authenticated maintainer's GitHub/Cloudflare access.
+Never print a private key, passphrase, R2 secret, backup plaintext, or
+encrypted recovery archive into a GitHub issue, chat or job log.
+
+1. Under repository **Settings → Environments**, create \`apt-release\`.
+   Restrict deployments to the protected \`master\` branch and protected
+   \`v*\` tags as supported by environment deployment policies. For **B**
+   (unattended release and scheduled refresh), do not enable a required
+   reviewer that would block every unattended signature. Instead protect
+   writes to \`master\` and creation/deletion/movement of \`v*\` tags via
+   repository rulesets and restrict who can edit release workflows or
+   environment secrets.
+2. Set environment **variable** \`RQS_R2_ACCOUNT_ID\` to the exact
+   32-character Cloudflare account ID. This is a variable, not a password.
+3. Add the following exact environment **secrets**:
+
+   | Secret | Contents |
+   | --- | --- |
+   | \`RQS_APT_PUBLIC_KEYRING_BASE64\` | Base64 of the existing checked public \`scripts/keyrings/rquickshare-native-archive.gpg\` |
+   | \`RQS_APT_SECRET_SUBKEY_BASE64\` | Base64 of a freshly exported **protected signing-only subkey** from the existing signer GPG home; no usable private primary |
+   | \`RQS_APT_SUBKEY_PASSPHRASE\` | The existing signing-only subkey passphrase, not a backup/archive passphrase |
+   | \`RQS_R2_ACCESS_KEY_ID\` | Access key belonging solely to the dedicated \`rquickshare-native-apt\` R2 bucket |
+   | \`RQS_R2_SECRET_ACCESS_KEY\` | Corresponding scoped R2 secret for conditional object reads/writes |
+   | \`RQS_CLOUDFLARE_API_TOKEN\` | API token scoped to deployment of the dedicated \`native-download\` Worker |
+
+   Do not reuse Picturix's \`app-dist\` publisher credential and never
+   upload authority/master/revocation private packets. In CI a new
+   temporary GPG home enforces the pinned primary and signing subkey
+   fingerprints, sole secret subkey with no usable primary, private
+   passphrase-file permissions and actual signed-index verification.
+4. Provision via GitHub Settings secret fields or \`gh secret set\` with
+   **standard input**, never CLI positional secret values. The public
+   keyring can be encoded locally; the private subkey export must be from
+   the isolated protected \`signer\` profile, *not* the \`authority\` profile.
+   Confirm \`gpg --list-secret-keys\` shows the stub primary (\`sec#\`) and
+   signing-only (\`ssb\`) **before** uploading. Do not upload secret values
+   or a keyring path to this repository.
+5. Check the configured environment, tag protection, worker token and
+   scoped R2 token before authorizing any production tag. CI must fail
+   cleanly if a secret or permissions are missing. Check the public
+   \`download.morozhenko.com\` Worker route separately; changing only a
+   GitHub Secret does not deploy the new allowlist automatically.
+6. For the first real version, obtain verified real Android/Linux,
+   Debian install/migration/rollback and exact-source complete Mode B
+   evidence. Fast-forward verified \`dev\` to protected \`master\`, then
+   create exactly one new annotated \`vMAJOR.MINOR.PATCH\` tag on
+   \`master\`. Tag push performs verification, complete 10x Mode B,
+   native compilation, protected signature, conditional R2 promotion,
+   public HTTPS/isolated APT acquisition and finally GitHub Release
+   publication. Never move or recycle a published tag.
+7. After release, ensure both distribution options are documented:
+   direct versioned .deb download (no automatic APT enrollment) and
+   explicit installation of the attached **public** archive keyring and
+   \`.sources\` into the appropriate \`/etc/apt\` paths before
+   \`apt update\` / \`apt install rquickshare-native\`. Signed metadata
+   refresh runs on the default branch at 08:17 UTC on every third
+   day-of-month, including months with uneven lengths. Its results must
+   be monitored and renewed before the seven-day validity window
+   expires; a successful schedule is not guaranteed delivery.
+
+Failure boundaries: tag validation/Mode B/build errors must leave R2
+untouched. If Worker deployment or any previous-snapshot/signing/R2
+publication step fails, do not create GitHub Release. The R2 publisher
+never unconditionally overwrites \`InRelease\`: partial immutable objects
+may remain privately but cannot authorize an unverified channel. If
+public readback fails after a successful R2 commit, treat the result as
+an operational incident and diagnose the public route; never roll back
+by overwriting immutable package bytes or moving tags.
+
 ## Stages and rollback
 
 | Stage | Planned change | Gate / rollback |
