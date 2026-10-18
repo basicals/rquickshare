@@ -139,6 +139,10 @@ Technical contracts: [native-apt.md](native-apt.md),
 [native-download-route.md](native-download-route.md),
 [native-local-signing.md](native-local-signing.md).
 
+## Automated release implementation decision
+
+The user selected **GitHub Actions auto-sign and R2 publication on validated Git tags** (option B), with an isolated signing subkey in protected GitHub Secrets. See [native-tagged-release.md](native-tagged-release.md) for the approved implementation plan and security boundary. The older manual-signing handoff remains available for recovery; production CI still requires a separately verified first release and secret provisioning.
+
 ## Next implementation handoff and non-goals of this docs change
 
 1. Finish the currently running **strict complete Mode B ten-pass** gate and
