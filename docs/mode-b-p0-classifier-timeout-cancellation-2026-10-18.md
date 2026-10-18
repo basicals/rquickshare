@@ -224,11 +224,11 @@ Read the complete job log, not merely the Actions badge:
   prefaces, **three** early-EOF variants and one
   abort-then-new-connection path with peer-address
   and full-wire content assertions.
-- Rust format, Core Clippy and frontend checks
-  were SUCCESS at the first Core-result checkpoint;
-  legacy Tauri desktop Clippy was still in progress.
-  The overall five-job Preflight requires its separate
-  final verdict before being marked globally green.
+- **All five Preflight jobs SUCCESS** on the exact
+  source: Core tests, Core Clippy, Rust format, frontend
+  lint/typecheck/unit tests and desktop Tauri
+  Clippy/unit tests (10/10). The ordinary quick
+  Preflight is fully green, not the final 10x gate.
 
 ### D2 — actual method counts by Positive/N categories
 
@@ -268,3 +268,17 @@ final source, full Stage 12 all-method/all-branch proof,
 actual BlueZ notifier/GATT, Google Android/Windows/KDE
 physical acceptance and security [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8).
 No production code or installed packages changed.
+
+## Final same-source quick CI result
+
+At exact SHA `c8753010c863049aee5a26ac39482ffb80f5605d`,
+[Preflight 39094606972](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606972)
+**completed SUCCESS (5/5 jobs)**; desktop Tauri Rust **10/10**
+passed, verified from desktop job logs. Independent
+[Native GTK UI verification 39094606916](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606916)
+**completed SUCCESS** with **52/52 GTK unit tests** from
+its actual job log. This is real exact-code automated
+CI evidence, **not** 10 consecutive complete Mode B suite
+runs and **not** actual installed KDE/Wayland or Google peer
+acceptance. All seven repository-wide Stage 12 answers
+remain NO until independently reconciled.
