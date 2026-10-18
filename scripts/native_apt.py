@@ -120,7 +120,7 @@ def index(root, architecture):
 
 def release(root, architectures, date):
     require(date.tzinfo is not None and date.utcoffset() == timedelta(0) and date.microsecond == 0, "Expected whole-second UTC date")
-    fields = ["Origin: rQuickShare", "Label: rQuickShare Native", f"Suite: {SUITE}", f"Codename: {SUITE}",
+    fields = ["Origin: rQuickShare", "Label: rQuickShare", f"Suite: {SUITE}", f"Codename: {SUITE}",
               "Architectures: " + " ".join(architectures), "Components: main", "Date: " + format_datetime(date, usegmt=True),
               "Valid-Until: " + format_datetime(date + LIFETIME, usegmt=True), "Acquire-By-Hash: yes", "SHA256:"]
     for architecture in architectures:
@@ -151,10 +151,10 @@ def prepare(packages, output, now=None):
         require(arch not in admitted, "Duplicate release architecture")
         admitted[arch] = package
     with stage(output) as root:
-        pool = root / "pool/main/r/rquickshare"
+        pool = root / "pool/main/r/rquickshare-native"
         pool.mkdir(parents=True)
         for arch, source in sorted(admitted.items()):
-            target = pool / f"rquickshare_{version}_{arch}.deb"
+            target = pool / f"rquickshare-native_{version}_{arch}.deb"
             shutil.copyfile(source, target)
             target.with_suffix(".deb.sha256").write_text(native_deb.checksum(target))
         for arch in sorted(admitted):
@@ -211,7 +211,7 @@ def validate_tree(root, now=None, signed=False, check_time=True):
         require(entry["Architecture"] == arch and not entry["Version"].endswith(".debug"), "Wrong native release architecture/profile")
         require(version in {None, entry["Version"]}, "Mixed channel versions")
         version = entry["Version"]
-        name = f"pool/main/r/rquickshare/rquickshare_{version}_{arch}.deb"
+        name = f"pool/main/r/rquickshare-native/rquickshare_{version}_{arch}.deb"
         require(entry.get("Filename") == name, "Unexpected package path")
         package = root / name
         regular(package.with_suffix(".deb.sha256"), 256)

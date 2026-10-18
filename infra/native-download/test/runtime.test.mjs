@@ -42,7 +42,7 @@ test("Given_actual_workerd_R2_and_APT_When_acquiring_selected_prefix_Then_signat
     await load(repository);
     // Even accidentally present private bytes must never become HTTP-readable.
     await storage.put("snapshots/private", "private authority");
-    const pool = "pool/main/r/rquickshare/rquickshare_0.11.5+native1_amd64.deb";
+    const pool = "pool/main/r/rquickshare-native/rquickshare-native_1.0.0-1_amd64.deb";
     const full = await mf.dispatchFetch(BASE_URI + pool);
     assert.equal(full.status, 200);
     const expected = await readFile(repository + "/" + pool);

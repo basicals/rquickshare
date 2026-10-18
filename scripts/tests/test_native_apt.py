@@ -76,7 +76,7 @@ class NativeAptTests(unittest.TestCase):
     def test_given_actual_signed_snapshot_when_verified_then_time_identity_and_scoped_bootstrap_are_exact(self):
         # Arrange / Act / Assert: actual gpgv verifies both signatures and cleartext.
         result = apt.verify(self.signed, self.keyring, self.fingerprint, self.now)
-        self.assertEqual(result["version"], "0.11.5+native1")
+        self.assertEqual(result["version"], "1.0.0-1")
         self.assertEqual(set(result["packages"]), {"amd64"})
         for now, valid in [(self.now - timedelta(seconds=10), True), (self.now - timedelta(seconds=11), False),
                            (self.now + apt.LIFETIME - timedelta(seconds=1), True), (self.now + apt.LIFETIME, False)]:
@@ -108,7 +108,7 @@ class NativeAptTests(unittest.TestCase):
                 apt.verify(self.signed, keyring, fingerprint, self.now)
         base = Path("dists") / apt.SUITE
         index = base / "main/binary-amd64"
-        pool = Path("pool/main/r/rquickshare/rquickshare_0.11.5+native1_amd64.deb")
+        pool = Path("pool/main/r/rquickshare-native/rquickshare-native_1.0.0-1_amd64.deb")
         for name in [base / "Release", base / "InRelease", base / "Release.gpg", index / "Packages", index / "Packages.gz", pool, Path(str(pool) + ".sha256")]:
             with self.subTest(file=name), tempfile.TemporaryDirectory() as temporary:
                 root = self.copy(Path(temporary))
@@ -143,7 +143,7 @@ class NativeAptTests(unittest.TestCase):
                 with self.subTest(packages=len(packages)), self.assertRaises((ValueError, OSError)):
                     apt.prepare(packages, root / "invalid", self.now)
                 self.assertFalse((root / "invalid").exists())
-            for version in ["0.11.5+native2.debug", "0.11.5"]:
+            for version in ["1.0.0-2.debug", "1.0.0"]:
                 fixture = root / version
                 fixture.mkdir()
                 package = deb_test.NativeDebTests().create(fixture, lambda tree: self.change_version(tree, version))
@@ -164,7 +164,7 @@ class NativeAptTests(unittest.TestCase):
     @staticmethod
     def change_version(tree, version):
         control = tree / "DEBIAN/control"
-        control.write_text(control.read_text().replace("Version: 0.11.5+native1\n", f"Version: {version}\n"))
+        control.write_text(control.read_text().replace("Version: 1.0.0-1\n", f"Version: {version}\n"))
 
     def test_given_two_architectures_when_staged_then_indexes_remain_separate_and_mixed_versions_or_architecture_removal_fail(self):
         # Arrange: metadata/ELF-header fixture only, never an executable ARM build claim.
@@ -193,7 +193,7 @@ class NativeAptTests(unittest.TestCase):
                 apt.verify(self.signed, self.keyring, self.fingerprint, self.now, signed)
             mixed = root / "mixed"
             mixed.mkdir()
-            other = deb_test.NativeDebTests().create(mixed, lambda tree: (arm_fixture(tree), self.change_version(tree, "0.11.5+native2")))
+            other = deb_test.NativeDebTests().create(mixed, lambda tree: (arm_fixture(tree), self.change_version(tree, "1.0.0-2")))
             with self.assertRaises(ValueError):
                 apt.prepare([self.package, other], root / "invalid", self.now)
             self.assertFalse((root / "invalid").exists())
@@ -204,8 +204,8 @@ class NativeAptTests(unittest.TestCase):
             root = Path(temporary)
             refresh = root / "refresh"
             apt.sign(self.unsigned, refresh, self.home, self.keyring, self.fingerprint, self.now, self.signed)
-            self.assertEqual(apt.verify(refresh, self.keyring, self.fingerprint, self.now, self.signed)["version"], "0.11.5+native1")
-            for version, success in [("0.11.5+native1", False), ("0.11.5+native2", True), ("0.11.4+native9", False)]:
+            self.assertEqual(apt.verify(refresh, self.keyring, self.fingerprint, self.now, self.signed)["version"], "1.0.0-1")
+            for version, success in [("1.0.0-1", False), ("1.0.0-2", True), ("0.9.9-9", False)]:
                 fixture = root / version
                 fixture.mkdir()
                 package = deb_test.NativeDebTests().create(fixture, lambda tree: (self.change_version(tree, version), (tree / "usr/bin/rquickshare").write_bytes(Path("/bin/true").read_bytes() + b"new release")))
@@ -263,9 +263,9 @@ APT::Get::AllowUnauthenticated "false";
                 return result.stdout
             # Act / Assert: APT itself validates signatures, indexes and downloaded package bytes.
             client("apt-get", "update", "--error-on=any")
-            policy = client("apt-cache", "policy", "rquickshare")
-            self.assertIn("Candidate: 0.11.5+native1", policy)
-            client("apt-get", "download", "rquickshare=0.11.5+native1")
+            policy = client("apt-cache", "policy", "rquickshare-native")
+            self.assertIn("Candidate: 1.0.0-1", policy)
+            client("apt-get", "download", "rquickshare-native=1.0.0-1")
             downloads = list((root / "downloads").glob("*.deb"))
             self.assertEqual(len(downloads), 1)
             self.assertEqual(hashlib.sha256(downloads[0].read_bytes()).digest(), hashlib.sha256(self.package.read_bytes()).digest())

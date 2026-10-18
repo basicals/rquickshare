@@ -3,14 +3,14 @@ import test from "node:test";
 import { BASE_URI, SUITE, objectPolicy, byteRange, matchesEtag } from "../src/policy.ts";
 
 export const active = `dists/${SUITE}/InRelease`;
-export const pool = "pool/main/r/rquickshare/rquickshare_0.11.5+native2_amd64.deb";
+export const pool = "pool/main/r/rquickshare-native/rquickshare-native_1.0.0-2_amd64.deb";
 
 test("Given_public_artifacts_When_projected_Then_only_exact_repository_keys_are_exposed", () => {
   // Arrange / Act / Assert: grammar matches native_apt/native_deb production contracts.
   for (const architecture of ["amd64", "arm64"]) {
     for (const suffix of ["", ".sha256"]) {
       const key = pool.replace("amd64", architecture) + suffix;
-      for (const spelling of [key, key.replace("+", "%2B"), key.replace("+", "%2b")])
+      for (const spelling of [key])
         assert.equal(objectPolicy(BASE_URI + spelling).key, key);
     }
     const key = `dists/${SUITE}/main/binary-${architecture}/by-hash/SHA256/${"a".repeat(64)}`;
@@ -19,7 +19,7 @@ test("Given_public_artifacts_When_projected_Then_only_exact_repository_keys_are_
   assert.equal(objectPolicy(BASE_URI + active).mutable, true);
   assert.equal(objectPolicy(BASE_URI + pool).maximum, 1073741824);
   assert.equal(objectPolicy(BASE_URI + pool + ".sha256").maximum, 1024);
-  assert.ok(objectPolicy(BASE_URI + pool.replace("native2", "native2147483647")));
+  assert.ok(objectPolicy(BASE_URI + pool.replace("-2_", "-2147483647_")));
 });
 
 test("Given_untrusted_URLs_When_projected_Then_private_sibling_and_ambiguous_paths_are_rejected", () => {
@@ -38,11 +38,14 @@ test("Given_untrusted_URLs_When_projected_Then_private_sibling_and_ambiguous_pat
     BASE_URI + active.replace("/", "%5c"), BASE_URI + "%00" + active,
     BASE_URI + "%252e" + active, BASE_URI + "%" + active,
     BASE_URI + active + "\n", BASE_URI + active.replace("/", "\\"),
-    BASE_URI + "x".repeat(2049), BASE_URI + pool.replace("native2", "native0"),
-    BASE_URI + pool.replace("native2", "native2147483648"),
-    BASE_URI + pool.replace("native2", "native99999999999"),
-    BASE_URI + pool.replace("native2", "native2.debug"),
+    BASE_URI + "x".repeat(2049), BASE_URI + pool.replace("-2_", "-0_"),
+    BASE_URI + pool.replace("-2_", "-2147483648_"),
+    BASE_URI + pool.replace("-2_", "-99999999999_"),
+    BASE_URI + pool.replace("-2_", "-2.debug_"),
     BASE_URI + pool.replace("amd64", "i386"),
+    BASE_URI + pool.replace("1.0.0-2", "01.0.0-2"),
+    BASE_URI + pool.replace("1.0.0-2", "1.0.0%2B2"),
+    BASE_URI + pool.replace("1.0.0-2", "1.0.0-02"),
     BASE_URI + `dists/${SUITE}/main/binary-amd64/by-hash/SHA256/${"A".repeat(64)}`];
   for (const url of urls) assert.equal(objectPolicy(url), null, url);
 });

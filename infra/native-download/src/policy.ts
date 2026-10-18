@@ -24,7 +24,7 @@ export function objectPolicy(raw: string): ObjectPolicy | null {
     return { key, mutable: true, type: "text/plain; charset=utf-8", maximum: 1024 * 1024 };
   if (new RegExp(`^dists/${SUITE}/main/binary-(amd64|arm64)/by-hash/SHA256/[a-f0-9]{64}$`).test(key))
     return { key, mutable: false, type: "application/octet-stream", maximum: 1024 * 1024 };
-  const match = /^pool\/main\/r\/rquickshare\/rquickshare_[0-9]+\.[0-9]+\.[0-9]+\+native([1-9][0-9]{0,9})_(amd64|arm64)\.deb(\.sha256)?$/.exec(key);
+  const match = /^pool\/main\/r\/rquickshare-native\/rquickshare-native_(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)-([1-9][0-9]{0,9})_(amd64|arm64)\.deb(\.sha256)?$/.exec(key);
   if (!match || Number(match[1]) > 2147483647) return null;
   return { key, mutable: false,
     type: match[3] ? "text/plain; charset=utf-8" : "application/vnd.debian.binary-package",

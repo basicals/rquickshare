@@ -4,7 +4,7 @@ import { serve } from "../src/worker.ts";
 import { BASE_URI, SUITE } from "../src/policy.ts";
 
 const active = `dists/${SUITE}/InRelease`;
-const pool = "pool/main/r/rquickshare/rquickshare_0.11.5+native2_amd64.deb";
+const pool = "pool/main/r/rquickshare-native/rquickshare-native_1.0.0-2_amd64.deb";
 const metadata = { size: 10, etag: "one", httpEtag: '"one"' };
 function request(key = pool, method = "GET", headers = {}) {
   return new Request(BASE_URI + key, { method, headers });
