@@ -307,10 +307,14 @@ def verify(root, keyring, expected, now=None, previous=None, check_time=True):
     return current
 
 
-def sign(source, output, home, keyring, expected, now=None, previous=None):
+def sign(source, output, home, keyring, expected, now=None, previous=None, passphrase_file=None):
     require(not source.is_symlink() and source.is_dir(), "Expected unsigned snapshot directory")
     public_key(keyring, expected)
     require(home.is_dir() and not home.is_symlink(), "Expected explicitly selected GPG home")
+    if passphrase_file is not None:
+        regular(passphrase_file, 4096)
+        mode = passphrase_file.stat()
+        require(mode.st_uid == os.getuid() and mode.st_mode & 0o077 == 0, "Signing passphrase file must be caller-owned and private")
     require(not output.absolute().is_relative_to(source.resolve()), "Signing output must be outside its input snapshot")
     current = validate_tree(source, now)
     if previous is not None:
@@ -319,6 +323,8 @@ def sign(source, output, home, keyring, expected, now=None, previous=None):
         shutil.copytree(source, root, dirs_exist_ok=True)
         base = root / "dists" / SUITE
         command = ["gpg", "--no-options", "--homedir", str(home.absolute()), "--batch", "--no-tty", "--local-user", expected, "--digest-algo", "SHA256"]
+        if passphrase_file is not None:
+            command += ["--pinentry-mode", "loopback", "--passphrase-file", str(passphrase_file.absolute())]
         run(*command, "--output", str(base / "InRelease"), "--clearsign", str(base / "Release"))
         run(*command, "--armor", "--output", str(base / "Release.gpg"), "--detach-sign", str(base / "Release"))
         verify(root, keyring, expected, now, previous)
@@ -350,6 +356,7 @@ def main():
         if name != "bootstrap":
             if name == "sign":
                 sub.add_argument("--gnupghome", type=Path, required=True)
+                sub.add_argument("--passphrase-file", type=Path, help="Private caller-owned file for protected CI signing subkey")
                 sub.add_argument("--output", type=Path, required=True)
                 previous = sub.add_mutually_exclusive_group(required=True)
                 previous.add_argument("--first-release", action="store_true")
@@ -364,7 +371,7 @@ def main():
         if args.command == "prepare":
             prepare(args.package, args.output)
         elif args.command == "sign":
-            sign(args.repository, args.output, args.gnupghome, args.keyring, args.fingerprint, previous=args.previous)
+            sign(args.repository, args.output, args.gnupghome, args.keyring, args.fingerprint, previous=args.previous, passphrase_file=args.passphrase_file)
         elif args.command == "verify":
             verify(args.repository, args.keyring, args.fingerprint, previous=args.previous)
         else:
