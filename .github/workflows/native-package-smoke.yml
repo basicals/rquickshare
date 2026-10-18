@@ -41,6 +41,8 @@ jobs:
     runs-on: ubuntu-24.04
     # Declare the target ABI explicitly; host-built 26.04 binaries are not 24.04 packages.
     container: ubuntu:26.04
+    env:
+      HOME: /root
     steps:
       - name: Install native build and isolated-check prerequisites
         run: |
@@ -61,6 +63,8 @@ jobs:
           "$RUNNER_TEMP/native-publication-python/bin/python" -m pip install -r scripts/requirements-r2.txt
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - uses: dtolnay/rust-toolchain@nightly
         with:
