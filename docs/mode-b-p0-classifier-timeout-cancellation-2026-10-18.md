@@ -141,9 +141,9 @@ No executable mutant engine run is claimed.
    map, N1–N12 matrix, interactions and estimates **before code**.
 2. [x] Add all 3 planned test-only methods, with no new
    production seam and no sleep.
-3. [ ] Confirm rustfmt, real compiled tests, Core CI and
+3. [x] Confirm rustfmt, real compiled tests, Core CI and
    actual per-case names/results on exact source SHA.
-4. [ ] Record D2 category outcomes, mutation review,
+4. [x] Record D2 category outcomes, mutation review,
    evidence, global inventory and current-state updates.
 5. [ ] Do not mark final repo-wide MODE B Stage 11/12
    or hardware acceptance complete without the full
@@ -206,3 +206,65 @@ test's diagnostic assertion log. This corrects an incorrect
 test-level assumption about TCP teardown; it is not an approved
 production logic change or generalized weakening of the security
 invariant. Run exact-source CI again after this correction.
+
+## Confirmed scoped execution — three P0 methods
+
+Exact test SHA `c8753010c863049aee5a26ac39482ffb80f5605d`;
+[GitHub Preflight run 39094606972](https://github.com/morozhenko-apps/rquickshare/actions/runs/39094606972),
+Core Rust job `117578366939`: **SUCCESS**.
+Read the complete job log, not merely the Actions badge:
+
+- Stable Core **728 passed / 0 failed / 0 ignored**, with
+  the standard **8 race-sensitive methods filtered** into
+  their separately scheduled execution profile.
+- Existing integration bins **4/4 + 4/4** pass.
+- Each of the **three new methods** appears
+  exactly **once** in the real Core output as `... ok`.
+- Source has **six table variants** for live incomplete
+  prefaces, **three** early-EOF variants and one
+  abort-then-new-connection path with peer-address
+  and full-wire content assertions.
+- Rust format, Core Clippy and frontend checks
+  were SUCCESS at the first Core-result checkpoint;
+  legacy Tauri desktop Clippy was still in progress.
+  The overall five-job Preflight requires its separate
+  final verdict before being marked globally green.
+
+### D2 — actual method counts by Positive/N categories
+
+Exactly **3 new method implementations**, with overlapping
+category tags, each executed successfully once on final SHA:
+
+| Category | New methods assigned | Verified scoped result |
+|---|---:|---|
+| Positive | 3 | PASS: preserved stream/owner, proper EOF, later valid connection |
+| N1 input validation | 2 | PASS: incomplete 0–4 prefix/body and early EOF |
+| N2 boundaries | 2 | PASS: 6 split counts, 3 EOF positions |
+| N3 network failures | 3 | PASS: deadline, EOF, cancelled ingress TCP |
+| N4 idempotency/retry | 3 | PASS: no false registration consumption or automatic replay |
+| N5 concurrency | 2 | PASS: in-flight partial classifier and cancellation vs owner |
+| N6 corrupt data | 0 | N/A: only incomplete frames, no decoded corrupted payload |
+| N7 security/ownership | 3 | PASS: other BLE owner remains, no wrong stream |
+| N8 locale/time | 0 | N/A: monotonic transport deadline belongs to N3, not locale/DST |
+| N9 interruption | 3 | PASS: slow peer, peer half-close and local classifier abandon |
+| N10 privacy/cross-peer | 3 | PASS: original TCP bytes and peer identity are isolated |
+| N11 monetization | 0 | N/A: transfer classifier contains no entitlements |
+| N12 storage failure | 0 | N/A: no file system in this scope |
+
+The purpose is the named bounded TCP ingress branches, not
+an aggregate repository category count. No mutations were
+executed with a mutation engine. Manual mutation review:
+consuming a byte in peek, treating a partial header as
+routable, removing the timeout, incorrectly consuming the
+owner, leaking the old socket, or losing the subsequent
+correct fresh connection would fail explicit assertions.
+Changing the OS RST to graceful FIN after cancellation
+**does not** violate the intended property, hence the
+closure assertion accurately accepts those two exact
+outcomes and rejects all other outcomes.
+
+**Remaining:** complete Stage 11 ten-pass on the exact
+final source, full Stage 12 all-method/all-branch proof,
+actual BlueZ notifier/GATT, Google Android/Windows/KDE
+physical acceptance and security [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8).
+No production code or installed packages changed.
