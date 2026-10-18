@@ -123,9 +123,24 @@ must fail assertions. Executed mutation engine is NOT claimed.
 ## Stages and rollback
 
 1. [x] Scan source, risks and existing tests; record Stages 1–8 **before** code.
-2. [ ] Add all three scoped table-driven methods (no production edits).
+2. [x] Add all three scoped table-driven methods (no production edits).
 3. [ ] Validate CI on exact source; debug failing **tests**, never soften
    a correct security assertion to accommodate a defect.
 4. [ ] Update this ledger, `docs/current-state.md`, global MODE B gaps
    and confirmed results; maintain global Stage 12 = NO.
 Rollback: revert only test and documentation commits.
+
+## Implementation handoff (unverified CI checkpoint)
+
+- Documentation-before-code commit: `c192a608`.
+- Three test-only functions added: `ea84a83e`.
+- Original GitHub Rust format job reported two cosmetic differences; fixed
+  without weakening assertions at `c6484ec8`.
+- Independent exact-name non-cancelling 10-run workflow:
+  `.github/workflows/p0-client-introduction.yml`, commit `216d0fac`.
+  [Run 39085557977](https://github.com/morozhenko-apps/rquickshare/actions/runs/39085557977).
+  **Not yet verified here:** compiled inventory, ten attempts, overall result.
+- Other simultaneous `dev` commits may cancel ordinary Preflight; do not
+  treat a cancellation as a test failure or count it as a passing attempt.
+
+Rollback remains documentation + test-only source + isolated CI workflow.
