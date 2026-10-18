@@ -383,6 +383,107 @@ mod tests {
     }
 
     #[test]
+    fn given_remote_mdns_txt_prefix_and_device_bits_when_parsed_then_only_complete_endpoint_data_is_admitted(
+    ) {
+        // Arrange: a genuine compact TXT prefix with no length/name suffix.
+        let mut compact = vec![DeviceType::Laptop as u8 << 1];
+        compact.extend_from_slice(&[0_u8; 16]);
+
+        // Act/Assert: every prefix shorter than 17 bytes is rejected,
+        // including the zero-byte and one-byte boundary cases.
+        for bytes in 0..17 {
+            let encoded = URL_SAFE_NO_PAD.encode(&compact[..bytes]);
+            assert!(
+                parse_mdns_endpoint_info(&encoded).is_err(),
+                "accepted an incomplete {bytes}-byte mDNS identity"
+            );
+        }
+
+        let decoded = parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(&compact)).unwrap();
+        assert_eq!(decoded, (DeviceType::Laptop, String::new()));
+
+        let mut empty_name = compact.clone();
+        empty_name.push(0);
+        let decoded = parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(&empty_name)).unwrap();
+        assert_eq!(decoded, (DeviceType::Laptop, String::new()));
+
+        // The length field is present, but its declared name is absent.
+        let mut missing_name = compact;
+        missing_name.push(1);
+        assert!(parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(&missing_name)).is_err());
+        missing_name.push(b'x');
+        let decoded = parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(&missing_name)).unwrap();
+        assert_eq!(decoded, (DeviceType::Laptop, "x".into()));
+
+        // Reserved bits and unsupported device types cannot bypass the
+        // production three-bit type normalization.
+        for raw in [0_u8, 2, 4, 6, 8, 14, 16, u8::MAX] {
+            let mut txt = vec![raw];
+            txt.extend_from_slice(&[0_u8; 16]);
+            let parsed = parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(txt)).unwrap();
+            assert_eq!(
+                parsed,
+                (DeviceType::from_raw_value((raw >> 1) & 7), String::new()),
+                "incorrect type normalization from raw header {raw}"
+            );
+        }
+    }
+
+    #[test]
+    fn given_remote_mdns_txt_name_boundaries_when_decoded_then_truncation_and_invalid_utf8_are_rejected(
+    ) {
+        // Arrange: remote TXT records may contain up to 255 UTF-8 name bytes,
+        // independently of our own stricter local device-name budget.
+        let names = [
+            String::new(),
+            "x".into(),
+            "x".repeat(254),
+            "x".repeat(255),
+            "é".repeat(127),
+            format!("{}x", "é".repeat(127)),
+            "🧩".repeat(63),
+        ];
+
+        for name in names {
+            let mut txt = vec![DeviceType::Phone as u8 << 1];
+            txt.extend_from_slice(&[0_u8; 16]);
+            txt.push(name.len() as u8);
+            txt.extend_from_slice(name.as_bytes());
+
+            // Act/Assert: exact declared boundaries must decode the full name.
+            let parsed = parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(&txt)).unwrap();
+            assert_eq!(parsed, (DeviceType::Phone, name.clone()));
+
+            // Removing the last byte must never accept a partial name.
+            if !name.is_empty() {
+                txt.pop();
+                assert!(
+                    parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(&txt)).is_err(),
+                    "accepted truncated name declared as {} bytes",
+                    name.len()
+                );
+            }
+        }
+
+        for bytes in [
+            vec![0xff_u8],
+            vec![0xc3],
+            vec![0x80],
+            vec![0xc0, 0xaf],
+            vec![0xed, 0xa0, 0x80],
+        ] {
+            let mut txt = vec![DeviceType::Phone as u8 << 1];
+            txt.extend_from_slice(&[0_u8; 16]);
+            txt.push(bytes.len() as u8);
+            txt.extend(bytes);
+            assert!(
+                parse_mdns_endpoint_info(&URL_SAFE_NO_PAD.encode(txt)).is_err(),
+                "accepted invalid UTF-8 in mDNS TXT identity"
+            );
+        }
+    }
+
+    #[test]
     fn test_normalize_p256_coordinate_left_pads_short_values() {
         let normalized = normalize_p256_coordinate(&[0x12, 0x34]).unwrap();
 
