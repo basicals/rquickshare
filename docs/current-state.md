@@ -17,10 +17,12 @@ Test SHA `86ebe678` verified from
 [Preflight 39116064673](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064673)
 Core job `117642032398`: **731/731 stable Core, 4+4
 integrations, all three new methods independently `ok`**.
-Format, frontend, Core Clippy and independent
-[Native GTK 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
-passed. Desktop Preflight completion must be confirmed before
-reporting 5/5. The earlier test-only rustfmt failure is
+**All five quick Preflight jobs SUCCESS**, including
+Tauri desktop Clippy and 10/10 desktop Rust tests;
+independent [Native GTK 39116064680](https://github.com/morozhenko-apps/rquickshare/actions/runs/39116064680)
+**SUCCESS: 52/52 native tests**. These are single
+quick CI validations, NOT the mandatory final 10×
+MODE B gate. The earlier test-only rustfmt failure is
 documented, not treated as product breakage.
 
 Remaining **OPEN**: hardware BlueZ `CharacteristicNotifier`,
