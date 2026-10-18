@@ -1,5 +1,32 @@
 # Current implementation and continuation state
 
+## MODE B P0 concurrent/segmented TCP ingress verified — 2026-10-18
+
+Three **test-only** methods now exercise the actual
+`core_lib/src/manager.rs::route_bandwidth_upgrade_if_pending`
+with real loopback TCP: seven segmented prefix/body splits,
+four non-BWU/malformed framing variants preserving the original
+socket and other pending owner, and competing current-vs-previous
+endpoint registrations with separate full-wire payloads. No
+production code/crypto/OS services/installed application changed.
+
+The exact-source [Preflight 39092368844](https://github.com/morozhenko-apps/rquickshare/actions/runs/39092368844)
+Core job at `811fd6ef` is **SUCCESS**: each new method individually
+`ok`, stable Core **725/0**, existing integration **4+4/0**;
+formatter, Core Clippy and frontend passed. Separate desktop Clippy
+was pending at this checkpoint. This is **one** Core run,
+not the final full 10× MODE B evidence. Detailed scoped inventory,
+branch-to-test mapping, Negative N1–N12, mutation review, test counts:
+[mode-b-p0-manager-ingress-2026-10-18.md](mode-b-p0-manager-ingress-2026-10-18.md).
+
+The plaintext current/last endpoint ID is not peer authentication.
+[Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8)
+tracks potential unauthenticated BWU route consumption/denial of
+service pending MODE A security design. This does not claim the
+ability to decrypt forged peer traffic. BlueZ/GATT, actual encrypted
+migration and physical Google peers still OPEN. **Global Stage 12 NO**.
+
+
 ## MODE B P0 TCP BWU introduction framing and identity — 2026-10-18
 
 Three new **test-only** Rust methods exercise actual protobuf decoding,
