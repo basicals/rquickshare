@@ -20,9 +20,10 @@ was recorded before code. Exact source `bd8c6b61`,
 integrations **4/4 + 4/4**, all 4 new methods
 separately `... ok`; formatter, frontend and Core
 Clippy SUCCESS. [Native GTK 39118831372](https://github.com/morozhenko-apps/rquickshare/actions/runs/39118831372)
-**SUCCESS 52/52**. Desktop Tauri outcome requires
-its final job result for quick Preflight 5/5
-confirmation. An earlier test fixture failed to
+**SUCCESS 52/52**. Desktop Tauri Clippy/unit
+**SUCCESS 10/10**, verified in its job log;
+the complete same-source quick Preflight
+**5/5 SUCCESS**. An earlier test fixture failed to
 compile due to Rust cast/shift precedence; corrected
 without changing test intentions or production code.
 
