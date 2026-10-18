@@ -149,7 +149,7 @@ review is not an executed mutation engine.
 ## Stages, rollback, and acceptance gate
 
 1. [x] Stage 1–8 scanned and documented BEFORE test changes.
-2. [ ] Implement all five planned test methods only.
+2. [x] Implement all five planned test methods only.
 3. [ ] Verify rustfmt, Core Rust, Clippy and native GTK
    at the exact code SHA; record failures honestly.
 4. [ ] Update this ledger, `docs/mode-b-inventory.md`,
@@ -160,3 +160,24 @@ review is not an executed mutation engine.
 Rollback only test and docs commits. Production behavior,
 security policy, wire schema, installed package, credentials,
 `master`, and release pipeline remain unchanged.
+
+## Stage 9 implementation checkpoint
+
+- Documentation-first scoped plan commit: `310d4ecd`.
+- Two schedule lifecycle methods implemented (test-only)
+  in `bc0ab2f7`.
+- Three real FEF3 + mDNS encoding and BlueZ descriptor
+  methods implemented (test-only) in `4a18f702`.
+- First Preflight at `4a18f702` reported rustfmt
+  formatting differences only. The seven exact source
+  layout corrections were committed test-only as
+  `38737fd7`; the test assumptions/assertions are unchanged.
+- Exact-code [Preflight 39117187583](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117187583)
+  and [Native GTK 39117187607](https://github.com/morozhenko-apps/rquickshare/actions/runs/39117187607)
+  are the run IDs to verify. Until the jobs complete,
+  no new scoped PASS/coverage totals are claimed.
+- Rollback is limited to `core_lib/src/hdl/blea.rs`
+  test modules and this documentation. Live BlueZ
+  advertising, JNI/Windows/KDE receivers and cryptographic
+  BWU [Issue #8](https://github.com/morozhenko-apps/rquickshare/issues/8)
+  remain unverified, and global Stage 12 is NO.
