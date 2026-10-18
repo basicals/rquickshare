@@ -206,8 +206,7 @@ mod tests {
         // or removed mask must be detected by an on-wire byte assertion.
         for raw_type in [0_u8, 1, 2, 3, 7, 8, u8::MAX] {
             let encoded = receiver_service_data(*b"TEST", raw_type, "");
-            let connection_len =
-                u32::from_be_bytes(encoded[4..8].try_into().unwrap()) as usize;
+            let connection_len = u32::from_be_bytes(encoded[4..8].try_into().unwrap()) as usize;
             let connection = &encoded[8..8 + connection_len];
             let info = &connection[9..9 + usize::from(connection[8])];
             assert_eq!(info[0], (1 << 5) | ((raw_type & 7) << 1));
