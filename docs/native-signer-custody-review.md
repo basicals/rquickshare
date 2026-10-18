@@ -1,5 +1,14 @@
 # Production native signing custody: concrete deployment decision
 
+> **2026-10-18 release-CI change:** The independently approved
+> [automated tagged release decision](native-tagged-release.md) supersedes
+> this document's former "never sign in CI" rule for protected public-release
+> automation. Only the encrypted signing **subkey**, never the certifying
+> primary/recovery material, may enter the isolated GitHub `apt-release`
+> environment. The local signer and backup remain valid offline recovery
+> paths. Historical observations below remain unchanged.
+
+
 2026-10-14 decision update: user selected the existing Linux workstation and
 rejected additional machines/VMs/hardware. The options below are historical.
 Current accepted boundary and implementation plan: native-local-signing.md.

@@ -1,5 +1,14 @@
 # Native release signing on the existing Linux workstation
 
+> **2026-10-18 release-CI change:** The independently approved
+> [automated tagged release decision](native-tagged-release.md) supersedes
+> this document's former "never sign in CI" rule for protected public-release
+> automation. Only the encrypted signing **subkey**, never the certifying
+> primary/recovery material, may enter the isolated GitHub `apt-release`
+> environment. The local signer and backup remain valid offline recovery
+> paths. Historical observations below remain unchanged.
+
+
 Current production checkpoint: same-PC keys have been initialized through user
 Pinentry and verified by an actual non-release subkey signature/gpgv check.
 Primary6D8854762CF0C86881138A56695A0888D09FA616. Both dedicated agents are closed.

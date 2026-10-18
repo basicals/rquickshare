@@ -33,7 +33,12 @@ how to build and verify a local Debian package, install the selected artifact an
 use the package-owned systemd user services. This candidate targets the declared
 build ABI; it does not establish Ubuntu 24.04, ARM64 or other desktop acceptance.
 
-The signed APT channel is being prepared and has not been published. Future
+The Git-tagged CI pipeline for the planned `v1.0.0` release is under
+validation; it now builds the separately named `rquickshare-native` package,
+requires complete Mode B 10x, signs via protected GitHub Environment and
+publishes the same immutable .deb for both APT and direct download. It has
+**not** published any public APT channel or `v1.0.0` GitHub Release. See the
+[release automation runbook](docs/native-tagged-release.md). Future
 direct .deb downloads and APT updates may reference one verified package in the
 same R2 bucket; direct installation does not implicitly configure APT. Local
 verified packages and source checkpoints are distinct from a public signed release.
