@@ -1,0 +1,189 @@
+# MODE B P0 bandwidth-upgrade route ownership, replay and cancellation
+
+Date 2026-10-18. **Primary MODE B — Testing.**
+Source-only testing scope on `dev`, bounded to the
+P0 BLE-to-TCP BWU owner handoff. This does not
+authorize edits to product routing logic, API,
+security boundaries, user devices, systemd services,
+release infrastructure, `master`, or installed
+native29.
+
+## Stage 1: repository scan
+
+Reviewed universal `agent.md` testing SSOT,
+`docs/mode-b-completion-audit-2026-10-18.md`,
+`docs/mode-b-inventory.md`,
+`core_lib/src/hdl/bwu.rs` production and existing
+11 tests, `core_lib/src/hdl/migratable.rs`,
+`core_lib/src/hdl/gatt.rs` worker,
+`core_lib/src/manager/session.rs`, and
+current CI / recent P0 Weave worker reports.
+Existing tests exercise basic routing, alias,
+duplicate registration, stale receiver,
+cancellation, exact-id preference and racing
+double admission. They do **not** yet
+assert end-to-end ownership and byte
+isolation after an *untrusted alias*
+or an *invalid/replayed/late socket*
+in one shot, using the actual returned
+TCP stream rather than accepting `is_err`
+as adequate proof that data/owners are
+preserved.
+
+P0 threat: one peer's TCP socket is accidentally
+consumed by another BLE session or a cancelled
+old registration. Direct real BlueZ identity
+and crypto continuity cannot be proved by
+this router alone. Only router correctness
+is being exercised with actual isolated
+localhost TCP sockets. The caller must
+separately authorize aliases, and this
+separate auth contract remains OPEN.
+
+## Stage 2: invariants
+
+1. A route may consume **one** currently
+   registered, live waiter only.
+2. An unknown endpoint/alias **must return
+   the same intact TCP socket** to the
+   caller; it must not consume unrelated
+   waiters or leak data to another owner.
+3. If exact current ID and old alias
+   are both live, exact wins and the
+   old owner must remain intact and
+   independently routable.
+4. A successful route is one-shot;
+   a second socket may not be replayed
+   into the consumed owner or silently
+   destroyed.
+5. Cancelling the old waiter closes its
+   receiver; a late TCP socket must be
+   returned intact, and only a newly
+   registered generation may accept it.
+6. Real data on the two TCP paths must
+   remain disjoint. No test credentials
+   or actual private peer content.
+
+## Stage 3: exhaustive scoped artifact inventory
+
+| Production item | Risk / level | Planned |
+|---|---|---|
+| `BwuRouter::route_with_alias`, unknown id and unknown alias | P0 integration | reject and **return original usable socket**, preserve unrelated registrations |
+| `route_with_alias` exact id and simultaneously live alias | P0 integration | exact owner receives its own bytes, alias remains and independently receives its own bytes |
+| `route_with_alias` one-shot consumed route then extra inbound socket | P0 integration | extra socket returned intact; no duplicate notification/delivery to old owner |
+| `BwuRouter::cancel` then late ingress and register fresh generation | P0 integration | old receiver closes, late bytes not delivered, new socket reaches only new lease |
+| `BwuRouter::register`, `has_pending` | P0 unit/integration | existing tests cover invalid/duplicate/abandoned cleanup; reassert meaningful invariant in each variant |
+| `MigratableStream::Tcp/Ble` forwarding | P0 integration | existing 4 tests for roundtrip/shutdown; this slice does NOT claim real crypto/BlueZ BWU |
+| `do_bandwidth_upgrade` and actual GATT notify | P0 hardware/contract | OPEN, no fake positive outcome |
+
+Planned **4 new independent test methods** using
+real localhost `TcpStream` pairs, `oneshot`
+receivers and actual router. No production
+domain mocks, test sleeps, or bypass
+of the live route ownership semantics.
+
+## Stage 4: branches to exact test names
+
+- Unknown identity and unknown alias branch
+  returns `Err(original_socket)` before
+  consuming any pending entry:
+  `given_untrusted_bwu_alias...`
+- Both exact+alias registered, exact priority
+  despite old alias presence; alias can
+  later be consumed normally:
+  `given_two_live_bwu_owners...`
+- Pending entry removed exactly once,
+  second connection returns the original
+  socket with bytes preserved; fresh
+  register needed for subsequent route:
+  `given_consumed_bwu_route...`
+- Cancel removes old sender, closes old
+  receiver; late socket returned; newly
+  registered receiver is independent:
+  `given_cancelled_bwu_generation...`
+
+## Stage 5: Positive / N1–N12
+
+C=prior evidence, P=new, NA=local
+pure routing scope not applicable,
+OPEN=requires OS / authenticated
+caller boundary, not a pass.
+
+| Artifact | Positive | N1 | N2 | N3 | N4 | N5 | N6 | N7 | N8 | N9 | N10 | N11 | N12 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Unknown alias route | C+P | P(unknown ID) | NA(no frame size) | P(return live socket) | P(no consumption) | P(other owners) | NA(no serialized data) | P(no route without owner) | NA(no clock) | NA(no UI) | P(no wrong-peer bytes) | NA(no billing) | NA(no disk) |
+| Exact over alias | C+P | NA(valid IDs) | NA(no numeric limits) | P(real pair) | P(one-shot) | P(both live) | NA(no schema) | P(exact owner) | NA(no clock) | NA(no UI) | P(no cross-peer) | NA(no billing) | NA(no disk) |
+| Replay after consumption | C+P | P(used ID) | NA | P(original TCP returned) | P(no implicit retry) | P(late socket) | NA | P(no unauthorized reuse) | NA | NA | P(no leaked bytes) | NA | NA |
+| Cancel and new generation | C+P | P(cancelled ID) | NA | P(socket retained) | P(explicit re-register) | P(old/new waiters) | NA | P(no stale authority) | NA | P(cancel) | P(no leaked bytes) | NA | NA |
+| Actual BLE→TCP peer auth/migration | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN | OPEN where relevant | OPEN | OPEN | NA(no billing) | OPEN |
+
+## Stage 6: interactions
+
+Route {unknown/current/alias} × owners
+{absent/one/two/consumed/cancelled/re-registered}
+× actual TCP {first/late/fresh} × data
+{peer A/peer B}; branch outcomes {return
+unchanged socket/exact owner/previous owner}.
+One router entry has one matching waiter,
+and fresh explicit registration is required
+before reuse. No real BLE key continuity
+claim or simulated protocol success.
+
+## Stage 7: scoped test counts
+
+Four new P0 test methods (each with distinct
+action/assertion group). Category assignment
+counts overlap and are not global D2:
+Positive 4, N1 3, N2 0 NA, N3 4,
+N4 4, N5 4, N6 0 NA, N7 4,
+N8 0 NA, N9 1, N10 4,
+N11 0 NA, N12 0 NA.
+Actual results to be recorded after CI.
+
+## Stage 8: production-file coverage map
+
+`core_lib/src/hdl/bwu.rs`:
+`register/route_with_alias/cancel/has_pending`
+route-id and stale-generation branches
+covered by existing tests plus four new
+cross-owner socket-content invariants.
+`core_lib/src/hdl/migratable.rs`:
+existing four real byte roundtrips and
+half-shutdown tests, but **not** a full
+migration handoff here. Upstream
+identity validation and physical BlueZ
+notifier remain OPEN. Other production
+files remain subject to repository-wide
+Stage 3–10 audit.
+
+## Stage 10: planned mutation review
+
+A mutant allowing route to succeed on
+unknown alias, selecting alias when
+exact owner exists, copying rather than
+moving a route owner, retaining a consumed
+registration, accepting late cancelled
+socket, or dropping returned socket must
+fail one or more assertions. Read actual
+bytes both ways to ensure identity,
+not merely `is_ok`. No mutation engine
+run is claimed.
+
+## Stages / rollback
+
+1. [x] Analyze P0 BWU routing, document
+   inventory, branch map, matrices first.
+2. [ ] Add 4 test-only methods to `bwu.rs`,
+   checking real byte routes and owner closure.
+3. [ ] Verify on same-source Core CI.
+   If generic Preflight is cancelled due
+   unrelated parallel packaging, run
+   separate dedicated exact-inventory P0
+   BWU job with independent concurrency
+   (not a replacement for full MODE B).
+4. [ ] Document actual outcomes, update
+   global inventory/Current State,
+   retain Stage 12 NO and hardware gaps.
+
+Rollback reverts only tests / optional
+separate CI workflow / documentation.
