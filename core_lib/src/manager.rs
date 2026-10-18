@@ -810,7 +810,14 @@ mod tests {
 
         // Assert: only the abandoned TCP socket was released.
         let mut eof = [0_u8; 1];
-        assert_eq!(abandoned_peer.read(&mut eof).await.unwrap(), 0);
+        let abandoned_read = abandoned_peer.read(&mut eof).await;
+        // Closing a TCP socket with unread inbound bytes may cause a
+        // peer-visible RST instead of a graceful EOF on Linux.
+        match abandoned_read {
+            Ok(0) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::ConnectionReset => {}
+            unexpected => panic!("abandoned classifier did not close TCP: {unexpected:?}"),
+        }
         assert!(router.has_pending().await);
 
         // A fresh connection with a complete introduction is still admitted
