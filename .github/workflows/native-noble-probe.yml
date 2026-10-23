@@ -201,6 +201,30 @@ jobs:
           } > noble-diagnostics/glycin-stage-audit.txt
           tar -C "$stage" -czf noble-diagnostics/rquickshare-native-noble-with-glycin.tar.gz .
 
+      - name: Audit staged ELF dynamic dependencies on Noble
+        if: success()
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/rquickshare-native-noble"
+          report="noble-diagnostics/elf-dependency-audit.txt"
+          : > "$report"
+          for binary in \
+            "$stage/usr/bin/rquickshare" \
+            "$stage/usr/libexec/rquickshare-daemon" \
+            "$stage/usr/libexec/rquickshare-preview-helper" \
+            "$stage/usr/libexec/glycin-loaders/2+/glycin-image-rs" \
+            "$stage/usr/lib/rquickshare-private/libgtk4-layer-shell.so.1.0.4"; do
+            echo "=== $binary ===" | tee -a "$report"
+            readelf -d "$binary" | grep NEEDED | tee -a "$report" || true
+            ldd -r "$binary" 2>&1 | tee -a "$report"
+            if ldd -r "$binary" 2>&1 | grep -E 'not found|undefined symbol:'; then
+              echo "ELF unresolved dependencies detected: $binary" | tee -a "$report"
+              exit 1
+            fi
+          done
+          echo "No unresolved dynamic dependencies on the build runner." | tee -a "$report"
+          echo "NOTE: the runner is not a clean minimal KDE neon installation." | tee -a "$report"
+
       - name: Create experimental Debian packaging probe and simulate APT
         if: success()
         run: |
