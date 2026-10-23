@@ -1,6 +1,11 @@
 name: Native GTK4 - Ubuntu 24.04 compatibility probe
 
 on:
+  push:
+    branches:
+      - gtk4-noble
+    paths:
+      - '.github/workflows/native-noble-probe.yml'
   workflow_dispatch:
 
 permissions:
