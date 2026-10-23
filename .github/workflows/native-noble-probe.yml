@@ -243,6 +243,20 @@ jobs:
               apt-get install -y --no-install-recommends \
                 /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb
               dpkg-query -W rquickshare-native-noble-probe
+              apt-get install -y --no-install-recommends desktop-file-utils dbus-bin
+              desktop-file-validate \
+                /usr/share/applications/io.github.morozhenko_apps.RQuickShare.desktop
+              for unit in rquickshare-daemon.service rquickshare-desktop.service; do
+                test -f "/usr/lib/systemd/user/$unit"
+                systemd-analyze --user verify "/usr/lib/systemd/user/$unit"
+              done
+              for service in \
+                io.github.morozhenko_apps.RQuickShare.service \
+                io.github.morozhenko_apps.RQuickShare.Desktop.service; do
+                test -f "/usr/share/dbus-1/services/$service"
+                grep -q "^SystemdService=rquickshare-" \
+                  "/usr/share/dbus-1/services/$service"
+              done
               test -x /usr/bin/rquickshare
               test -x /usr/libexec/rquickshare-daemon
               test -x /usr/libexec/rquickshare-preview-helper
@@ -266,7 +280,7 @@ jobs:
               /usr/libexec/rquickshare-daemon --help
               /usr/libexec/rquickshare-preview-helper --help
               echo "PASS: package installed and ELF dependencies resolved in clean Ubuntu 24.04"
-              echo "NOT TESTED: interactive GTK desktop, KDE integration, DBus session, Bluetooth and transfer"
+              echo "PASS: static desktop, user units and DBus activation metadata validated"\n              echo "NOT TESTED: interactive GTK desktop, live DBus activation, KDE integration, Bluetooth and transfer"
             ' 2>&1 | tee noble-diagnostics/clean-noble-install.log
 
       - name: Upload diagnostics even if compilation fails
