@@ -6,6 +6,7 @@ on:
       - gtk4-noble
     paths:
       - '.github/workflows/native-noble-probe.yml'
+      - 'scripts/native_noble_probe_deb.py'
   workflow_dispatch:
 
 permissions:
@@ -199,6 +200,12 @@ jobs:
             ldd "$stage/usr/libexec/glycin-loaders/2+/glycin-image-rs"
           } > noble-diagnostics/glycin-stage-audit.txt
           tar -C "$stage" -czf noble-diagnostics/rquickshare-native-noble-with-glycin.tar.gz .
+
+      - name: Create experimental Debian packaging probe and simulate APT
+        if: success()
+        run: |
+          python3 scripts/native_noble_probe_deb.py
+          cat noble-diagnostics/apt-install-simulation.txt
 
       - name: Upload diagnostics even if compilation fails
         if: always()
