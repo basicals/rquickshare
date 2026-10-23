@@ -231,6 +231,44 @@ jobs:
           python3 scripts/native_noble_probe_deb.py
           cat noble-diagnostics/apt-install-simulation.txt
 
+      - name: Install experimental Debian probe in a clean Ubuntu 24.04 container
+        if: success()
+        run: |
+          set -euo pipefail
+          docker run --rm --network host \
+            --mount "type=bind,source=$PWD/noble-diagnostics,target=/packages,readonly" \
+            ubuntu:24.04 bash -euo pipefail -c '
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y --no-install-recommends \
+                /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb
+              dpkg-query -W -f="${Package} ${Version}\n" rquickshare-native-noble-probe
+              test -x /usr/bin/rquickshare
+              test -x /usr/libexec/rquickshare-daemon
+              test -x /usr/libexec/rquickshare-preview-helper
+              test -x /usr/libexec/glycin-loaders/2+/glycin-image-rs
+              test -f /usr/share/glycin-loaders/2+/conf.d/glycin-image-rs.conf
+              test -f /usr/lib/rquickshare-private/libgtk4-layer-shell.so.1.0.4
+              grep -q "/usr/libexec/glycin-loaders/2+/glycin-image-rs" \
+                /usr/share/glycin-loaders/2+/conf.d/glycin-image-rs.conf
+              for binary in /usr/bin/rquickshare \
+                /usr/libexec/rquickshare-daemon \
+                /usr/libexec/rquickshare-preview-helper \
+                /usr/libexec/glycin-loaders/2+/glycin-image-rs \
+                /usr/lib/rquickshare-private/libgtk4-layer-shell.so.1.0.4; do
+                echo "Checking ELF in clean Noble container: $binary"
+                ldd -r "$binary" | tee /tmp/ldd-check.txt
+                if grep -Eq "not found|undefined symbol:" /tmp/ldd-check.txt; then
+                  echo "FAIL: missing runtime dependency in clean Noble container"
+                  exit 1
+                fi
+              done
+              /usr/libexec/rquickshare-daemon --help
+              /usr/libexec/rquickshare-preview-helper --help
+              echo "PASS: package installed and ELF dependencies resolved in clean Ubuntu 24.04"
+              echo "NOT TESTED: interactive GTK desktop, KDE integration, DBus session, Bluetooth and transfer"
+            ' 2>&1 | tee noble-diagnostics/clean-noble-install.log
+
       - name: Upload diagnostics even if compilation fails
         if: always()
         uses: actions/upload-artifact@v6
