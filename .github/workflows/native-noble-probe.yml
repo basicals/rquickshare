@@ -106,9 +106,9 @@ jobs:
           install -m 0755 native_desktop/target/release/rquickshare-preview-helper "$stage/usr/libexec/rquickshare-preview-helper"
           install -m 0755 core_lib/target/release/rquickshare-daemon "$stage/usr/libexec/rquickshare-daemon"
           cp -a /opt/rquickshare-noble/lib/x86_64-linux-gnu/libgtk4-layer-shell.so* "$stage/usr/lib/rquickshare-private/"
-          patchelf --set-rpath '\$ORIGIN/../lib/rquickshare-private' "$stage/usr/bin/rquickshare"
+          patchelf --set-rpath '$ORIGIN/../lib/rquickshare-private' "$stage/usr/bin/rquickshare"
           for executable in "$stage/usr/libexec/rquickshare-daemon" "$stage/usr/libexec/rquickshare-preview-helper"; do
-            patchelf --set-rpath '\$ORIGIN/../lib/rquickshare-private' "$executable"
+            patchelf --set-rpath '$ORIGIN/../lib/rquickshare-private' "$executable"
           done
           {
             echo "Native Noble preliminary payload, not an installer."
