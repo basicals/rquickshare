@@ -140,6 +140,9 @@ jobs:
         if: success()
         run: |
           set -euo pipefail
+          export RUSTC="$(rustup which rustc)"
+          export RUSTDOC="$(rustup which rustdoc)"
+          "$RUSTC" --version
           curl --fail --location --silent --show-error \
             https://download.gnome.org/sources/glycin/2.1/glycin-2.1.5.tar.xz \
             -o /tmp/glycin-2.1.5.tar.xz
