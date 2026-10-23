@@ -40,7 +40,7 @@ jobs:
             libpipewire-0.3-dev libx11-dev libxkbcommon-x11-dev \
             liblcms2-dev libheif-dev libjxl-dev libjpeg-dev \
             libpng-dev librsvg2-dev bubblewrap dbus-user-session \
-            python3 dpkg-dev
+            python3 dpkg-dev patchelf
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -95,6 +95,46 @@ jobs:
             done
             find /opt/rquickshare-noble -type f | sort
           } 2>&1 | tee noble-diagnostics/binary-dependencies.txt
+
+      - name: Stage native Noble runtime payload (not installable yet)
+        if: success()
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/rquickshare-native-noble"
+          mkdir -p "$stage/usr/bin" "$stage/usr/libexec" "$stage/usr/lib/rquickshare-private"
+          install -m 0755 native_desktop/target/release/rquickshare "$stage/usr/bin/rquickshare"
+          install -m 0755 native_desktop/target/release/rquickshare-preview-helper "$stage/usr/libexec/rquickshare-preview-helper"
+          install -m 0755 core_lib/target/release/rquickshare-daemon "$stage/usr/libexec/rquickshare-daemon"
+          cp -a /opt/rquickshare-noble/lib/x86_64-linux-gnu/libgtk4-layer-shell.so* "$stage/usr/lib/rquickshare-private/"
+          patchelf --set-rpath '\$ORIGIN/../lib/rquickshare-private' "$stage/usr/bin/rquickshare"
+          for executable in "$stage/usr/libexec/rquickshare-daemon" "$stage/usr/libexec/rquickshare-preview-helper"; do
+            patchelf --set-rpath '\$ORIGIN/../lib/rquickshare-private' "$executable"
+          done
+          {
+            echo "Native Noble preliminary payload, not an installer."
+            echo "Glycin 2.x loaders are NOT bundled. Do not install this payload on the host."
+            echo "GTK layer shell private library included:"
+            ls -l "$stage/usr/lib/rquickshare-private"
+            echo "ELF rpath and dependencies:"
+            for executable in "$stage/usr/bin/rquickshare" "$stage/usr/libexec/rquickshare-daemon" "$stage/usr/libexec/rquickshare-preview-helper"; do
+              echo "--- $executable ---"
+              patchelf --print-rpath "$executable"
+              readelf -d "$executable" | grep NEEDED || true
+            done
+          } | tee noble-diagnostics/staging.txt
+          tar -C "$stage" -czf noble-diagnostics/rquickshare-native-noble-runtime-preview.tar.gz .
+          echo "Preliminary runtime assembled; Glycin 2.x packaging still pending."
+
+      - name: Investigate Glycin 2.x loader compatibility
+        if: success()
+        run: |
+          {
+            echo "Noble Glycin version:"
+            apt-cache show glycin-loaders | grep -E '^(Version|Depends):' | head -5 || true
+            echo "Glycin 2.x decoder depends on a separate runtime loader distribution."
+            echo "The source uses glycin =4.0.0 (Rust API); Noble ships glycin-loaders=1.0.1."
+            echo "Do not weaken required Glycin >= 2.1 in native_deb.py."
+          } | tee noble-diagnostics/glycin-compatibility.txt
 
       - name: Upload diagnostics even if compilation fails
         if: always()
