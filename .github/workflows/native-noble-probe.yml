@@ -147,6 +147,18 @@ jobs:
             https://download.gnome.org/sources/glycin/2.1/glycin-2.1.5.tar.xz \
             -o /tmp/glycin-2.1.5.tar.xz
           tar -xf /tmp/glycin-2.1.5.tar.xz -C /tmp
+          # Glycin's Meson build overrides CARGO_HOME for nested Cargo jobs.
+          # Inject the actual compiler into the Meson custom target environment;
+          # the shell export alone did not reach that nested invocation.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/glycin-2.1.5/meson.build')
+          data = p.read_text()
+          marker = "cargo_env.set('CARGO_HOME', cargo_home)"
+          assert data.count(marker) == 1
+          data = data.replace(marker, marker + "\n" + "cargo_env.set('RUSTC', '/home/runner/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc')")
+          p.write_text(data)
+          PY
           meson setup /tmp/glycin-2.1.5/build /tmp/glycin-2.1.5 \
             --prefix=/opt/rquickshare-noble \
             --buildtype=release \
