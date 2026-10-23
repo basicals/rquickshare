@@ -26,7 +26,7 @@ jobs:
       LD_LIBRARY_PATH: /opt/rquickshare-noble/lib/x86_64-linux-gnu:/opt/rquickshare-noble/lib
     steps:
       - name: Checkout experimental branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Noble build dependencies (runner only)
         run: |
@@ -35,7 +35,7 @@ jobs:
             build-essential pkg-config protobuf-compiler libdbus-1-dev \
             libgtk-4-dev libglib2.0-dev libfontconfig1-dev libseccomp-dev \
             libwayland-dev wayland-protocols libgirepository1.0-dev \
-            gobject-introspection meson ninja-build git libxkbcommon-dev \
+            gobject-introspection valac meson ninja-build git libxkbcommon-dev \
             libssl-dev libclang-dev clang libudev-dev libavahi-client-dev \
             libpipewire-0.3-dev libx11-dev libxkbcommon-x11-dev \
             liblcms2-dev libheif-dev libjxl-dev libjpeg-dev \
@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload diagnostics even if compilation fails
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: native-noble-compatibility-diagnostics
           path: noble-diagnostics/
