@@ -136,6 +136,33 @@ jobs:
             echo "Do not weaken required Glycin >= 2.1 in native_deb.py."
           } | tee noble-diagnostics/glycin-compatibility.txt
 
+      - name: Probe Glycin 2.1.5 source build on Noble (isolated)
+        if: success()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          curl --fail --location --silent --show-error \
+            https://download.gnome.org/sources/glycin/2.1/glycin-2.1.5.tar.xz \
+            -o /tmp/glycin-2.1.5.tar.xz
+          tar -xf /tmp/glycin-2.1.5.tar.xz -C /tmp
+          meson setup /tmp/glycin-2.1.5/build /tmp/glycin-2.1.5 \
+            --prefix=/opt/rquickshare-noble \
+            --buildtype=release \
+            -Dglycin-loaders=true \
+            -Dloaders=glycin-image-rs \
+            -Dlibglycin=false \
+            -Dlibglycin-gtk4=false \
+            -Dglycin-thumbnailer=false \
+            -Dtests=false \
+            -Dintrospection=false \
+            -Dvapi=false \
+            2>&1 | tee noble-diagnostics/glycin-meson-setup.log
+          meson compile -C /tmp/glycin-2.1.5/build \
+            2>&1 | tee noble-diagnostics/glycin-build.log
+          sudo meson install -C /tmp/glycin-2.1.5/build
+          find /opt/rquickshare-noble -iname '*glycin*' -o -name '*.conf' \
+            | tee noble-diagnostics/glycin-installed-files.txt
+
       - name: Upload diagnostics even if compilation fails
         if: always()
         uses: actions/upload-artifact@v6
