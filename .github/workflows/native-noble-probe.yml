@@ -177,6 +177,29 @@ jobs:
           find /opt/rquickshare-noble -iname '*glycin*' -o -name '*.conf' \
             | tee noble-diagnostics/glycin-installed-files.txt
 
+      - name: Assemble Glycin loader in experimental Noble artifact
+        if: success()
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/rquickshare-native-noble"
+          mkdir -p "$stage/usr/libexec/glycin-loaders/2+" \
+                   "$stage/usr/share/glycin-loaders/2+/conf.d"
+          install -m 0755 \
+            /opt/rquickshare-noble/libexec/glycin-loaders/2+/glycin-image-rs \
+            "$stage/usr/libexec/glycin-loaders/2+/glycin-image-rs"
+          sed 's@/opt/rquickshare-noble/libexec/@/usr/libexec/@g' \
+            /opt/rquickshare-noble/share/glycin-loaders/2+/conf.d/glycin-image-rs.conf \
+            > "$stage/usr/share/glycin-loaders/2+/conf.d/glycin-image-rs.conf"
+          grep -q '/usr/libexec/glycin-loaders/2+/glycin-image-rs' \
+            "$stage/usr/share/glycin-loaders/2+/conf.d/glycin-image-rs.conf"
+          {
+            echo 'Experimental runtime archive only — not a validated Debian package.'
+            find "$stage" -type f -o -type l | sort
+            echo 'Glycin loader system dependencies:'
+            ldd "$stage/usr/libexec/glycin-loaders/2+/glycin-image-rs"
+          } > noble-diagnostics/glycin-stage-audit.txt
+          tar -C "$stage" -czf noble-diagnostics/rquickshare-native-noble-with-glycin.tar.gz .
+
       - name: Upload diagnostics even if compilation fails
         if: always()
         uses: actions/upload-artifact@v6
