@@ -283,6 +283,44 @@ jobs:
               echo "PASS: static desktop, user units and DBus activation metadata validated"\n              echo "NOT TESTED: interactive GTK desktop, live DBus activation, KDE integration, Bluetooth and transfer"
             ' 2>&1 | tee noble-diagnostics/clean-noble-install.log
 
+      - name: Probe native GTK4 on virtual Wayland session
+        if: success()
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends \
+            weston dbus-user-session
+          mkdir -p noble-diagnostics
+          runtime="$(mktemp -d)"
+          chmod 700 "$runtime"
+          export XDG_RUNTIME_DIR="$runtime"
+          export WAYLAND_DISPLAY=wayland-rquickshare
+          export GDK_BACKEND=wayland
+          weston --backend=headless-backend.so --socket="$WAYLAND_DISPLAY" \
+            --idle-time=0 > noble-diagnostics/weston-headless.log 2>&1 &
+          weston_pid=$!
+          trap 'kill "$weston_pid" 2>/dev/null || true; rm -rf "$runtime"' EXIT
+          for attempt in $(seq 1 30); do
+            if test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"; then break; fi
+            sleep 1
+          done
+          test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+          dbus-run-session -- bash -euo pipefail -c '
+            export XDG_SESSION_TYPE=wayland
+            export XDG_CURRENT_DESKTOP=KDE
+            export GDK_BACKEND=wayland
+            echo "Wayland socket: $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
+            echo "Session bus: $DBUS_SESSION_BUS_ADDRESS"
+            timeout 15s native_desktop/target/release/rquickshare --help \
+              > noble-diagnostics/gui-probe.txt 2>&1 || code=$?
+            echo "GUI --help exit: ${code:-0}" >> noble-diagnostics/gui-probe.txt
+            if [ "${code:-0}" -ne 0 ]; then
+              cat noble-diagnostics/gui-probe.txt
+              exit 1
+            fi
+            echo "PASS: GTK4 GUI executable starts its help path with Wayland and session DBus available."
+            echo "NOT TESTED: actual interactive tray lifecycle, D-Bus activation, Bluetooth."
+          '
+
       - name: Upload diagnostics even if compilation fails
         if: always()
         uses: actions/upload-artifact@v6
