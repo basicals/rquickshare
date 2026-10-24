@@ -248,7 +248,7 @@ jobs:
                 /usr/share/applications/io.github.morozhenko_apps.RQuickShare.desktop
               for unit in rquickshare-daemon.service rquickshare-desktop.service; do
                 test -f "/usr/lib/systemd/user/$unit"
-                systemd-analyze --user verify "/usr/lib/systemd/user/$unit"
+                systemd-analyze verify "/usr/lib/systemd/user/$unit"
               done
               for service in \
                 io.github.morozhenko_apps.RQuickShare.service \
