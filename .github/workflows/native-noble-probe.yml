@@ -317,6 +317,17 @@ jobs:
               cat noble-diagnostics/gui-probe.txt
               exit 1
             fi
+            timeout 45s native_desktop/target/release/rquickshare \
+              --preview --preview-page nearby --preview-output "$PWD/noble-diagnostics/gtk4-wayland-preview.png" \
+              > noble-diagnostics/gtk4-wayland-preview.log 2>&1 || preview_rc=$?
+            echo "Preview exit code: ${preview_rc:-0}"
+            if [ "${preview_rc:-0}" -ne 0 ]; then
+              cat noble-diagnostics/gtk4-wayland-preview.log
+              exit 1
+            fi
+            test -s noble-diagnostics/gtk4-wayland-preview.png
+            file noble-diagnostics/gtk4-wayland-preview.png
+            echo "PASS: interactive GTK4 window rendered a PNG snapshot in headless Wayland."
             echo "PASS: GTK4 GUI executable starts its help path with Wayland and session DBus available."
             echo "NOT TESTED: actual interactive tray lifecycle, D-Bus activation, Bluetooth."
           '
