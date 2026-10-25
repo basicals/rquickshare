@@ -46,7 +46,7 @@ def main():
         "xdg-desktop-portal"
     )
     control = (
-        "Package: rquickshare-native-noble-probe\n"
+        "Package: rquickshare-native-noble-beta\n"
         "Version: 1.0.0-1\n"
         "Architecture: amd64\n"
         "Maintainer: rQuickShare experimental build <noreply@github.com>\n"
@@ -55,8 +55,8 @@ def main():
         "Conflicts: rquickshare, r-quick-share\n"
         "Replaces: rquickshare, r-quick-share\n"
         f"Depends: {depends}\n"
-        "Description: Unvalidated Native GTK4 rQuickShare packaging probe\n"
-        " NOT RELEASE READY. Do not install on a real system.\n"
+        "Description: Experimental Native GTK4 rQuickShare beta for Noble\n"
+        " Experimental build requiring manual Bluetooth and KDE integration validation.\n"
         " Contains an experimental locally bundled Glycin decoder.\n"
     )
     (control_dir / "control").write_text(control)
@@ -64,7 +64,7 @@ def main():
     for folder in [STAGE, *(x for x in STAGE.rglob("*") if x.is_dir())]:
         folder.chmod(0o755)
     OUT.mkdir(exist_ok=True)
-    deb = OUT / "rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb"
+    deb = OUT / "rquickshare-native-noble-BETA_1.0.0-1_amd64.deb"
     subprocess.run(
         ["dpkg-deb", "--root-owner-group", "--build", str(STAGE), str(deb)],
         check=True,
