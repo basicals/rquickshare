@@ -241,14 +241,14 @@ jobs:
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
               apt-get install -y --no-install-recommends \
-                /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb
+                /packages/rquickshare-native-noble-BLE-LITE_1.0.0-2_amd64.deb
               dpkg-query -W rquickshare-native-noble-beta
-              test "$(dpkg-deb -f /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb Conflicts)" = "rquickshare, r-quick-share"
-              test "$(dpkg-deb -f /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb Replaces)" = "rquickshare, r-quick-share"
+              test "$(dpkg-deb -f /packages/rquickshare-native-noble-BLE-LITE_1.0.0-2_amd64.deb Conflicts)" = "rquickshare, r-quick-share"
+              test "$(dpkg-deb -f /packages/rquickshare-native-noble-BLE-LITE_1.0.0-2_amd64.deb Replaces)" = "rquickshare, r-quick-share"
               echo "=== Debian collision policy ==="
-              dpkg-deb -f /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb Package Conflicts Replaces
+              dpkg-deb -f /packages/rquickshare-native-noble-BLE-LITE_1.0.0-2_amd64.deb Package Conflicts Replaces
               echo "=== Existing package filename collision audit ==="
-              dpkg-deb --fsys-tarfile /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb |
+              dpkg-deb --fsys-tarfile /packages/rquickshare-native-noble-BLE-LITE_1.0.0-2_amd64.deb |
                 tar -tf - | grep -E "(rquickshare|dbus-1/services|glycin-loaders)" |
                 tee /tmp/probe-collision-paths.txt
               test -s /tmp/probe-collision-paths.txt
