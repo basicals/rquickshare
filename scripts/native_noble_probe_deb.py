@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Create a STRICTLY EXPERIMENTAL Noble Debian artifact without installing it.
+"""Package the validated build artifacts as an experimental Noble BLE-Lite beta.
 
-Builds on an Ubuntu 24.04 GitHub runner from already staged binaries. This is a
-packaging/inventory probe, NOT an assertion that the package is installable.
+This script only builds the Debian file; CI separately installs, tests and
+removes it in a disposable Ubuntu 24.04 container. It does not modify hosts.
 """
 from pathlib import Path
 import hashlib
@@ -34,9 +34,8 @@ def main():
             continue
         copy(src, dest, mode)
 
-    # Avoid system-wide Glycin loader registration collisions while the
-    # application's loader discovery is still under investigation.
-    # DO NOT suggest installation of this proof-of-packaging .deb.
+    # Keep Glycin's bundled decoder and configuration as verified by CI.
+    # This remains an experimental build, not a signed distribution release.
     control_dir = STAGE / "DEBIAN"
     control_dir.mkdir()
     depends = (
@@ -86,9 +85,9 @@ def main():
         "WARNING: simulation is not a guarantee of safe installation.\n"
         + apt.stdout + f"\nexit_code={apt.returncode}\n"
     )
-    print("Built packaging PROBE only:", deb)
+    print("Built experimental BLE-Lite beta:", deb)
     print("APT simulation exit:", apt.returncode)
-    print("Not validated for installation; ELF dependency audit still required.")
+    print("CI must separately validate installation, removal and ELF dependencies.")
 
 
 if __name__ == "__main__":
