@@ -52,6 +52,8 @@ def main():
         "Maintainer: rQuickShare experimental build <noreply@github.com>\n"
         "Section: net\n"
         "Priority: optional\n"
+        "Conflicts: rquickshare, r-quick-share\n"
+        "Replaces: rquickshare, r-quick-share\n"
         f"Depends: {depends}\n"
         "Description: Unvalidated Native GTK4 rQuickShare packaging probe\n"
         " NOT RELEASE READY. Do not install on a real system.\n"
