@@ -241,14 +241,14 @@ jobs:
               export DEBIAN_FRONTEND=noninteractive
               apt-get update
               apt-get install -y --no-install-recommends \
-                /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb
-              dpkg-query -W rquickshare-native-noble-probe
-              test "$(dpkg-deb -f /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb Conflicts)" = "rquickshare, r-quick-share"
-              test "$(dpkg-deb -f /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb Replaces)" = "rquickshare, r-quick-share"
+                /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb
+              dpkg-query -W rquickshare-native-noble-beta
+              test "$(dpkg-deb -f /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb Conflicts)" = "rquickshare, r-quick-share"
+              test "$(dpkg-deb -f /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb Replaces)" = "rquickshare, r-quick-share"
               echo "=== Debian collision policy ==="
-              dpkg-deb -f /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb Package Conflicts Replaces
+              dpkg-deb -f /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb Package Conflicts Replaces
               echo "=== Existing package filename collision audit ==="
-              dpkg-deb --fsys-tarfile /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb |
+              dpkg-deb --fsys-tarfile /packages/rquickshare-native-noble-BETA_1.0.0-1_amd64.deb |
                 tar -tf - | grep -E "(rquickshare|dbus-1/services|glycin-loaders)" |
                 tee /tmp/probe-collision-paths.txt
               test -s /tmp/probe-collision-paths.txt
@@ -289,8 +289,8 @@ jobs:
               done
               /usr/libexec/rquickshare-daemon --help
               /usr/libexec/rquickshare-preview-helper --help
-              apt-get remove -y rquickshare-native-noble-probe
-              ! dpkg-query -W -f="${Status}" rquickshare-native-noble-probe 2>/dev/null | grep -q "install ok installed"
+              apt-get remove -y rquickshare-native-noble-beta
+              ! dpkg-query -W -f="${Status}" rquickshare-native-noble-beta 2>/dev/null | grep -q "install ok installed"
               test ! -e /usr/bin/rquickshare
               echo "PASS: package removal does not leave installed executable"
               echo "PASS: package installed and ELF dependencies resolved in clean Ubuntu 24.04"
