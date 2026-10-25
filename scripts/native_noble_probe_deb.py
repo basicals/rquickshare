@@ -47,7 +47,7 @@ def main():
     )
     control = (
         "Package: rquickshare-native-noble-beta\n"
-        "Version: 1.0.0-1\n"
+        "Version: 1.0.0-2\n"
         "Architecture: amd64\n"
         "Maintainer: rQuickShare experimental build <noreply@github.com>\n"
         "Section: net\n"
@@ -55,7 +55,7 @@ def main():
         "Conflicts: rquickshare, r-quick-share\n"
         "Replaces: rquickshare, r-quick-share\n"
         f"Depends: {depends}\n"
-        "Description: Experimental Native GTK4 rQuickShare beta for Noble\n"
+        "Description: Low-radio-activity GTK4 rQuickShare beta for Noble\n"
         " Experimental build requiring manual Bluetooth and KDE integration validation.\n"
         " Contains an experimental locally bundled Glycin decoder.\n"
     )
@@ -64,7 +64,7 @@ def main():
     for folder in [STAGE, *(x for x in STAGE.rglob("*") if x.is_dir())]:
         folder.chmod(0o755)
     OUT.mkdir(exist_ok=True)
-    deb = OUT / "rquickshare-native-noble-BETA_1.0.0-1_amd64.deb"
+    deb = OUT / "rquickshare-native-noble-BLE-LITE_1.0.0-2_amd64.deb"
     subprocess.run(
         ["dpkg-deb", "--root-owner-group", "--build", str(STAGE), str(deb)],
         check=True,
