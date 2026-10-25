@@ -286,26 +286,36 @@ impl RQS {
                 identity.snapshot().name.as_str(),
             );
 
-            let visibility_rx = self.subscribe_visibility();
-            let ctk = ctoken.clone();
-            tracker.spawn(async move {
-                let Some(initialized) =
-                    manager::session::until_stopped(&ctk, BleAdvertiser::new(visibility_rx)).await
-                else {
-                    return;
-                };
-                let blea = match initialized {
-                    Ok(advertiser) => advertiser,
-                    Err(error) => {
-                        error!("Couldn't init BleAdvertiser: {error}");
+            // Low-radio-activity Noble beta: disable the redundant legacy FE2C
+            // advertisement by default. Retain ReceiverAdvertiser and GATT,
+            // which are required for modern Quick Share inbound discovery.
+            // Set RQS_ENABLE_LEGACY_BLE_ADVERTISING=1 to opt back in.
+            if std::env::var_os("RQS_ENABLE_LEGACY_BLE_ADVERTISING").as_deref()
+                == Some(std::ffi::OsStr::new("1"))
+            {
+                let visibility_rx = self.subscribe_visibility();
+                let ctk = ctoken.clone();
+                tracker.spawn(async move {
+                    let Some(initialized) =
+                        manager::session::until_stopped(&ctk, BleAdvertiser::new(visibility_rx)).await
+                    else {
                         return;
-                    }
-                };
+                    };
+                    let blea = match initialized {
+                        Ok(advertiser) => advertiser,
+                        Err(error) => {
+                            error!("Couldn't init BleAdvertiser: {error}");
+                            return;
+                        }
+                    };
 
-                if let Err(error) = blea.run(ctk).await {
-                    error!("BleAdvertiser stopped with error: {error}");
-                }
-            });
+                    if let Err(error) = blea.run(ctk).await {
+                        error!("BleAdvertiser stopped with error: {error}");
+                    }
+                });
+            } else {
+                info!("Legacy FE2C BLE advertising disabled (low-radio-activity mode)");
+            }
 
             let (receiver_adv_refresh_sender, _) =
                 broadcast::channel::<crate::hdl::ReceiverAdvertisingRefresh>(8);
