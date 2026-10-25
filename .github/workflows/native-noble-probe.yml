@@ -243,6 +243,14 @@ jobs:
               apt-get install -y --no-install-recommends \
                 /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb
               dpkg-query -W rquickshare-native-noble-probe
+              echo "=== Debian collision policy ==="
+              dpkg-deb -f /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb Package Conflicts Replaces
+              echo "=== Existing package filename collision audit ==="
+              dpkg-deb --fsys-tarfile /packages/rquickshare-native-noble-PROBE_1.0.0-1_amd64.deb |
+                tar -tf - | grep -E "(rquickshare|dbus-1/services|glycin-loaders)" |
+                tee /tmp/probe-collision-paths.txt
+              test -s /tmp/probe-collision-paths.txt
+              echo "WARNING: PROBE has no coexistence policy for an existing rquickshare installation."
               apt-get install -y --no-install-recommends desktop-file-utils dbus-bin
               desktop-file-validate \
                 /usr/share/applications/io.github.morozhenko_apps.RQuickShare.desktop
@@ -310,6 +318,12 @@ jobs:
             export GDK_BACKEND=wayland
             echo "Wayland socket: $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
             echo "Session bus: $DBUS_SESSION_BUS_ADDRESS"
+            dbus-send --session --dest=org.freedesktop.DBus \
+              --type=method_call --print-reply /org/freedesktop/DBus \
+              org.freedesktop.DBus.ListNames \
+              > noble-diagnostics/dbus-live-session.txt
+            grep -q org.freedesktop.DBus noble-diagnostics/dbus-live-session.txt
+            echo "PASS: real session D-Bus round trip (bus only, not app service activation)."
             timeout 15s native_desktop/target/release/rquickshare --help \
               > noble-diagnostics/gui-probe.txt 2>&1 || code=$?
             echo "GUI --help exit: ${code:-0}" >> noble-diagnostics/gui-probe.txt
